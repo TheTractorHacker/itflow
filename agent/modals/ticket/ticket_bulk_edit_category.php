@@ -34,15 +34,24 @@ ob_start();
                 <select class="form-control select2" name="bulk_category">
                     <option value="0">- Uncategorized -</option>
                     <?php
-                    $sql_categories = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_archived_at IS NULL ORDER BY category_name ASC");
-                    while ($row = mysqli_fetch_assoc($sql_categories)) {
-                        $category_id = intval($row['category_id']);
-                        $category_name = nullable_htmlentities($row['category_name']);
-
-                        ?>
-                        <option value="<?php echo $category_id; ?>"><?php echo $category_name; ?></option>
-                    <?php } ?>
-
+                    $sql_groups = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_parent = 0 AND category_archived_at IS NULL ORDER BY category_name ASC");
+                    $groups = [];
+                    while ($g = mysqli_fetch_assoc($sql_groups)) $groups[] = $g;
+                    $sql_subs = mysqli_query($mysqli, "SELECT category_id, category_name, category_parent FROM categories WHERE category_type = 'Ticket' AND category_parent > 0 AND category_archived_at IS NULL ORDER BY category_name ASC");
+                    $subs = [];
+                    while ($s = mysqli_fetch_assoc($sql_subs)) $subs[intval($s['category_parent'])][] = $s;
+                    foreach ($groups as $g) {
+                        $gid = intval($g['category_id']);
+                        $gname = nullable_htmlentities($g['category_name']);
+                        if (isset($subs[$gid])) {
+                            echo "<optgroup label=\"$gname\">";
+                            foreach ($subs[$gid] as $s) echo "<option value=\"{$s['category_id']}\">" . nullable_htmlentities($s['category_name']) . "</option>";
+                            echo "</optgroup>";
+                        } else {
+                            echo "<option value=\"$gid\">$gname</option>";
+                        }
+                    }
+                    ?>
                 </select>
             </div>
         </div>

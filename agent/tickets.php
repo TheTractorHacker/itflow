@@ -114,17 +114,18 @@ $query =
     $access_permission_query_overide
     $client_query
     ORDER BY
+        COALESCE(category_name, '') ASC,
         CASE
             WHEN '$sort' = 'ticket_priority' THEN
                 CASE ticket_priority
                     WHEN 'High' THEN 1
                     WHEN 'Medium' THEN 2
                     WHEN 'Low' THEN 3
-                    ELSE 4  -- Optional: for unexpected priority values
+                    ELSE 4
                 END
             ELSE NULL
         END $order,
-        $sort $order  -- Apply normal sorting by $sort and $order
+        $sort $order
     LIMIT $record_from, $record_to";
 
 $sql = mysqli_query($mysqli,$query);

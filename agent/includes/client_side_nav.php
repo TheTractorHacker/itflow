@@ -237,6 +237,20 @@
 
                     <!-- Allow files even without module_support for things like contracts, etc. ) -->
                     <li class="nav-item">
+                        <a href="/agent/contracts.php?client_id=<?php echo $client_id; ?>" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "contracts.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-file-contract"></i>
+                            <p>
+                                Contracts
+                                <?php
+                                $num_contracts = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM contracts WHERE contract_archived_at IS NULL AND contract_client_id = $client_id"))[0]);
+                                $num_contracts_due = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM contracts WHERE contract_archived_at IS NULL AND contract_client_id = $client_id AND contract_renewal_date IS NOT NULL AND contract_renewal_date <= DATE_ADD(CURDATE(), INTERVAL 45 DAY)"))[0]);
+                                if ($num_contracts > 0) { ?>
+                                    <span class="right badge <?php if ($num_contracts_due > 0) { ?> badge-warning text-dark <?php } else { ?> text-light <?php } ?>"><?php echo $num_contracts; ?></span>
+                                <?php } ?>
+                            </p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="/agent/files.php?client_id=<?php echo $client_id; ?>" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "files.php") { echo "active"; } ?>">
                             <i class="nav-icon fas fa-folder"></i>
                             <p>

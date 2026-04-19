@@ -13,14 +13,11 @@ if (isset($_GET['category'])) {
     $category = "Expense";
 }
 
-$sql = mysqli_query(
-    $mysqli,
-    "SELECT SQL_CALC_FOUND_ROWS * FROM categories
-    WHERE category_name LIKE '%$q%'
-    AND category_type = '$category'
-    AND category_$archive_query
-    ORDER BY $sort $order LIMIT $record_from, $record_to"
-);
+if ($category === 'Ticket') {
+    $sql = mysqli_query($mysqli, "SELECT SQL_CALC_FOUND_ROWS * FROM categories WHERE category_name LIKE '%$q%' AND category_type = 'Ticket' AND category_$archive_query ORDER BY category_parent ASC, category_name ASC LIMIT $record_from, $record_to");
+} else {
+    $sql = mysqli_query($mysqli, "SELECT SQL_CALC_FOUND_ROWS * FROM categories WHERE category_name LIKE '%$q%' AND category_type = '$category' AND category_$archive_query ORDER BY $sort $order LIMIT $record_from, $record_to");
+}
 $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 ?>
@@ -141,18 +138,34 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 <tbody>
                     <?php
 
+                    // Pre-load group names for Ticket categories
+                    $group_names = [];
+                    if ($category === 'Ticket') {
+                        $sql_gn = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_parent = 0 AND category_archived_at IS NULL");
+                        while ($gn = mysqli_fetch_assoc($sql_gn)) $group_names[intval($gn['category_id'])] = nullable_htmlentities($gn['category_name']);
+                    }
+
                     while ($row = mysqli_fetch_assoc($sql)) {
                         $category_id = intval($row['category_id']);
                         $category_name = nullable_htmlentities($row['category_name']);
                         $category_description = nullable_htmlentities($row['category_description']);
                         $category_color = nullable_htmlentities($row['category_color']);
+                        $category_parent = intval($row['category_parent'] ?? 0);
+                        $is_group = ($category === 'Ticket' && $category_parent == 0);
+                        $parent_name = ($category === 'Ticket' && $category_parent > 0) ? ($group_names[$category_parent] ?? '') : '';
 
                         ?>
-                        <tr>
+                        <tr <?= $is_group ? 'class="table-secondary"' : '' ?>>
                             <td>
                                 <a class="text-dark ajax-modal" href="#"
                                     data-modal-url="modals/category/category_edit.php?id=<?= $category_id ?>">
-                                    <?php echo $category_name; ?>
+                                    <?php if ($is_group) { ?>
+                                        <i class="fas fa-layer-group mr-1 text-muted"></i><strong><?= $category_name ?></strong>
+                                        <span class="badge badge-light ml-1">Group</span>
+                                    <?php } else { ?>
+                                        <?php if ($parent_name) { ?><small class="text-muted mr-1"><?= $parent_name ?> /</small><?php } ?>
+                                        <?= $category_name ?>
+                                    <?php } ?>
                                     <div><small class="text-secondary"><?= $category_description ?></small></div>
                                 </a>
                             </td>

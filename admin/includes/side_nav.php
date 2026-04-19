@@ -126,6 +126,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="/admin/worksheet_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['worksheet_template.php', 'worksheet_template_details.php']) ? 'active' : ''); ?>">
+                            <i class="nav-icon fas fa-clipboard-list"></i>
+                            <p>Worksheet Templates</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="/admin/vendor_template.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'vendor_template.php' ? 'active' : ''); ?>">
                             <i class="nav-icon fas fa-building"></i>
                             <p>Vendor Templates</p>

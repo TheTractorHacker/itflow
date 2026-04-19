@@ -74,7 +74,23 @@ if (isset($_POST['add_ticket'])) {
     //Generate a unique URL key for clients to access
     $url_key = randomString(32);
 
-    mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$config_ticket_prefix', ticket_number = $ticket_number, ticket_source = 'Agent', ticket_category = $category_id, ticket_subject = '$subject', ticket_details = '$details', ticket_priority = '$priority', ticket_billable = '$billable', ticket_status = '$ticket_status', ticket_vendor_ticket_number = '$vendor_ticket_number', ticket_vendor_id = $vendor_id, ticket_location_id = $location_id, ticket_asset_id = $asset_id, ticket_created_by = $session_user_id, ticket_assigned_to = $assigned_to, ticket_contact_id = $contact_id, ticket_url_key = '$url_key', ticket_due_at = $due, ticket_client_id = $client_id, ticket_invoice_id = 0, ticket_project_id = $project_id");
+    // SLA: calculate response/resolution deadlines from linked contract
+    $contract_id = intval($_POST['contract_id'] ?? 0);
+    $sla_response_due = 'NULL';
+    $sla_resolution_due = 'NULL';
+    if ($contract_id > 0) {
+        $sql_ct = mysqli_query($mysqli, "SELECT * FROM contracts WHERE contract_id = $contract_id AND contract_client_id = $client_id LIMIT 1");
+        if ($ct = mysqli_fetch_assoc($sql_ct)) {
+            $p = strtolower($priority);
+            $r_hours  = $p === 'low' ? intval($ct['contract_sla_low_response_time'])    : ($p === 'medium' ? intval($ct['contract_sla_medium_response_time'])    : intval($ct['contract_sla_high_response_time']));
+            $res_hours= $p === 'low' ? intval($ct['contract_sla_low_resolution_time'])  : ($p === 'medium' ? intval($ct['contract_sla_medium_resolution_time'])  : intval($ct['contract_sla_high_resolution_time']));
+            if ($r_hours > 0)   $sla_response_due   = "'" . date('Y-m-d H:i:s', strtotime("+{$r_hours} hours"))   . "'";
+            if ($res_hours > 0) $sla_resolution_due = "'" . date('Y-m-d H:i:s', strtotime("+{$res_hours} hours")) . "'";
+        }
+    }
+    $contract_id_sql = $contract_id > 0 ? $contract_id : 'NULL';
+
+    mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$config_ticket_prefix', ticket_number = $ticket_number, ticket_source = 'Agent', ticket_category = $category_id, ticket_subject = '$subject', ticket_details = '$details', ticket_priority = '$priority', ticket_billable = '$billable', ticket_status = '$ticket_status', ticket_vendor_ticket_number = '$vendor_ticket_number', ticket_vendor_id = $vendor_id, ticket_location_id = $location_id, ticket_asset_id = $asset_id, ticket_created_by = $session_user_id, ticket_assigned_to = $assigned_to, ticket_contact_id = $contact_id, ticket_url_key = '$url_key', ticket_due_at = $due, ticket_client_id = $client_id, ticket_invoice_id = 0, ticket_project_id = $project_id, ticket_contract_id = $contract_id_sql, ticket_sla_response_due = $sla_response_due, ticket_sla_resolution_due = $sla_resolution_due");
 
     $ticket_id = mysqli_insert_id($mysqli);
 
@@ -353,6 +369,45 @@ if (isset($_POST['edit_ticket_priority'])) {
     customAction('ticket_update', $ticket_id);
 
     flash_alert("Priority updated from <strong>$original_priority</strong> to <strong>$priority</strong>");
+
+    redirect();
+
+}
+
+if (isset($_POST['edit_ticket_status'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id = intval($_POST['ticket_id']);
+    $new_status_id = intval($_POST['ticket_status_id']);
+    $client_id = intval($_POST['client_id']);
+
+    $sql = mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_status_name, ticket_client_id FROM tickets LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id WHERE ticket_id = $ticket_id");
+    $row = mysqli_fetch_assoc($sql);
+    $ticket_prefix = sanitizeInput($row['ticket_prefix']);
+    $ticket_number = intval($row['ticket_number']);
+    $original_status = sanitizeInput($row['ticket_status_name']);
+    $client_id = intval($row['ticket_client_id']);
+
+    if ($client_id) {
+        enforceClientAccess();
+    }
+
+    $sql_new_status = mysqli_query($mysqli, "SELECT ticket_status_name FROM ticket_statuses WHERE ticket_status_id = $new_status_id LIMIT 1");
+    $new_status_row = mysqli_fetch_assoc($sql_new_status);
+    $new_status_name = sanitizeInput($new_status_row['ticket_status_name']);
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $ticket_id");
+
+    mysqli_query($mysqli, "INSERT INTO ticket_history SET ticket_history_status = '$new_status_name', ticket_history_description = '$session_name changed status from $original_status to $new_status_name', ticket_history_ticket_id = $ticket_id");
+
+    logAction("Ticket", "Edit", "$session_name changed status from $original_status to $new_status_name for ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
+
+    customAction('ticket_update', $ticket_id);
+
+    flash_alert("Status updated from <strong>$original_status</strong> to <strong>$new_status_name</strong>");
 
     redirect();
 
@@ -736,6 +791,137 @@ if (isset($_POST['edit_ticket_vendor'])) {
 
     redirect();
 
+}
+
+if (isset($_POST['quick_categorize_ticket'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id   = intval($_POST['ticket_id']);
+    $category_id = intval($_POST['category_id']);
+
+    $td = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+    if (!$td) { echo json_encode(['ok' => false]); exit; }
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_category = $category_id WHERE ticket_id = $ticket_id");
+
+    $cat_name = $category_id ? nullable_htmlentities(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT category_name FROM categories WHERE category_id = $category_id LIMIT 1"))['category_name'] ?? '') : '';
+    logAction("Ticket", "Edit", "Category changed on ticket {$td['ticket_prefix']}{$td['ticket_number']}", intval($td['ticket_client_id']), $ticket_id);
+
+    echo json_encode(['ok' => true, 'name' => $cat_name]);
+    exit;
+}
+
+if (isset($_POST['quick_assign_ticket'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id   = intval($_POST['ticket_id']);
+    $assigned_to = intval($_POST['assigned_to']);
+
+    $ticket_details_sql = mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_subject, ticket_status, ticket_client_id, client_name FROM tickets LEFT JOIN clients ON ticket_client_id = client_id WHERE ticket_id = $ticket_id AND ticket_closed_at IS NULL LIMIT 1");
+    $td = mysqli_fetch_assoc($ticket_details_sql);
+
+    if (!$td) { echo json_encode(['ok' => false, 'error' => 'Ticket not found']); exit; }
+
+    $ticket_status = intval($td['ticket_status']);
+    $client_id     = intval($td['ticket_client_id']);
+    $ticket_prefix = sanitizeInput($td['ticket_prefix']);
+    $ticket_number = intval($td['ticket_number']);
+    $ticket_subject = sanitizeInput($td['ticket_subject']);
+    $client_name   = sanitizeInput($td['client_name']);
+
+    if ($assigned_to == 0) {
+        $agent_name  = 'No One';
+        $ticket_reply = 'Ticket unassigned.';
+    } else {
+        $agent_sql  = mysqli_query($mysqli, "SELECT user_name, user_email FROM users WHERE user_id = $assigned_to AND user_archived_at IS NULL LIMIT 1");
+        $agent      = mysqli_fetch_assoc($agent_sql);
+        if (!$agent) { echo json_encode(['ok' => false, 'error' => 'Invalid agent']); exit; }
+        $agent_name  = sanitizeInput($agent['user_name']);
+        $agent_email = sanitizeInput($agent['user_email']);
+        $ticket_reply = "Ticket re-assigned to $agent_name.";
+    }
+
+    // New → Open when assigned
+    if ($ticket_status == 1 && $assigned_to !== 0) $ticket_status = 2;
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_assigned_to = $assigned_to, ticket_status = $ticket_status WHERE ticket_id = $ticket_id");
+    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$ticket_reply', ticket_reply_type = 'Internal', ticket_reply_time_worked = '00:01:00', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+
+    logAction("Ticket", "Edit", "$session_name reassigned $ticket_prefix$ticket_number to $agent_name", $client_id, $ticket_id);
+
+    if ($session_user_id != $assigned_to && $assigned_to != 0) {
+        $client_uri = $client_id ? "&client_id=$client_id" : '';
+        mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = 'Ticket', notification = 'Ticket $ticket_prefix$ticket_number - $ticket_subject has been assigned to you by $session_name', notification_action = '/agent/ticket.php?ticket_id=$ticket_id$client_uri', notification_client_id = $client_id, notification_user_id = $assigned_to");
+    }
+
+    echo json_encode(['ok' => true, 'name' => $agent_name, 'agent_id' => $assigned_to]);
+    exit;
+}
+
+if (isset($_POST['quick_priority_ticket'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id = intval($_POST['ticket_id']);
+    $priority  = sanitizeInput($_POST['priority']);
+
+    if (!in_array($priority, ['Low', 'Medium', 'High'])) { echo json_encode(['ok' => false]); exit; }
+
+    $sql = mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_priority, ticket_status_name, ticket_client_id FROM tickets LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id WHERE ticket_id = $ticket_id AND ticket_closed_at IS NULL LIMIT 1");
+    $td = mysqli_fetch_assoc($sql);
+    if (!$td) { echo json_encode(['ok' => false]); exit; }
+
+    $client_id = intval($td['ticket_client_id']);
+    $original_priority = sanitizeInput($td['ticket_priority']);
+    $ticket_status_name = sanitizeInput($td['ticket_status_name']);
+    $ticket_prefix = sanitizeInput($td['ticket_prefix']);
+    $ticket_number = intval($td['ticket_number']);
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_priority = '$priority' WHERE ticket_id = $ticket_id");
+    mysqli_query($mysqli, "INSERT INTO ticket_history SET ticket_history_status = '$ticket_status_name', ticket_history_description = '$session_name changed priority from $original_priority to $priority', ticket_history_ticket_id = $ticket_id");
+    logAction("Ticket", "Edit", "$session_name changed priority from $original_priority to $priority for ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
+    customAction('ticket_update', $ticket_id);
+
+    echo json_encode(['ok' => true]);
+    exit;
+}
+
+if (isset($_POST['quick_status_ticket'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id     = intval($_POST['ticket_id']);
+    $new_status_id = intval($_POST['ticket_status_id']);
+
+    $sql = mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_status_name, ticket_client_id FROM tickets LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id WHERE ticket_id = $ticket_id AND ticket_closed_at IS NULL LIMIT 1");
+    $td = mysqli_fetch_assoc($sql);
+    if (!$td) { echo json_encode(['ok' => false]); exit; }
+
+    $client_id = intval($td['ticket_client_id']);
+    $original_status = sanitizeInput($td['ticket_status_name']);
+    $ticket_prefix = sanitizeInput($td['ticket_prefix']);
+    $ticket_number = intval($td['ticket_number']);
+
+    $sql_ns = mysqli_query($mysqli, "SELECT ticket_status_name, ticket_status_color FROM ticket_statuses WHERE ticket_status_id = $new_status_id LIMIT 1");
+    $ns = mysqli_fetch_assoc($sql_ns);
+    if (!$ns) { echo json_encode(['ok' => false]); exit; }
+
+    $new_status_name  = sanitizeInput($ns['ticket_status_name']);
+    $new_status_color = sanitizeInput($ns['ticket_status_color']);
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $ticket_id");
+    mysqli_query($mysqli, "INSERT INTO ticket_history SET ticket_history_status = '$new_status_name', ticket_history_description = '$session_name changed status from $original_status to $new_status_name', ticket_history_ticket_id = $ticket_id");
+    logAction("Ticket", "Edit", "$session_name changed status from $original_status to $new_status_name for ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
+    customAction('ticket_update', $ticket_id);
+
+    echo json_encode(['ok' => true, 'name' => $new_status_name, 'color' => $new_status_color]);
+    exit;
 }
 
 if (isset($_POST['assign_ticket'])) {
@@ -2118,6 +2304,20 @@ if (isset($_GET['resolve_ticket'])) {
         enforceClientAccess();
     }
 
+    // Block resolve if unsigned dedicated outtake form exists
+    $sql_outtake_check = mysqli_query($mysqli, "SELECT COUNT(*) FROM ticket_outtake_forms WHERE outtake_ticket_id = $ticket_id AND outtake_signed_at IS NULL");
+    if (intval(mysqli_fetch_row($sql_outtake_check)[0]) > 0) {
+        flash_alert("Cannot resolve ticket — there is an unsigned outtake form. Have the customer sign it first.", "error");
+        redirect();
+    }
+
+    // Block resolve if outtake worksheet not finalized
+    $sql_ws_outtake = mysqli_query($mysqli, "SELECT COUNT(*) FROM ticket_worksheets WHERE worksheet_ticket_id = $ticket_id AND worksheet_is_outtake = 1 AND worksheet_completed_at IS NULL");
+    if (intval(mysqli_fetch_row($sql_ws_outtake)[0]) > 0) {
+        flash_alert("Cannot resolve ticket — there is an unfinalized outtake worksheet. Finalize it first.", "error");
+        redirect();
+    }
+
     // Mark FR
     if (empty($ticket_first_response_at)) {
         mysqli_query($mysqli, "UPDATE tickets SET ticket_first_response_at = NOW() WHERE ticket_id = $ticket_id");
@@ -2222,6 +2422,20 @@ if (isset($_GET['close_ticket'])) {
     // Don't Enforce Client Access if Ticket doesn't have an assigned client
     if ($client_id) {
         enforceClientAccess();
+    }
+
+    // Block close if unsigned dedicated outtake form exists
+    $sql_ot_close = mysqli_query($mysqli, "SELECT COUNT(*) FROM ticket_outtake_forms WHERE outtake_ticket_id = $ticket_id AND outtake_signed_at IS NULL");
+    if (intval(mysqli_fetch_row($sql_ot_close)[0]) > 0) {
+        flash_alert("Cannot close ticket — there is an unsigned outtake form. Have the customer sign it first.", "error");
+        redirect();
+    }
+
+    // Block close if outtake worksheet not finalized
+    $sql_ws_ot_close = mysqli_query($mysqli, "SELECT COUNT(*) FROM ticket_worksheets WHERE worksheet_ticket_id = $ticket_id AND worksheet_is_outtake = 1 AND worksheet_completed_at IS NULL");
+    if (intval(mysqli_fetch_row($sql_ws_ot_close)[0]) > 0) {
+        flash_alert("Cannot close ticket — there is an unfinalized outtake worksheet. Finalize it first.", "error");
+        redirect();
     }
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 5, ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id") or die(mysqli_error($mysqli));

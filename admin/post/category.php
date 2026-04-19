@@ -12,7 +12,7 @@ if (isset($_POST['add_category'])) {
 
     require_once 'category_model.php';
 
-    mysqli_query($mysqli,"INSERT INTO categories SET category_name = '$name', category_description = '$description', category_type = '$type', category_color = '$color'");
+    mysqli_query($mysqli,"INSERT INTO categories SET category_name = '$name', category_description = '$description', category_type = '$type', category_color = '$color', category_parent = $parent");
 
     $category_id = mysqli_insert_id($mysqli);
 
@@ -32,7 +32,7 @@ if (isset($_POST['edit_category'])) {
 
     $category_id = intval($_POST['category_id']);
 
-    mysqli_query($mysqli,"UPDATE categories SET category_name = '$name', category_description = '$description', category_type = '$type', category_color = '$color' WHERE category_id = $category_id");
+    mysqli_query($mysqli,"UPDATE categories SET category_name = '$name', category_description = '$description', category_type = '$type', category_color = '$color', category_parent = $parent WHERE category_id = $category_id");
 
     logAction("Category", "Edit", "$session_name edited category $type $name", 0, $category_id);
 

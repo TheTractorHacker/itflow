@@ -40,6 +40,24 @@ $category_types_array = ['Expense', 'Income', 'Referral', 'Ticket'];
 
         <?php } ?>
 
+        <?php if ($category === 'Ticket') { ?>
+        <div class="form-group">
+            <label>Group <small class="text-muted">(optional — leave blank to create a new group)</small></label>
+            <div class="input-group">
+                <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-fw fa-layer-group"></i></span></div>
+                <select class="form-control select2" name="category_parent">
+                    <option value="0">— New Group / Ungrouped —</option>
+                    <?php
+                    $sql_groups = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_parent = 0 AND category_archived_at IS NULL ORDER BY category_name");
+                    while ($g = mysqli_fetch_assoc($sql_groups)) echo "<option value=\"{$g['category_id']}\">" . nullable_htmlentities($g['category_name']) . "</option>";
+                    ?>
+                </select>
+            </div>
+        </div>
+        <?php } else { ?>
+        <input type="hidden" name="category_parent" value="0">
+        <?php } ?>
+
         <div class="form-group">
             <label>Name <strong class="text-danger">*</strong></label>
             <div class="input-group">

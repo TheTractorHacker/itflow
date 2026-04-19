@@ -1,3 +1,23 @@
+<?php
+// Pre-load all techs for inline assignment dropdowns
+$_techs_list = [];
+$_sql_techs = mysqli_query($mysqli, "SELECT user_id, user_name FROM users WHERE user_type = 1 AND user_status = 1 AND user_archived_at IS NULL ORDER BY user_name ASC");
+while ($_t = mysqli_fetch_assoc($_sql_techs)) $_techs_list[] = $_t;
+
+// Pre-load all ticket statuses for inline status dropdowns
+$_statuses_list = [];
+$_sql_statuses = mysqli_query($mysqli, "SELECT ticket_status_id, ticket_status_name, ticket_status_color FROM ticket_statuses WHERE ticket_status_active = 1 ORDER BY ticket_status_order ASC");
+while ($_st = mysqli_fetch_assoc($_sql_statuses)) $_statuses_list[] = $_st;
+
+// Pre-load all ticket categories for inline category dropdowns
+$_cats_list = [];
+$_sql_cats_g = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_parent = 0 AND category_archived_at IS NULL ORDER BY category_name");
+$_cat_groups = [];
+while ($_g = mysqli_fetch_assoc($_sql_cats_g)) $_cat_groups[] = $_g;
+$_sql_cats_s = mysqli_query($mysqli, "SELECT category_id, category_name, category_parent FROM categories WHERE category_type = 'Ticket' AND category_parent > 0 AND category_archived_at IS NULL ORDER BY category_name");
+$_cat_subs = [];
+while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_parent'])][] = $_s;
+?>
 <div class="card card-dark">
     <div class="card-body">
         <form id="bulkActions" action="post.php" method="post">
@@ -45,6 +65,11 @@
                             <?php } ?>
 
                             <th>
+                                <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=category_name&order=<?php echo $disp; ?>">
+                                    Category <?php if ($sort == 'category_name') { echo $order_icon; } ?>
+                                </a>
+                            </th>
+                            <th>
                                 <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=ticket_priority&order=<?php echo $disp; ?>">
                                     Priority <?php if ($sort == 'ticket_priority') { echo $order_icon; } ?>
                                 </a>
@@ -71,10 +96,29 @@
                             </th>
                         </tr>
                         </thead>
-                        <tbody>
                         <?php
+                        // Buffer all rows so we can count per group before rendering
+                        $_all_rows = [];
+                        while ($_r = mysqli_fetch_assoc($sql)) $_all_rows[] = $_r;
 
-                        while ($row = mysqli_fetch_assoc($sql)) {
+                        // Count tickets per group and collect color
+                        $_group_meta = []; // [label => ['count'=>n,'color'=>'#hex','id'=>category_id]]
+                        foreach ($_all_rows as $_r) {
+                            $_lbl = ($_r['category_name'] ?? '') ?: 'Uncategorized';
+                            if (!isset($_group_meta[$_lbl])) {
+                                $_group_meta[$_lbl] = [
+                                    'count' => 0,
+                                    'color' => $_r['category_color'] ?? '#6c757d',
+                                    'cat_id' => intval($_r['ticket_category'] ?? 0),
+                                ];
+                            }
+                            $_group_meta[$_lbl]['count']++;
+                        }
+
+                        $current_group_cat = null;
+                        $group_index = 0;
+
+                        foreach ($_all_rows as $row) {
                             $ticket_id = intval($row['ticket_id']);
                             $ticket_prefix = nullable_htmlentities($row['ticket_prefix']);
                             $ticket_number = intval($row['ticket_number']);
@@ -101,17 +145,12 @@
                             }
 
                             $project_id = intval($row['ticket_project_id']);
-
                             $client_id = intval($row['ticket_client_id']);
                             $client_name = nullable_htmlentities($row['client_name']);
                             $contact_id = intval($row['contact_id']);
                             $contact_name = nullable_htmlentities($row['contact_name']);
                             $contact_email = nullable_htmlentities($row['contact_email']);
-                            if ($client_id) {
-                                $has_client = "&client_id=$client_id";
-                            } else {
-                                $has_client = "";
-                            }
+                            $has_client = $client_id ? "&client_id=$client_id" : "";
 
                             if ($ticket_priority == "High") {
                                 $ticket_priority_color = "danger";
@@ -123,23 +162,39 @@
 
                             $ticket_assigned_to = intval($row['ticket_assigned_to']);
                             if (empty($ticket_assigned_to)) {
-                                if (!empty($ticket_closed_at)) {
-                                    $ticket_assigned_to_display = "<p>Unassigned</p>";
-                                } else {
-                                    $ticket_assigned_to_display = "<p class='text-muted'>Unassigned</p>";
-                                }
+                                $ticket_assigned_to_display = empty($ticket_closed_at) ? "<span class='text-muted'>Unassigned</span>" : "Unassigned";
                             } else {
                                 $ticket_assigned_to_display = nullable_htmlentities($row['user_name']);
                             }
 
-                            if (empty($contact_name)) {
-                                $contact_display = "-";
-                            } else {
-                                $contact_display = "<div><a href='contact_details.php?client_id=$client_id&contact_id=$contact_id'>$contact_name</a></div>";
-                            }
+                            $contact_display = empty($contact_name) ? "-" : "<div><a href='contact_details.php?client_id=$client_id&contact_id=$contact_id'>$contact_name</a></div>";
 
                             $ticket_invoice_id = intval($row['ticket_invoice_id']);
                             $ticket_quote_id = intval($row['ticket_quote_id']);
+                            $ticket_category_id = intval($row['ticket_category'] ?? 0);
+                            $ticket_category_name = nullable_htmlentities($row['category_name'] ?? '');
+                            $group_label = $ticket_category_name ?: 'Uncategorized';
+
+                            // Emit group header when category changes
+                            if ($group_label !== $current_group_cat) {
+                                if ($current_group_cat !== null) echo '</tbody>';
+                                $group_index++;
+                                $group_id = 'cat_group_' . $group_index;
+                                $current_group_cat = $group_label;
+                                $gcolor = $_group_meta[$group_label]['color'] ?? '#6c757d';
+                                $gcount = $_group_meta[$group_label]['count'] ?? 0;
+                                // Darken color slightly for text contrast check
+                                echo '<tbody>'
+                                   . '<tr class="ticket-group-header" data-group="' . $group_id . '" style="cursor:pointer;background:#2d2d2d;border-top:3px solid ' . htmlspecialchars($gcolor) . ';">'
+                                   . '<td colspan="99" class="py-2 px-3" style="border:none;">'
+                                   . '<i class="fas fa-chevron-down group-chevron mr-2 text-white" style="font-size:11px;transition:transform .2s;"></i>'
+                                   . '<span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:' . htmlspecialchars($gcolor) . ';vertical-align:middle;margin-right:8px;"></span>'
+                                   . '<strong class="text-white" style="font-size:13px;letter-spacing:.3px;">' . htmlspecialchars($group_label) . '</strong>'
+                                   . '<span style="display:inline-block;min-width:22px;height:22px;line-height:22px;border-radius:11px;background:' . htmlspecialchars($gcolor) . ';color:#fff;font-size:11px;font-weight:700;text-align:center;padding:0 7px;margin-left:10px;vertical-align:middle;">' . $gcount . '</span>'
+                                   . '</td></tr>'
+                                   . '</tbody>';
+                                echo '<tbody class="ticket-group-body" id="' . $group_id . '">';
+                            }
 
                             // Get who last updated the ticket - to be shown in the last Response column
 
@@ -254,36 +309,140 @@
                                     </td>
                                 <?php } ?>
 
-                                <!-- Ticket Priority -->
+                                <!-- Category pill -->
                                 <td>
-                                    <a href="#"
-                                        <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) { ?>
-                                        class="ajax-modal"
-                                        data-modal-url = "modals/ticket/ticket_priority.php?id=<?= $ticket_id ?>"
-                                        <?php } ?>
-                                        >
-                                        <span class='p-2 badge badge-pill badge-<?php echo $ticket_priority_color; ?>'>
-                                            <?php echo $ticket_priority; ?>
+                                    <?php
+                                    $cat_color = ($row['category_color'] ?? '') ?: '#6c757d';
+                                    $cat_label = $ticket_category_name ?: 'Uncategorized';
+                                    if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) { ?>
+                                    <div class="dropdown">
+                                        <span class="badge badge-pill tkt-pill-badge dropdown-toggle" data-toggle="dropdown" data-boundary="window"
+                                             style="background:<?= htmlspecialchars($cat_color) ?>;color:#fff;cursor:pointer;">
+                                            <?= htmlspecialchars($cat_label) ?>
                                         </span>
-                                    </a>
+                                        <div class="dropdown-menu shadow-sm" style="min-width:180px;max-height:280px;overflow-y:auto;">
+                                            <h6 class="dropdown-header">Set Category</h6>
+                                            <a class="dropdown-item quick-cat-item <?= !$ticket_category_id ? 'active' : '' ?>"
+                                               href="#" data-ticket-id="<?= $ticket_id ?>" data-cat-id="0" data-cat-name="Uncategorized" data-cat-color="#6c757d">
+                                               <span class="badge badge-pill mr-2" style="background:#6c757d;color:#fff;">None</span>Uncategorized
+                                            </a>
+                                            <div class="dropdown-divider"></div>
+                                            <?php foreach ($_cat_groups as $_g) {
+                                                $_gid = intval($_g['category_id']);
+                                                $_gname = nullable_htmlentities($_g['category_name']);
+                                                $_gcolor = $_g['category_color'] ?? '#6c757d';
+                                                if (isset($_cat_subs[$_gid])) {
+                                                    echo '<h6 class="dropdown-header">' . $_gname . '</h6>';
+                                                    foreach ($_cat_subs[$_gid] as $_s) {
+                                                        $active = intval($_s['category_id']) === $ticket_category_id ? ' active' : '';
+                                                        echo '<a class="dropdown-item quick-cat-item' . $active . '" href="#" data-ticket-id="' . $ticket_id . '" data-cat-id="' . intval($_s['category_id']) . '" data-cat-name="' . nullable_htmlentities($_s['category_name']) . '" data-cat-color="' . htmlspecialchars($_gcolor) . '">'
+                                                           . '<span class="badge badge-pill mr-2" style="background:' . htmlspecialchars($_gcolor) . ';color:#fff;">&nbsp;</span>' . nullable_htmlentities($_s['category_name'])
+                                                           . '</a>';
+                                                    }
+                                                } else {
+                                                    $active = $_gid === $ticket_category_id ? ' active' : '';
+                                                    echo '<a class="dropdown-item quick-cat-item' . $active . '" href="#" data-ticket-id="' . $ticket_id . '" data-cat-id="' . $_gid . '" data-cat-name="' . $_gname . '" data-cat-color="' . htmlspecialchars($_gcolor) . '">'
+                                                       . '<span class="badge badge-pill mr-2" style="background:' . htmlspecialchars($_gcolor) . ';color:#fff;">&nbsp;</span>' . $_gname
+                                                       . '</a>';
+                                                }
+                                            } ?>
+                                        </div>
+                                    </div>
+                                    <?php } else { ?>
+                                    <span class="badge badge-pill tkt-pill-badge" style="background:<?= htmlspecialchars($cat_color) ?>;color:#fff;">
+                                        <?= htmlspecialchars($cat_label) ?>
+                                    </span>
+                                    <?php } ?>
+                                </td>
+
+                                <!-- Priority -->
+                                <td>
+                                    <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) { ?>
+                                    <div class="dropdown">
+                                        <span class="badge badge-pill tkt-pill-badge badge-<?= $ticket_priority_color ?> dropdown-toggle"
+                                              data-toggle="dropdown" data-boundary="window" style="cursor:pointer;">
+                                            <?= $ticket_priority ?>
+                                        </span>
+                                        <div class="dropdown-menu shadow-sm" style="min-width:120px;">
+                                            <h6 class="dropdown-header">Set Priority</h6>
+                                            <?php foreach (['Low'=>'info','Medium'=>'warning','High'=>'danger'] as $_p=>$_pc) {
+                                                $active = $ticket_priority === $_p ? ' active' : '';
+                                                echo '<a class="dropdown-item quick-priority-item' . $active . '" href="#" data-ticket-id="' . $ticket_id . '" data-priority="' . $_p . '" data-color="' . $_pc . '">'
+                                                   . '<span class="badge badge-pill badge-' . $_pc . ' mr-2">&nbsp;</span>' . $_p
+                                                   . '</a>';
+                                            } ?>
+                                        </div>
+                                    </div>
+                                    <?php } else { ?>
+                                    <span class="badge badge-pill tkt-pill-badge badge-<?= $ticket_priority_color ?>">
+                                        <?= $ticket_priority ?>
+                                    </span>
+                                    <?php } ?>
                                 </td>
 
                                 <!-- Ticket Status -->
                                 <td>
-                                    <span class='badge badge-pill text-light p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span>
-                                    <?php if (isset ($ticket_scheduled_for)) { echo "<div class='mt-1'> <small class='text-secondary'> $ticket_scheduled_for </small></div>"; } ?>
+                                    <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) { ?>
+                                    <div class="dropdown">
+                                        <span class="badge badge-pill tkt-pill-badge text-light dropdown-toggle"
+                                              style="background-color:<?= $ticket_status_color ?>;cursor:pointer;"
+                                              data-toggle="dropdown" data-boundary="window">
+                                            <?= $ticket_status_name ?>
+                                        </span>
+                                        <div class="dropdown-menu shadow-sm" style="min-width:160px;max-height:260px;overflow-y:auto;">
+                                            <h6 class="dropdown-header">Set Status</h6>
+                                            <?php foreach ($_statuses_list as $_st) {
+                                                $active = intval($_st['ticket_status_id']) === $ticket_status_id ? ' active' : '';
+                                                echo '<a class="dropdown-item quick-status-item' . $active . '" href="#" data-ticket-id="' . $ticket_id . '" data-status-id="' . intval($_st['ticket_status_id']) . '" data-status-name="' . nullable_htmlentities($_st['ticket_status_name']) . '" data-status-color="' . htmlspecialchars($_st['ticket_status_color']) . '">'
+                                                   . '<span class="badge badge-pill mr-2" style="background:' . htmlspecialchars($_st['ticket_status_color']) . ';color:#fff;">&nbsp;</span>' . nullable_htmlentities($_st['ticket_status_name'])
+                                                   . '</a>';
+                                            } ?>
+                                        </div>
+                                    </div>
+                                    <?php } else { ?>
+                                    <span class="badge badge-pill tkt-pill-badge text-light" style="background-color:<?= $ticket_status_color ?>">
+                                        <?= $ticket_status_name ?>
+                                    </span>
+                                    <?php } ?>
+                                    <?php if (isset($ticket_scheduled_for)) { echo "<div class='mt-1'><small class='text-secondary'>$ticket_scheduled_for</small></div>"; } ?>
                                 </td>
 
-                                <!-- Ticket Assigned agent -->
+                                <!-- Assigned agent pill -->
                                 <td>
-                                    <a href="#"
-                                        <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) { ?>
-                                        class="ajax-modal"
-                                        data-modal-url="modals/ticket/ticket_assign.php?id=<?= $ticket_id ?>"
-                                        <?php } ?>
-                                        >
-                                        <?php echo $ticket_assigned_to_display; ?>
-                                    </a>
+                                    <?php
+                                    $agent_name_raw = $ticket_assigned_to ? ($row['user_name'] ?? '') : '';
+                                    $agent_label = $agent_name_raw ?: 'Unassigned';
+                                    $agent_colors = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c','#e67e22','#34495e','#c0392b','#16a085'];
+                                    $agent_color = $ticket_assigned_to ? $agent_colors[$ticket_assigned_to % count($agent_colors)] : '#adb5bd';
+                                    if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) { ?>
+                                    <div class="dropdown">
+                                        <span class="badge badge-pill tkt-pill-badge dropdown-toggle" data-toggle="dropdown" data-boundary="window"
+                                             style="background:<?= $agent_color ?>;color:#fff;cursor:pointer;">
+                                            <?= htmlspecialchars($agent_label) ?>
+                                        </span>
+                                        <div class="dropdown-menu shadow-sm" style="min-width:160px;">
+                                            <h6 class="dropdown-header">Assign To</h6>
+                                            <a class="dropdown-item quick-assign-item <?= !$ticket_assigned_to ? 'active' : '' ?>"
+                                               href="#" data-ticket-id="<?= $ticket_id ?>" data-user-id="0" data-user-name="Unassigned" data-user-color="#adb5bd">
+                                               <span class="badge badge-pill mr-2" style="background:#adb5bd;color:#fff;">&nbsp;</span>Unassigned
+                                            </a>
+                                            <div class="dropdown-divider"></div>
+                                            <?php foreach ($_techs_list as $_t) {
+                                                $_uid = intval($_t['user_id']);
+                                                $_uname = nullable_htmlentities($_t['user_name']);
+                                                $_ucolor = $agent_colors[$_uid % count($agent_colors)];
+                                                $active = $_uid === $ticket_assigned_to ? ' active' : '';
+                                                echo '<a class="dropdown-item quick-assign-item' . $active . '" href="#" data-ticket-id="' . $ticket_id . '" data-user-id="' . $_uid . '" data-user-name="' . $_uname . '" data-user-color="' . $_ucolor . '">'
+                                                   . '<span class="badge badge-pill mr-2" style="background:' . $_ucolor . ';color:#fff;">&nbsp;</span>' . $_uname
+                                                   . '</a>';
+                                            } ?>
+                                        </div>
+                                    </div>
+                                    <?php } else { ?>
+                                    <span class="badge badge-pill tkt-pill-badge" style="background:<?= $agent_color ?>;color:#fff;">
+                                        <?= htmlspecialchars($agent_label) ?>
+                                    </span>
+                                    <?php } ?>
                                 </td>
 
                                 <!-- Ticket Last Response -->
@@ -305,13 +464,119 @@
 
                             <?php
                         }
-
+                        // Close the last group tbody
+                        if ($current_group_cat !== null) echo '</tbody>';
+                        else echo '<tbody></tbody>';
                         ?>
 
-                        </tbody>
                     </table>
                 </div>
             </form>
             <?php require_once "../includes/filter_footer.php"; ?>
         </div>
     </div>
+
+<style>
+.tkt-pill-badge {
+    font-size: 13px; font-weight: 600; padding: 6px 14px;
+    white-space: nowrap; cursor: pointer; user-select: none;
+}
+.tkt-pill-badge.dropdown-toggle::after { display: none; }
+.ticket-group-header td { border: none !important; }
+</style>
+
+<script>
+// Category group collapse/expand
+$(document).on('click', '.ticket-group-header', function(e) {
+    if ($(e.target).closest('.dropdown').length) return;
+    var groupId = $(this).data('group');
+    var $body = $('#' + groupId);
+    var $chevron = $(this).find('.group-chevron');
+    $body.toggle();
+    $chevron.css('transform', $body.is(':visible') ? 'rotate(0deg)' : 'rotate(-90deg)');
+});
+
+// Category dropdown item click
+$(document).on('click', '.quick-cat-item', function(e) {
+    e.preventDefault();
+    var $item = $(this);
+    var ticketId = $item.data('ticket-id');
+    var catId = $item.data('cat-id');
+    var catName = $item.data('cat-name');
+    var catColor = $item.data('cat-color');
+    var $pill = $item.closest('.dropdown').find('.tkt-pill-badge');
+    var csrf = $('input[name="csrf_token"]').first().val();
+
+    $pill.css('opacity', '0.5');
+    $.post('post.php', { quick_categorize_ticket: 1, ticket_id: ticketId, category_id: catId, csrf_token: csrf }, function(res) {
+        if (res.ok) {
+            $pill.css({'opacity':'1', 'background': catColor}).text(catName);
+            $item.closest('.dropdown-menu').find('.active').removeClass('active');
+            $item.addClass('active');
+            setTimeout(function() { location.reload(); }, 600);
+        }
+    }, 'json').fail(function(){ $pill.css('opacity','1'); });
+});
+
+// Priority dropdown item click
+$(document).on('click', '.quick-priority-item', function(e) {
+    e.preventDefault();
+    var $item = $(this);
+    var ticketId = $item.data('ticket-id');
+    var priority = $item.data('priority');
+    var color = $item.data('color');
+    var $pill = $item.closest('.dropdown').find('.tkt-pill-badge');
+    var csrf = $('input[name="csrf_token"]').first().val();
+
+    $pill.css('opacity', '0.5');
+    $.post('post.php', { quick_priority_ticket: 1, ticket_id: ticketId, priority: priority, csrf_token: csrf }, function(res) {
+        if (res.ok) {
+            $pill.css('opacity','1').removeClass('badge-info badge-warning badge-danger').addClass('badge-' + color).text(priority);
+            $item.closest('.dropdown-menu').find('.active').removeClass('active');
+            $item.addClass('active');
+        }
+    }, 'json').fail(function(){ $pill.css('opacity','1'); });
+});
+
+// Status dropdown item click
+$(document).on('click', '.quick-status-item', function(e) {
+    e.preventDefault();
+    var $item = $(this);
+    var ticketId = $item.data('ticket-id');
+    var statusId = $item.data('status-id');
+    var statusName = $item.data('status-name');
+    var statusColor = $item.data('status-color');
+    var $pill = $item.closest('.dropdown').find('.tkt-pill-badge');
+    var csrf = $('input[name="csrf_token"]').first().val();
+
+    $pill.css('opacity', '0.5');
+    $.post('post.php', { quick_status_ticket: 1, ticket_id: ticketId, ticket_status_id: statusId, csrf_token: csrf }, function(res) {
+        if (res.ok) {
+            $pill.css({'opacity':'1', 'background-color': statusColor}).text(statusName);
+            $item.closest('.dropdown-menu').find('.active').removeClass('active');
+            $item.addClass('active');
+        }
+    }, 'json').fail(function(){ $pill.css('opacity','1'); });
+});
+
+// Assign dropdown item click
+$(document).on('click', '.quick-assign-item', function(e) {
+    e.preventDefault();
+    var $item = $(this);
+    var ticketId = $item.data('ticket-id');
+    var userId = $item.data('user-id');
+    var userName = $item.data('user-name');
+    var userColor = $item.data('user-color');
+    var $pill = $item.closest('.dropdown').find('.tkt-pill-badge');
+    var csrf = $('input[name="csrf_token"]').first().val();
+
+    $pill.css('opacity', '0.5');
+    $.post('post.php', { quick_assign_ticket: 1, ticket_id: ticketId, assigned_to: userId, csrf_token: csrf }, function(res) {
+        if (res.ok) {
+            $pill.css({'opacity':'1', 'background': userColor}).text(userName);
+            $item.closest('.dropdown-menu').find('.active').removeClass('active');
+            $item.addClass('active');
+        }
+    }, 'json').fail(function(){ $pill.css('opacity','1'); });
+});
+</script>

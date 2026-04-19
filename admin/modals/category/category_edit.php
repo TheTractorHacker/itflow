@@ -11,6 +11,7 @@ $category_name = nullable_htmlentities($row['category_name']);
 $category_description = nullable_htmlentities($row['category_description']);
 $category_color = nullable_htmlentities($row['category_color']);
 $category_type = nullable_htmlentities($row['category_type']);
+$category_parent = intval($row['category_parent']);
 
 // Generate the HTML form content using output buffering.
 ob_start();
@@ -26,6 +27,24 @@ ob_start();
     <input type="hidden" name="category_id" value="<?php echo $category_id; ?>">
     <input type="hidden" name="type" value="<?php echo $category_type; ?>">
     <div class="modal-body">
+
+        <?php if ($category_type === 'Ticket') { ?>
+        <div class="form-group">
+            <label>Group <small class="text-muted">(leave blank = this is a group itself)</small></label>
+            <div class="input-group">
+                <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-fw fa-layer-group"></i></span></div>
+                <select class="form-control select2" name="category_parent">
+                    <option value="0">— New Group / Ungrouped —</option>
+                    <?php
+                    $sql_groups = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_parent = 0 AND category_archived_at IS NULL AND category_id != $category_id ORDER BY category_name");
+                    while ($g = mysqli_fetch_assoc($sql_groups)) echo "<option value=\"{$g['category_id']}\"" . ($category_parent == $g['category_id'] ? ' selected' : '') . ">" . nullable_htmlentities($g['category_name']) . "</option>";
+                    ?>
+                </select>
+            </div>
+        </div>
+        <?php } else { ?>
+        <input type="hidden" name="category_parent" value="0">
+        <?php } ?>
 
         <div class="form-group">
             <label>Name <strong class="text-danger">*</strong></label>

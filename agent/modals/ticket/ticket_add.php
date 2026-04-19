@@ -160,15 +160,7 @@ ob_start();
                                 <select class="form-control select2" name="category_id">
                                     <option value="0">- Not Categorized -</option>
                                     <?php
-                                    $sql_categories = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_archived_at IS NULL ORDER BY category_name ASC");
-                                    while ($row = mysqli_fetch_assoc($sql_categories)) {
-                                        $category_id = intval($row['category_id']);
-                                        $category_name = nullable_htmlentities($row['category_name']);
-
-                                        ?>
-                                        <option value="<?php echo $category_id; ?>"><?php echo $category_name; ?></option>
-                                    <?php } ?>
-
+                                    echo ticketCategoryOptions($mysqli);
                                 </select>
                                 <div class="input-group-append">
                                     <button class="btn btn-secondary ajax-modal" type="button"
@@ -223,6 +215,32 @@ ob_start();
                         </div>
                     </div>
                 </div>
+
+                <?php if ($client_id) {
+                    $sql_contracts = mysqli_query($mysqli, "SELECT contract_id, contract_name, contract_sla_low_response_time, contract_sla_low_resolution_time, contract_sla_medium_response_time, contract_sla_medium_resolution_time, contract_sla_high_response_time, contract_sla_high_resolution_time FROM contracts WHERE contract_client_id = $client_id AND contract_archived_at IS NULL AND contract_status = 'Active' ORDER BY contract_name");
+                    if (mysqli_num_rows($sql_contracts) > 0) { ?>
+                <div class="form-group">
+                    <label>Contract / SLA</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-fw fa-file-contract"></i></span></div>
+                        <select class="form-control select2" name="contract_id" id="ticketContractSelect">
+                            <option value="0" data-sla="{}">- No Contract -</option>
+                            <?php while ($cr = mysqli_fetch_assoc($sql_contracts)) {
+                                $sla = json_encode([
+                                    'low_r'  => intval($cr['contract_sla_low_response_time']),
+                                    'low_res'=> intval($cr['contract_sla_low_resolution_time']),
+                                    'med_r'  => intval($cr['contract_sla_medium_response_time']),
+                                    'med_res'=> intval($cr['contract_sla_medium_resolution_time']),
+                                    'hi_r'   => intval($cr['contract_sla_high_response_time']),
+                                    'hi_res' => intval($cr['contract_sla_high_resolution_time']),
+                                ]);
+                                echo "<option value=\"{$cr['contract_id']}\" data-sla='" . htmlspecialchars($sla, ENT_QUOTES) . "'>" . nullable_htmlentities($cr['contract_name']) . "</option>";
+                            } ?>
+                        </select>
+                    </div>
+                    <small id="slaHint" class="form-text text-muted"></small>
+                </div>
+                <?php } } ?>
 
                 <?php if ($config_module_enable_accounting) { ?>
                 <div class="form-group">
@@ -463,6 +481,26 @@ ob_start();
         <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
     </div>
 </form>
+
+<!-- SLA hint -->
+<script>
+function updateSlaHint() {
+    var $contract = $('#ticketContractSelect');
+    var $priority = $('select[name="priority"]');
+    if (!$contract.length) return;
+    var sla = {};
+    try { sla = JSON.parse($contract.find(':selected').attr('data-sla') || '{}'); } catch(e) {}
+    var p = ($priority.val() || '').toLowerCase();
+    var rKey = p === 'low' ? 'low_r' : (p === 'medium' ? 'med_r' : 'hi_r');
+    var resKey = p === 'low' ? 'low_res' : (p === 'medium' ? 'med_res' : 'hi_res');
+    var r = sla[rKey], res = sla[resKey];
+    var hint = '';
+    if (r) hint += 'Response: <strong>' + r + 'h</strong>';
+    if (res) hint += (hint ? ' &nbsp;|&nbsp; ' : '') + 'Resolution: <strong>' + res + 'h</strong>';
+    $('#slaHint').html(hint ? '<i class="fas fa-stopwatch mr-1"></i>' + hint : '');
+}
+$(document).on('change', '#ticketContractSelect, select[name="priority"]', updateSlaHint);
+</script>
 
 <!-- Ticket Templates -->
 <script>

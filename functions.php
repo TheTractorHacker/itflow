@@ -2073,3 +2073,41 @@ function formatDuration($time) {
 
     return implode(' ', $parts);
 }
+
+function ticketCategoryOptions($mysqli, $selected = 0) {
+    $out = '';
+    $sql_groups = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_parent = 0 AND category_archived_at IS NULL ORDER BY category_name ASC");
+    $groups = [];
+    while ($g = mysqli_fetch_assoc($sql_groups)) $groups[] = $g;
+
+    $sql_subs = mysqli_query($mysqli, "SELECT category_id, category_name, category_parent FROM categories WHERE category_type = 'Ticket' AND category_parent > 0 AND category_archived_at IS NULL ORDER BY category_name ASC");
+    $subs = [];
+    while ($s = mysqli_fetch_assoc($sql_subs)) $subs[intval($s['category_parent'])][] = $s;
+
+    foreach ($groups as $g) {
+        $gid = intval($g['category_id']);
+        $gname = nullable_htmlentities($g['category_name']);
+        if (isset($subs[$gid])) {
+            $out .= "<optgroup label=\"$gname\">";
+            foreach ($subs[$gid] as $s) {
+                $sel = intval($s['category_id']) == $selected ? ' selected' : '';
+                $out .= "<option value=\"{$s['category_id']}\"$sel>" . nullable_htmlentities($s['category_name']) . "</option>";
+            }
+            $out .= "</optgroup>";
+        } else {
+            $sel = $gid == $selected ? ' selected' : '';
+            $out .= "<option value=\"$gid\"$sel>$gname</option>";
+        }
+    }
+    // Orphaned sub-categories (parent archived/missing)
+    $all_group_ids = array_column($groups, 'category_id');
+    foreach ($subs as $pid => $children) {
+        if (!in_array($pid, $all_group_ids)) {
+            foreach ($children as $s) {
+                $sel = intval($s['category_id']) == $selected ? ' selected' : '';
+                $out .= "<option value=\"{$s['category_id']}\"$sel>" . nullable_htmlentities($s['category_name']) . "</option>";
+            }
+        }
+    }
+    return $out;
+}
