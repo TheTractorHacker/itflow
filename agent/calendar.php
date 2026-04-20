@@ -112,55 +112,44 @@ if (isset($_GET['calendar_id'])) {
         </div>
 
         <!-- Outlook / Calendar Sync -->
+        <?php
+        // Stable per-user calendar token — HMAC of user_id with installation_id as key
+        $cal_token  = hash_hmac('sha256', $session_user_id, $installation_id);
+        $feed_url   = "https://$config_base_url/agent/calendar_feed.php?token=$cal_token";
+        $webcal_url = "webcal://$config_base_url/agent/calendar_feed.php?token=$cal_token";
+        ?>
         <div class="card">
             <div class="card-header bg-dark">
                 <h3 class="card-title"><i class="fas fa-sync-alt mr-1"></i>Calendar Sync</h3>
             </div>
             <div class="card-body p-3">
-                <?php if ($session_token) {
-                    $feed_url   = "https://$config_base_url/agent/calendar_feed.php?token=$session_token";
-                    $webcal_url = "webcal://$config_base_url/agent/calendar_feed.php?token=$session_token";
-                ?>
-                <p class="text-muted mb-2" style="font-size:.85rem;">Your scheduled tickets, synced to any calendar app.</p>
+                <p class="text-muted mb-3" style="font-size:.85rem;">Subscribe to your scheduled tickets in any calendar app. Refreshes automatically.</p>
 
                 <!-- Outlook Classic -->
-                <div class="mb-3">
-                    <small class="font-weight-bold text-uppercase text-muted d-block mb-1" style="letter-spacing:.4px;font-size:.75rem;"><i class="fas fa-envelope mr-1"></i>Outlook (Classic)</small>
-                    <div class="input-group input-group-sm mb-1">
-                        <input type="text" class="form-control" id="cal_webcal_url" value="<?= htmlspecialchars($webcal_url, ENT_QUOTES) ?>" readonly>
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="button"
-                                onclick="var el=document.getElementById('cal_webcal_url');el.select();document.execCommand('copy');this.innerHTML='<i class=\'fas fa-check\'></i> Copied!';setTimeout(()=>this.innerHTML='Copy',2000);">Copy</button>
-                        </div>
+                <p class="mb-1"><strong><i class="fas fa-envelope mr-1"></i>Outlook (Classic)</strong></p>
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" class="form-control" id="cal_webcal_url" value="<?= htmlspecialchars($webcal_url, ENT_QUOTES) ?>" readonly>
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary copy-btn" type="button" data-target="cal_webcal_url">Copy</button>
                     </div>
-                    <small class="text-muted">Calendar → Open Calendar → From Internet → paste URL above</small>
                 </div>
+                <p class="text-muted mb-3" style="font-size:.8rem;">Calendar &rarr; Open Calendar &rarr; From Internet &rarr; paste above</p>
 
                 <!-- Apple / Outlook New -->
-                <div class="mb-3">
-                    <small class="font-weight-bold text-uppercase text-muted d-block mb-1" style="letter-spacing:.4px;font-size:.75rem;"><i class="fab fa-apple mr-1"></i>Apple Calendar / Outlook (New)</small>
-                    <a href="<?= htmlspecialchars($webcal_url, ENT_QUOTES) ?>" class="btn btn-sm btn-outline-primary btn-block">
-                        <i class="fas fa-calendar-plus mr-1"></i>Subscribe Now
-                    </a>
-                </div>
+                <p class="mb-1"><strong><i class="fab fa-apple mr-1"></i>Apple / Outlook (New)</strong></p>
+                <a href="<?= htmlspecialchars($webcal_url, ENT_QUOTES) ?>" class="btn btn-sm btn-outline-primary btn-block mb-3">
+                    <i class="fas fa-calendar-plus mr-1"></i>Subscribe Now
+                </a>
 
                 <!-- Google Calendar -->
-                <div>
-                    <small class="font-weight-bold text-uppercase text-muted d-block mb-1" style="letter-spacing:.4px;font-size:.75rem;"><i class="fab fa-google mr-1"></i>Google Calendar</small>
-                    <div class="input-group input-group-sm mb-1">
-                        <input type="text" class="form-control" id="cal_https_url" value="<?= htmlspecialchars($feed_url, ENT_QUOTES) ?>" readonly>
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="button"
-                                onclick="var el=document.getElementById('cal_https_url');el.select();document.execCommand('copy');this.innerHTML='<i class=\'fas fa-check\'></i> Copied!';setTimeout(()=>this.innerHTML='Copy',2000);">Copy</button>
-                        </div>
+                <p class="mb-1"><strong><i class="fab fa-google mr-1"></i>Google Calendar</strong></p>
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" class="form-control" id="cal_https_url" value="<?= htmlspecialchars($feed_url, ENT_QUOTES) ?>" readonly>
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary copy-btn" type="button" data-target="cal_https_url">Copy</button>
                     </div>
-                    <small class="text-muted">Settings → Add calendar → From URL → paste URL above</small>
                 </div>
-
-                <?php } else { ?>
-                <p class="text-muted mb-2" style="font-size:.85rem;">Generate an API token in your profile to enable calendar sync.</p>
-                <a href="/agent/user/profile.php" class="btn btn-sm btn-outline-primary btn-block"><i class="fa fa-user-cog mr-1"></i>Go to Profile</a>
-                <?php } ?>
+                <p class="text-muted mb-0" style="font-size:.8rem;">Settings &rarr; Add calendar &rarr; From URL &rarr; paste above</p>
             </div>
         </div>
     </div>
@@ -460,4 +449,17 @@ while ($row = mysqli_fetch_assoc($sql)) {
         // Update the end date field
         document.getElementById("event_add_end").value = new_end;
     }
+
+    // Copy button for calendar sync URLs
+    document.querySelectorAll('.copy-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var el = document.getElementById(this.getAttribute('data-target'));
+            el.select();
+            document.execCommand('copy');
+            var orig = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            var b = this;
+            setTimeout(function() { b.innerHTML = orig; }, 2000);
+        });
+    });
 </script>

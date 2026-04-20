@@ -1,33 +1,40 @@
 <?php
 /**
  * iCal subscription feed for Outlook / Apple Calendar / Google Calendar.
- * URL: /agent/calendar_feed.php?token=USER_API_TOKEN
+ * URL: /agent/calendar_feed.php?token=HMAC_TOKEN
+ * Token = hash_hmac('sha256', user_id, installation_id)
  */
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
 
 $token = isset($_GET['token']) ? preg_replace('/[^a-zA-Z0-9]/', '', $_GET['token']) : '';
 
-if (!$token) {
+if (!$token || strlen($token) < 32) {
     http_response_code(401);
     exit('Unauthorized');
 }
 
-$token_escaped = mysqli_real_escape_string($mysqli, $token);
-$user_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+// Brute-force: check all active users whose HMAC matches the token
+$users_result = mysqli_query($mysqli,
     "SELECT user_id, user_name FROM users
-     WHERE user_token = '$token_escaped'
-       AND user_status = 1
-       AND user_archived_at IS NULL
-     LIMIT 1"
-));
+     WHERE user_status = 1 AND user_archived_at IS NULL AND user_type = 1"
+);
 
-if (!$user_row) {
+$user_id   = 0;
+$user_name = '';
+while ($u = mysqli_fetch_assoc($users_result)) {
+    $expected = hash_hmac('sha256', intval($u['user_id']), $installation_id);
+    if (hash_equals($expected, $token)) {
+        $user_id   = intval($u['user_id']);
+        $user_name = $u['user_name'];
+        break;
+    }
+}
+
+if (!$user_id) {
     http_response_code(401);
     exit('Unauthorized');
 }
-
-$user_id   = intval($user_row['user_id']);
 $user_name = $user_row['user_name'];
 
 // Fetch this user's scheduled tickets (upcoming + past 30 days)
