@@ -640,6 +640,24 @@ if ($user_config_dashboard_technical_enable == 1) {
     $sql_top_techs = mysqli_query($mysqli, "SELECT user_name, COUNT(ticket_id) AS c FROM tickets LEFT JOIN users ON ticket_assigned_to = user_id WHERE ticket_closed_at IS NULL AND ticket_assigned_to > 0 GROUP BY user_name ORDER BY c DESC LIMIT 8");
     $tech_rows = [];
     while ($r = mysqli_fetch_assoc($sql_top_techs)) $tech_rows[] = $r;
+
+    // Historical ticket metrics for selected year
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE YEAR(ticket_created_at) = $year"));
+    $tickets_created_year = intval($r['c']);
+
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE ticket_closed_at IS NOT NULL AND YEAR(ticket_closed_at) = $year"));
+    $tickets_resolved_year = intval($r['c']);
+
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ROUND(AVG(TIMESTAMPDIFF(HOUR, ticket_created_at, ticket_closed_at)),1) AS avg_h FROM tickets WHERE ticket_closed_at IS NOT NULL AND YEAR(ticket_closed_at) = $year"));
+    $avg_resolution_hours = floatval($r['avg_h']);
+
+    // Resolved by technician for selected year
+    $sql_resolved_by_tech = mysqli_query($mysqli, "SELECT user_name, COUNT(ticket_id) AS c FROM tickets LEFT JOIN users ON ticket_assigned_to = user_id WHERE ticket_closed_at IS NOT NULL AND YEAR(ticket_closed_at) = $year AND ticket_assigned_to > 0 GROUP BY user_name ORDER BY c DESC LIMIT 8");
+    $resolved_tech_rows = [];
+    while ($r = mysqli_fetch_assoc($sql_resolved_by_tech)) $resolved_tech_rows[] = $r;
+
+    // Recently resolved tickets
+    $sql_recent_resolved = mysqli_query($mysqli, "SELECT tickets.ticket_id, ticket_subject, ticket_prefix, ticket_number, ticket_closed_at, ticket_priority, client_name, ticket_client_id, ticket_status_name, ticket_status_color FROM tickets LEFT JOIN clients ON ticket_client_id = client_id LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id WHERE ticket_closed_at IS NOT NULL ORDER BY ticket_closed_at DESC LIMIT 10");
 ?>
 
 <div class="card card-body">
@@ -854,6 +872,117 @@ if ($user_config_dashboard_technical_enable == 1) {
         </div>
         <?php } ?>
     </div> <!-- ticket charts row -->
+
+    <!-- Past / Historical Ticket Metrics -->
+    <div class="row">
+        <div class="col-12">
+            <h5 class="mt-2 mb-3 text-muted"><i class="fas fa-fw fa-history mr-2"></i>Historical Tickets (<?php echo $year; ?>)</h5>
+        </div>
+
+        <div class="col-lg-4 col-6">
+            <a class="small-box bg-secondary" href="tickets.php">
+                <div class="inner">
+                    <h3><?php echo $tickets_created_year; ?></h3>
+                    <p>Created in <?php echo $year; ?></p>
+                </div>
+                <div class="icon"><i class="fa fa-ticket-alt"></i></div>
+            </a>
+        </div>
+
+        <div class="col-lg-4 col-6">
+            <a class="small-box bg-success" href="tickets.php">
+                <div class="inner">
+                    <h3><?php echo $tickets_resolved_year; ?></h3>
+                    <p>Resolved in <?php echo $year; ?></p>
+                </div>
+                <div class="icon"><i class="fa fa-check-double"></i></div>
+            </a>
+        </div>
+
+        <div class="col-lg-4 col-6">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3><?php echo $avg_resolution_hours > 0 ? $avg_resolution_hours . 'h' : 'N/A'; ?></h3>
+                    <p>Avg Resolution Time</p>
+                </div>
+                <div class="icon"><i class="fa fa-stopwatch"></i></div>
+            </div>
+        </div>
+
+        <?php if ($resolved_tech_rows) { ?>
+        <div class="col-lg-6">
+            <div class="card card-dark mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-fw fa-user-check mr-2"></i>Resolved by Technician (<?php echo $year; ?>)</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <?php foreach ($resolved_tech_rows as $tr) { ?>
+                            <tr>
+                                <td><?= nullable_htmlentities($tr['user_name']) ?></td>
+                                <td>
+                                    <div class="progress" style="height:18px;">
+                                        <div class="progress-bar bg-success" style="width:<?= min(100, round($tr['c'] / max(1, $tickets_resolved_year) * 100)) ?>%">
+                                            <?= intval($tr['c']) ?>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php } ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php } ?>
+
+        <div class="col-lg-6">
+            <div class="card card-dark mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-fw fa-check-circle mr-2"></i>Recently Resolved</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Subject</th>
+                                <th>Client</th>
+                                <th>Resolved</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while ($rr = mysqli_fetch_assoc($sql_recent_resolved)) {
+                                $rr_tid = intval($rr['ticket_id']);
+                                $rr_cid = intval($rr['ticket_client_id']);
+                                $rr_prefix = nullable_htmlentities($rr['ticket_prefix']);
+                                $rr_num = intval($rr['ticket_number']);
+                                $rr_subj = nullable_htmlentities($rr['ticket_subject']);
+                                $rr_client = nullable_htmlentities($rr['client_name']);
+                                $rr_closed = timeAgo($rr['ticket_closed_at']);
+                                $rr_prio = $rr['ticket_priority'];
+                                $rr_pcolor = $rr_prio === 'High' ? 'danger' : ($rr_prio === 'Medium' ? 'warning' : 'info');
+                            ?>
+                            <tr>
+                                <td><a href="ticket.php?ticket_id=<?= $rr_tid ?>&client_id=<?= $rr_cid ?>"><?= $rr_prefix . $rr_num ?></a></td>
+                                <td><a href="ticket.php?ticket_id=<?= $rr_tid ?>&client_id=<?= $rr_cid ?>"><?= $rr_subj ?></a></td>
+                                <td><?= $rr_client ?></td>
+                                <td><?= $rr_closed ?></td>
+                            </tr>
+                            <?php } ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div> <!-- historical row -->
 
     <?php if ($your_tickets) { ?>
         <div class="row">
