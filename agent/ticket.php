@@ -643,7 +643,15 @@ if (isset($_GET['ticket_id'])) {
                             </div>
 
                             <div class="form-group">
+                                <div id="ticket-reply-draft-banner" class="alert alert-warning mb-2" style="display:none;border-radius:6px;padding:8px 14px;align-items:center;justify-content:space-between;">
+                                    <span><i class="fas fa-history mr-2"></i>You have an unsaved draft for this ticket.</span>
+                                    <div>
+                                        <button type="button" id="draft-restore-btn" class="btn btn-sm btn-warning mr-2">Restore Draft</button>
+                                        <button type="button" id="draft-discard-btn" class="btn btn-sm btn-outline-secondary">Discard</button>
+                                    </div>
+                                </div>
                                 <textarea
+                                    id="ticket-reply-editor"
                                     class="form-control tinymceTicket" name="ticket_reply"
                                     placeholder="Type a response">
                                 </textarea>
@@ -1607,7 +1615,8 @@ require_once "../includes/footer.php";
 
 <script src="/plugins/SortableJS/Sortable.min.js"></script>
 <script>
-new Sortable(document.querySelector('table#tasks tbody'), {
+var _tasksTbody = document.querySelector('table#tasks tbody');
+if (_tasksTbody) new Sortable(_tasksTbody, {
     handle: '.drag-handle',
     animation: 150,
     onEnd: function (evt) {
@@ -1628,6 +1637,46 @@ new Sortable(document.querySelector('table#tasks tbody'), {
 </script>
 
 <script>
+// Ticket reply draft autosave
+(function() {
+    var draftKey = 'ticket_draft_<?= $ticket_id ?>';
+    var $banner  = $('#ticket-reply-draft-banner');
+    var saved    = localStorage.getItem(draftKey);
+
+    // Show restore banner if draft exists
+    if (saved && saved.trim() !== '' && saved.trim() !== '<p></p>') {
+        $banner.css('display', 'flex');
+        $('#draft-restore-btn').on('click', function() {
+            tinymce.get('ticket-reply-editor').setContent(saved);
+            $banner.hide();
+        });
+        $('#draft-discard-btn').on('click', function() {
+            localStorage.removeItem(draftKey);
+            $banner.hide();
+        });
+    }
+
+    // Save every 3 seconds if content changed
+    var lastSaved = '';
+    setInterval(function() {
+        var ed = tinymce.get('ticket-reply-editor');
+        if (!ed) return;
+        var content = ed.getContent();
+        if (content === lastSaved) return;
+        lastSaved = content;
+        if (content.trim() !== '' && content.trim() !== '<p></p>') {
+            localStorage.setItem(draftKey, content);
+        } else {
+            localStorage.removeItem(draftKey);
+        }
+    }, 3000);
+
+    // Clear on submit
+    $('form').on('submit', function() {
+        localStorage.removeItem(draftKey);
+    });
+})();
+
 // Inline quick-assign on ticket detail
 $(document).on('change', '#quickAssignSelect', function() {
     var $sel = $(this);

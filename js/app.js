@@ -233,6 +233,7 @@ $(document).ready(function() {
                         editor.setDirty(false);
                     });
                 }
+
             });
 
             var rewordButtonApi;
