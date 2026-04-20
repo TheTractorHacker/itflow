@@ -7,6 +7,11 @@
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
 
+// Load the configured timezone from ITFlow settings
+$tz_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_timezone FROM settings WHERE company_id = 1 LIMIT 1"));
+$tz_id  = ($tz_row && $tz_row['config_timezone']) ? $tz_row['config_timezone'] : 'America/Chicago';
+date_default_timezone_set($tz_id);
+
 $token = isset($_GET['token']) ? preg_replace('/[^a-zA-Z0-9]/', '', $_GET['token']) : '';
 
 if (!$token || strlen($token) < 32) {
@@ -14,7 +19,7 @@ if (!$token || strlen($token) < 32) {
     exit('Unauthorized');
 }
 
-// Brute-force: check all active users whose HMAC matches the token
+// Verify HMAC token against all active users
 $users_result = mysqli_query($mysqli,
     "SELECT user_id, user_name FROM users
      WHERE user_status = 1 AND user_archived_at IS NULL AND user_type = 1"
@@ -35,10 +40,9 @@ if (!$user_id) {
     http_response_code(401);
     exit('Unauthorized');
 }
-$user_name = $user_row['user_name'];
 
 // Fetch this user's scheduled tickets (upcoming + past 30 days)
-$cutoff = gmdate('Y-m-d H:i:s', strtotime('-30 days'));
+$cutoff = date('Y-m-d H:i:s', strtotime('-30 days'));
 $result = mysqli_query($mysqli,
     "SELECT t.ticket_id, t.ticket_prefix, t.ticket_number, t.ticket_subject,
             t.ticket_schedule, t.ticket_schedule_end, t.ticket_appointment_notes,
@@ -56,22 +60,20 @@ $result = mysqli_query($mysqli,
      ORDER BY t.ticket_schedule ASC"
 );
 
-// Helpers
+// Format DB datetime as iCal local time (no Z — TZID handles the zone)
 function ical_dt($sql_dt) {
-    // Output UTC datetime in iCal format: 20260420T171500Z
-    return gmdate('Ymd\THis\Z', strtotime($sql_dt));
+    return date('Ymd\THis', strtotime($sql_dt));
 }
 
 function ical_escape($str) {
     $str = str_replace('\\', '\\\\', $str);
-    $str = str_replace(',', '\,', $str);
-    $str = str_replace(';', '\;', $str);
-    $str = str_replace("\n", '\n', $str);
+    $str = str_replace(',',  '\,',   $str);
+    $str = str_replace(';',  '\;',   $str);
+    $str = str_replace("\n", '\n',   $str);
     return $str;
 }
 
 function ical_fold($line) {
-    // RFC 5545: lines longer than 75 octets must be folded
     $out = '';
     while (strlen($line) > 75) {
         $out .= substr($line, 0, 75) . "\r\n ";
@@ -80,8 +82,8 @@ function ical_fold($line) {
     return $out . $line . "\r\n";
 }
 
-$now_utc = gmdate('Ymd\THis\Z');
-$cal_name = ical_escape($user_name . "'s Schedule");
+$now_stamp = date('Ymd\THis');
+$cal_name  = ical_escape($user_name . "'s Schedule");
 
 $ical  = "BEGIN:VCALENDAR\r\n";
 $ical .= "VERSION:2.0\r\n";
@@ -89,31 +91,29 @@ $ical .= "PRODID:-//ITFlow//Ticket Schedule//EN\r\n";
 $ical .= "METHOD:PUBLISH\r\n";
 $ical .= "CALSCALE:GREGORIAN\r\n";
 $ical .= "X-WR-CALNAME:" . $cal_name . "\r\n";
-$ical .= "X-WR-TIMEZONE:UTC\r\n";
+$ical .= "X-WR-TIMEZONE:" . $tz_id . "\r\n";
 
 while ($row = mysqli_fetch_assoc($result)) {
-    $tid    = intval($row['ticket_id']);
-    $start  = ical_dt($row['ticket_schedule']);
-    $end    = $row['ticket_schedule_end'] ? ical_dt($row['ticket_schedule_end']) : $start;
-    $uid    = 'ticket-' . $tid . '@' . $config_base_url;
+    $tid   = intval($row['ticket_id']);
+    $start = ical_dt($row['ticket_schedule']);
+    $end   = $row['ticket_schedule_end'] ? ical_dt($row['ticket_schedule_end']) : $start;
+    $uid   = 'ticket-' . $tid . '@' . $config_base_url;
 
     $summary = $row['ticket_prefix'] . $row['ticket_number'] . ': ' . $row['ticket_subject'];
     if ($row['client_name']) $summary .= ' - ' . $row['client_name'];
 
-    $notes  = $row['ticket_appointment_notes'] ?: '';
-    $url    = 'https://' . $config_base_url . '/agent/ticket.php?ticket_id=' . $tid;
-    $desc   = $notes ? $notes . '\n' . $url : $url;
-
-    $loc    = $row['location_address'] ?: ($row['ticket_onsite'] ? 'Onsite' : 'Remote');
+    $url  = 'https://' . $config_base_url . '/agent/ticket.php?ticket_id=' . $tid;
+    $desc = ($row['ticket_appointment_notes'] ? $row['ticket_appointment_notes'] . '\n' : '') . $url;
+    $loc  = $row['location_address'] ?: ($row['ticket_onsite'] ? 'Onsite' : 'Remote');
 
     $ical .= "BEGIN:VEVENT\r\n";
     $ical .= ical_fold("UID:" . $uid);
-    $ical .= "DTSTAMP:" . $now_utc . "\r\n";
-    $ical .= "DTSTART:" . $start . "\r\n";
-    $ical .= "DTEND:" . $end . "\r\n";
-    $ical .= ical_fold("SUMMARY:" . ical_escape($summary));
+    $ical .= ical_fold("DTSTAMP;TZID=$tz_id:" . $now_stamp);
+    $ical .= ical_fold("DTSTART;TZID=$tz_id:" . $start);
+    $ical .= ical_fold("DTEND;TZID=$tz_id:" . $end);
+    $ical .= ical_fold("SUMMARY:"     . ical_escape($summary));
     $ical .= ical_fold("DESCRIPTION:" . ical_escape($desc));
-    $ical .= ical_fold("LOCATION:" . ical_escape($loc));
+    $ical .= ical_fold("LOCATION:"    . ical_escape($loc));
     $ical .= "URL:" . $url . "\r\n";
     if ($row['ticket_priority'] == 'High') $ical .= "PRIORITY:1\r\n";
     $ical .= "END:VEVENT\r\n";
