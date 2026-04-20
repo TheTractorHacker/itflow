@@ -2865,10 +2865,13 @@ if (isset($_POST['edit_ticket_schedule'])) {
 
     enforceUserPermission('module_support', 2);
 
-    $ticket_id = intval($_POST['ticket_id']);
-    $onsite = intval($_POST['onsite']);
-    $schedule = sanitizeInput($_POST['scheduled_date_time']);
-    $ticket_link = "client/ticket.php?id=$ticket_id";
+    $ticket_id       = intval($_POST['ticket_id']);
+    $onsite          = intval($_POST['onsite']);
+    $schedule        = sanitizeInput($_POST['scheduled_date_time']);
+    $schedule_end_raw= sanitizeInput($_POST['scheduled_end_time'] ?? '');
+    $appt_notes      = sanitizeInput($_POST['appointment_notes'] ?? '');
+    $schedule_end    = $schedule_end_raw ?: null;
+    $ticket_link     = "client/ticket.php?id=$ticket_id";
     $full_ticket_url = "https://$config_base_url/client/ticket.php?id=$ticket_id";
     $ticket_link_html = "<a href=\"$full_ticket_url\">$ticket_link</a>";
 
@@ -2878,8 +2881,12 @@ if (isset($_POST['edit_ticket_schedule'])) {
         enforceClientAccess();
     }
 
+    $schedule_end_sql = $schedule_end ? "'$schedule_end'" : 'NULL';
     mysqli_query($mysqli,"UPDATE tickets
-        SET ticket_schedule = '$schedule', ticket_onsite = $onsite
+        SET ticket_schedule = '$schedule',
+            ticket_schedule_end = $schedule_end_sql,
+            ticket_appointment_notes = '$appt_notes',
+            ticket_onsite = $onsite
         WHERE ticket_id = $ticket_id"
     );
 
@@ -2932,7 +2939,7 @@ if (isset($_POST['edit_ticket_schedule'])) {
 
 
     /// Create iCal event
-    $cal_str = createiCalStr($schedule, $cal_subject, $cal_description, $cal_location);
+    $cal_str = createiCalStr($schedule, $cal_subject, $cal_description, $cal_location, $schedule_end);
 
     // Notify the agent of the scheduled work
     $data[] = [
@@ -3066,7 +3073,7 @@ if (isset($_GET['cancel_ticket_schedule'])) {
         $client_uri = '';
     }
 
-    mysqli_query($mysqli, "UPDATE tickets SET ticket_schedule = NULL WHERE ticket_id = $ticket_id");
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_schedule = NULL, ticket_schedule_end = NULL, ticket_appointment_notes = NULL WHERE ticket_id = $ticket_id");
 
     // Sanitize Config Vars
     $config_ticket_from_email = sanitizeInput($config_ticket_from_email);

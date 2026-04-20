@@ -110,6 +110,37 @@ if (isset($_GET['calendar_id'])) {
 
             </div>
         </div>
+
+        <!-- Outlook / Calendar Sync -->
+        <div class="card">
+            <div class="card-header bg-dark">
+                <h3 class="card-title"><i class="fas fa-sync-alt mr-1"></i>Calendar Sync</h3>
+            </div>
+            <div class="card-body p-3">
+                <?php if ($session_token) {
+                    $feed_url   = "https://$config_base_url/agent/calendar_feed.php?token=$session_token";
+                    $webcal_url = "webcal://$config_base_url/agent/calendar_feed.php?token=$session_token";
+                ?>
+                <p class="text-muted mb-2" style="font-size:.85rem;">Subscribe to your scheduled tickets in Outlook, Apple Calendar, or Google Calendar.</p>
+                <div class="input-group input-group-sm mb-2">
+                    <input type="text" class="form-control" id="cal_feed_url" value="<?= htmlspecialchars($feed_url, ENT_QUOTES) ?>" readonly>
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="button"
+                            onclick="var el=document.getElementById('cal_feed_url');el.select();document.execCommand('copy');this.innerHTML='<i class=\'fas fa-check\'></i>';setTimeout(()=>this.innerHTML='Copy',1500);">Copy</button>
+                    </div>
+                </div>
+                <a href="<?= htmlspecialchars($webcal_url, ENT_QUOTES) ?>" class="btn btn-sm btn-outline-primary btn-block mb-1">
+                    <i class="fas fa-calendar-plus mr-1"></i>Subscribe (Outlook / Apple Calendar)
+                </a>
+                <a href="https://calendar.google.com/calendar/r/settings/addbyurl?url=<?= urlencode($feed_url) ?>" target="_blank" class="btn btn-sm btn-outline-secondary btn-block">
+                    <i class="fab fa-google mr-1"></i>Add to Google Calendar
+                </a>
+                <?php } else { ?>
+                <p class="text-muted mb-2" style="font-size:.85rem;">Generate an API token in your profile to enable calendar sync.</p>
+                <a href="/agent/user/profile.php" class="btn btn-sm btn-outline-primary btn-block"><i class="fa fa-user-cog mr-1"></i>Go to Profile</a>
+                <?php } ?>
+            </div>
+        </div>
     </div>
 
     <div class="col-md-9">

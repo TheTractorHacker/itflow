@@ -1101,31 +1101,25 @@ function addToMailQueue($data) {
     return true;
 }
 
-function createiCalStr($datetime, $title, $description, $location)
+function createiCalStr($datetime, $title, $description, $location, $datetime_end = null)
 {
     require_once "plugins/zapcal/zapcallib.php";
 
-    // Create the iCal object
     $cal_event = new ZCiCal();
     $event = new ZCiCalNode("VEVENT", $cal_event->curnode);
 
+    $end = $datetime_end ?: $datetime;
 
-    // Set the method to REQUEST to indicate an invite
     $event->addNode(new ZCiCalDataNode("METHOD:REQUEST"));
     $event->addNode(new ZCiCalDataNode("SUMMARY:" . $title));
     $event->addNode(new ZCiCalDataNode("DTSTART:" . ZCiCal::fromSqlDateTime($datetime)));
-    // Assuming the end time is the same as start time.
-    // Todo: adjust this for actual duration
-    $event->addNode(new ZCiCalDataNode("DTEND:" . ZCiCal::fromSqlDateTime($datetime)));
+    $event->addNode(new ZCiCalDataNode("DTEND:" . ZCiCal::fromSqlDateTime($end)));
     $event->addNode(new ZCiCalDataNode("DTSTAMP:" . ZCiCal::fromSqlDateTime()));
     $uid = date('Y-m-d-H-i-s') . "@" . $_SERVER['SERVER_NAME'];
     $event->addNode(new ZCiCalDataNode("UID:" . $uid));
     $event->addNode(new ZCiCalDataNode("LOCATION:" . $location));
     $event->addNode(new ZCiCalDataNode("DESCRIPTION:" . $description));
-    // Todo: add organizer details
-    // $event->addNode(new ZCiCalDataNode("ORGANIZER;CN=Organizer Name:MAILTO:organizer@example.com"));
 
-    // Return the iCal string
     return $cal_event->export();
 }
 

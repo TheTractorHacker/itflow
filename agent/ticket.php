@@ -78,9 +78,19 @@ if (isset($_GET['ticket_id'])) {
         $ticket_priority = nullable_htmlentities($row['ticket_priority']);
         $ticket_billable = intval($row['ticket_billable']);
         $ticket_scheduled_for = nullable_htmlentities($row['ticket_schedule']);
+        $ticket_schedule_end  = nullable_htmlentities($row['ticket_schedule_end'] ?? '');
+        $ticket_appt_notes    = nullable_htmlentities($row['ticket_appointment_notes'] ?? '');
         $ticket_onsite = intval($row['ticket_onsite']);
         if ($ticket_scheduled_for) {
-            $ticket_scheduled_wording = "$ticket_scheduled_for";
+            $sched_ts  = strtotime($ticket_scheduled_for);
+            $sched_fmt = date('D, M j · g:i A', $sched_ts);
+            if ($ticket_schedule_end) {
+                $end_ts = strtotime($ticket_schedule_end);
+                $dur_mins = round(($end_ts - $sched_ts) / 60);
+                $dur_label = $dur_mins < 60 ? "{$dur_mins}m" : round($dur_mins/60, 1).'h';
+                $sched_fmt .= ' – ' . date('g:i A', $end_ts) . " ({$dur_label})";
+            }
+            $ticket_scheduled_wording = $sched_fmt;
         } else {
             $ticket_scheduled_wording = "Add";
         }
@@ -514,10 +524,17 @@ if (isset($_GET['ticket_id'])) {
                 </div>
 
                 <!-- Ticket scheduling -->
-                <?php if (empty ($ticket_closed_at)) { ?>
-                    <div class="mt-1">
-                        <i class="fa fa-fw fa-calendar-check text-secondary mr-2"></i>Scheduled: <a class='ajax-modal' href="#" data-modal-url="modals/ticket/ticket_edit_schedule.php?ticket_id=<?= $ticket_id ?>"> <?=$ticket_scheduled_wording ?> </a>
-                    </div>
+                <?php if (empty($ticket_closed_at)) { ?>
+                <div class="mt-1">
+                    <i class="fa fa-fw fa-calendar-check text-secondary mr-1"></i>
+                    <?php if ($ticket_scheduled_for) { ?>
+                        <a class="ajax-modal font-weight-bold" href="#" data-modal-url="modals/ticket/ticket_edit_schedule.php?ticket_id=<?= $ticket_id ?>"><?= $ticket_scheduled_wording ?></a>
+                        <?php if ($ticket_onsite) { ?><span class="badge badge-warning ml-1">Onsite</span><?php } else { ?><span class="badge badge-secondary ml-1">Remote</span><?php } ?>
+                        <?php if ($ticket_appt_notes) { ?><br><small class="text-muted ml-4"><?= $ticket_appt_notes ?></small><?php } ?>
+                    <?php } else { ?>
+                        <a class="ajax-modal text-muted" href="#" data-modal-url="modals/ticket/ticket_edit_schedule.php?ticket_id=<?= $ticket_id ?>"><i class="fa fa-plus mr-1"></i>Schedule</a>
+                    <?php } ?>
+                </div>
                 <?php } ?>
                 <!-- End ticket scheduling -->
 
