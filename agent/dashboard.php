@@ -598,6 +598,48 @@ if ($user_config_dashboard_technical_enable == 1) {
         AND ticket_closed_at IS NULL
         ORDER BY ticket_number DESC
     ");
+
+    // Ticket metrics
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE ticket_closed_at IS NULL AND (ticket_assigned_to IS NULL OR ticket_assigned_to = 0)"));
+    $unassigned_tickets = intval($row['c']);
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE DATE(ticket_created_at) = CURDATE()"));
+    $tickets_opened_today = intval($row['c']);
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE ticket_closed_at IS NOT NULL AND ticket_closed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"));
+    $tickets_resolved_week = intval($row['c']);
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id WHERE ticket_closed_at IS NULL AND ticket_status_name = 'Waiting on Customer'"));
+    $tickets_waiting_customer = intval($row['c']);
+
+    // Priority breakdown (open tickets)
+    $sql_by_priority = mysqli_query($mysqli, "SELECT ticket_priority, COUNT(ticket_id) AS c FROM tickets WHERE ticket_closed_at IS NULL GROUP BY ticket_priority ORDER BY FIELD(ticket_priority,'High','Medium','Low')");
+    $priority_labels = $priority_counts = [];
+    while ($r = mysqli_fetch_assoc($sql_by_priority)) { $priority_labels[] = $r['ticket_priority']; $priority_counts[] = intval($r['c']); }
+
+    // Status breakdown (open tickets)
+    $sql_by_status = mysqli_query($mysqli, "SELECT ticket_status_name, ticket_status_color, COUNT(ticket_id) AS c FROM tickets LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id WHERE ticket_closed_at IS NULL GROUP BY ticket_status_name, ticket_status_color ORDER BY c DESC LIMIT 8");
+    $status_labels = $status_counts = $status_colors = [];
+    while ($r = mysqli_fetch_assoc($sql_by_status)) { $status_labels[] = $r['ticket_status_name']; $status_counts[] = intval($r['c']); $status_colors[] = $r['ticket_status_color'] ?: '#6c757d'; }
+
+    // Category breakdown (open tickets)
+    $sql_by_cat = mysqli_query($mysqli, "SELECT COALESCE(category_name,'Uncategorized') AS cat, category_color, COUNT(ticket_id) AS c FROM tickets LEFT JOIN categories ON ticket_category = category_id WHERE ticket_closed_at IS NULL GROUP BY cat, category_color ORDER BY c DESC LIMIT 8");
+    $cat_labels = $cat_counts = $cat_colors = [];
+    while ($r = mysqli_fetch_assoc($sql_by_cat)) { $cat_labels[] = $r['cat']; $cat_counts[] = intval($r['c']); $cat_colors[] = $r['category_color'] ?: '#6c757d'; }
+
+    // Monthly opened vs resolved for selected year
+    $monthly_opened = $monthly_resolved = [];
+    for ($m = 1; $m <= 12; $m++) {
+        $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE YEAR(ticket_created_at)=$year AND MONTH(ticket_created_at)=$m"));
+        $monthly_opened[] = intval($r['c']);
+        $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE ticket_closed_at IS NOT NULL AND YEAR(ticket_closed_at)=$year AND MONTH(ticket_closed_at)=$m"));
+        $monthly_resolved[] = intval($r['c']);
+    }
+
+    // Top techs by open ticket count
+    $sql_top_techs = mysqli_query($mysqli, "SELECT user_name, COUNT(ticket_id) AS c FROM tickets LEFT JOIN users ON ticket_assigned_to = user_id WHERE ticket_closed_at IS NULL AND ticket_assigned_to > 0 GROUP BY user_name ORDER BY c DESC LIMIT 8");
+    $tech_rows = [];
+    while ($r = mysqli_fetch_assoc($sql_top_techs)) $tech_rows[] = $r;
 ?>
 
 <div class="card card-body">
@@ -681,7 +723,137 @@ if ($user_config_dashboard_technical_enable == 1) {
             </a>
         </div>
         <!-- ./col -->
+
+        <div class="col-lg-3 col-6">
+            <a class="small-box bg-danger" href="tickets.php?assigned=0">
+                <div class="inner">
+                    <h3><?php echo $unassigned_tickets; ?></h3>
+                    <p>Unassigned Tickets</p>
+                </div>
+                <div class="icon"><i class="fa fa-user-slash"></i></div>
+            </a>
+        </div>
+
+        <div class="col-lg-3 col-6">
+            <a class="small-box bg-info" href="tickets.php">
+                <div class="inner">
+                    <h3><?php echo $tickets_opened_today; ?></h3>
+                    <p>Opened Today</p>
+                </div>
+                <div class="icon"><i class="fa fa-plus-circle"></i></div>
+            </a>
+        </div>
+
+        <div class="col-lg-3 col-6">
+            <a class="small-box bg-success" href="tickets.php?status=Closed">
+                <div class="inner">
+                    <h3><?php echo $tickets_resolved_week; ?></h3>
+                    <p>Resolved This Week</p>
+                </div>
+                <div class="icon"><i class="fa fa-check-circle"></i></div>
+            </a>
+        </div>
+
+        <div class="col-lg-3 col-6">
+            <a class="small-box bg-warning" href="tickets.php">
+                <div class="inner">
+                    <h3><?php echo $tickets_waiting_customer; ?></h3>
+                    <p>Waiting on Customer</p>
+                </div>
+                <div class="icon"><i class="fa fa-clock"></i></div>
+            </a>
+        </div>
     </div> <!-- row -->
+
+    <!-- Ticket Charts -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card card-dark mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-line mr-2"></i>Tickets Opened vs Resolved <small>(<?php echo $year; ?>)</small></h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-h-240"><canvas id="ticketFlowChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card card-dark mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie mr-2"></i>By Priority</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-h-240"><canvas id="ticketPriorityChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card card-dark mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie mr-2"></i>By Status</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-h-240"><canvas id="ticketStatusChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card card-dark mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie mr-2"></i>By Category</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-h-240"><canvas id="ticketCategoryChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <?php if ($tech_rows) { ?>
+        <div class="col-lg-6">
+            <div class="card card-dark mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-fw fa-users mr-2"></i>Open Tickets by Technician</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <?php foreach ($tech_rows as $tr) { ?>
+                            <tr>
+                                <td><?= nullable_htmlentities($tr['user_name']) ?></td>
+                                <td>
+                                    <div class="progress" style="height:18px;">
+                                        <div class="progress-bar bg-primary" style="width:<?= min(100, round($tr['c'] / max(1, $active_tickets) * 100)) ?>%">
+                                            <?= intval($tr['c']) ?>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php } ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php } ?>
+    </div> <!-- ticket charts row -->
 
     <?php if ($your_tickets) { ?>
         <div class="row">
@@ -1175,4 +1347,106 @@ if ($user_config_dashboard_technical_enable == 1) {
     })();
 </script>
 
+<?php } ?>
+
+<?php if ($user_config_dashboard_technical_enable == 1) { ?>
+<script>
+// TICKET FLOW (Opened vs Resolved)
+(function() {
+    var ctx = document.getElementById('ticketFlowChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+            datasets: [
+                {
+                    label: 'Opened',
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220,53,69,0.08)',
+                    pointBackgroundColor: '#dc3545',
+                    fill: true,
+                    tension: 0.3,
+                    data: [<?php echo implode(',', $monthly_opened); ?>]
+                },
+                {
+                    label: 'Resolved',
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40,167,69,0.08)',
+                    pointBackgroundColor: '#28a745',
+                    fill: true,
+                    tension: 0.3,
+                    data: [<?php echo implode(',', $monthly_resolved); ?>]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { maxTicksLimit: 5 }, grid: { color: 'rgba(0,0,0,.1)' } }
+            },
+            plugins: { legend: { display: true } }
+        }
+    });
+})();
+
+// TICKET BY PRIORITY
+(function() {
+    var ctx = document.getElementById('ticketPriorityChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [<?php echo implode(',', array_map('json_encode', $priority_labels)); ?>],
+            datasets: [{
+                data: [<?php echo implode(',', $priority_counts); ?>],
+                backgroundColor: <?php
+                    $pc = [];
+                    foreach ($priority_labels as $p) {
+                        $pc[] = $p === 'High' ? '"#dc3545"' : ($p === 'Medium' ? '"#ffc107"' : '"#17a2b8"');
+                    }
+                    echo '[' . implode(',', $pc) . ']';
+                ?>
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right' } } }
+    });
+})();
+
+// TICKET BY STATUS
+(function() {
+    var ctx = document.getElementById('ticketStatusChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [<?php echo implode(',', array_map('json_encode', $status_labels)); ?>],
+            datasets: [{
+                data: [<?php echo implode(',', $status_counts); ?>],
+                backgroundColor: [<?php echo implode(',', array_map('json_encode', $status_colors)); ?>]
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right' } } }
+    });
+})();
+
+// TICKET BY CATEGORY
+(function() {
+    var ctx = document.getElementById('ticketCategoryChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [<?php echo implode(',', array_map('json_encode', $cat_labels)); ?>],
+            datasets: [{
+                data: [<?php echo implode(',', $cat_counts); ?>],
+                backgroundColor: [<?php echo implode(',', array_map('json_encode', $cat_colors)); ?>]
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right' } } }
+    });
+})();
+</script>
 <?php } ?>
