@@ -3211,7 +3211,8 @@ if (isset($_POST['add_ticket_charge'])) {
     enforceUserPermission('module_support', 2);
 
     $ticket_id        = intval($_POST['ticket_id']);
-    $client_id        = intval($_POST['client_id']);
+    $client_id        = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    if ($client_id) { enforceClientAccess(); }
     $product_id       = intval($_POST['charge_product_id'] ?? 0);
     $labor_type_id    = intval($_POST['charge_labor_type_id'] ?? 0);
     $charge_name      = sanitizeInput($_POST['charge_name']);
@@ -3255,6 +3256,7 @@ if (isset($_POST['edit_ticket_charge'])) {
 
     $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
     $client_id = intval($r['ticket_client_id'] ?? 0);
+    if ($client_id) { enforceClientAccess(); }
 
     mysqli_query($mysqli, "UPDATE ticket_charges SET
         charge_name        = '$charge_name',
@@ -3283,6 +3285,7 @@ if (isset($_GET['delete_ticket_charge'])) {
 
     $tr = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
     $client_id = intval($tr['ticket_client_id'] ?? 0);
+    if ($client_id) { enforceClientAccess(); }
 
     mysqli_query($mysqli, "UPDATE ticket_charges SET charge_archived_at = NOW() WHERE charge_id = $charge_id");
 
