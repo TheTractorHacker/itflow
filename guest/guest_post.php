@@ -1019,7 +1019,13 @@ if (isset($_POST['sign_outtake'], $_POST['outtake_sign_token'])) {
 
     logAction("Outtake", "Sign", "Outtake form signed by $signed_name — PDF attached ($pdf_name)", $client_id, $ticket_id);
 
-    header("Location: outtake_sign.php?token=$token");
+    // If an agent is signed in (in-person signing), send them back to the ticket
+    if (!empty($_SESSION['user_id'])) {
+        $redirect_url = "/agent/ticket.php?ticket_id=$ticket_id" . ($client_id ? "&client_id=$client_id" : '');
+        header("Location: $redirect_url");
+    } else {
+        header("Location: outtake_sign.php?token=$token");
+    }
     exit;
 }
 
