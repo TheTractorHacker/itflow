@@ -3174,3 +3174,90 @@ if (isset($_GET['cancel_ticket_schedule'])) {
     redirect();
 
 }
+
+// ── Ticket Charges ──────────────────────────────────────────────────────────
+
+if (isset($_POST['add_ticket_charge'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id      = intval($_POST['ticket_id']);
+    $client_id      = intval($_POST['client_id']);
+    $product_id     = intval($_POST['charge_product_id'] ?? 0);
+    $charge_name    = sanitizeInput($_POST['charge_name']);
+    $charge_desc    = mysqli_real_escape_string($mysqli, $_POST['charge_description'] ?? '');
+    $charge_qty     = round(floatval($_POST['charge_quantity']), 2);
+    $charge_price   = round(floatval($_POST['charge_unit_price']), 2);
+    $charge_total   = round($charge_qty * $charge_price, 2);
+    $charge_tax_id  = intval($_POST['charge_tax_id'] ?? 0);
+
+    mysqli_query($mysqli, "INSERT INTO ticket_charges SET
+        charge_ticket_id  = $ticket_id,
+        charge_product_id = $product_id,
+        charge_name       = '$charge_name',
+        charge_description= '$charge_desc',
+        charge_quantity   = $charge_qty,
+        charge_unit_price = $charge_price,
+        charge_total      = $charge_total,
+        charge_tax_id     = $charge_tax_id,
+        charge_created_by = $session_user_id");
+
+    logAction("Ticket", "Edit", "Added charge '$charge_name' to ticket", $client_id, $ticket_id);
+
+    flash_alert("Charge added", 'success');
+    redirect();
+}
+
+if (isset($_POST['edit_ticket_charge'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $charge_id      = intval($_POST['charge_id']);
+    $ticket_id      = intval($_POST['ticket_id']);
+    $charge_name    = sanitizeInput($_POST['charge_name']);
+    $charge_desc    = mysqli_real_escape_string($mysqli, $_POST['charge_description'] ?? '');
+    $charge_qty     = round(floatval($_POST['charge_quantity']), 2);
+    $charge_price   = round(floatval($_POST['charge_unit_price']), 2);
+    $charge_total   = round($charge_qty * $charge_price, 2);
+    $charge_tax_id  = intval($_POST['charge_tax_id'] ?? 0);
+
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+    $client_id = intval($r['ticket_client_id'] ?? 0);
+
+    mysqli_query($mysqli, "UPDATE ticket_charges SET
+        charge_name        = '$charge_name',
+        charge_description = '$charge_desc',
+        charge_quantity    = $charge_qty,
+        charge_unit_price  = $charge_price,
+        charge_total       = $charge_total,
+        charge_tax_id      = $charge_tax_id
+        WHERE charge_id = $charge_id");
+
+    logAction("Ticket", "Edit", "Updated charge '$charge_name' on ticket", $client_id, $ticket_id);
+
+    flash_alert("Charge updated", 'success');
+    redirect();
+}
+
+if (isset($_GET['delete_ticket_charge'])) {
+
+    validateCSRFToken($_GET['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $charge_id = intval($_GET['delete_ticket_charge']);
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT charge_ticket_id, charge_name FROM ticket_charges WHERE charge_id = $charge_id LIMIT 1"));
+    $ticket_id   = intval($r['charge_ticket_id'] ?? 0);
+    $charge_name = sanitizeInput($r['charge_name'] ?? 'charge');
+
+    $tr = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+    $client_id = intval($tr['ticket_client_id'] ?? 0);
+
+    mysqli_query($mysqli, "UPDATE ticket_charges SET charge_archived_at = NOW() WHERE charge_id = $charge_id");
+
+    logAction("Ticket", "Edit", "Deleted charge '$charge_name' from ticket", $client_id, $ticket_id);
+
+    flash_alert("Charge deleted", 'error');
+    redirect();
+}
