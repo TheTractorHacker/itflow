@@ -15,6 +15,7 @@ $charge_price = floatval($row['charge_unit_price']);
 $charge_total = floatval($row['charge_total']);
 $charge_tax_id = intval($row['charge_tax_id']);
 $charge_product_id = intval($row['charge_product_id']);
+$charge_labor_type_id = intval($row['charge_labor_type_id']);
 
 ob_start();
 
@@ -28,8 +29,40 @@ ob_start();
     <input type="hidden" name="charge_id" value="<?= $charge_id ?>">
     <input type="hidden" name="ticket_id" value="<?= $ticket_id ?>">
     <input type="hidden" name="charge_product_id" value="<?= $charge_product_id ?>">
+    <input type="hidden" name="charge_labor_type_id" id="edit_labor_type_id" value="<?= $charge_labor_type_id ?>">
 
     <div class="modal-body">
+
+        <!-- Labor Type quick-select -->
+        <?php
+        $sql_lt = mysqli_query($mysqli, "SELECT * FROM labor_types WHERE labor_type_archived_at IS NULL ORDER BY labor_type_order ASC, labor_type_name ASC");
+        $lt_rows = [];
+        while ($lt = mysqli_fetch_assoc($sql_lt)) $lt_rows[] = $lt;
+        if ($lt_rows) { ?>
+        <div class="form-group">
+            <label>Labor Type</label>
+            <div class="d-flex flex-wrap" id="edit_labor_type_btns">
+                <button type="button" class="btn btn-sm lt-btn mr-1 mb-1 <?= $charge_labor_type_id == 0 ? 'active' : '' ?> btn-outline-secondary" data-id="0" data-rate="0" data-name="">
+                    Custom
+                </button>
+                <?php foreach ($lt_rows as $lt) {
+                    $lt_id    = intval($lt['labor_type_id']);
+                    $lt_name  = nullable_htmlentities($lt['labor_type_name']);
+                    $lt_rate  = floatval($lt['labor_type_rate']);
+                    $lt_color = nullable_htmlentities($lt['labor_type_color']);
+                    $is_active = $lt_id === $charge_labor_type_id;
+                ?>
+                <button type="button" class="btn btn-sm lt-btn mr-1 mb-1 <?= $is_active ? 'active' : '' ?>"
+                        data-id="<?= $lt_id ?>"
+                        data-rate="<?= $lt_rate ?>"
+                        data-name="<?= $lt_name ?>"
+                        style="background:<?= $lt_color ?>;color:#fff;border-color:<?= $lt_color ?>;<?= $is_active ? '' : 'opacity:0.65;' ?>">
+                    <?= $lt_name ?>
+                </button>
+                <?php } ?>
+            </div>
+        </div>
+        <?php } ?>
 
         <div class="form-group">
             <label>Item Name <strong class="text-danger">*</strong></label>
@@ -105,6 +138,19 @@ $(function() {
         $('#charge_total_display').val((qty * price).toFixed(2));
     }
     $('#charge_quantity, #charge_unit_price').on('input', recalcTotal);
+
+    $(document).on('click', '.lt-btn', function() {
+        $('.lt-btn').removeClass('active').css('opacity','0.65');
+        $(this).addClass('active').css('opacity','1');
+        var id   = parseInt($(this).data('id')) || 0;
+        var rate = parseFloat($(this).data('rate')) || 0;
+        var name = $(this).data('name') || '';
+        $('#edit_labor_type_id').val(id);
+        if (id > 0 && rate > 0) {
+            $('#charge_unit_price').val(rate.toFixed(2));
+            recalcTotal();
+        }
+    });
 });
 </script>
 

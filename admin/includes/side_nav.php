@@ -91,6 +91,12 @@
                             <p>Ticket Statuses</p>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="/admin/labor_type.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'labor_type.php' ? 'active' : ''); ?>">
+                            <i class="nav-icon fas fa-clock"></i>
+                            <p>Labor Types</p>
+                        </a>
+                    </li>
                 <?php } ?>
                 <li class="nav-item">
                     <a href="/admin/custom_link.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'custom_link.php' ? 'active' : ''); ?>">

@@ -314,7 +314,7 @@ if (isset($_GET['ticket_id'])) {
 
 
         // Get Charges
-        $sql_charges = mysqli_query($mysqli, "SELECT tc.*, t.tax_percent, t.tax_name FROM ticket_charges tc LEFT JOIN taxes t ON tc.charge_tax_id = t.tax_id WHERE tc.charge_ticket_id = $ticket_id AND tc.charge_archived_at IS NULL ORDER BY tc.charge_id ASC");
+        $sql_charges = mysqli_query($mysqli, "SELECT tc.*, t.tax_percent, t.tax_name, lt.labor_type_name, lt.labor_type_color FROM ticket_charges tc LEFT JOIN taxes t ON tc.charge_tax_id = t.tax_id LEFT JOIN labor_types lt ON tc.charge_labor_type_id = lt.labor_type_id WHERE tc.charge_ticket_id = $ticket_id AND tc.charge_archived_at IS NULL ORDER BY tc.charge_id ASC");
         $charge_rows = [];
         $charges_subtotal = 0.00;
         while ($cr = mysqli_fetch_assoc($sql_charges)) {
@@ -666,47 +666,39 @@ if (isset($_GET['ticket_id'])) {
                                 </textarea>
                             </div>
 
-                            <div class="form-row">
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <div class="input-group">
-                                            <select class="form-control select2" name="status" required>
+                            <?php
+                            $sql_lt_reply = mysqli_query($mysqli, "SELECT labor_type_id, labor_type_name, labor_type_color FROM labor_types WHERE labor_type_archived_at IS NULL ORDER BY labor_type_order ASC, labor_type_name ASC");
+                            $lt_reply_rows = [];
+                            while ($lt = mysqli_fetch_assoc($sql_lt_reply)) $lt_reply_rows[] = $lt;
+                            ?>
+                            <div class="form-row align-items-center" style="background:#f8f9fa;border-top:1px solid #dee2e6;margin:0 -20px;padding:10px 20px 4px;">
 
-                                                <!-- Show all active ticket statuses, apart from new or closed as these are system-managed -->
-                                                <?php
-                                                $status_snippet = '';
-                                                if ($task_count !== $completed_task_count) {
-                                                    $status_snippet = "AND ticket_status_id != 4";
-                                                }
-                                                $sql_ticket_status = mysqli_query($mysqli, "SELECT * FROM ticket_statuses WHERE ticket_status_id != 1 AND ticket_status_id != 5 AND ticket_status_active = 1 $status_snippet ORDER BY ticket_status_order");
-                                                while ($row = mysqli_fetch_assoc($sql_ticket_status)) {
-                                                    $ticket_status_id_select = intval($row['ticket_status_id']);
-                                                    $ticket_status_name_select = nullable_htmlentities($row['ticket_status_name']); ?>
-
-                                                    <option value="<?php echo $ticket_status_id_select ?>" <?php if ($ticket_status == $ticket_status_id_select) { echo 'selected'; } ?>> <?php echo $ticket_status_name_select ?> </option>
-
-                                                <?php } ?>
-                                            </select>
-                                        </div>
+                                <!-- Labor Type (most prominent, first) -->
+                                <?php if ($lt_reply_rows) { ?>
+                                <div class="col-auto">
+                                    <div class="form-group mb-2">
+                                        <select class="form-control font-weight-bold" name="reply_labor_type_id" id="reply_labor_type_id"
+                                                style="border:2px solid #343a40;border-radius:6px;background:#343a40;color:#fff;min-width:150px;cursor:pointer;">
+                                            <option value="0" style="background:#fff;color:#343a40;">— Labor Type —</option>
+                                            <?php foreach ($lt_reply_rows as $lt) { ?>
+                                            <option value="<?= intval($lt['labor_type_id']) ?>"
+                                                    data-color="<?= nullable_htmlentities($lt['labor_type_color']) ?>"
+                                                    style="background:#fff;color:#343a40;">
+                                                <?= nullable_htmlentities($lt['labor_type_name']) ?>
+                                            </option>
+                                            <?php } ?>
+                                        </select>
                                     </div>
                                 </div>
+                                <?php } ?>
 
-                                <!-- Time Tracking -->
-                                <div class="col-md-6">
-                                    <div class="form-group">
+                                <!-- Time tracking -->
+                                <div class="col-auto">
+                                    <div class="form-group mb-2">
                                         <div class="input-group">
-                                            <div class="input-group-prepend px-0 col-2">
-                                                <input type="text" class="form-control" inputmode="numeric" id="hours" name="hours" placeholder="Hrs" min="0" max="23" pattern="0?[0-9]|1[0-9]|2[0-3]">
-                                            </div>
-
-                                            <div class="px-0 col-2">
-                                                <input type="text" class="form-control" inputmode="numeric" id="minutes" name="minutes" placeholder="Mins" min="0" max="59" pattern="[0-5]?[0-9]">
-                                            </div>
-
-                                            <div class="input-group-append px-0 col-2">
-                                                <input type="text" class="form-control" inputmode="numeric" id="seconds" name="seconds" placeholder="Secs" min="0" max="59" pattern="[0-5]?[0-9]">
-                                            </div>
-
+                                            <input type="text" class="form-control" inputmode="numeric" id="hours" name="hours" placeholder="Hrs" style="width:60px;max-width:60px;">
+                                            <input type="text" class="form-control" inputmode="numeric" id="minutes" name="minutes" placeholder="Mins" style="width:60px;max-width:60px;">
+                                            <input type="text" class="form-control" inputmode="numeric" id="seconds" name="seconds" placeholder="Secs" style="width:60px;max-width:60px;">
                                             <div class="btn-group">
                                                 <button type="button" class="btn btn-light" id="startStopTimer"><i class="fas fa-play"></i></button>
                                                 <button type="button" class="btn btn-light" id="resetTimer"><i class="fas fa-redo-alt"></i></button>
@@ -715,9 +707,41 @@ if (isset($_GET['ticket_id'])) {
                                     </div>
                                 </div>
 
-                                <div class="col-md-3">
-                                    <div class="btn-toolbar float-right mb-3">
-                                        <button type="submit" id="ticket_add_reply" name="add_ticket_reply" class="btn btn-success ml-3"><i class="fas fa-check mr-2"></i>Submit</button>
+                                <!-- Charge now -->
+                                <?php if ($config_module_enable_accounting && $lt_reply_rows) { ?>
+                                <div class="col-auto">
+                                    <div class="form-group mb-2">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="reply_charge_now" name="reply_charge_now" value="1" checked>
+                                            <label class="custom-control-label font-weight-600" for="reply_charge_now">Charge now</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php } ?>
+
+                                <!-- Status -->
+                                <div class="col-auto flex-grow-1">
+                                    <div class="form-group mb-2">
+                                        <select class="form-control select2" name="status" required>
+                                            <?php
+                                            $status_snippet = '';
+                                            if ($task_count !== $completed_task_count) {
+                                                $status_snippet = "AND ticket_status_id != 4";
+                                            }
+                                            $sql_ticket_status = mysqli_query($mysqli, "SELECT * FROM ticket_statuses WHERE ticket_status_id != 1 AND ticket_status_id != 5 AND ticket_status_active = 1 $status_snippet ORDER BY ticket_status_order");
+                                            while ($row = mysqli_fetch_assoc($sql_ticket_status)) {
+                                                $ticket_status_id_select = intval($row['ticket_status_id']);
+                                                $ticket_status_name_select = nullable_htmlentities($row['ticket_status_name']); ?>
+                                                <option value="<?= $ticket_status_id_select ?>" <?php if ($ticket_status == $ticket_status_id_select) echo 'selected'; ?>><?= $ticket_status_name_select ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Submit -->
+                                <div class="col-auto">
+                                    <div class="form-group mb-2">
+                                        <button type="submit" id="ticket_add_reply" name="add_ticket_reply" class="btn btn-success"><i class="fas fa-check mr-2"></i>Submit</button>
                                     </div>
                                 </div>
 
@@ -1388,11 +1412,16 @@ if (isset($_GET['ticket_id'])) {
                                     $cr_qty   = floatval($cr['charge_quantity']);
                                     $cr_price = floatval($cr['charge_unit_price']);
                                     $cr_total = floatval($cr['charge_total']);
-                                    $cr_tax   = $cr['tax_name'] ? nullable_htmlentities($cr['tax_name']) . ' ' . floatval($cr['tax_percent']) . '%' : '';
+                                    $cr_tax      = $cr['tax_name'] ? nullable_htmlentities($cr['tax_name']) . ' ' . floatval($cr['tax_percent']) . '%' : '';
+                                    $cr_lt_name  = nullable_htmlentities($cr['labor_type_name']);
+                                    $cr_lt_color = nullable_htmlentities($cr['labor_type_color'] ?? '#6c757d');
                                     $cr_invoiced = !empty($cr['charge_invoiced_at']);
                                 ?>
                                 <tr>
                                     <td>
+                                        <?php if ($cr_lt_name) { ?>
+                                            <span class="badge badge-pill text-white mr-1" style="background:<?= $cr_lt_color ?>;"><?= $cr_lt_name ?></span>
+                                        <?php } ?>
                                         <strong><?= $cr_name ?></strong>
                                         <?php if ($cr_desc) { ?><br><small class="text-muted"><?= $cr_desc ?></small><?php } ?>
                                         <?php if ($cr_tax) { ?><br><small class="text-muted"><?= $cr_tax ?></small><?php } ?>

@@ -23,8 +23,39 @@ ob_start();
     <input type="hidden" name="ticket_id" value="<?= $ticket_id ?>">
     <input type="hidden" name="client_id" value="<?= $client_id ?>">
     <input type="hidden" name="charge_product_id" id="charge_product_id" value="0">
+    <input type="hidden" name="charge_labor_type_id" id="charge_labor_type_id" value="0">
 
     <div class="modal-body">
+
+        <!-- Labor Type quick-select -->
+        <?php
+        $sql_lt = mysqli_query($mysqli, "SELECT * FROM labor_types WHERE labor_type_archived_at IS NULL ORDER BY labor_type_order ASC, labor_type_name ASC");
+        $lt_rows = [];
+        while ($lt = mysqli_fetch_assoc($sql_lt)) $lt_rows[] = $lt;
+        if ($lt_rows) { ?>
+        <div class="form-group">
+            <label>Labor Type <small class="text-muted">(optional)</small></label>
+            <div class="d-flex flex-wrap gap-2" id="labor_type_btns">
+                <button type="button" class="btn btn-sm btn-outline-secondary lt-btn active" data-id="0" data-rate="0" data-name="">
+                    Custom
+                </button>
+                <?php foreach ($lt_rows as $lt) {
+                    $lt_id    = intval($lt['labor_type_id']);
+                    $lt_name  = nullable_htmlentities($lt['labor_type_name']);
+                    $lt_rate  = floatval($lt['labor_type_rate']);
+                    $lt_color = nullable_htmlentities($lt['labor_type_color']);
+                ?>
+                <button type="button" class="btn btn-sm lt-btn"
+                        data-id="<?= $lt_id ?>"
+                        data-rate="<?= $lt_rate ?>"
+                        data-name="<?= $lt_name ?>"
+                        style="background:<?= $lt_color ?>;color:#fff;border-color:<?= $lt_color ?>;">
+                    <?= $lt_name ?>
+                </button>
+                <?php } ?>
+            </div>
+        </div>
+        <?php } ?>
 
         <div class="form-group">
             <label>Product / Service <small class="text-muted">(optional)</small></label>
@@ -121,6 +152,23 @@ $(function() {
         $('#charge_total_display').val((qty * price).toFixed(2));
     }
     $('#charge_quantity, #charge_unit_price').on('input', recalcTotal);
+
+    // Labor type pill buttons
+    $(document).on('click', '.lt-btn', function() {
+        $('.lt-btn').removeClass('active').css('opacity','0.65');
+        $(this).addClass('active').css('opacity','1');
+        var id    = parseInt($(this).data('id')) || 0;
+        var rate  = parseFloat($(this).data('rate')) || 0;
+        var name  = $(this).data('name') || '';
+        $('#charge_labor_type_id').val(id);
+        if (id > 0) {
+            if (!$('#charge_name').val()) $('#charge_name').val(name);
+            if (rate > 0) {
+                $('#charge_unit_price').val(rate.toFixed(2));
+                recalcTotal();
+            }
+        }
+    });
 
     $('#product_lookup').on('change', function() {
         var $opt = $(this).find(':selected');

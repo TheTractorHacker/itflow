@@ -1930,6 +1930,8 @@ if (isset($_POST['add_ticket_reply'])) {
     $minutes = intval($_POST['minutes']);
     $seconds = intval($_POST['seconds']);
     $ticket_reply_time_worked = sanitizeInput(sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds));
+    $reply_labor_type_id = intval($_POST['reply_labor_type_id'] ?? 0);
+    $reply_charge_now    = isset($_POST['reply_charge_now']) ? 1 : 0;
 
     // Defaults
     $send_email = 0;
@@ -1966,6 +1968,25 @@ if (isset($_POST['add_ticket_reply'])) {
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$ticket_reply', ticket_reply_time_worked = '$ticket_reply_time_worked', ticket_reply_type = '$ticket_reply_type', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 
         $ticket_reply_id = mysqli_insert_id($mysqli);
+
+        // Auto-create charge if a labor type was selected, time logged, and Charge now checked
+        if ($reply_labor_type_id > 0 && $reply_charge_now && ($hours > 0 || $minutes > 0 || $seconds > 0)) {
+            $lt_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM labor_types WHERE labor_type_id = $reply_labor_type_id LIMIT 1"));
+            if ($lt_row) {
+                $lt_name  = mysqli_real_escape_string($mysqli, $lt_row['labor_type_name']);
+                $lt_rate  = floatval($lt_row['labor_type_rate']);
+                $charge_qty   = round($hours + ($minutes / 60) + ($seconds / 3600), 2);
+                $charge_total = round($charge_qty * $lt_rate, 2);
+                mysqli_query($mysqli, "INSERT INTO ticket_charges SET
+                    charge_ticket_id    = $ticket_id,
+                    charge_labor_type_id= $reply_labor_type_id,
+                    charge_name         = '$lt_name',
+                    charge_quantity     = $charge_qty,
+                    charge_unit_price   = $lt_rate,
+                    charge_total        = $charge_total,
+                    charge_created_by   = $session_user_id");
+            }
+        }
 
         // Get Ticket Details
         $ticket_sql = mysqli_query($mysqli, "SELECT contact_name, contact_email, ticket_prefix, ticket_number, ticket_subject, ticket_status, ticket_status_name, ticket_url_key, ticket_first_response_at, ticket_created_by, ticket_assigned_to, ticket_client_id
@@ -3182,28 +3203,30 @@ if (isset($_POST['add_ticket_charge'])) {
     validateCSRFToken($_POST['csrf_token']);
     enforceUserPermission('module_support', 2);
 
-    $ticket_id      = intval($_POST['ticket_id']);
-    $client_id      = intval($_POST['client_id']);
-    $product_id     = intval($_POST['charge_product_id'] ?? 0);
-    $charge_name    = sanitizeInput($_POST['charge_name']);
-    $charge_desc    = mysqli_real_escape_string($mysqli, $_POST['charge_description'] ?? '');
-    $charge_qty     = round(floatval($_POST['charge_quantity']), 2);
-    $charge_price   = round(floatval($_POST['charge_unit_price']), 2);
-    $charge_total   = round($charge_qty * $charge_price, 2);
-    $charge_tax_id  = intval($_POST['charge_tax_id'] ?? 0);
+    $ticket_id        = intval($_POST['ticket_id']);
+    $client_id        = intval($_POST['client_id']);
+    $product_id       = intval($_POST['charge_product_id'] ?? 0);
+    $labor_type_id    = intval($_POST['charge_labor_type_id'] ?? 0);
+    $charge_name      = sanitizeInput($_POST['charge_name']);
+    $charge_desc      = mysqli_real_escape_string($mysqli, $_POST['charge_description'] ?? '');
+    $charge_qty       = round(floatval($_POST['charge_quantity']), 2);
+    $charge_price     = round(floatval($_POST['charge_unit_price']), 2);
+    $charge_total     = round($charge_qty * $charge_price, 2);
+    $charge_tax_id    = intval($_POST['charge_tax_id'] ?? 0);
 
     mysqli_query($mysqli, "INSERT INTO ticket_charges SET
-        charge_ticket_id  = $ticket_id,
-        charge_product_id = $product_id,
-        charge_name       = '$charge_name',
-        charge_description= '$charge_desc',
-        charge_quantity   = $charge_qty,
-        charge_unit_price = $charge_price,
-        charge_total      = $charge_total,
-        charge_tax_id     = $charge_tax_id,
-        charge_created_by = $session_user_id");
+        charge_ticket_id    = $ticket_id,
+        charge_product_id   = $product_id,
+        charge_labor_type_id= $labor_type_id,
+        charge_name         = '$charge_name',
+        charge_description  = '$charge_desc',
+        charge_quantity     = $charge_qty,
+        charge_unit_price   = $charge_price,
+        charge_total        = $charge_total,
+        charge_tax_id       = $charge_tax_id,
+        charge_created_by   = $session_user_id");
 
-    logAction("Ticket", "Edit", "Added charge '$charge_name' to ticket", $client_id, $ticket_id);
+    logAction("Ticket", "Edit", "Added charge $charge_name to ticket", $client_id, $ticket_id);
 
     flash_alert("Charge added", 'success');
     redirect();
@@ -3235,7 +3258,7 @@ if (isset($_POST['edit_ticket_charge'])) {
         charge_tax_id      = $charge_tax_id
         WHERE charge_id = $charge_id");
 
-    logAction("Ticket", "Edit", "Updated charge '$charge_name' on ticket", $client_id, $ticket_id);
+    logAction("Ticket", "Edit", "Updated charge $charge_name on ticket", $client_id, $ticket_id);
 
     flash_alert("Charge updated", 'success');
     redirect();
@@ -3256,7 +3279,7 @@ if (isset($_GET['delete_ticket_charge'])) {
 
     mysqli_query($mysqli, "UPDATE ticket_charges SET charge_archived_at = NOW() WHERE charge_id = $charge_id");
 
-    logAction("Ticket", "Edit", "Deleted charge '$charge_name' from ticket", $client_id, $ticket_id);
+    logAction("Ticket", "Edit", "Deleted charge $charge_name from ticket", $client_id, $ticket_id);
 
     flash_alert("Charge deleted", 'error');
     redirect();
