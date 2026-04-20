@@ -1,13 +1,10 @@
 <?php
 /**
- * iCal feed for Outlook / Apple Calendar / Google Calendar subscription.
- * URL: /agent/calendar_feed.php?token=USER_TOKEN
- * The token is the user's API token (user_token column).
+ * iCal subscription feed for Outlook / Apple Calendar / Google Calendar.
+ * URL: /agent/calendar_feed.php?token=USER_API_TOKEN
  */
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/plugins/zapcal/zapcallib.php';
 
 $token = isset($_GET['token']) ? preg_replace('/[^a-zA-Z0-9]/', '', $_GET['token']) : '';
 
@@ -17,7 +14,13 @@ if (!$token) {
 }
 
 $token_escaped = mysqli_real_escape_string($mysqli, $token);
-$user_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT user_id, user_name FROM users WHERE user_token = '$token_escaped' AND user_status = 1 AND user_archived_at IS NULL LIMIT 1"));
+$user_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT user_id, user_name FROM users
+     WHERE user_token = '$token_escaped'
+       AND user_status = 1
+       AND user_archived_at IS NULL
+     LIMIT 1"
+));
 
 if (!$user_row) {
     http_response_code(401);
@@ -27,14 +30,13 @@ if (!$user_row) {
 $user_id   = intval($user_row['user_id']);
 $user_name = $user_row['user_name'];
 
-// Fetch scheduled tickets for this user (upcoming + past 30 days)
-$cutoff = date('Y-m-d H:i:s', strtotime('-30 days'));
-$sql = mysqli_query($mysqli,
+// Fetch this user's scheduled tickets (upcoming + past 30 days)
+$cutoff = gmdate('Y-m-d H:i:s', strtotime('-30 days'));
+$result = mysqli_query($mysqli,
     "SELECT t.ticket_id, t.ticket_prefix, t.ticket_number, t.ticket_subject,
             t.ticket_schedule, t.ticket_schedule_end, t.ticket_appointment_notes,
             t.ticket_onsite, t.ticket_priority,
             c.client_name,
-            co.contact_name,
             l.location_address
      FROM tickets t
      LEFT JOIN clients c ON t.ticket_client_id = c.client_id
@@ -47,36 +49,73 @@ $sql = mysqli_query($mysqli,
      ORDER BY t.ticket_schedule ASC"
 );
 
-$cal = new ZCiCal();
-$cal->curnode->addNode(new ZCiCalDataNode("METHOD:PUBLISH"));
-$cal->curnode->addNode(new ZCiCalDataNode("X-WR-CALNAME:" . $user_name . "'s Schedule"));
-$cal->curnode->addNode(new ZCiCalDataNode("X-WR-TIMEZONE:UTC"));
-$cal->curnode->addNode(new ZCiCalDataNode("REFRESH-INTERVAL;VALUE=DURATION:PT1H"));
-
-while ($row = mysqli_fetch_assoc($sql)) {
-    $start   = $row['ticket_schedule'];
-    $end     = $row['ticket_schedule_end'] ?: $start;
-    $subject = $row['ticket_prefix'] . $row['ticket_number'] . ': ' . $row['ticket_subject'];
-    if ($row['client_name']) $subject .= ' – ' . $row['client_name'];
-    $desc    = $row['ticket_appointment_notes'] ?: $row['ticket_subject'];
-    $desc   .= "\nhttps://" . $config_base_url . "/agent/ticket.php?ticket_id=" . intval($row['ticket_id']);
-    $loc     = $row['location_address'] ?: ($row['ticket_onsite'] ? 'Onsite' : 'Remote');
-
-    $event = new ZCiCalNode("VEVENT", $cal->curnode);
-    $event->addNode(new ZCiCalDataNode("SUMMARY:" . $subject));
-    $event->addNode(new ZCiCalDataNode("DTSTART:" . ZCiCal::fromSqlDateTime($start)));
-    $event->addNode(new ZCiCalDataNode("DTEND:" . ZCiCal::fromSqlDateTime($end)));
-    $event->addNode(new ZCiCalDataNode("DTSTAMP:" . ZCiCal::fromSqlDateTime()));
-    $uid = 'ticket-' . intval($row['ticket_id']) . '@' . $config_base_url;
-    $event->addNode(new ZCiCalDataNode("UID:" . $uid));
-    $event->addNode(new ZCiCalDataNode("LOCATION:" . $loc));
-    $event->addNode(new ZCiCalDataNode("DESCRIPTION:" . str_replace("\n", "\\n", $desc)));
-    if ($row['ticket_priority'] == 'High') {
-        $event->addNode(new ZCiCalDataNode("PRIORITY:1"));
-    }
+// Helpers
+function ical_dt($sql_dt) {
+    // Output UTC datetime in iCal format: 20260420T171500Z
+    return gmdate('Ymd\THis\Z', strtotime($sql_dt));
 }
 
+function ical_escape($str) {
+    $str = str_replace('\\', '\\\\', $str);
+    $str = str_replace(',', '\,', $str);
+    $str = str_replace(';', '\;', $str);
+    $str = str_replace("\n", '\n', $str);
+    return $str;
+}
+
+function ical_fold($line) {
+    // RFC 5545: lines longer than 75 octets must be folded
+    $out = '';
+    while (strlen($line) > 75) {
+        $out .= substr($line, 0, 75) . "\r\n ";
+        $line = substr($line, 75);
+    }
+    return $out . $line . "\r\n";
+}
+
+$now_utc = gmdate('Ymd\THis\Z');
+$cal_name = ical_escape($user_name . "'s Schedule");
+
+$ical  = "BEGIN:VCALENDAR\r\n";
+$ical .= "VERSION:2.0\r\n";
+$ical .= "PRODID:-//ITFlow//Ticket Schedule//EN\r\n";
+$ical .= "METHOD:PUBLISH\r\n";
+$ical .= "CALSCALE:GREGORIAN\r\n";
+$ical .= "X-WR-CALNAME:" . $cal_name . "\r\n";
+$ical .= "X-WR-TIMEZONE:UTC\r\n";
+
+while ($row = mysqli_fetch_assoc($result)) {
+    $tid    = intval($row['ticket_id']);
+    $start  = ical_dt($row['ticket_schedule']);
+    $end    = $row['ticket_schedule_end'] ? ical_dt($row['ticket_schedule_end']) : $start;
+    $uid    = 'ticket-' . $tid . '@' . $config_base_url;
+
+    $summary = $row['ticket_prefix'] . $row['ticket_number'] . ': ' . $row['ticket_subject'];
+    if ($row['client_name']) $summary .= ' - ' . $row['client_name'];
+
+    $notes  = $row['ticket_appointment_notes'] ?: '';
+    $url    = 'https://' . $config_base_url . '/agent/ticket.php?ticket_id=' . $tid;
+    $desc   = $notes ? $notes . '\n' . $url : $url;
+
+    $loc    = $row['location_address'] ?: ($row['ticket_onsite'] ? 'Onsite' : 'Remote');
+
+    $ical .= "BEGIN:VEVENT\r\n";
+    $ical .= ical_fold("UID:" . $uid);
+    $ical .= "DTSTAMP:" . $now_utc . "\r\n";
+    $ical .= "DTSTART:" . $start . "\r\n";
+    $ical .= "DTEND:" . $end . "\r\n";
+    $ical .= ical_fold("SUMMARY:" . ical_escape($summary));
+    $ical .= ical_fold("DESCRIPTION:" . ical_escape($desc));
+    $ical .= ical_fold("LOCATION:" . ical_escape($loc));
+    $ical .= "URL:" . $url . "\r\n";
+    if ($row['ticket_priority'] == 'High') $ical .= "PRIORITY:1\r\n";
+    $ical .= "END:VEVENT\r\n";
+}
+
+$ical .= "END:VCALENDAR\r\n";
+
 header('Content-Type: text/calendar; charset=utf-8');
-header('Content-Disposition: attachment; filename="schedule.ics"');
-header('Cache-Control: no-cache, must-revalidate');
-echo $cal->export();
+header('Content-Disposition: inline; filename="itflow-schedule.ics"');
+header('Cache-Control: no-store, no-cache');
+header('Pragma: no-cache');
+echo $ical;
