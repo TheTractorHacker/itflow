@@ -7,9 +7,14 @@ $row = mysqli_fetch_assoc($sql_settings);
 // Database version
 DEFINE("CURRENT_DATABASE_VERSION", $row['config_current_database_version']);
 
-// Microsoft OAuth
+// Microsoft OAuth (SSO / Identity Provider)
 $config_azure_client_id = $row['config_azure_client_id'];
 $config_azure_client_secret = $row['config_azure_client_secret'];
+
+// Outlook Calendar Sync
+$config_outlook_cal_client_id     = $row['config_outlook_cal_client_id'] ?? '';
+$config_outlook_cal_client_secret = $row['config_outlook_cal_client_secret'] ?? '';
+$config_outlook_cal_tenant_id     = $row['config_outlook_cal_tenant_id'] ?? '';
 
 // Mail - SMTP
 $config_smtp_provider = $row['config_smtp_provider'];
