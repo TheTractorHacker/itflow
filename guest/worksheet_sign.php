@@ -123,7 +123,7 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
         <h5 class="text-success mb-2"><i class="fas fa-check-circle mr-2"></i>Form Signed</h5>
         <p class="mb-1">Signed by <strong><?= $signed_name ?></strong> on <?= date('M j, Y g:i A', strtotime($signed_at)) ?></p>
         <?php if ($existing_sig) { ?>
-        <img src="<?= $existing_sig ?>" style="max-height:80px; border:1px solid #ccc; border-radius:4px; background:#fff; display:block; margin-top:8px;">
+        <img src="<?= htmlspecialchars($existing_sig, ENT_QUOTES, 'UTF-8') ?>" style="max-height:80px; border:1px solid #ccc; border-radius:4px; background:#fff; display:block; margin-top:8px;">
         <?php } ?>
     </div>
     <div class="text-center py-3 no-print">

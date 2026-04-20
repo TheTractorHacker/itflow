@@ -788,6 +788,9 @@ if (isset($_POST['sign_outtake'], $_POST['outtake_sign_token'])) {
     $token = sanitizeInput($_POST['outtake_sign_token']);
     $signed_name = sanitizeInput($_POST['signed_name'] ?? '');
     $signature = isset($_POST['outtake_signature']) ? $_POST['outtake_signature'] : '';
+    if ($signature && !preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,[A-Za-z0-9+\/=]+$/', $signature)) {
+        $signature = '';
+    }
 
     if (empty($signed_name)) {
         echo "<script>alert('Please enter your full name.'); history.back();</script>";
@@ -1057,6 +1060,9 @@ if (isset($_POST['sign_worksheet'], $_POST['worksheet_sign_token'])) {
     // Use drawn main signature if provided, fall back to any signature field
     if (!empty($_POST['main_signature'])) {
         $main_sig = $_POST['main_signature'];
+        if (!preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,[A-Za-z0-9+\/=]+$/', $main_sig)) {
+            $main_sig = '';
+        }
     }
     $sig_escaped = $main_sig ? mysqli_real_escape_string($mysqli, $main_sig) : '';
     $sig_sql = $sig_escaped ? "worksheet_signature = '$sig_escaped'," : '';

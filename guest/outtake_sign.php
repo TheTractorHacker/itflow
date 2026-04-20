@@ -116,7 +116,7 @@ $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_ty
         <strong style="color:#27ae60; font-size:16px;">&#10003; Outtake Form Signed</strong><br>
         <span>Signed by <strong><?= $signed_name ?></strong> on <?= date('F j, Y \a\t g:i A', strtotime($signed_at)) ?></span>
         <?php if ($existing_sig) { ?>
-        <div class="mt-3"><img src="<?= $existing_sig ?>" style="max-height:90px;border:1px solid #ccc;border-radius:4px;background:#fff;"></div>
+        <div class="mt-3"><img src="<?= htmlspecialchars($existing_sig, ENT_QUOTES, 'UTF-8') ?>" style="max-height:90px;border:1px solid #ccc;border-radius:4px;background:#fff;"></div>
         <?php } ?>
     </div>
 
