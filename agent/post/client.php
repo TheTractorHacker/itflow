@@ -280,7 +280,7 @@ if (isset($_POST['edit_client'])) {
     );
     mysqli_stmt_bind_param(
         $query,
-        "ssssdisiisi",
+        "ssssdisissi",
         $name,
         $type,
         $website,

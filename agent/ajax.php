@@ -403,6 +403,8 @@ if (isset($_GET['get_totp_token_via_id'])) {
     $totp_secret = $sql['credential_otp_secret'];
     $client_id = intval($sql['credential_client_id']);
 
+    enforceClientAccess();
+
     $otp = TokenAuth6238::getTokenCode(strtoupper($totp_secret));
     echo json_encode($otp);
 

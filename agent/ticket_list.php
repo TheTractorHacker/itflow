@@ -227,6 +227,9 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
 
 
                             // Get Tasks
+                            // Get Tasks
+                            $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT('task_id') AS count FROM tickets, tasks WHERE ticket_id = task_ticket_id AND ticket_project_id = $project_id"));
+                            $task_count = $row['count'];
                             $sql_tasks = mysqli_query( $mysqli, "SELECT * FROM tasks WHERE task_ticket_id = $ticket_id ORDER BY task_created_at ASC");
                             $task_count = mysqli_num_rows($sql_tasks);
                                     // Get Completed Task Count

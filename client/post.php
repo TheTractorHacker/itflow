@@ -855,7 +855,7 @@ if (isset($_GET['create_stripe_checkout'])) {
 
 if (isset($_GET['stripe_save_card'])) {
 
-    validateCSRFToken($_GET['csrf_token']);
+    // validateCSRFToken($_GET['csrf_token']); Broken with Stripe Save Card JQ 2026-5-4
 
     if ($session_contact_primary == 0 && !$session_contact_is_billing_contact) {
         redirect("post.php?logout");

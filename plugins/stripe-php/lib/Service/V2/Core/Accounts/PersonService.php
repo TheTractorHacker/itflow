@@ -20,33 +20,11 @@ class PersonService extends \Stripe\Service\AbstractService
      *
      * @return \Stripe\V2\Collection<\Stripe\V2\Core\AccountPerson>
      *
-     * @throws \Stripe\Exception\RateLimitException
+     * @throws \Stripe\Exception\ApiErrorException if the request fails
      */
     public function all($id, $params = null, $opts = null)
     {
-        return $this->requestCollection('get', $this->buildPath('/v2/core/accounts/%s/persons', $id), $params, $opts, [
-            'response_schema' => [
-                'kind' => 'object',
-                'fields' => [
-                    'data' => [
-                        'kind' => 'array',
-                        'element' => [
-                            'kind' => 'object',
-                            'fields' => [
-                                'relationship' => [
-                                    'kind' => 'object',
-                                    'fields' => [
-                                        'percent_ownership' => [
-                                            'kind' => 'decimal_string',
-                                        ],
-                                    ],
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-            ],
-        ]);
+        return $this->requestCollection('get', $this->buildPath('/v2/core/accounts/%s/persons', $id), $params, $opts);
     }
 
     /**
@@ -59,34 +37,11 @@ class PersonService extends \Stripe\Service\AbstractService
      *
      * @return \Stripe\V2\Core\AccountPerson
      *
-     * @throws \Stripe\Exception\RateLimitException
+     * @throws \Stripe\Exception\ApiErrorException if the request fails
      */
     public function create($id, $params = null, $opts = null)
     {
-        return $this->request('post', $this->buildPath('/v2/core/accounts/%s/persons', $id), $params, $opts, [
-            'request_schema' => [
-                'kind' => 'object',
-                'fields' => [
-                    'relationship' => [
-                        'kind' => 'object',
-                        'fields' => [
-                            'percent_ownership' => ['kind' => 'decimal_string'],
-                        ],
-                    ],
-                ],
-            ],
-            'response_schema' => [
-                'kind' => 'object',
-                'fields' => [
-                    'relationship' => [
-                        'kind' => 'object',
-                        'fields' => [
-                            'percent_ownership' => ['kind' => 'decimal_string'],
-                        ],
-                    ],
-                ],
-            ],
-        ]);
+        return $this->request('post', $this->buildPath('/v2/core/accounts/%s/persons', $id), $params, $opts);
     }
 
     /**
@@ -99,7 +54,7 @@ class PersonService extends \Stripe\Service\AbstractService
      *
      * @return \Stripe\V2\DeletedObject
      *
-     * @throws \Stripe\Exception\RateLimitException
+     * @throws \Stripe\Exception\ApiErrorException if the request fails
      */
     public function delete($parentId, $id, $params = null, $opts = null)
     {
@@ -116,23 +71,11 @@ class PersonService extends \Stripe\Service\AbstractService
      *
      * @return \Stripe\V2\Core\AccountPerson
      *
-     * @throws \Stripe\Exception\RateLimitException
+     * @throws \Stripe\Exception\ApiErrorException if the request fails
      */
     public function retrieve($parentId, $id, $params = null, $opts = null)
     {
-        return $this->request('get', $this->buildPath('/v2/core/accounts/%s/persons/%s', $parentId, $id), $params, $opts, [
-            'response_schema' => [
-                'kind' => 'object',
-                'fields' => [
-                    'relationship' => [
-                        'kind' => 'object',
-                        'fields' => [
-                            'percent_ownership' => ['kind' => 'decimal_string'],
-                        ],
-                    ],
-                ],
-            ],
-        ]);
+        return $this->request('get', $this->buildPath('/v2/core/accounts/%s/persons/%s', $parentId, $id), $params, $opts);
     }
 
     /**
@@ -145,33 +88,10 @@ class PersonService extends \Stripe\Service\AbstractService
      *
      * @return \Stripe\V2\Core\AccountPerson
      *
-     * @throws \Stripe\Exception\RateLimitException
+     * @throws \Stripe\Exception\ApiErrorException if the request fails
      */
     public function update($parentId, $id, $params = null, $opts = null)
     {
-        return $this->request('post', $this->buildPath('/v2/core/accounts/%s/persons/%s', $parentId, $id), $params, $opts, [
-            'request_schema' => [
-                'kind' => 'object',
-                'fields' => [
-                    'relationship' => [
-                        'kind' => 'object',
-                        'fields' => [
-                            'percent_ownership' => ['kind' => 'decimal_string'],
-                        ],
-                    ],
-                ],
-            ],
-            'response_schema' => [
-                'kind' => 'object',
-                'fields' => [
-                    'relationship' => [
-                        'kind' => 'object',
-                        'fields' => [
-                            'percent_ownership' => ['kind' => 'decimal_string'],
-                        ],
-                    ],
-                ],
-            ],
-        ]);
+        return $this->request('post', $this->buildPath('/v2/core/accounts/%s/persons/%s', $parentId, $id), $params, $opts);
     }
 }

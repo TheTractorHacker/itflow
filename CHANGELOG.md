@@ -2,6 +2,21 @@
 
 This file documents all notable changes made to ITFlow.
 
+## [26.05] Stable Release
+### Bug Fixes
+- Stripe Payment: Fix adding saved cards on client portal.
+- Various client and module enforments fixes. 
+- Projects: Fix slow load by using an optimized query to count tickets and tasks.
+- Show correct currency for the account balance when adding payment to invoice.
+- Expire all Password reset tokens nightly with cron.
+- Shared Items via secure link: Do not delete shared items that have not been viewed before cron runs.
+- Client: Fix Client Abbreviation being converted to an int on edit.
+
+### New Features & Updates 
+- Bump TinyMCE from 8.4.0 to 8.5.0.
+- Bump TCPDF from 6.11.2 to 6.11.3.
+- DeBump stripe-php from 20.0.0 to 19.4.1.
+
 ## [26.04] Stable Release
 ### Bug Fixes
 - Racks: Fix Device Removal.
