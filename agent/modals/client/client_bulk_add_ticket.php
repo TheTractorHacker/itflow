@@ -60,9 +60,7 @@ ob_start();
                         </div>
                         <select class="form-control select2" name="bulk_category">
                             <option value="0">- Not Categorized -</option>
-                            <?php
-                            echo ticketCategoryOptions($mysqli);
-
+                            <?php echo ticketCategoryOptions($mysqli); ?>
                         </select>
                     </div>
                 </div>

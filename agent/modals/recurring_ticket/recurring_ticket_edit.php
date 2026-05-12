@@ -103,9 +103,7 @@ ob_start();
                                 </div>
                                 <select class="form-control select2" name="category_id">
                                     <option value="0">- Uncategorized -</option>
-                                    <?php
-                                    echo ticketCategoryOptions($mysqli, $recurring_ticket_category);
-
+                                    <?php echo ticketCategoryOptions($mysqli, $recurring_ticket_category); ?>
                                 </select>
                                 <div class="input-group-append">
                                     <button class="btn btn-secondary ajax-modal" type="button"
