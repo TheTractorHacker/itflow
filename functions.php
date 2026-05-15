@@ -1158,6 +1158,167 @@ function createiCalStrCancel($originaliCalStr) {
     return $cal_event->export();
 }
 
+// ── Outlook Calendar Graph API ─────────────────────────────────────────────
+
+function getOutlookAccessToken($user_id) {
+    global $mysqli, $config_outlook_cal_tenant_id, $config_outlook_cal_client_id, $config_outlook_cal_client_secret;
+
+    if (!$config_outlook_cal_tenant_id || !$config_outlook_cal_client_id || !$config_outlook_cal_client_secret) {
+        return null;
+    }
+
+    $user_id = intval($user_id);
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT user_outlook_refresh_token, user_outlook_access_token, user_outlook_token_expires FROM users WHERE user_id = $user_id"
+    ));
+
+    if (!$row || empty($row['user_outlook_refresh_token'])) {
+        return null;
+    }
+
+    // Return cached access token if still valid
+    if (!empty($row['user_outlook_access_token']) && !empty($row['user_outlook_token_expires'])
+        && strtotime($row['user_outlook_token_expires']) > time() + 60) {
+        return $row['user_outlook_access_token'];
+    }
+
+    // Refresh the access token
+    $ch = curl_init("https://login.microsoftonline.com/" . rawurlencode($config_outlook_cal_tenant_id) . "/oauth2/v2.0/token");
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => http_build_query([
+            'client_id'     => $config_outlook_cal_client_id,
+            'client_secret' => $config_outlook_cal_client_secret,
+            'grant_type'    => 'refresh_token',
+            'refresh_token' => $row['user_outlook_refresh_token'],
+            'scope'         => 'Calendars.ReadWrite offline_access',
+        ]),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+    ]);
+    $data = json_decode(curl_exec($ch), true);
+    curl_close($ch);
+
+    if (empty($data['access_token'])) {
+        return null;
+    }
+
+    $access_token  = mysqli_real_escape_string($mysqli, $data['access_token']);
+    $expires_at    = date('Y-m-d H:i:s', time() + intval($data['expires_in'] ?? 3600));
+    $refresh_extra = '';
+    if (!empty($data['refresh_token'])) {
+        $new_refresh   = mysqli_real_escape_string($mysqli, $data['refresh_token']);
+        $refresh_extra = ", user_outlook_refresh_token = '$new_refresh'";
+    }
+
+    mysqli_query($mysqli, "UPDATE users SET user_outlook_access_token = '$access_token', user_outlook_token_expires = '$expires_at'$refresh_extra WHERE user_id = $user_id");
+
+    return $data['access_token'];
+}
+
+function syncTicketToOutlook($ticket_id) {
+    global $mysqli;
+
+    $ticket_id = intval($ticket_id);
+    $sql = mysqli_query($mysqli, "SELECT t.*, c.client_name, l.location_address
+        FROM tickets t
+        LEFT JOIN clients c ON t.ticket_client_id = c.client_id
+        LEFT JOIN contacts ct ON t.ticket_contact_id = ct.contact_id
+        LEFT JOIN locations l ON ct.contact_location_id = l.location_id
+        WHERE t.ticket_id = $ticket_id");
+    $t = mysqli_fetch_assoc($sql);
+
+    if (!$t || !$t['ticket_schedule'] || !$t['ticket_assigned_to']) {
+        return;
+    }
+
+    $access_token = getOutlookAccessToken($t['ticket_assigned_to']);
+    if (!$access_token) {
+        return;
+    }
+
+    $tz_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_timezone FROM settings WHERE company_id = 1 LIMIT 1"));
+    $tz = ($tz_row && $tz_row['config_timezone']) ? $tz_row['config_timezone'] : 'America/Chicago';
+
+    $subject   = ($t['ticket_number'] ? '#' . $t['ticket_number'] . ': ' : '') . ($t['client_name'] ?? '') . ' — ' . $t['ticket_subject'];
+    $start_dt  = date('Y-m-d\TH:i:s', strtotime($t['ticket_schedule']));
+    $end_dt    = $t['ticket_schedule_end']
+        ? date('Y-m-d\TH:i:s', strtotime($t['ticket_schedule_end']))
+        : date('Y-m-d\TH:i:s', strtotime($t['ticket_schedule']) + 3600);
+    $location  = $t['ticket_onsite'] ? 'Onsite' : 'Remote';
+    if (!empty($t['location_address'])) {
+        $location .= ' — ' . $t['location_address'];
+    }
+    $body_text = strip_tags($t['ticket_details'] ?? '');
+    if ($t['ticket_appointment_notes']) {
+        $body_text .= "\n\nAppointment Notes: " . $t['ticket_appointment_notes'];
+    }
+
+    $payload = json_encode([
+        'subject'  => $subject,
+        'body'     => ['contentType' => 'text', 'content' => $body_text],
+        'start'    => ['dateTime' => $start_dt, 'timeZone' => $tz],
+        'end'      => ['dateTime' => $end_dt,   'timeZone' => $tz],
+        'location' => ['displayName' => $location],
+    ]);
+
+    $existing_event_id = $t['ticket_outlook_event_id'] ?? null;
+    if ($existing_event_id) {
+        $url    = "https://graph.microsoft.com/v1.0/me/events/" . rawurlencode($existing_event_id);
+        $method = 'PATCH';
+    } else {
+        $url    = "https://graph.microsoft.com/v1.0/me/events";
+        $method = 'POST';
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST  => $method,
+        CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_HTTPHEADER     => [
+            "Authorization: Bearer $access_token",
+            "Content-Type: application/json",
+        ],
+    ]);
+    $response = json_decode(curl_exec($ch), true);
+    curl_close($ch);
+
+    if ($method === 'POST' && !empty($response['id'])) {
+        $event_id = mysqli_real_escape_string($mysqli, $response['id']);
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_outlook_event_id = '$event_id' WHERE ticket_id = $ticket_id");
+    }
+}
+
+function deleteOutlookCalendarEvent($ticket_id) {
+    global $mysqli;
+
+    $ticket_id = intval($ticket_id);
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT ticket_outlook_event_id, ticket_assigned_to FROM tickets WHERE ticket_id = $ticket_id"
+    ));
+
+    if (!$row || empty($row['ticket_outlook_event_id'])) {
+        return;
+    }
+
+    $access_token = getOutlookAccessToken($row['ticket_assigned_to']);
+    if ($access_token) {
+        $ch = curl_init("https://graph.microsoft.com/v1.0/me/events/" . rawurlencode($row['ticket_outlook_event_id']));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST  => 'DELETE',
+            CURLOPT_HTTPHEADER     => ["Authorization: Bearer $access_token"],
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+    }
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_outlook_event_id = NULL WHERE ticket_id = $ticket_id");
+}
+
+// ── End Outlook Calendar ────────────────────────────────────────────────────
+
 function getTicketStatusName($ticket_status) {
 
     global $mysqli;

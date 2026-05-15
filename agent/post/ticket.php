@@ -2890,6 +2890,9 @@ if (isset($_POST['edit_ticket_schedule'])) {
         WHERE ticket_id = $ticket_id"
     );
 
+    // Sync to Outlook Calendar for the assigned technician
+    syncTicketToOutlook($ticket_id);
+
     // Check for other conflicting scheduled items based on 2 hr window
     //TODO make this configurable
     $start = date('Y-m-d H:i:s', strtotime($schedule) - 7200);
@@ -3072,6 +3075,9 @@ if (isset($_GET['cancel_ticket_schedule'])) {
     } else {
         $client_uri = '';
     }
+
+    // Remove Outlook Calendar event before clearing schedule
+    deleteOutlookCalendarEvent($ticket_id);
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_schedule = NULL, ticket_schedule_end = NULL, ticket_appointment_notes = NULL WHERE ticket_id = $ticket_id");
 

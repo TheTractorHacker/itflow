@@ -46,6 +46,13 @@
                     </a>
                 </li>
 
+                <li class="nav-item mt-2">
+                    <a href="/agent/user/user_integrations.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "user_integrations.php") { echo "active"; } ?>">
+                        <i class="nav-icon fab fa-microsoft"></i>
+                        <p>Integrations</p>
+                    </a>
+                </li>
+
             </ul>
         </nav>
         <!-- /.sidebar-menu -->
