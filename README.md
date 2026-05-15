@@ -8,116 +8,112 @@
 
 <div align="center">
 
-  <h3 align="center">ITFlow</h3>
+  <h3 align="center">ITFlow — MSP Edition</h3>
 
   <p align="center">
-    IT documentation, ticketing and accounting system for small MSPs.
+    A fork of <a href="https://github.com/itflow-org/itflow">ITFlow</a> with extended MSP workflow features built by <a href="https://foleyit.com">Foley IT</a>.
     <br />
     <br />
-    <a href="https://demo.itflow.org"><strong>View demo</strong></a>
-    <br />
-    Username: <b>demo@demo.com</b> | Password: <b>demo</b>
-    <br />
-    <br />
-    <a href="https://itflow.org/#about">About</a>
+    <a href="https://github.com/itflow-org/itflow">Upstream Project</a>
     ·
     <a href="https://docs.itflow.org">Docs</a>
     ·
-    <a href="https://forum.itflow.org/">Forum</a>
+    <a href="https://github.com/TheTractorHacker/itflow/releases">Releases</a>
     ·
-    <a href="https://forum.itflow.org/t/bug">Report Bug</a>
-    ·
-    <a href="https://forum.itflow.org/t/features">Request Feature</a>
-    ·
-    <a href="https://github.com/itflow-org/itflow/security/policy">Security</a>
+    <a href="https://github.com/TheTractorHacker/itflow/issues">Report Bug</a>
   </p>
 </div>
 
-<!-- ABOUT THE PROJECT -->
+---
+
+> **This is a fork.** It tracks the upstream [itflow-org/itflow](https://github.com/itflow-org/itflow) and merges updates regularly. All original credit goes to the ITFlow contributors. MSP-specific additions are maintained here by Foley IT.
+
+---
+
+<!-- ABOUT -->
 ## About
 
-<b>A comprehensive, free & open-source documentation, ticket management, and accounting platform.</b>
+**ITFlow MSP Edition** is a hardened, feature-extended build of ITFlow — the free and open-source IT documentation, ticketing, and accounting platform for managed service providers.
 
-[![ITFlow][product-screenshot]](https://itflow.org)
+This fork adds real-world MSP dispatch and scheduling workflows that go beyond the upstream project, while staying in sync with upstream security patches and improvements.
 
+<!-- MSP ADDITIONS -->
+## What's Added in This Fork
 
-### The Problem
-- You're a small but busy managed service provider with 101 things to do. Information about your clients is unorganised, unstructured and outdated.
-- For some work, you seem to spend longer looking for the relevant documentation than actually working on the issue/project. 
-- On top of the technical day to day, you also have to take care of the financial side of the business - consistent pricing, quotes/invoicing, and accounting. 
+### Ticketing
+- **Ticket categories** with parent/group hierarchy and collapsible grouped list view
+- **Inline pill-style dropdowns** — change Category, Assigned Tech, Priority, and Status directly from the ticket list without opening the ticket
+- **Syncro-style appointments** — end time, duration picker (30 min – 8 hr), Remote/Onsite toggle, appointment notes, and live preview
+- **Ticket reply draft autosave** — localStorage autosave with Restore/Discard banner so replies survive accidental navigation
 
-### The Solution: ITFlow
-- ITFlow consolidates common MSP needs (documentation, ticketing and billing) into one unified system.
+### Calendar & Scheduling
+- **Outlook Calendar push sync** — each technician connects their Microsoft account once; scheduled tickets automatically create, update, and cancel events in their personal Outlook calendar via Microsoft Graph API
+- **iCal subscription feed** — per-user webcal:// URL for subscribing scheduled tickets into Outlook Classic, Apple Calendar, or Google Calendar
+- **Per-tech calendar colors** — each technician picks a color shown on the ITFlow dispatch calendar
+
+### Contracts & SLA
+- **SLA tracking on contracts** — define response/resolution hours per priority tier
+- **Contract billing frequency** — Monthly, Quarterly, Annual, or Other
+- **Live SLA hint on ticket add** — shows expected response/resolution time when a contract is selected
+
+### Worksheets
+- **Worksheet template drag-and-drop field reordering**
+- **Worksheet percent counter** — accurately counts all field types
+
+### Security Fixes (beyond upstream)
+- Fixed authorization bypass on ticket charge handlers (client access not enforced)
+- Fixed XSS in outtake/worksheet signature storage
+- Fixed SQL injection in contract name logAction call
+
+<!-- SYNCING WITH UPSTREAM -->
+## Keeping Up With Upstream
+
+This fork merges upstream changes periodically:
+
+```bash
+git fetch origin        # origin = itflow-org/itflow
+git merge origin/master
+git push fork master    # fork = TheTractorHacker/itflow
+```
 
 <!-- GETTING STARTED -->
 ## Getting Started
 
-### Self Hosting
-- The best installation method is to use the [install script](https://docs.itflow.org/installation_script) on Ubuntu/Debian. A video walk through is available [here](https://www.youtube.com/watch?v=kKz9NOU_1XE).
+Installation is the same as upstream ITFlow. See the [official docs](https://docs.itflow.org/installation).
+
+```bash
+wget -O itflow_install.sh https://github.com/itflow-org/itflow-install-script/raw/main/itflow_install.sh
+bash itflow_install.sh
 ```
-  wget -O itflow_install.sh https://github.com/itflow-org/itflow-install-script/raw/main/itflow_install.sh
-  bash itflow_install.sh
-```
-- Other manual installation methods are available in the [docs](https://docs.itflow.org/installation).
 
-### Managed Hosting
-- If you'd prefer, we can [host ITFlow for you](https://services.itflow.org/hosting.php).
+After installing, replace the files with this fork's content or clone this repo directly into your web root.
 
-<!-- FEATURES -->
-## Key Features
-* Client documentation - assets, contacts, domains, docs, files, passwords, and more 
-* Accounting / Billing - finance dashboard, quotes, invoices, accounting, expenses, etc
-* Client Portal - self service quote/invoice/ticket management for clients
-* Alerting - account balance, invoices, domain/SSL renewals
-* Completely free & open-source alternative to ITGlue and Hudu
-  
-<!-- ROADMAP -->
-## Roadmap / Future to-do
-We track the implementation of confirmed features and bugs via [TaskFlow](https://tasks.dev.itflow.org/tasks.php). Use the [forum](https://forum.itflow.org) to request features or raise bug reports. 
+<!-- RELEASES -->
+## Releases
 
-<!-- CONTRIBUTING -->
-## Support & Contributions
+Fork releases follow the format `vX.Y.Z-msp`. See [Releases](https://github.com/TheTractorHacker/itflow/releases) for changelogs.
 
-### Forum
-For help using ITFlow, bugs, feature requests, and general ideas / discussions please use the community [forum](https://forum.itflow.org).
-
-### Contributing
-We have temporarily paused PRs from the community.
-
-#### Contributors
-<a href="https://github.com/itflow-org/itflow/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=itflow-org/itflow" />
-</a>
-
-### Supporters
-We’re incredibly grateful to the organizations and individuals who support the project - a big thank you to:
-- CompuMatter
-- F1 for HELP
-- digiBandit
-- JetBrains (PhpStorm)
+| Release | Notes |
+|---------|-------|
+| v1.2.5-msp | Outlook push sync, per-tech calendar colors, modal bug fixes |
+| v1.2.4-msp | Upstream sync, security fixes |
+| v1.2.3-msp | Categories, SLA, contracts, worksheets, inline ticket actions |
 
 ## License
-ITFlow is distributed "as is" under the GPL License, WITHOUT WARRANTY OF ANY KIND. See [`LICENSE`](https://github.com/itflow-org/itflow/blob/master/LICENSE) for details.
+
+ITFlow is distributed under the GPL License. This fork inherits the same license. See [`LICENSE`](https://github.com/itflow-org/itflow/blob/master/LICENSE) for details.
 
 ## Security
-* As of 2025, we now have a stable release of the project.
-* Whilst we are confident in the safety of the code, no system is risk-free. Nearly all software has bugs. Use your best judgement before storing highly confidential information in ITFlow.
-* If you have a security concern, privately report it [here](https://github.com/itflow-org/itflow/security/policy).
+
+If you find a security issue in the upstream project, report it [here](https://github.com/itflow-org/itflow/security/policy).
+For issues specific to this fork, open an [issue](https://github.com/TheTractorHacker/itflow/issues).
 
 <!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/itflow-org/itflow.svg?style=for-the-badge
-[contributors-url]: https://github.com/itflow-org/itflow/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/itflow-org/itflow.svg?style=for-the-badge
-[forks-url]: https://github.com/itflow-org/itflow/network/members
-[stars-shield]: https://img.shields.io/github/stars/itflow-org/itflow.svg?style=for-the-badge
-[stars-url]: https://github.com/itflow-org/itflow/stargazers
-[issues-shield]: https://img.shields.io/github/issues/itflow-org/itflow.svg?style=for-the-badge
-[issues-url]: https://github.com/itflow-org/itflow/issues
-[license-shield]: https://img.shields.io/github/license/itflow-org/itflow.svg?style=for-the-badge
+[contributors-shield]: https://img.shields.io/github/contributors/TheTractorHacker/itflow.svg?style=for-the-badge
+[contributors-url]: https://github.com/TheTractorHacker/itflow/graphs/contributors
+[stars-shield]: https://img.shields.io/github/stars/TheTractorHacker/itflow.svg?style=for-the-badge
+[stars-url]: https://github.com/TheTractorHacker/itflow/stargazers
+[license-shield]: https://img.shields.io/github/license/TheTractorHacker/itflow.svg?style=for-the-badge
 [license-url]: https://github.com/itflow-org/itflow/blob/master/LICENSE
-[commit-shield]: https://img.shields.io/github/last-commit/itflow-org/itflow?style=for-the-badge
-[commit-url]: https://github.com/itflow-org/itflow/commits/master
-[product-screenshot]: .github/readme.gif
-
-<!-- https://github.com/othneildrew/Best-README-Template -->
+[commit-shield]: https://img.shields.io/github/last-commit/TheTractorHacker/itflow?style=for-the-badge
+[commit-url]: https://github.com/TheTractorHacker/itflow/commits/master
