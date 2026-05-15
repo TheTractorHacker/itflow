@@ -362,16 +362,14 @@ while ($row = mysqli_fetch_assoc($sql)) {
                 if (empty($username)) {
                     $username = "";
                 } else {
-                    //Limit to  characters and add ...
                     $username = substr($row['user_name'], 0, 9) . "...";
                 }
 
-                if (strtotime($row['ticket_schedule']) < time()) {
-                    if (!empty($row['ticket_schedule'])) {
-                        $event_color = "red";
-                    } else {
-                        $event_color = "green";
-                    }
+                // Use the assigned tech's personal color; fall back to red (past) / grey (future)
+                if (!empty($row['user_color'])) {
+                    $event_color = nullable_htmlentities($row['user_color']);
+                } elseif (strtotime($row['ticket_schedule']) < time()) {
+                    $event_color = "red";
                 } else {
                     $event_color = "grey";
                 }
@@ -379,9 +377,9 @@ while ($row = mysqli_fetch_assoc($sql)) {
                 $ticket_status = strval($row['ticket_status_name']);
                 $event_title = json_encode($row['ticket_prefix'] . $row['ticket_number'] . " scheduled - " . $row['ticket_subject'] . " [" . $username . "]{" . $ticket_status . "}");
                 $event_start = json_encode($row['ticket_schedule']);
+                $event_end   = $row['ticket_schedule_end'] ? json_encode($row['ticket_schedule_end']) : 'null';
 
-
-                echo "{ id: $event_id, title: $event_title, start: $event_start, color: '$event_color', url: 'ticket.php?ticket_id=$event_id$client_url' },";
+                echo "{ id: $event_id, title: $event_title, start: $event_start, end: $event_end, color: '$event_color', url: 'ticket.php?ticket_id=$event_id$client_url' },";
             }
 
             // Vendors Added Created

@@ -1,6 +1,8 @@
 <?php
 
-require_once "includes/inc_all.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/check_login.php';
 
 if (!$config_outlook_cal_tenant_id || !$config_outlook_cal_client_id) {
     flash_alert("Outlook Calendar Sync is not configured. Ask your admin to complete the setup under Admin → Settings → Calendar Sync.", 'error');
@@ -20,6 +22,7 @@ $auth_url = "https://login.microsoftonline.com/" . rawurlencode($config_outlook_
     'response_mode' => 'query',
     'scope'         => 'Calendars.ReadWrite offline_access',
     'state'         => $state,
+    'prompt'        => 'select_account',
 ]);
 
 header("Location: $auth_url");

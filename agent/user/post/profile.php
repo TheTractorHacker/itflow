@@ -311,3 +311,18 @@ if (isset($_POST['revoke_your_2fa_remember_tokens'])) {
     redirect();
 
 }
+
+if (isset($_POST['save_user_color'])) {
+    validateCSRFToken($_POST['csrf_token']);
+
+    $color = sanitizeInput($_POST['user_color']);
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+        $color = '#3498db';
+    }
+
+    mysqli_query($mysqli, "UPDATE users SET user_color = '$color' WHERE user_id = $session_user_id");
+
+    logAction("User Account", "Edit", "$session_name updated their calendar color");
+    flash_alert("Calendar color saved.");
+    redirect();
+}

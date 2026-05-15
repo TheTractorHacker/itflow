@@ -16,15 +16,33 @@ if (isset($_GET['disconnect_outlook'])) {
     exit;
 }
 
-// Load current user's Outlook connection status
-$row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT user_outlook_refresh_token, user_outlook_token_expires FROM users WHERE user_id = $session_user_id"));
+// Load current user's Outlook connection status and color
+$row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT user_outlook_refresh_token, user_outlook_token_expires, user_color FROM users WHERE user_id = $session_user_id"));
 $outlook_connected = !empty($row['user_outlook_refresh_token']);
 $outlook_expires   = $row['user_outlook_token_expires'] ?? null;
+$user_color        = $row['user_color'] ?? '#3498db';
 
 $admin_configured = !empty($config_outlook_cal_client_id) && !empty($config_outlook_cal_tenant_id);
 
 ?>
 
+<!-- Calendar Color -->
+<div class="card card-dark">
+    <div class="card-header py-3">
+        <h3 class="card-title"><i class="fas fa-palette mr-2"></i>My Calendar Color</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Your color is used on the ITFlow calendar so dispatchers can tell tickets apart by technician at a glance.</p>
+        <form action="post.php" method="post" class="form-inline">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+            <input type="color" name="user_color" value="<?= htmlspecialchars($user_color, ENT_QUOTES) ?>"
+                   class="mr-3" style="width:48px;height:38px;border:none;padding:2px;cursor:pointer;">
+            <button type="submit" name="save_user_color" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Color</button>
+        </form>
+    </div>
+</div>
+
+<!-- Outlook Calendar Sync -->
 <div class="card card-dark">
     <div class="card-header py-3">
         <h3 class="card-title"><i class="fab fa-microsoft mr-2"></i>Outlook Calendar Sync</h3>
