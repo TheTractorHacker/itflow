@@ -60,7 +60,7 @@ echo json_encode([
     'timeout'                => 60000,
     'excludeCredentials'     => $excludeCredentials,
     'authenticatorSelection' => [
-        'residentKey'        => 'preferred',
+        'residentKey'        => 'required',
         'userVerification'   => 'preferred',
     ],
     'attestation'            => 'none',

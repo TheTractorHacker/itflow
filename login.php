@@ -660,6 +660,17 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
             <form method="post">
 
                 <?php if ($show_login_form): ?>
+                    <!-- Passkey — primary, no email needed -->
+                    <button type="button" class="btn btn-dark btn-block mb-3" id="passkeySignInBtn">
+                        <i class="fas fa-fingerprint mr-2"></i>Sign in with a Passkey
+                    </button>
+
+                    <div class="d-flex align-items-center mb-3">
+                        <hr class="flex-grow-1">
+                        <span class="px-2 text-muted small">or sign in with password</span>
+                        <hr class="flex-grow-1">
+                    </div>
+
                     <!-- STEP 1: Email + Password -->
                     <div class="input-group mb-3">
                         <input type="text" class="form-control"
@@ -684,13 +695,7 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-block mb-3" name="login">Sign In</button>
-
-                    <div id="passkey-btn-wrapper" class="mt-1">
-                        <button type="button" class="btn btn-dark btn-block" id="passkeySignInBtn">
-                            <i class="fas fa-fingerprint mr-2"></i>Use a Passkey
-                        </button>
-                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" name="login">Sign In</button>
                 <?php endif; ?>
 
                 <?php if ($show_role_choice): ?>

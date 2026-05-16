@@ -1,15 +1,13 @@
-/* Passkey sign-in for login.php — CSP-compliant (no inline scripts/styles) */
+/* Discoverable passkey sign-in — no email required.
+   The OS picker lets the user choose their account. */
 (function () {
     'use strict';
 
-    var emailInput = document.querySelector('[name="email"]');
-    var btn        = document.getElementById('passkeySignInBtn');
-
-    if (!emailInput || !wrapper || !btn) return;
+    var btn = document.getElementById('passkeySignInBtn');
+    if (!btn) return;
 
     btn.addEventListener('click', passkeySignIn);
 
-    // ── base64url helpers ─────────────────────────────────────────────────────
     function b64uToBuf(str) {
         var b64 = str.replace(/-/g, '+').replace(/_/g, '/');
         while (b64.length % 4) b64 += '=';
@@ -17,38 +15,28 @@
     }
 
     function bufToB64u(buf) {
-        var bytes = new Uint8Array(buf);
-        var s = '';
+        var bytes = new Uint8Array(buf), s = '';
         bytes.forEach(function (b) { s += String.fromCharCode(b); });
         return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     }
 
-    // ── main sign-in flow ─────────────────────────────────────────────────────
     async function passkeySignIn() {
-        var email = emailInput.value.trim();
-        if (!email) { alert('Please enter your email address first.'); return; }
-
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Waiting…';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Waiting for passkey…';
 
         try {
-            var beginResp = await fetch('passkey_auth_begin.php', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ email: email }),
-            });
-            var options = await beginResp.json();
-            if (options.error) { alert(options.error); return; }
+            // 1. Get challenge (no email sent)
+            var beginResp = await fetch('passkey_auth_begin.php', { method: 'POST' });
+            var options   = await beginResp.json();
+            if (options.error) { showError(options.error); return; }
 
             options.challenge = b64uToBuf(options.challenge);
-            if (options.allowCredentials) {
-                options.allowCredentials = options.allowCredentials.map(function (c) {
-                    return Object.assign({}, c, { id: b64uToBuf(c.id) });
-                });
-            }
+            // allowCredentials is empty — browser shows all available passkeys for this site
 
+            // 2. OS picker → user selects their passkey
             var credential = await navigator.credentials.get({ publicKey: options });
 
+            // 3. Send assertion to server
             var payload = {
                 id:   credential.id,
                 type: credential.type,
@@ -72,15 +60,26 @@
             if (result.ok) {
                 window.location.href = result.redirect || '/agent/dashboard.php';
             } else {
-                alert('Passkey sign-in failed: ' + (result.error || 'Unknown error'));
+                showError(result.error || 'Sign-in failed');
             }
         } catch (err) {
             if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
-                alert('Error: ' + err.message);
+                showError(err.message);
             }
         } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-fingerprint mr-2"></i>Use a Passkey';
+            btn.innerHTML = '<i class="fas fa-fingerprint mr-2"></i>Sign in with a Passkey';
         }
+    }
+
+    function showError(msg) {
+        var el = document.getElementById('passkey-error');
+        if (!el) {
+            el = document.createElement('p');
+            el.id = 'passkey-error';
+            el.className = 'text-danger small text-center mt-2 mb-0';
+            btn.parentNode.insertBefore(el, btn.nextSibling);
+        }
+        el.textContent = msg;
     }
 })();
