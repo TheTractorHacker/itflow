@@ -59,11 +59,12 @@ try {
         passkey_aaguid = '$aaguid'
     ");
 
-    logAction("Passkey", "Register", "$session_name registered passkey '$name'", 0, $uid);
+    logAction("Passkey", "Register", "$session_name registered passkey $name", 0, $uid);
 
     echo json_encode(['ok' => true]);
 
 } catch (Throwable $e) {
-    logAction("Passkey", "Register Failed", "Registration failed: " . $e->getMessage());
+    $_err_safe = substr(preg_replace("/['\\\\']/", '', $e->getMessage()), 0, 200);
+    logAction("Passkey", "Register Failed", "Passkey registration failed: $_err_safe");
     echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
 }

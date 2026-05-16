@@ -38,6 +38,6 @@ if (!$pk) {
 mysqli_query($mysqli, "DELETE FROM user_passkeys WHERE passkey_id = $passkey_id AND passkey_user_id = $uid");
 
 $pk_name = sanitizeInput($pk['passkey_name']);
-logAction("Passkey", "Delete", "$uid removed passkey '$pk_name'");
+logAction("Passkey", "Delete", "Passkey deleted: $pk_name");
 
 echo json_encode(['ok' => true]);

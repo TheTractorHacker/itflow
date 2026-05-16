@@ -207,7 +207,7 @@ async function passkeyDoRegister() {
     document.getElementById('passkey-modal-waiting').style.display = '';
     footer.style.display = 'none';
     try {
-        const beginResp = await fetch('passkey_register_begin.php');
+        const beginResp = await fetch('passkey_enroll_start.php');
         const options   = await beginResp.json();
         if (options.error) throw new Error(options.error);
         options.challenge = b64u_to_buf(options.challenge);
@@ -220,7 +220,7 @@ async function passkeyDoRegister() {
                 clientDataJSON:    buf_to_b64u(credential.response.clientDataJSON),
                 attestationObject: buf_to_b64u(credential.response.attestationObject),
             }};
-        const result = await (await fetch('passkey_register_complete.php', {
+        const result = await (await fetch('passkey_enroll_finish.php', {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
         })).json();
         if (result.ok) {
