@@ -4415,6 +4415,38 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.5'");
     }
 
+    if (CURRENT_DATABASE_VERSION == '2.4.5') {
+        // Outbound Webhooks
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `webhooks` (
+          `webhook_id` int(11) NOT NULL AUTO_INCREMENT,
+          `webhook_name` varchar(200) NOT NULL DEFAULT '',
+          `webhook_url` varchar(2048) NOT NULL,
+          `webhook_secret` varchar(255) NOT NULL DEFAULT '',
+          `webhook_events` varchar(500) NOT NULL DEFAULT '',
+          `webhook_enabled` tinyint(1) NOT NULL DEFAULT 1,
+          `webhook_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+          PRIMARY KEY (`webhook_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `webhook_queue` (
+          `queue_id` int(11) NOT NULL AUTO_INCREMENT,
+          `queue_webhook_id` int(11) NOT NULL,
+          `queue_event` varchar(100) NOT NULL,
+          `queue_payload` longtext NOT NULL,
+          `queue_status` enum('pending','delivered','failed') NOT NULL DEFAULT 'pending',
+          `queue_attempts` tinyint(3) NOT NULL DEFAULT 0,
+          `queue_response_code` smallint(6) DEFAULT NULL,
+          `queue_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+          `queue_next_attempt_at` datetime NOT NULL DEFAULT current_timestamp(),
+          `queue_delivered_at` datetime DEFAULT NULL,
+          PRIMARY KEY (`queue_id`),
+          KEY `queue_status_next` (`queue_status`,`queue_next_attempt_at`),
+          KEY `queue_webhook_id` (`queue_webhook_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.6'");
+    }
+
 } else {
     // Up-to-date
 }

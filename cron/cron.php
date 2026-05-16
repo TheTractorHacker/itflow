@@ -1244,6 +1244,70 @@ if ($updates->current_version !== $updates->latest_version) {
 
 /*
  * ###############################################################################################################
+ *  WEBHOOK DELIVERY
+ * ###############################################################################################################
+ */
+
+$sql_wq = mysqli_query($mysqli,
+    "SELECT wq.queue_id, wq.queue_event, wq.queue_payload, wq.queue_attempts,
+            w.webhook_url, w.webhook_secret
+     FROM webhook_queue wq
+     JOIN webhooks w ON wq.queue_webhook_id = w.webhook_id
+     WHERE wq.queue_status = 'pending'
+       AND wq.queue_next_attempt_at <= NOW()
+       AND w.webhook_enabled = 1
+     LIMIT 50"
+);
+
+while ($wq = mysqli_fetch_assoc($sql_wq)) {
+    $wq_id       = intval($wq['queue_id']);
+    $wq_payload  = $wq['queue_payload'];
+    $wq_secret   = $wq['webhook_secret'];
+    $wq_url      = $wq['webhook_url'];
+    $wq_attempts = intval($wq['queue_attempts']) + 1;
+    $wq_event    = $wq['queue_event'];
+
+    $signature = 'sha256=' . hash_hmac('sha256', $wq_payload, $wq_secret);
+
+    $ctx = stream_context_create(['http' => [
+        'method'        => 'POST',
+        'header'        => "Content-Type: application/json
+X-ITFlow-Signature: $signature
+X-ITFlow-Event: $wq_event
+",
+        'content'       => $wq_payload,
+        'timeout'       => 10,
+        'ignore_errors' => true,
+    ]]);
+
+    @file_get_contents($wq_url, false, $ctx);
+
+    $resp_code = 0;
+    if (isset($http_response_header) && preg_match('/HTTP\/\S+ (\d+)/', $http_response_header[0], $m)) {
+        $resp_code = intval($m[1]);
+    }
+
+    $success = ($resp_code >= 200 && $resp_code < 300);
+
+    if ($success) {
+        mysqli_query($mysqli, "UPDATE webhook_queue SET queue_status = 'delivered', queue_attempts = $wq_attempts, queue_response_code = $resp_code, queue_delivered_at = NOW() WHERE queue_id = $wq_id");
+    } else {
+        // Exponential backoff: 5 min, 30 min, 2 hr, 6 hr → then failed
+        $backoffs = [5, 30, 120, 360];
+        if ($wq_attempts >= 5) {
+            mysqli_query($mysqli, "UPDATE webhook_queue SET queue_status = 'failed', queue_attempts = $wq_attempts, queue_response_code = $resp_code WHERE queue_id = $wq_id");
+        } else {
+            $delay = $backoffs[min($wq_attempts - 1, count($backoffs) - 1)];
+            mysqli_query($mysqli, "UPDATE webhook_queue SET queue_attempts = $wq_attempts, queue_response_code = $resp_code, queue_next_attempt_at = DATE_ADD(NOW(), INTERVAL $delay MINUTE) WHERE queue_id = $wq_id");
+        }
+    }
+}
+
+// Prune old delivered/failed webhook entries after 30 days
+mysqli_query($mysqli, "DELETE FROM webhook_queue WHERE queue_status IN ('delivered','failed') AND queue_created_at < NOW() - INTERVAL 30 DAY");
+
+/*
+ * ###############################################################################################################
  *  FINISH UP
  * ###############################################################################################################
  */

@@ -205,6 +205,7 @@ if (isset($_POST['add_ticket'])) {
     customAction('ticket_create', $ticket_id);
 
     logAction("Ticket", "Create", "$session_name created ticket $config_ticket_prefix$ticket_number - $ticket_subject", $client_id, $ticket_id);
+    queueWebhookEvent('ticket.created', getWebhookTicketPayload($ticket_id));
 
     flash_alert("Ticket <strong>$config_ticket_prefix$ticket_number</strong> created");
 
@@ -404,6 +405,7 @@ if (isset($_POST['edit_ticket_status'])) {
     mysqli_query($mysqli, "INSERT INTO ticket_history SET ticket_history_status = '$new_status_name', ticket_history_description = '$session_name changed status from $original_status to $new_status_name', ticket_history_ticket_id = $ticket_id");
 
     logAction("Ticket", "Edit", "$session_name changed status from $original_status to $new_status_name for ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
+    queueWebhookEvent('ticket.status_changed', getWebhookTicketPayload($ticket_id));
 
     customAction('ticket_update', $ticket_id);
 
@@ -858,6 +860,7 @@ if (isset($_POST['quick_assign_ticket'])) {
         mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = 'Ticket', notification = 'Ticket $ticket_prefix$ticket_number - $ticket_subject has been assigned to you by $session_name', notification_action = '/agent/ticket.php?ticket_id=$ticket_id$client_uri', notification_client_id = $client_id, notification_user_id = $assigned_to");
     }
 
+    queueWebhookEvent('ticket.assigned', getWebhookTicketPayload($ticket_id));
     echo json_encode(['ok' => true, 'name' => $agent_name, 'agent_id' => $assigned_to]);
     exit;
 }
@@ -2109,6 +2112,7 @@ if (isset($_POST['add_ticket_reply'])) {
     }
 
     logAction("Ticket", "Reply", "$session_name replied to ticket $ticket_prefix$ticket_number - $ticket_subject and was a $ticket_reply_type reply", $client_id, $ticket_id);
+    queueWebhookEvent('ticket.replied', getWebhookTicketPayload($ticket_id));
 
     redirect();
 
@@ -2348,6 +2352,7 @@ if (isset($_GET['resolve_ticket'])) {
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 4, ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id");
 
     logAction("Ticket", "Resolved", "$session_name resolved ticket $ticket_prefix$ticket_number (ID: $ticket_id)", $client_id, $ticket_id);
+    queueWebhookEvent('ticket.resolved', getWebhookTicketPayload($ticket_id));
 
     customAction('ticket_resolve', $ticket_id);
 
