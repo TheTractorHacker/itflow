@@ -52,8 +52,17 @@ if (isset($_POST['edit_credential'])) {
 
     enforceClientAccess();
 
+    // Snapshot old values before update (for history tracking)
+    $old_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT credential_name, credential_description, credential_uri, credential_username, credential_password, credential_note FROM credentials WHERE credential_id = $credential_id"));
+    $old_name_h        = $old_row['credential_name'];
+    $old_description_h = $old_row['credential_description'];
+    $old_uri_h         = $old_row['credential_uri'];
+    $old_username_h    = decryptCredentialEntry($old_row['credential_username']);
+    $old_password_h    = decryptCredentialEntry($old_row['credential_password']);
+    $old_note_h        = $old_row['credential_note'];
+
     // Determine if the password has actually changed (salt is rotated on all updates, so have to dencrypt both and compare)
-    $current_password = decryptCredentialEntry(mysqli_fetch_row(mysqli_query($mysqli, "SELECT credential_password FROM credentials WHERE credential_id = $credential_id"))[0]); // Get current credential password
+    $current_password = $old_password_h;
     $new_password = decryptCredentialEntry($password); // Get the new password being set (already encrypted by the credential model)
     if ($current_password !== $new_password) {
         // The password has been changed - update the DB to track
@@ -62,6 +71,29 @@ if (isset($_POST['edit_credential'])) {
 
     // Update the credential entry with the new details
     mysqli_query($mysqli,"UPDATE credentials SET credential_name = '$name', credential_description = '$description', credential_uri = '$uri', credential_uri_2 = '$uri_2', credential_username = '$username', credential_password = '$password', credential_otp_secret = '$otp_secret', credential_note = '$note', credential_favorite = $favorite, credential_contact_id = $contact_id, credential_asset_id = $asset_id WHERE credential_id = $credential_id");
+
+    // Record history for each changed field
+    $new_username_plain = decryptCredentialEntry($username);
+    $history_changes = [
+        ['Name',        $old_name_h,        $name],
+        ['Description', $old_description_h,  $description],
+        ['URL',         $old_uri_h,          $uri],
+        ['Username',    $old_username_h,     $new_username_plain],
+        ['Note',        $old_note_h,         $note],
+    ];
+    foreach ($history_changes as [$field, $old_val, $new_val]) {
+        if ($old_val !== $new_val) {
+            $h_field   = sanitizeInput($field);
+            $h_old     = sanitizeInput((string)$old_val);
+            $h_new     = sanitizeInput((string)$new_val);
+            $h_user    = sanitizeInput($session_name);
+            mysqli_query($mysqli, "INSERT INTO credential_history SET history_credential_id = $credential_id, history_user_id = $session_user_id, history_user_name = '$h_user', history_field = '$h_field', history_old_value = '$h_old', history_new_value = '$h_new'");
+        }
+    }
+    if ($current_password !== $new_password) {
+        $h_user = sanitizeInput($session_name);
+        mysqli_query($mysqli, "INSERT INTO credential_history SET history_credential_id = $credential_id, history_user_id = $session_user_id, history_user_name = '$h_user', history_field = 'Password', history_old_value = NULL, history_new_value = NULL");
+    }
 
     // Tags
     // Delete existing tags

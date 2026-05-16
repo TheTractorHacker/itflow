@@ -4394,11 +4394,26 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
     }
 
-    // if (CURRENT_DATABASE_VERSION == '2.4.4') {
-    //     // Insert queries here required to update to DB version 2.4.5
-    //     // Then, update the database to the next sequential version
-    //     mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.5'");
-    // }
+    if (CURRENT_DATABASE_VERSION == '2.4.4') {
+        // Session lifetime setting
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_login_session_lifetime` INT(11) NOT NULL DEFAULT 480 AFTER `config_login_remember_me_expire`");
+
+        // Credential history table
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `credential_history` (
+          `history_id` int(11) NOT NULL AUTO_INCREMENT,
+          `history_credential_id` int(11) NOT NULL,
+          `history_user_id` int(11) NOT NULL DEFAULT 0,
+          `history_user_name` varchar(200) NOT NULL DEFAULT '',
+          `history_field` varchar(100) NOT NULL,
+          `history_old_value` text DEFAULT NULL,
+          `history_new_value` text DEFAULT NULL,
+          `history_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+          PRIMARY KEY (`history_id`),
+          KEY `history_credential_id` (`history_credential_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.5'");
+    }
 
 } else {
     // Up-to-date

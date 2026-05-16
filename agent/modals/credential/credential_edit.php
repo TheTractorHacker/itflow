@@ -62,6 +62,9 @@ ob_start();
             <li class="nav-item">
                 <a class="nav-link" data-toggle="pill" href="#pills-credential-notes<?php echo $credential_id; ?>">Notes</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="pill" href="#pills-credential-history<?php echo $credential_id; ?>">History</a>
+            </li>
         </ul>
 
         <hr>
@@ -262,6 +265,41 @@ ob_start();
                     </div>
                 </div>
 
+            </div>
+
+            <div class="tab-pane fade" id="pills-credential-history<?php echo $credential_id; ?>">
+                <?php
+                $sql_history = mysqli_query($mysqli, "SELECT * FROM credential_history WHERE history_credential_id = $credential_id ORDER BY history_created_at DESC LIMIT 100");
+                if (mysqli_num_rows($sql_history) == 0) { ?>
+                    <p class="text-muted text-center mt-3"><i class="fas fa-history mr-2"></i>No changes recorded yet.</p>
+                <?php } else { ?>
+                <table class="table table-sm table-borderless mt-2">
+                    <thead class="text-secondary">
+                        <tr><th>When</th><th>By</th><th>Field</th><th>Old</th><th>New</th></tr>
+                    </thead>
+                    <tbody>
+                    <?php while ($hr = mysqli_fetch_assoc($sql_history)) {
+                        $h_field = nullable_htmlentities($hr['history_field']);
+                        $h_old   = $hr['history_old_value'] !== null ? nullable_htmlentities($hr['history_old_value']) : '<em class="text-muted">—</em>';
+                        $h_new   = $hr['history_new_value'] !== null ? nullable_htmlentities($hr['history_new_value']) : '<em class="text-muted">—</em>';
+                        $h_by    = nullable_htmlentities($hr['history_user_name']);
+                        $h_when  = timeAgo($hr['history_created_at']);
+                        if ($h_field === 'Password') {
+                            $h_old = '<em class="text-muted">hidden</em>';
+                            $h_new = '<em class="text-muted">hidden</em>';
+                        }
+                    ?>
+                        <tr>
+                            <td class="text-nowrap text-secondary" title="<?= nullable_htmlentities($hr['history_created_at']) ?>"><?= $h_when ?></td>
+                            <td class="text-nowrap"><?= $h_by ?></td>
+                            <td><strong><?= $h_field ?></strong></td>
+                            <td class="text-danger" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?= $h_old ?>"><?= $h_old ?></td>
+                            <td class="text-success" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?= $h_new ?>"><?= $h_new ?></td>
+                        </tr>
+                    <?php } ?>
+                    </tbody>
+                </table>
+                <?php } ?>
             </div>
 
         </div>

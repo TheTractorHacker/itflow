@@ -44,6 +44,19 @@ require_once "includes/inc_all_admin.php";
             </div>
 
             <div class="form-group">
+                <label>Session Lifetime <small class="text-secondary">(Minutes of inactivity before re-login is required &mdash; 480 = 8 hrs, 43200 = 30 days)</small></label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-hourglass-half"></i></span>
+                    </div>
+                    <input type="number" class="form-control" name="config_login_session_lifetime" min="30" max="43200" placeholder="Minutes (e.g. 480)" value="<?php echo intval($config_login_session_lifetime); ?>">
+                    <div class="input-group-append">
+                        <span class="input-group-text">minutes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
                 <label>Log retention <small class="text-secondary">(The amount of days before app/audit/auth logs are deleted during nightly cron)</small></label>
                 <div class="input-group">
                     <div class="input-group-prepend">

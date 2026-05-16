@@ -161,10 +161,11 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                             }
 
                             $ticket_assigned_to = intval($row['ticket_assigned_to']);
+                            $ticket_assigned_user_name = nullable_htmlentities($row['user_name'] ?? '');
                             if (empty($ticket_assigned_to)) {
                                 $ticket_assigned_to_display = empty($ticket_closed_at) ? "<span class='text-muted'>Unassigned</span>" : "Unassigned";
                             } else {
-                                $ticket_assigned_to_display = nullable_htmlentities($row['user_name']);
+                                $ticket_assigned_to_display = $ticket_assigned_user_name;
                             }
 
                             $contact_display = empty($contact_name) ? "-" : "<div><a href='contact_details.php?client_id=$client_id&contact_id=$contact_id'>$contact_name</a></div>";
@@ -413,7 +414,7 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                 <!-- Assigned agent pill -->
                                 <td>
                                     <?php
-                                    $agent_name_raw = $ticket_assigned_to ? ($row['user_name'] ?? '') : '';
+                                    $agent_name_raw = $ticket_assigned_to ? $ticket_assigned_user_name : '';
                                     $agent_label = $agent_name_raw ?: 'Unassigned';
                                     $agent_colors = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c','#e67e22','#34495e','#c0392b','#16a085'];
                                     $agent_color = $ticket_assigned_to ? $agent_colors[$ticket_assigned_to % count($agent_colors)] : '#adb5bd';
