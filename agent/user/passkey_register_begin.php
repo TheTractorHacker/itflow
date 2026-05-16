@@ -2,14 +2,32 @@
 // Returns WebAuthn PublicKeyCredentialCreationOptions as JSON
 // Must be called while authenticated
 
+ob_start();
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/session_init.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/auth_check.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_user_session.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/webauthn.php';
+ob_end_clean();
 
 header('Content-Type: application/json');
+
+// Auth check — return JSON instead of redirect for AJAX
+if (empty($_SESSION['logged']) || empty($_SESSION['user_id'])) {
+    echo json_encode(['error' => 'Not authenticated']);
+    exit;
+}
+
+// Load minimal user context
+$session_user_id = intval($_SESSION['user_id']);
+$userRow = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT user_name, user_email FROM users WHERE user_id = $session_user_id AND user_type = 1 AND user_status = 1 AND user_archived_at IS NULL LIMIT 1"
+));
+if (!$userRow) {
+    echo json_encode(['error' => 'Account not found']);
+    exit;
+}
+$session_name  = $userRow['user_name'];
+$session_email = $userRow['user_email'];
 
 $challenge = random_bytes(32);
 $_SESSION['passkey_register_challenge'] = wa_b64u_encode($challenge);

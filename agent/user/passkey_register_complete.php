@@ -2,14 +2,28 @@
 // Verifies and stores a newly-registered passkey
 // Expects JSON body: { id, response: { clientDataJSON, attestationObject }, passkeyName }
 
+ob_start();
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/session_init.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/auth_check.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_user_session.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/webauthn.php';
+ob_end_clean();
 
 header('Content-Type: application/json');
+
+if (empty($_SESSION['logged']) || empty($_SESSION['user_id'])) {
+    echo json_encode(['ok' => false, 'error' => 'Not authenticated']);
+    exit;
+}
+$session_user_id = intval($_SESSION['user_id']);
+$userRow = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT user_name FROM users WHERE user_id = $session_user_id AND user_type = 1 AND user_status = 1 AND user_archived_at IS NULL LIMIT 1"
+));
+if (!$userRow) {
+    echo json_encode(['ok' => false, 'error' => 'Account not found']);
+    exit;
+}
+$session_name = $userRow['user_name'];
 
 $body = json_decode(file_get_contents('php://input'), true);
 if (!$body) { echo json_encode(['ok' => false, 'error' => 'Invalid JSON']); exit; }

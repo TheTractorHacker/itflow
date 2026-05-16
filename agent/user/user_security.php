@@ -141,23 +141,75 @@ if (!empty($_SESSION['show_mfa_modal'])) {
     </div>
 </div>
 
+<!-- Passkey Registration Modal -->
+<div class="modal fade" id="passkeyAddModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-fingerprint mr-2"></i>Add Passkey</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div id="passkey-modal-idle">
+                    <p class="text-muted mb-3">Give this passkey a name so you can identify which device it belongs to.</p>
+                    <div class="form-group">
+                        <label>Passkey name</label>
+                        <input type="text" class="form-control" id="passkeyNameInput"
+                               placeholder="e.g. MacBook Touch ID, iPhone Face ID"
+                               maxlength="200">
+                    </div>
+                </div>
+                <div id="passkey-modal-waiting" class="text-center py-3" style="display:none;">
+                    <i class="fas fa-fingerprint fa-3x text-primary mb-3" style="animation:pulse 1.2s infinite;"></i>
+                    <p class="mb-0"><strong>Waiting for your authenticator&hellip;</strong></p>
+                    <p class="text-muted small">Touch ID, Face ID, or security key</p>
+                </div>
+                <div id="passkey-modal-error" class="alert alert-danger mt-2" style="display:none;"></div>
+                <div id="passkey-modal-success" class="alert alert-success mt-2" style="display:none;">
+                    <i class="fas fa-check-circle mr-2"></i>Passkey registered successfully!
+                </div>
+            </div>
+            <div class="modal-footer" id="passkey-modal-footer">
+                <button type="button" class="btn btn-primary" id="passkeyRegisterBtn" onclick="passkeyDoRegister()">
+                    <i class="fas fa-fingerprint mr-1"></i>Register Passkey
+                </button>
+                <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.1)} }
+</style>
+
 <script>
-async function passkeyRegister() {
-    const btn = document.getElementById('addPasskeyBtn');
+function passkeyRegister() {
+    // Reset modal state
+    document.getElementById('passkey-modal-idle').style.display    = '';
+    document.getElementById('passkey-modal-waiting').style.display = 'none';
+    document.getElementById('passkey-modal-error').style.display   = 'none';
+    document.getElementById('passkey-modal-success').style.display = 'none';
+    document.getElementById('passkey-modal-footer').style.display  = '';
+    document.getElementById('passkeyNameInput').value = '';
+    $('#passkeyAddModal').modal('show');
+}
 
-    // Prompt for a name
-    const name = prompt('Name this passkey (e.g. "MacBook Touch ID", "iPhone Face ID"):');
-    if (name === null) return;
-    const passkeyName = name.trim() || 'Passkey';
+async function passkeyDoRegister() {
+    const nameInput = document.getElementById('passkeyNameInput');
+    const passkeyName = nameInput.value.trim() || 'Passkey';
+    const errBox  = document.getElementById('passkey-modal-error');
+    const footer  = document.getElementById('passkey-modal-footer');
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Waiting…';
+    errBox.style.display = 'none';
+    document.getElementById('passkey-modal-idle').style.display    = 'none';
+    document.getElementById('passkey-modal-waiting').style.display = '';
+    footer.style.display = 'none';
 
     try {
         // 1. Get creation options
         const beginResp = await fetch('passkey_register_begin.php');
         const options   = await beginResp.json();
-        if (options.error) { alert(options.error); return; }
+        if (options.error) throw new Error(options.error);
 
         // Decode base64url fields
         options.challenge = b64u_to_buf(options.challenge);
@@ -166,10 +218,10 @@ async function passkeyRegister() {
             options.excludeCredentials = options.excludeCredentials.map(c => ({...c, id: b64u_to_buf(c.id)}));
         }
 
-        // 2. Create credential
+        // 2. Trigger authenticator
         const credential = await navigator.credentials.create({ publicKey: options });
 
-        // 3. Encode and send
+        // 3. Send to server
         const body = {
             passkeyName,
             id:   credential.id,
@@ -179,7 +231,6 @@ async function passkeyRegister() {
                 attestationObject: buf_to_b64u(credential.response.attestationObject),
             }
         };
-
         const completeResp = await fetch('passkey_register_complete.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -188,17 +239,20 @@ async function passkeyRegister() {
         const result = await completeResp.json();
 
         if (result.ok) {
-            window.location.reload();
+            document.getElementById('passkey-modal-waiting').style.display = 'none';
+            document.getElementById('passkey-modal-success').style.display = '';
+            setTimeout(() => { $('#passkeyAddModal').modal('hide'); window.location.reload(); }, 1200);
         } else {
-            alert('Registration failed: ' + (result.error || 'Unknown error'));
+            throw new Error(result.error || 'Server rejected the passkey');
         }
     } catch (err) {
-        if (err.name !== 'NotAllowedError') {
-            alert('Error: ' + err.message);
+        document.getElementById('passkey-modal-waiting').style.display = 'none';
+        document.getElementById('passkey-modal-idle').style.display    = '';
+        footer.style.display = '';
+        if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
+            errBox.textContent = 'Error: ' + err.message;
+            errBox.style.display = '';
         }
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-plus mr-1"></i>Add Passkey';
     }
 }
 
@@ -209,8 +263,7 @@ function b64u_to_buf(str) {
 }
 function buf_to_b64u(buf) {
     const bytes = new Uint8Array(buf);
-    let s = '';
-    bytes.forEach(b => s += String.fromCharCode(b));
+    let s = ''; bytes.forEach(b => s += String.fromCharCode(b));
     return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
 </script>

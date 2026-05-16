@@ -2,11 +2,13 @@
 // Verifies a passkey assertion and creates a session
 // Expects JSON body: { id, response: { clientDataJSON, authenticatorData, signature, userHandle } }
 
+ob_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/includes/webauthn.php';
 require_once __DIR__ . '/includes/load_global_settings.php';
+ob_end_clean();
 
 header('Content-Type: application/json');
 
