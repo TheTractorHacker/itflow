@@ -3,21 +3,9 @@
     'use strict';
 
     var emailInput = document.querySelector('[name="email"]');
-    var wrapper    = document.getElementById('passkey-btn-wrapper');
     var btn        = document.getElementById('passkeySignInBtn');
 
     if (!emailInput || !wrapper || !btn) return;
-
-    // Show button only when an email is typed
-    function toggleBtn() {
-        if (emailInput.value.trim()) {
-            wrapper.classList.remove('d-none');
-        } else {
-            wrapper.classList.add('d-none');
-        }
-    }
-    emailInput.addEventListener('input', toggleBtn);
-    toggleBtn(); // run once on load
 
     btn.addEventListener('click', passkeySignIn);
 

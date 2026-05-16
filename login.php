@@ -686,7 +686,7 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
 
                     <button type="submit" class="btn btn-primary btn-block mb-3" name="login">Sign In</button>
 
-                    <div id="passkey-btn-wrapper" class="mt-1 d-none">
+                    <div id="passkey-btn-wrapper" class="mt-1">
                         <button type="button" class="btn btn-dark btn-block" id="passkeySignInBtn">
                             <i class="fas fa-fingerprint mr-2"></i>Use a Passkey
                         </button>
