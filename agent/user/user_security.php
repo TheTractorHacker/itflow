@@ -127,11 +127,10 @@ if (!empty($_SESSION['show_mfa_modal'])) {
                         <td class="text-secondary"><?= $pkcreated ?></td>
                         <td><?= $pklast ?></td>
                         <td class="text-right">
-                            <a href="post.php?delete_passkey=<?= $pkid ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                               class="btn btn-sm btn-danger"
-                               onclick="return confirm('Remove this passkey?')">
+                            <button class="btn btn-sm btn-danger"
+                                    onclick="deletePasskey(<?= $pkid ?>, '<?= htmlspecialchars($pkname, ENT_QUOTES) ?>', this)">
                                 <i class="fas fa-trash"></i>
-                            </a>
+                            </button>
                         </td>
                     </tr>
                 <?php }
@@ -253,6 +252,40 @@ async function passkeyDoRegister() {
             errBox.textContent = 'Error: ' + err.message;
             errBox.style.display = '';
         }
+    }
+}
+
+async function deletePasskey(pkId, pkName, btn) {
+    if (!confirm('Remove passkey "' + pkName + '"?')) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const resp = await fetch('passkey_delete.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                passkey_id: pkId,
+                csrf_token: document.querySelector('meta[name="csrf"]')?.content
+                            || '<?php echo $_SESSION["csrf_token"]; ?>'
+            })
+        });
+        const result = await resp.json();
+        if (result.ok) {
+            btn.closest('tr').remove();
+            // Show empty-row if no passkeys left
+            if (document.querySelectorAll('#passkey-table tbody tr').length === 0) {
+                const tbody = document.querySelector('#passkey-table tbody');
+                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center py-3">No passkeys registered yet. Add one above.</td></tr>';
+            }
+        } else {
+            alert('Delete failed: ' + (result.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-trash"></i>';
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash"></i>';
     }
 }
 
