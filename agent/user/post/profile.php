@@ -160,8 +160,12 @@ if (isset($_POST['edit_your_user_preferences'])) {
     $dark_mode = intval($_POST['dark_mode'] ?? 0);
 
     // Calendar
+    $records_per_page = in_array(intval($_POST['records_per_page'] ?? 10), [10,25,50,100])
+        ? intval($_POST['records_per_page'])
+        : 10;
+
     if (isset($calendar_first_day)) {
-        mysqli_query($mysqli, "UPDATE user_settings SET user_config_calendar_first_day = $calendar_first_day, user_config_theme_dark = $dark_mode WHERE user_id = $session_user_id");
+        mysqli_query($mysqli, "UPDATE user_settings SET user_config_calendar_first_day = $calendar_first_day, user_config_theme_dark = $dark_mode, user_config_records_per_page = $records_per_page WHERE user_id = $session_user_id");
     }
 
     // Enable extension access, only if it isn't already setup (user doesn't have cookie)

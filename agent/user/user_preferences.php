@@ -1,54 +1,77 @@
 <?php
 require_once "includes/inc_all_user.php";
 
-$row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT user_config_calendar_first_day FROM user_settings WHERE user_id = $session_user_id"));
-$user_config_calendar_first_day = intval($row['user_config_calendar_first_day']);
-
+$pref = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT user_config_calendar_first_day, user_config_records_per_page FROM user_settings WHERE user_id = $session_user_id"
+));
+$calendar_first_day  = intval($pref['user_config_calendar_first_day']);
+$records_per_page    = intval($pref['user_config_records_per_page'] ?: 10);
 ?>
 
 <div class="card card-dark">
-    <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-fw fa-globe mr-2"></i>Preferences</h3>
+    <div class="card-header py-2">
+        <h3 class="card-title"><i class="fas fa-fw fa-sliders-h mr-2"></i>Preferences</h3>
     </div>
     <div class="card-body">
+        <form action="post.php" method="post" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
-        <form action="post.php" method="post" enctype="multipart/form-data" autocomplete="off">
-            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
-
+            <!-- Theme -->
             <div class="form-group">
-                <h5>Dark Mode</h5>
-
+                <label class="d-block mb-2">Theme</label>
                 <div class="btn-group btn-group-toggle" data-toggle="buttons">
-                    <label class="btn btn-outline-primary <?php if ($user_config_theme_dark === 0) { echo "active"; } ?>">
-                    <input type="radio" name="dark_mode" id="light-mode" autocomplete="off" <?php if ($user_config_theme_dark === 0) { echo "checked"; } ?>>
-                    <i class="fas fa-sun mr-2"></i>Light
+                    <label class="btn btn-outline-secondary <?= $user_config_theme_dark === 0 ? 'active' : '' ?>">
+                        <input type="radio" name="dark_mode" autocomplete="off"
+                               <?= $user_config_theme_dark === 0 ? 'checked' : '' ?>>
+                        <i class="fas fa-sun mr-1"></i> Light
                     </label>
-                    <label class="btn btn-outline-dark <?php if ($user_config_theme_dark === 1) { echo "active"; } ?>">
-                    <input type="radio" name="dark_mode" id="dark-mode" autocomplete="off" value="1" <?php if ($user_config_theme_dark === 1) { echo "checked"; } ?>>
-                    <i class="fas fa-moon mr-2"></i>Dark
+                    <label class="btn btn-outline-secondary <?= $user_config_theme_dark === 1 ? 'active' : '' ?>">
+                        <input type="radio" name="dark_mode" value="1" autocomplete="off"
+                               <?= $user_config_theme_dark === 1 ? 'checked' : '' ?>>
+                        <i class="fas fa-moon mr-1"></i> Dark
                     </label>
                 </div>
             </div>
 
+            <hr>
+
+            <!-- Calendar -->
             <div class="form-group">
-                <label>Calendar starts on<strong class="text-danger">*</strong></label>
-                <div class="input-group">
+                <label>Calendar starts on</label>
+                <div class="input-group" style="max-width:220px;">
                     <div class="input-group-prepend">
                         <span class="input-group-text"><i class="fa fa-fw fa-calendar-day"></i></span>
                     </div>
-                    <select class="form-control select2" name="calendar_first_day" required>
-                        <option <?php if ($user_config_calendar_first_day == '0') { echo "selected"; } ?> value="0" >Sunday</option>
-                        <option <?php if ($user_config_calendar_first_day == '1') { echo "selected"; } ?> value="1" >Monday</option>
+                    <select class="form-control" name="calendar_first_day">
+                        <option value="0" <?= $calendar_first_day == 0 ? 'selected' : '' ?>>Sunday</option>
+                        <option value="1" <?= $calendar_first_day == 1 ? 'selected' : '' ?>>Monday</option>
                     </select>
                 </div>
             </div>
 
-            <button type="submit" name="edit_your_user_preferences" class="btn btn-primary"><i class="fas fa-check mr-2"></i>Save</button>
+            <!-- Records per page -->
+            <div class="form-group">
+                <label>Records per page</label>
+                <div class="input-group" style="max-width:220px;">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-list"></i></span>
+                    </div>
+                    <select class="form-control" name="records_per_page">
+                        <?php foreach ([10, 25, 50, 100] as $n) { ?>
+                        <option value="<?= $n ?>" <?= $records_per_page == $n ? 'selected' : '' ?>><?= $n ?></option>
+                        <?php } ?>
+                    </select>
+                </div>
+                <small class="text-muted">Number of rows shown in tables.</small>
+            </div>
 
+            <hr>
+
+            <button type="submit" name="edit_your_user_preferences" class="btn btn-primary btn-sm">
+                <i class="fas fa-check mr-1"></i>Save Preferences
+            </button>
         </form>
-
     </div>
 </div>
 
-<?php
-require_once "../../includes/footer.php";
+<?php require_once "../../includes/footer.php"; ?>
