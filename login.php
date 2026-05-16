@@ -760,7 +760,7 @@ if (!$config_whitelabel_enabled) {
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="plugins/adminlte/js/adminlte.min.js"></script>
 <script src="js/login_prevent_resubmit.js"></script>
-<script src="js/passkey_login.js"></script>
+<script src="js/webauthn_signin.js"></script>
 
 </body>
 </html>
