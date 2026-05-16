@@ -686,12 +686,8 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
 
                     <button type="submit" class="btn btn-primary btn-block mb-3" name="login">Sign In</button>
 
-                    <?php if (!empty($email_prefill ?? '')): ?>
-                    <div id="passkey-btn-wrapper" class="mt-1">
-                    <?php else: ?>
-                    <div id="passkey-btn-wrapper" class="mt-1" style="display:none;">
-                    <?php endif; ?>
-                        <button type="button" class="btn btn-dark btn-block" id="passkeySignInBtn" onclick="passkeySignIn()">
+                    <div id="passkey-btn-wrapper" class="mt-1 d-none">
+                        <button type="button" class="btn btn-dark btn-block" id="passkeySignInBtn">
                             <i class="fas fa-fingerprint mr-2"></i>Use a Passkey
                         </button>
                     </div>
@@ -759,91 +755,7 @@ if (!$config_whitelabel_enabled) {
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="plugins/adminlte/js/adminlte.min.js"></script>
 <script src="js/login_prevent_resubmit.js"></script>
-<script>
-// Show/hide passkey button based on email field
-(function(){
-    const emailInput = document.querySelector('[name="email"]');
-    const wrapper    = document.getElementById('passkey-btn-wrapper');
-    if (!emailInput || !wrapper) return;
-    function toggle() { wrapper.style.display = emailInput.value.trim() ? '' : 'none'; }
-    emailInput.addEventListener('input', toggle);
-    toggle();
-})();
-
-// ── WebAuthn helpers ──────────────────────────────────────────────────────────
-function b64u_to_buf(str) {
-    const b64 = str.replace(/-/g,'+').replace(/_/g,'/') + '=='.slice(0, (4 - str.length % 4) % 4);
-    return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
-}
-function buf_to_b64u(buf) {
-    const bytes = new Uint8Array(buf);
-    let s = ''; bytes.forEach(b => s += String.fromCharCode(b));
-    return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-}
-
-async function passkeySignIn() {
-    const emailInput = document.querySelector('[name="email"]');
-    const btn        = document.getElementById('passkeySignInBtn');
-    const email      = emailInput ? emailInput.value.trim() : '';
-
-    if (!email) { alert('Please enter your email address first.'); return; }
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Waiting for passkey…';
-
-    try {
-        // 1. Get assertion options
-        const beginResp = await fetch('passkey_auth_begin.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email }),
-        });
-        const options = await beginResp.json();
-        if (options.error) { alert(options.error); return; }
-
-        // Decode base64url
-        options.challenge = b64u_to_buf(options.challenge);
-        if (options.allowCredentials) {
-            options.allowCredentials = options.allowCredentials.map(c => ({...c, id: b64u_to_buf(c.id)}));
-        }
-
-        // 2. Get assertion from authenticator
-        const credential = await navigator.credentials.get({ publicKey: options });
-
-        // 3. Send to server
-        const body = {
-            id:   credential.id,
-            type: credential.type,
-            response: {
-                clientDataJSON:    buf_to_b64u(credential.response.clientDataJSON),
-                authenticatorData: buf_to_b64u(credential.response.authenticatorData),
-                signature:         buf_to_b64u(credential.response.signature),
-                userHandle:        credential.response.userHandle ? buf_to_b64u(credential.response.userHandle) : null,
-            },
-        };
-
-        const completeResp = await fetch('passkey_auth_complete.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(body),
-        });
-        const result = await completeResp.json();
-
-        if (result.ok) {
-            window.location.href = result.redirect || '/agent/dashboard.php';
-        } else {
-            alert('Passkey sign-in failed: ' + (result.error || 'Unknown error'));
-        }
-    } catch (err) {
-        if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
-            alert('Error: ' + err.message);
-        }
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-fingerprint mr-2"></i>Use a Passkey';
-    }
-}
-</script>
+<script src="js/passkey_login.js"></script>
 
 </body>
 </html>
