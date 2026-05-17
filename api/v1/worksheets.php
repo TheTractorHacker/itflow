@@ -162,3 +162,58 @@ if ($resource === 'worksheet-templates' && $method === 'GET') {
 }
 
 api_error(404, 'Not found');
+
+// Create ticket charge
+if ($resource === 'tickets' && $sub === 'charges' && $method === 'POST') {
+    $body      = json_decode(file_get_contents('php://input'), true) ?? [];
+    $name      = mysqli_real_escape_string($mysqli, trim($body['name'] ?? ''));
+    $desc      = mysqli_real_escape_string($mysqli, trim($body['description'] ?? ''));
+    $qty       = floatval($body['quantity'] ?? 1);
+    $unit_price= floatval($body['unit_price'] ?? 0);
+    $total     = round($qty * $unit_price, 2);
+
+    if (!$name) api_error(400, 'name required');
+
+    mysqli_query($mysqli,
+        "INSERT INTO ticket_charges (charge_ticket_id, charge_name, charge_description,
+         charge_quantity, charge_unit_price, charge_total, charge_created_by)
+         VALUES ($id, '$name', '$desc', $qty, $unit_price, $total, $uid)"
+    );
+    api_response(201, ['id' => mysqli_insert_id($mysqli), 'total' => $total]);
+}
+
+// Create worksheet from template
+if ($resource === 'tickets' && $sub === 'worksheets' && $method === 'POST') {
+    $body        = json_decode(file_get_contents('php://input'), true) ?? [];
+    $template_id = intval($body['template_id'] ?? 0);
+    $is_outtake  = intval($body['is_outtake'] ?? 0);
+    if (!$template_id) api_error(400, 'template_id required');
+
+    $sign_token = $is_outtake ? "'" . bin2hex(random_bytes(32)) . "'" : 'NULL';
+    mysqli_query($mysqli,
+        "INSERT INTO ticket_worksheets (worksheet_ticket_id, worksheet_template_id,
+         worksheet_is_outtake, worksheet_sign_token, worksheet_created_by)
+         VALUES ($id, $template_id, $is_outtake, $sign_token, $uid)"
+    );
+    $ws_id = mysqli_insert_id($mysqli);
+    api_response(201, ['id' => $ws_id]);
+}
+
+// Save worksheet field responses
+if ($resource === 'worksheets' && $id !== null && $sub === 'responses' && $method === 'POST') {
+    $body      = json_decode(file_get_contents('php://input'), true) ?? [];
+    $responses = $body['responses'] ?? [];
+    foreach ($responses as $resp) {
+        $field_id = intval($resp['field_id'] ?? 0);
+        $value    = mysqli_real_escape_string($mysqli, $resp['value'] ?? '');
+        if (!$field_id) continue;
+        mysqli_query($mysqli,
+            "INSERT INTO ticket_worksheet_responses (response_worksheet_id, response_field_id, response_value)
+             VALUES ($id, $field_id, '$value')
+             ON DUPLICATE KEY UPDATE response_value = '$value'"
+        );
+    }
+    // Mark completed
+    mysqli_query($mysqli, "UPDATE ticket_worksheets SET worksheet_completed_at = NOW() WHERE worksheet_id = $id AND worksheet_completed_at IS NULL");
+    api_response(200, ['ok' => true]);
+}

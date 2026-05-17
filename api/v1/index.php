@@ -108,7 +108,9 @@ switch ($resource) {
     case 'invoices':      require __DIR__ . '/invoices.php';      break;
     case 'expenses':      require __DIR__ . '/expenses.php';      break;
     case 'worksheets':        require __DIR__ . '/worksheets.php'; break;
+    case 'worksheet-responses': require __DIR__ . '/worksheets.php'; break;
     case 'worksheet-templates': require __DIR__ . '/worksheets.php'; break;
+    case 'me':                  require __DIR__ . '/me.php'; break;
     case 'appointments': require __DIR__ . '/appointments.php'; break;
     case 'notifications': require __DIR__ . '/notifications.php'; break;
     default:              api_error(404, 'Not found');
