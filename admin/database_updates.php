@@ -4475,6 +4475,38 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.8'");
     }
 
+    if (CURRENT_DATABASE_VERSION == '2.4.8') {
+        // Comet Backup integration
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_comet_enabled` tinyint(1) NOT NULL DEFAULT 0 AFTER `config_backup_retain_count`");
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_comet_server_url` varchar(500) NOT NULL DEFAULT 'http://10.1.0.35:8060' AFTER `config_comet_enabled`");
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_comet_admin_user` varchar(200) NOT NULL DEFAULT '' AFTER `config_comet_server_url`");
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_comet_admin_pass` varchar(200) NOT NULL DEFAULT '' AFTER `config_comet_admin_user`");
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_comet_auto_ticket` tinyint(1) NOT NULL DEFAULT 0 AFTER `config_comet_admin_pass`");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `comet_client_map` (
+          `map_id` int(11) NOT NULL AUTO_INCREMENT,
+          `map_client_id` int(11) NOT NULL,
+          `map_comet_username` varchar(200) NOT NULL,
+          `map_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+          PRIMARY KEY (`map_id`),
+          UNIQUE KEY `map_client_id` (`map_client_id`),
+          KEY `map_comet_username` (`map_comet_username`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `comet_backup_alerts` (
+          `alert_id` int(11) NOT NULL AUTO_INCREMENT,
+          `alert_comet_username` varchar(200) NOT NULL,
+          `alert_device_name` varchar(200) NOT NULL,
+          `alert_ticket_id` int(11) NOT NULL,
+          `alert_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+          `alert_resolved_at` datetime DEFAULT NULL,
+          PRIMARY KEY (`alert_id`),
+          KEY `alert_lookup` (`alert_comet_username`,`alert_device_name`,`alert_resolved_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.9'");
+    }
+
 } else {
     // Up-to-date
 }

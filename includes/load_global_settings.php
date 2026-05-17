@@ -122,7 +122,12 @@ $config_log_retention = intval($row['config_log_retention']);
 $config_backup_auto_enabled  = intval($row['config_backup_auto_enabled'] ?? 0);
 $config_backup_frequency     = $row['config_backup_frequency'] ?? 'daily';
 $config_backup_retain_count  = max(1, intval($row['config_backup_retain_count'] ?? 7));
-
+// Comet Backup
+$config_comet_enabled      = intval($row['config_comet_enabled'] ?? 0);
+$config_comet_server_url   = $row['config_comet_server_url'] ?? 'http://10.1.0.35:8060';
+$config_comet_admin_user   = $row['config_comet_admin_user'] ?? '';
+$config_comet_admin_pass   = $row['config_comet_admin_pass'] ?? '';
+$config_comet_auto_ticket  = intval($row['config_comet_auto_ticket'] ?? 0);
 // Locale
 $config_currency_format = "US_en";
 $config_timezone = $row['config_timezone'];

@@ -800,6 +800,79 @@ $sql_asset_retired = mysqli_query(
 
 </div>
 
+
+<?php
+// ── Comet Backup card (only if enabled + client is mapped) ────────────────────
+if (!empty($config_comet_enabled)) {
+    require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/comet.php';
+    $comet_map = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT map_comet_username FROM comet_client_map WHERE map_client_id = $client_id LIMIT 1"
+    ));
+    if ($comet_map) {
+        $c_username  = $comet_map['map_comet_username'];
+        $c_last_jobs = comet_last_jobs_per_device($c_username);
+        $c_devices   = (comet_get_users()[$c_username] ?? [])['Devices'] ?? [];
+        ?>
+<div class="card card-dark mt-3">
+    <div class="card-header py-2 d-flex align-items-center">
+        <h3 class="card-title mr-auto">
+            <i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Comet Backup
+            <small class="text-muted ml-2"><?= htmlspecialchars($c_username) ?></small>
+        </h3>
+        <a href="/admin/comet_status.php" class="btn btn-xs btn-outline-secondary">
+            <i class="fas fa-expand-alt mr-1"></i>Full View
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <?php if (empty($c_devices)): ?>
+            <p class="text-muted text-center py-3 mb-0">No devices found for this user in Comet.</p>
+        <?php else: ?>
+        <table class="table table-sm table-borderless table-hover mb-0">
+            <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;" class="text-muted border-bottom">
+                <tr>
+                    <th class="pl-3" style="width:30px;"></th>
+                    <th>Device</th>
+                    <th>Status</th>
+                    <th>Last Backup</th>
+                    <th>Size</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($c_devices as $devid => $devdata):
+                $dev_name = $devdata['FriendlyName'] ?? $devid;
+                $job      = $c_last_jobs[$dev_name] ?? null;
+                $status   = $job ? intval($job['Status']) : 0;
+                $sc  = comet_status_class($status);
+                $sl  = comet_status_label($status);
+                $si  = comet_status_icon($status);
+                $ago = $job ? timeAgo(date('Y-m-d H:i:s', $job['StartTime'])) : '—';
+                $full= $job ? date('Y-m-d H:i', $job['StartTime']) : '';
+                $sz  = ($job && ($job['BytesOut'] ?? 0)) ? comet_fmt_bytes(intval($job['BytesOut'])) : '—';
+                $err = !empty($job['ErrorString']) ? htmlspecialchars(mb_strimwidth($job['ErrorString'], 0, 60, '…')) : '';
+            ?>
+                <tr>
+                    <td class="pl-3 text-center"><i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i></td>
+                    <td class="small font-weight-bold"><?= htmlspecialchars($dev_name) ?></td>
+                    <td>
+                        <span class="badge badge-<?= $sc ?>"><?= $sl ?></span>
+                        <?php if ($err): ?>
+                            <span class="text-danger small d-block"><?= $err ?></span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-muted small" title="<?= $full ?>"><?= $ago ?></td>
+                    <td class="text-muted small"><?= $sz ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+</div>
+        <?php
+    }
+}
+?>
+
 <!-- Include script to get TOTP code via the login ID -->
 <script src="js/credential_show_otp_via_id.js"></script>
 
