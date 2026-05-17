@@ -97,6 +97,12 @@
                             <p>Labor Types</p>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="/admin/ticket_automation.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'ticket_automation.php' ? 'active' : ''); ?>">
+                            <i class="nav-icon fas fa-robot"></i>
+                            <p>Ticket Automation</p>
+                        </a>
+                    </li>
                 <?php } ?>
                 <li class="nav-item">
                     <a href="/admin/custom_link.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'custom_link.php' ? 'active' : ''); ?>">
