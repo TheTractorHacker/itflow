@@ -86,7 +86,13 @@ if (!$api_user_id) {
 // Route
 switch ($resource) {
     case 'dashboard':     require __DIR__ . '/dashboard.php';     break;
-    case 'tickets':       require __DIR__ . '/tickets.php';       break;
+    case 'tickets':
+        if ($sub === 'charges' || $sub === 'worksheets') {
+            require __DIR__ . '/worksheets.php';
+        } else {
+            require __DIR__ . '/tickets.php';
+        }
+        break;
     case 'statuses':      require __DIR__ . '/tickets.php';      break;
     case 'clients':
         if ($sub !== null && !is_numeric($sub ?? '')) {
@@ -101,6 +107,8 @@ switch ($resource) {
     case 'quotes':        require __DIR__ . '/quotes.php';        break;
     case 'invoices':      require __DIR__ . '/invoices.php';      break;
     case 'expenses':      require __DIR__ . '/expenses.php';      break;
+    case 'worksheets':        require __DIR__ . '/worksheets.php'; break;
+    case 'worksheet-templates': require __DIR__ . '/worksheets.php'; break;
     case 'appointments': require __DIR__ . '/appointments.php'; break;
     case 'notifications': require __DIR__ . '/notifications.php'; break;
     default:              api_error(404, 'Not found');
