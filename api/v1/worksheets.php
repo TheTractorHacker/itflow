@@ -74,24 +74,27 @@ if ($resource === 'worksheets' && $id !== null && $sub === null && $method === '
     if (!$ws) api_error(404, 'Worksheet not found');
 
     $fields = [];
-    $sql = mysqli_query($mysqli,
-        "SELECT f.*, r.response_value
-         FROM worksheet_template_fields f
-         LEFT JOIN ticket_worksheet_responses r
-           ON r.response_field_id = f.field_id AND r.response_worksheet_id = $id
-         WHERE f.field_template_id = {$ws['worksheet_template_id']}
-         ORDER BY f.field_order ASC"
-    );
-    while ($row = mysqli_fetch_assoc($sql)) {
-        $fields[] = [
-            'id'       => intval($row['field_id']),
-            'name'     => $row['field_name'],
-            'type'     => $row['field_type'],
-            'options'  => $row['field_options'],
-            'required' => (bool)$row['field_required'],
-            'value'    => $row['response_value'],
-        ];
+    if (!empty($ws['worksheet_template_id'])) {
+        $sql = mysqli_query($mysqli,
+            "SELECT f.*, r.response_value
+             FROM worksheet_template_fields f
+             LEFT JOIN ticket_worksheet_responses r
+               ON r.response_field_id = f.field_id AND r.response_worksheet_id = $id
+             WHERE f.field_template_id = {$ws['worksheet_template_id']}
+             ORDER BY f.field_order ASC"
+        );
+        while ($row = mysqli_fetch_assoc($sql)) {
+            $fields[] = [
+                'id'       => intval($row['field_id']),
+                'name'     => $row['field_name'],
+                'type'     => $row['field_type'],
+                'options'  => $row['field_options'],
+                'required' => (bool)$row['field_required'],
+                'value'    => $row['response_value'],
+            ];
+        }
     }
+    // outtake with no template → $fields stays empty, sign screen handles it
 
     api_response(200, [
         'id'            => intval($ws['worksheet_id']),
@@ -216,17 +219,13 @@ if ($resource === 'worksheets' && $id !== null && $sub === 'responses' && $metho
     api_response(200, ['ok' => true]);
 }
 
-// Create outtake form (separate from worksheet - is_outtake=1 always)
+// Create outtake form — no template required, just needs a signature
 if ($resource === 'tickets' && $sub === 'outtake' && $method === 'POST') {
-    $body        = json_decode(file_get_contents('php://input'), true) ?? [];
-    $template_id = intval($body['template_id'] ?? 0);
-    if (!$template_id) api_error(400, 'template_id required');
-
-    $sign_token = "'" . bin2hex(random_bytes(32)) . "'";
+    $sign_token = bin2hex(random_bytes(32));
     mysqli_query($mysqli,
         "INSERT INTO ticket_worksheets (worksheet_ticket_id, worksheet_template_id,
          worksheet_is_outtake, worksheet_sign_token, worksheet_created_by)
-         VALUES ($id, $template_id, 1, $sign_token, $uid)"
+         VALUES ($id, NULL, 1, '$sign_token', $uid)"
     );
     api_response(201, ['id' => mysqli_insert_id($mysqli)]);
 }
