@@ -10,7 +10,7 @@ $sql = mysqli_query($mysqli,
     <div class="card-header py-2">
         <h3 class="card-title mt-2"><i class="fas fa-fw fa-robot mr-2"></i>Ticket Automation Rules</h3>
         <div class="card-tools">
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addRuleModal">
+            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/ticket_automation/add_rule.php">
                 <i class="fas fa-plus mr-2"></i>New Rule
             </button>
         </div>
@@ -111,72 +111,6 @@ $sql = mysqli_query($mysqli,
             <?php endwhile; ?>
             </tbody>
         </table>
-    </div>
-</div>
-
-<!-- Add Rule Modal -->
-<div class="modal fade" id="addRuleModal" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="post/ticket_automation.php">
-            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-            <input type="hidden" name="add_rule" value="1">
-            <div class="modal-content">
-                <div class="modal-header bg-dark">
-                    <h5 class="modal-title"><i class="fas fa-robot mr-2"></i>New Automation Rule</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>Rule Name</label>
-                        <input type="text" name="rule_name" class="form-control" placeholder="e.g. Escalate stale high priority" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Condition — When this is true:</label>
-                        <div class="input-group">
-                            <select name="rule_cond_field" class="form-control">
-                                <option value="age_hours">Ticket age (hours open)</option>
-                                <option value="idle_hours">Hours since last reply</option>
-                                <option value="priority">Priority (low/medium/high/critical)</option>
-                                <option value="status_id">Status ID</option>
-                                <option value="assigned_to">Assigned to user ID (0 = unassigned)</option>
-                            </select>
-                            <select name="rule_cond_op" class="form-control">
-                                <option value="greater_than">&gt; greater than</option>
-                                <option value="less_than">&lt; less than</option>
-                                <option value="equals">= equals</option>
-                                <option value="not_equals">≠ not equals</option>
-                            </select>
-                            <input type="text" name="rule_cond_value" class="form-control" placeholder="Value" required>
-                        </div>
-                        <small class="text-muted">Examples: age_hours &gt; 4 | priority = high | assigned_to = 0</small>
-                    </div>
-                    <div class="form-group">
-                        <label>Action — Do this:</label>
-                        <select name="rule_action" class="form-control">
-                            <option value="set_priority">Set priority (low/medium/high/critical)</option>
-                            <option value="assign_to">Assign to user ID</option>
-                            <option value="set_status">Set status ID</option>
-                            <option value="add_note">Add internal note (text)</option>
-                            <option value="notify_assignee">Notify assigned technician</option>
-                            <option value="close_ticket">Close ticket</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Action Value</label>
-                        <input type="text" name="rule_action_value" class="form-control" placeholder="e.g. critical  |  3  |  Ticket auto-escalated">
-                        <small class="text-muted">Leave blank for notify/close actions</small>
-                    </div>
-                    <div class="form-group">
-                        <label>Order (lower runs first)</label>
-                        <input type="number" name="rule_order" class="form-control" value="0">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Rule</button>
-                </div>
-            </div>
-        </form>
     </div>
 </div>
 
