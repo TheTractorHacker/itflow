@@ -1276,3 +1276,26 @@ if (isset($_POST['client_upload_document'])) {
 
     redirect('documents.php');
 }
+
+if (isset($_GET['client_serve_contract_doc'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    $doc_id = intval($_GET['client_serve_contract_doc']);
+    $doc = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT d.*, c.contract_client_id FROM contract_documents d
+         JOIN contracts c ON d.doc_contract_id = c.contract_id
+         WHERE d.doc_id = $doc_id LIMIT 1"
+    ));
+    if (!$doc || intval($doc['contract_client_id']) !== intval($session_client_id)) {
+        http_response_code(403); exit('Access denied');
+    }
+    $path = $_SERVER['DOCUMENT_ROOT'] . "/uploads/contracts/{$doc['doc_contract_id']}/{$doc['doc_filename']}";
+    if (!is_file($path)) { http_response_code(404); exit('File not found'); }
+    $safe = preg_replace('/[^\w.\-]/', '_', $doc['doc_original_name']);
+    header('Content-Type: ' . $doc['doc_mime_type']);
+    header('Content-Disposition: inline; filename="' . $safe . '"');
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private');
+    readfile($path);
+    exit;
+}
+

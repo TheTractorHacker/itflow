@@ -80,3 +80,121 @@ if (isset($_GET['delete_contract'])) {
     flash_alert("Contract deleted.");
     redirect();
 }
+
+// ── Upload contract document ──────────────────────────────────────────────────
+if (isset($_POST['upload_contract_document'])) {
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_contracts', 2);
+
+    $contract_id = intval($_POST['contract_id']);
+    $client_id   = intval(getFieldById('contracts', $contract_id, 'contract_client_id'));
+    if ($client_id) enforceClientAccess();
+
+    if (empty($_FILES['contract_document']['tmp_name'])) {
+        flash_alert('No file selected.', 'error'); redirect();
+    }
+
+    $file      = $_FILES['contract_document'];
+    $max_bytes = 20 * 1048576; // 20 MB
+
+    if ($file['size'] > $max_bytes) {
+        flash_alert('File too large (max 20 MB).', 'error'); redirect();
+    }
+
+    // Allowed MIME types
+    $allowed_mime = [
+        'application/pdf', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/png', 'image/jpeg', 'text/plain',
+    ];
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime  = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+    if (!in_array($mime, $allowed_mime)) {
+        flash_alert('File type not allowed.', 'error'); redirect();
+    }
+
+    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . "/uploads/contracts/$contract_id";
+    if (!is_dir($upload_dir)) mkdir($upload_dir, 0750, true);
+
+    // Safe stored filename: doc_id will come from insert, use timestamp for now
+    $ext      = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $stored   = time() . '_' . bin2hex(random_bytes(8)) . '.' . preg_replace('/[^a-z0-9]/i', '', $ext);
+    $dest     = "$upload_dir/$stored";
+
+    if (!move_uploaded_file($file['tmp_name'], $dest)) {
+        flash_alert('File upload failed.', 'error'); redirect();
+    }
+
+    $orig_safe = sanitizeInput($file['name']);
+    $mime_safe = sanitizeInput($mime);
+    $size      = intval($file['size']);
+
+    mysqli_query($mysqli, "INSERT INTO contract_documents SET
+        doc_contract_id  = $contract_id,
+        doc_filename     = '$stored',
+        doc_original_name = '$orig_safe',
+        doc_mime_type    = '$mime_safe',
+        doc_size         = $size,
+        doc_uploaded_by  = $session_user_id
+    ");
+
+    logAction('Contract', 'Upload', "$session_name uploaded $orig_safe to contract #$contract_id", $client_id);
+    flash_alert("Document <strong>$orig_safe</strong> uploaded.");
+    redirect();
+}
+
+// ── Serve (download) contract document ───────────────────────────────────────
+if (isset($_GET['serve_contract_document'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    enforceUserPermission('module_contracts');
+
+    $doc_id = intval($_GET['serve_contract_document']);
+    $doc = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT d.*, c.contract_client_id FROM contract_documents d
+         JOIN contracts c ON d.doc_contract_id = c.contract_id
+         WHERE d.doc_id = $doc_id LIMIT 1"
+    ));
+    if (!$doc) { flash_alert('Document not found.', 'error'); redirect(); }
+
+    $client_id = intval($doc['contract_client_id']);
+    if ($client_id) enforceClientAccess();
+
+    $path = $_SERVER['DOCUMENT_ROOT'] . "/uploads/contracts/{$doc['doc_contract_id']}/{$doc['doc_filename']}";
+    if (!is_file($path)) { flash_alert('File not found on server.', 'error'); redirect(); }
+
+    $safe_name = preg_replace('/[^\w.\-]/', '_', $doc['doc_original_name']);
+    header('Content-Type: ' . $doc['doc_mime_type']);
+    header('Content-Disposition: inline; filename="' . $safe_name . '"');
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private');
+    readfile($path);
+    exit;
+}
+
+// ── Delete contract document ──────────────────────────────────────────────────
+if (isset($_GET['delete_contract_document'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    enforceUserPermission('module_contracts', 2);
+
+    $doc_id = intval($_GET['delete_contract_document']);
+    $doc = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT d.*, c.contract_client_id FROM contract_documents d
+         JOIN contracts c ON d.doc_contract_id = c.contract_id
+         WHERE d.doc_id = $doc_id LIMIT 1"
+    ));
+    if (!$doc) { redirect(); }
+
+    $client_id = intval($doc['contract_client_id']);
+    if ($client_id) enforceClientAccess();
+
+    $path = $_SERVER['DOCUMENT_ROOT'] . "/uploads/contracts/{$doc['doc_contract_id']}/{$doc['doc_filename']}";
+    if (is_file($path)) @unlink($path);
+
+    mysqli_query($mysqli, "DELETE FROM contract_documents WHERE doc_id = $doc_id");
+    $orig_safe = sanitizeInput($doc['doc_original_name']);
+    logAction('Contract', 'Delete', "$session_name deleted document $orig_safe from contract #{$doc['doc_contract_id']}", $client_id);
+    flash_alert("Document <strong>$orig_safe</strong> deleted.", 'error');
+    redirect();
+}
+

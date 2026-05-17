@@ -112,11 +112,16 @@ $warn_date = date('Y-m-d', strtotime('+45 days'));
                         } else { echo '-'; } ?>
                     </td>
                     <td class="text-center">
-                        <a href="#" class="btn btn-sm btn-secondary ajax-modal"
+                        <a href="#" class="btn btn-sm btn-outline-primary ajax-modal"
+                            data-modal-url="modals/contract/contract_documents.php?contract_id=<?= $cid ?>"
+                            title="Documents">
+                            <i class="fas fa-file-pdf"></i>
+                        </a>
+                        <a href="#" class="btn btn-sm btn-secondary ajax-modal ml-1"
                             data-modal-url="modals/contract/contract_edit.php?contract_id=<?= $cid ?>">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <a href="post.php?delete_contract=<?= $cid ?>&client_id=<?= $cclient_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-sm btn-danger confirm-link">
+                        <a href="post.php?delete_contract=<?= $cid ?>&client_id=<?= $cclient_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-sm btn-danger confirm-link ml-1">
                             <i class="fas fa-trash"></i>
                         </a>
                     </td>

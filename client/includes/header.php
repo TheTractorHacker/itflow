@@ -65,12 +65,13 @@ header("X-Frame-Options: DENY"); // Legacy
 
                 <?php if ($config_module_enable_itdoc && ($session_contact_primary == 1 || $session_contact_is_technical_contact)) { ?>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?php echo in_array(basename($_SERVER['PHP_SELF']), ['documents.php', 'contacts.php', 'domains.php', 'certificates.php']) ? 'active' : ''; ?>" href="#" id="navbarDropdown2" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle <?php echo in_array(basename($_SERVER['PHP_SELF']), ['documents.php', 'contacts.php', 'domains.php', 'certificates.php', 'contracts.php']) ? 'active' : ''; ?>" href="#" id="navbarDropdown2" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Technical
                         </a>
                         <div class="dropdown-menu" aria-labelledby="navbarDropdown2">
                             <a class="dropdown-item" href="/client/contacts.php">Contacts</a>
                             <a class="dropdown-item" href="/client/assets.php">Assets</a>
+                            <a class="dropdown-item" href="/client/contracts.php">Contracts &amp; Docs</a>
                             <a class="dropdown-item" href="/client/documents.php">Documents</a>
                             <a class="dropdown-item" href="/client/domains.php">Domains</a>
                             <a class="dropdown-item" href="/client/certificates.php">Certificates</a>
