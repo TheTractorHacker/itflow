@@ -48,7 +48,15 @@ if ($resource === 'auth') {
 // All other endpoints require Bearer token
 $api_token_row  = null;
 $api_user_id    = null;
-$authHeader     = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+
+// Apache often strips Authorization header — try multiple sources
+$authHeader = $_SERVER['HTTP_AUTHORIZATION']
+           ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+           ?? '';
+if (empty($authHeader) && function_exists('getallheaders')) {
+    $hdrs = getallheaders();
+    $authHeader = $hdrs['Authorization'] ?? $hdrs['authorization'] ?? '';
+}
 
 if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {
     $raw_token  = $m[1];
