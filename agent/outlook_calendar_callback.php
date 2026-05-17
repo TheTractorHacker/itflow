@@ -1,6 +1,8 @@
 <?php
 
-require_once "includes/inc_all.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/check_login.php';
 
 // Validate CSRF state
 if (empty($_GET['state']) || empty($_SESSION['outlook_oauth_state']) || !hash_equals($_SESSION['outlook_oauth_state'], $_GET['state'])) {
