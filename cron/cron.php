@@ -1300,7 +1300,7 @@ $config_comet_admin_pass  = $row['config_comet_admin_pass'] ?? '';
 if ($config_comet_enabled && $config_comet_auto_ticket) {
     require_once dirname(__DIR__) . '/includes/comet.php';
 
-    $jobs = comet_get_all_jobs(26) ?: []; // last 26 hours
+    $jobs = comet_get_jobs_recent() ?: []; // recent + in-progress jobs
 
     // Build client lookup: comet_username => client_id
     $map_result = mysqli_query($mysqli, "SELECT map_comet_username, map_client_id FROM comet_client_map");
