@@ -151,3 +151,27 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
 }
 
 api_error(404, 'Not found');
+
+// UPDATE TICKET STATUS
+if ($method === 'POST' && $id !== null && $sub === 'status') {
+    $body   = json_decode(file_get_contents('php://input'), true) ?? [];
+    $status = intval($body['status_id'] ?? 0);
+    if (!$status) api_error(400, 'status_id required');
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $status, ticket_updated_at = NOW() WHERE ticket_id = $id");
+    // If status resolves the ticket
+    $resolved_status = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_status_id FROM ticket_statuses WHERE ticket_status_name IN ('Resolved','Closed','Complete') LIMIT 1"));
+    if ($resolved_status && $status == intval($resolved_status['ticket_status_id'])) {
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW() WHERE ticket_id = $id AND ticket_resolved_at IS NULL");
+    }
+    api_response(200, ['ok' => true]);
+}
+
+// GET TICKET STATUSES
+if ($method === 'GET' && $resource === 'statuses' || ($method === 'GET' && $id === null && isset($_GET['statuses']))) {
+    $statuses = [];
+    $sql = mysqli_query($mysqli, "SELECT * FROM ticket_statuses WHERE ticket_status_active = 1 ORDER BY ticket_status_order ASC");
+    while ($row = mysqli_fetch_assoc($sql)) {
+        $statuses[] = ['id' => intval($row['ticket_status_id']), 'name' => $row['ticket_status_name'], 'color' => $row['ticket_status_color']];
+    }
+    api_response(200, $statuses);
+}

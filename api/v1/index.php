@@ -87,6 +87,7 @@ if (!$api_user_id) {
 switch ($resource) {
     case 'dashboard':     require __DIR__ . '/dashboard.php';     break;
     case 'tickets':       require __DIR__ . '/tickets.php';       break;
+    case 'statuses':      require __DIR__ . '/tickets.php';      break;
     case 'clients':       require __DIR__ . '/clients.php';       break;
     case 'contacts':      require __DIR__ . '/contacts.php';      break;
     case 'assets':        require __DIR__ . '/assets.php';        break;
