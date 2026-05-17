@@ -1376,6 +1376,130 @@ mysqli_query($mysqli, "DELETE FROM webhook_queue WHERE queue_status IN ('deliver
  * ###############################################################################################################
  */
 
+/*
+ * ###############################################################################################################
+ *  TICKET AUTOMATION RULES
+ * ###############################################################################################################
+ */
+
+$automation_rules = [];
+$sql_rules = mysqli_query($mysqli,
+    "SELECT * FROM ticket_automation_rules WHERE rule_enabled = 1 ORDER BY rule_order ASC, rule_id ASC"
+);
+while ($r = mysqli_fetch_assoc($sql_rules)) {
+    $automation_rules[] = $r;
+}
+
+if (!empty($automation_rules)) {
+    // Fetch all open (non-resolved, non-closed) tickets
+    $sql_open = mysqli_query($mysqli,
+        "SELECT t.*, ts.ticket_status_name, u.user_email AS assignee_email, u.user_name AS assignee_name
+         FROM tickets t
+         LEFT JOIN ticket_statuses ts ON t.ticket_status = ts.ticket_status_id
+         LEFT JOIN users u ON t.ticket_assigned_to = u.user_id
+         WHERE t.ticket_archived_at IS NULL
+           AND t.ticket_resolved_at IS NULL"
+    );
+
+    while ($ticket = mysqli_fetch_assoc($sql_open)) {
+        $tid          = intval($ticket['ticket_id']);
+        $age_hours    = round((time() - strtotime($ticket['ticket_created_at'])) / 3600, 1);
+        $priority     = strtolower($ticket['ticket_priority'] ?? '');
+        $status_id    = intval($ticket['ticket_status']);
+        $assigned_to  = intval($ticket['ticket_assigned_to']);
+        $client_id    = intval($ticket['ticket_client_id']);
+
+        // Hours since last reply
+        $last_reply = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT MAX(ticket_reply_created_at) AS lr FROM ticket_replies WHERE ticket_reply_ticket_id = $tid"
+        ));
+        $idle_since = $last_reply['lr'] ? $last_reply['lr'] : $ticket['ticket_created_at'];
+        $idle_hours = round((time() - strtotime($idle_since)) / 3600, 1);
+
+        $ticket_vals = [
+            'age_hours'   => $age_hours,
+            'priority'    => $priority,
+            'status_id'   => $status_id,
+            'assigned_to' => $assigned_to,
+            'idle_hours'  => $idle_hours,
+        ];
+
+        foreach ($automation_rules as $rule) {
+            $field = $rule['rule_cond_field'];
+            $op    = $rule['rule_cond_op'];
+            $rval  = $rule['rule_cond_value'];
+            $act   = $rule['rule_action'];
+            $aval  = $rule['rule_action_value'];
+
+            $tval = $ticket_vals[$field] ?? null;
+            if ($tval === null) continue;
+
+            // Evaluate condition
+            $match = false;
+            $tval_cmp = is_numeric($tval) ? floatval($tval) : strtolower($tval);
+            $rval_cmp = is_numeric($rval) ? floatval($rval) : strtolower($rval);
+
+            switch ($op) {
+                case 'greater_than': $match = ($tval_cmp > $rval_cmp);  break;
+                case 'less_than':    $match = ($tval_cmp < $rval_cmp);  break;
+                case 'equals':       $match = ($tval_cmp == $rval_cmp); break;
+                case 'not_equals':   $match = ($tval_cmp != $rval_cmp); break;
+            }
+
+            if (!$match) continue;
+
+            // Execute action
+            $esc_aval = mysqli_real_escape_string($mysqli, $aval);
+            $rule_name = mysqli_real_escape_string($mysqli, $rule['rule_name']);
+
+            switch ($act) {
+                case 'set_priority':
+                    $p = mysqli_real_escape_string($mysqli, strtolower($aval));
+                    mysqli_query($mysqli, "UPDATE tickets SET ticket_priority = '$p' WHERE ticket_id = $tid");
+                    logAction("Automation", "Update", "Rule '$rule_name': set priority=$p on ticket $tid", $client_id, $tid);
+                    break;
+
+                case 'assign_to':
+                    $uid = intval($aval);
+                    mysqli_query($mysqli, "UPDATE tickets SET ticket_assigned_to = $uid WHERE ticket_id = $tid");
+                    logAction("Automation", "Update", "Rule '$rule_name': assigned ticket $tid to user $uid", $client_id, $tid);
+                    break;
+
+                case 'set_status':
+                    $sid = intval($aval);
+                    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $sid WHERE ticket_id = $tid");
+                    logAction("Automation", "Update", "Rule '$rule_name': set status=$sid on ticket $tid", $client_id, $tid);
+                    break;
+
+                case 'add_note':
+                    $note = mysqli_real_escape_string($mysqli, "🤖 Automation: $aval");
+                    mysqli_query($mysqli,
+                        "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_ticket_id, ticket_reply_created_at)
+                         VALUES ('$note', 'note', $tid, NOW())"
+                    );
+                    break;
+
+                case 'notify_assignee':
+                    if (!empty($ticket['assignee_email'])) {
+                        appNotify("Automation", "Rule '$rule_name' triggered on ticket #$tid", "/agent/ticket.php?ticket_id=$tid", $client_id);
+                    }
+                    break;
+
+                case 'close_ticket':
+                    $closer = $assigned_to > 0 ? $assigned_to : 1;
+                    mysqli_query($mysqli,
+                        "UPDATE tickets SET ticket_status = 5, ticket_closed_at = NOW(), ticket_closed_by = $closer
+                         WHERE ticket_id = $tid AND ticket_resolved_at IS NULL"
+                    );
+                    logAction("Automation", "Close", "Rule '$rule_name': auto-closed ticket $tid", $client_id, $tid);
+                    break;
+            }
+        }
+    }
+
+    logApp("Cron", "info", "Ticket automation rules processed (" . count($automation_rules) . " rules)");
+}
+
 // Send Alert to inform Cron was run
 appNotify("Cron", "Cron successfully executed", "/admin/audit_log.php");
 
