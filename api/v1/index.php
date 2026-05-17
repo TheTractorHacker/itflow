@@ -88,13 +88,20 @@ switch ($resource) {
     case 'dashboard':     require __DIR__ . '/dashboard.php';     break;
     case 'tickets':       require __DIR__ . '/tickets.php';       break;
     case 'statuses':      require __DIR__ . '/tickets.php';      break;
-    case 'clients':       require __DIR__ . '/clients.php';       break;
+    case 'clients':
+        if ($sub !== null && !is_numeric($sub ?? '')) {
+            require __DIR__ . '/client_tabs.php';
+        } else {
+            require __DIR__ . '/clients.php';
+        }
+        break;
     case 'contacts':      require __DIR__ . '/contacts.php';      break;
     case 'assets':        require __DIR__ . '/assets.php';        break;
     case 'credentials':   require __DIR__ . '/credentials.php';   break;
     case 'quotes':        require __DIR__ . '/quotes.php';        break;
     case 'invoices':      require __DIR__ . '/invoices.php';      break;
     case 'expenses':      require __DIR__ . '/expenses.php';      break;
+    case 'appointments': require __DIR__ . '/appointments.php'; break;
     case 'notifications': require __DIR__ . '/notifications.php'; break;
     default:              api_error(404, 'Not found');
 }
