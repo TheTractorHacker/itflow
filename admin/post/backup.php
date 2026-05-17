@@ -1,331 +1,300 @@
 <?php
 
 /*
- * ITFlow - GET/POST request handler for DB / master key backup
- * Rewritten with streaming SQL dump, component checksums, safer zipping, and better headers.
+ * ITFlow - Backup POST/GET handler
+ * Actions: backup_download_fresh, backup_save, backup_serve, backup_delete,
+ *          save_backup_settings, backup_master_key
  */
 
 defined('FROM_POST_HANDLER') || die("Direct file access is not allowed");
 
 require_once "../includes/app_version.php";
 
-// --- Optional performance levers for big backups ---
 @set_time_limit(0);
-if (function_exists('ini_set')) {
-    @ini_set('memory_limit', '1024M');
-}
+@ini_set('memory_limit', '1024M');
 
-/**
- * Write a line to a file handle with newline.
- */
+$BACKUP_DIR = $_SERVER['DOCUMENT_ROOT'] . '/backups';
+
+// ── Shared helpers ─────────────────────────────────────────────────────────────
+
 function fwrite_ln($fh, string $s): void {
-    fwrite($fh, $s);
-    fwrite($fh, PHP_EOL);
+    fwrite($fh, $s . PHP_EOL);
 }
 
-/**
- * Stream a SQL dump of schema and data into $sqlFile.
- * - Tables first (DROP + CREATE + INSERTs)
- * - Views (DROP VIEW + CREATE VIEW)
- * - Triggers (DROP TRIGGER + CREATE TRIGGER)
- *
- * NOTE: Routines/events are not dumped here. Add if needed.
- */
 function dump_database_streaming(mysqli $mysqli, string $sqlFile): void {
     $fh = fopen($sqlFile, 'wb');
-    if (!$fh) {
-        http_response_code(500);
-        exit("Cannot open dump file");
-    }
+    if (!$fh) { http_response_code(500); exit("Cannot open dump file"); }
 
-    // Preamble
-    fwrite_ln($fh, "-- UTF-8 + Foreign Key Safe Dump");
+    fwrite_ln($fh, "-- ITFlow DB Dump | Generated: " . date('Y-m-d H:i:s'));
     fwrite_ln($fh, "SET NAMES 'utf8mb4';");
     fwrite_ln($fh, "SET FOREIGN_KEY_CHECKS = 0;");
     fwrite_ln($fh, "SET UNIQUE_CHECKS = 0;");
     fwrite_ln($fh, "SET AUTOCOMMIT = 0;");
     fwrite_ln($fh, "");
 
-    // Gather tables and views
-    $tables = [];
-    $views  = [];
-
+    $tables = []; $views = [];
     $res = $mysqli->query("SHOW FULL TABLES");
-    if (!$res) {
-        fclose($fh);
-        error_log("MySQL Error (SHOW FULL TABLES): " . $mysqli->error);
-        http_response_code(500);
-        exit("Error retrieving tables.");
-    }
     while ($row = $res->fetch_array(MYSQLI_NUM)) {
-        $name = $row[0];
-        $type = strtoupper($row[1] ?? '');
-        if ($type === 'VIEW') {
-            $views[] = $name;
-        } else {
-            $tables[] = $name;
-        }
+        strtoupper($row[1] ?? '') === 'VIEW' ? ($views[] = $row[0]) : ($tables[] = $row[0]);
     }
     $res->close();
 
-    // --- TABLES: structure and data ---
     foreach ($tables as $table) {
-        $createRes = $mysqli->query("SHOW CREATE TABLE `{$mysqli->real_escape_string($table)}`");
-        if (!$createRes) {
-            error_log("MySQL Error (SHOW CREATE TABLE $table): " . $mysqli->error);
-            // continue to next table
-            continue;
-        }
-        $createRow = $createRes->fetch_assoc();
-        $createSQL = array_values($createRow)[1] ?? '';
-        $createRes->close();
-
-        fwrite_ln($fh, "-- ----------------------------");
-        fwrite_ln($fh, "-- Table structure for `{$table}`");
-        fwrite_ln($fh, "-- ----------------------------");
+        $cr = $mysqli->query("SHOW CREATE TABLE `{$mysqli->real_escape_string($table)}`");
+        if (!$cr) continue;
+        $createSQL = array_values($cr->fetch_assoc())[1] ?? '';
+        $cr->close();
         fwrite_ln($fh, "DROP TABLE IF EXISTS `{$table}`;");
         fwrite_ln($fh, $createSQL . ";");
         fwrite_ln($fh, "");
-
-        // Dump data in a streaming fashion
-        $dataRes = $mysqli->query("SELECT * FROM `{$mysqli->real_escape_string($table)}`", MYSQLI_USE_RESULT);
-        if ($dataRes) {
-            $wroteHeader = false;
-            while ($row = $dataRes->fetch_assoc()) {
-                if (!$wroteHeader) {
-                    fwrite_ln($fh, "-- Dumping data for table `{$table}`");
-                    $wroteHeader = true;
-                }
+        $dr = $mysqli->query("SELECT * FROM `{$mysqli->real_escape_string($table)}`", MYSQLI_USE_RESULT);
+        if ($dr) {
+            while ($row = $dr->fetch_assoc()) {
                 $cols = array_map(fn($c) => '`' . $mysqli->real_escape_string($c) . '`', array_keys($row));
-                $vals = array_map(
-                    function ($v) use ($mysqli) {
-                        return is_null($v) ? "NULL" : "'" . $mysqli->real_escape_string($v) . "'";
-                    },
-                    array_values($row)
-                );
-                fwrite_ln($fh, "INSERT INTO `{$table}` (" . implode(", ", $cols) . ") VALUES (" . implode(", ", $vals) . ");");
+                $vals = array_map(fn($v) => is_null($v) ? 'NULL' : "'" . $mysqli->real_escape_string($v) . "'", array_values($row));
+                fwrite_ln($fh, "INSERT INTO `{$table}` (" . implode(', ', $cols) . ") VALUES (" . implode(', ', $vals) . ");");
             }
-            $dataRes->close();
-            if ($wroteHeader) fwrite_ln($fh, "");
-        }
-    }
-
-    // --- VIEWS ---
-    foreach ($views as $view) {
-        $escView = $mysqli->real_escape_string($view);
-        $cRes = $mysqli->query("SHOW CREATE VIEW `{$escView}`");
-        if ($cRes) {
-            $row = $cRes->fetch_assoc();
-            $createView = $row['Create View'] ?? '';
-            $cRes->close();
-
-            fwrite_ln($fh, "-- ----------------------------");
-            fwrite_ln($fh, "-- View structure for `{$view}`");
-            fwrite_ln($fh, "-- ----------------------------");
-            fwrite_ln($fh, "DROP VIEW IF EXISTS `{$view}`;");
-            // Ensure statement ends with semicolon
-            if (!str_ends_with($createView, ';')) $createView .= ';';
-            fwrite_ln($fh, $createView);
+            $dr->close();
             fwrite_ln($fh, "");
         }
     }
 
-    // --- TRIGGERS ---
-    $tRes = $mysqli->query("SHOW TRIGGERS");
-    if ($tRes) {
-        while ($t = $tRes->fetch_assoc()) {
-            $triggerName = $t['Trigger'];
-            $escTrig = $mysqli->real_escape_string($triggerName);
-            $crt = $mysqli->query("SHOW CREATE TRIGGER `{$escTrig}`");
-            if ($crt) {
-                $row = $crt->fetch_assoc();
-                $createTrig = $row['SQL Original Statement'] ?? ($row['Create Trigger'] ?? '');
-                $crt->close();
+    foreach ($views as $view) {
+        $vr = $mysqli->query("SHOW CREATE VIEW `{$mysqli->real_escape_string($view)}`");
+        if ($vr) {
+            $row = $vr->fetch_assoc();
+            $sql = $row['Create View'] ?? '';
+            $vr->close();
+            fwrite_ln($fh, "DROP VIEW IF EXISTS `{$view}`;");
+            fwrite_ln($fh, $sql . ";");
+            fwrite_ln($fh, "");
+        }
+    }
 
-                fwrite_ln($fh, "-- ----------------------------");
-                fwrite_ln($fh, "-- Trigger for `{$triggerName}`");
-                fwrite_ln($fh, "-- ----------------------------");
-                fwrite_ln($fh, "DROP TRIGGER IF EXISTS `{$triggerName}`;");
-                if (!str_ends_with($createTrig, ';')) $createTrig .= ';';
-                fwrite_ln($fh, $createTrig);
+    $tr = $mysqli->query("SHOW TRIGGERS");
+    if ($tr) {
+        while ($t = $tr->fetch_assoc()) {
+            $cr2 = $mysqli->query("SHOW CREATE TRIGGER `{$mysqli->real_escape_string($t['Trigger'])}`");
+            if ($cr2) {
+                $row = $cr2->fetch_assoc();
+                $sql = $row['SQL Original Statement'] ?? ($row['Create Trigger'] ?? '');
+                $cr2->close();
+                fwrite_ln($fh, "DROP TRIGGER IF EXISTS `{$t['Trigger']}`;");
+                fwrite_ln($fh, $sql . ";");
                 fwrite_ln($fh, "");
             }
         }
-        $tRes->close();
+        $tr->close();
     }
 
-    // Postamble
     fwrite_ln($fh, "SET FOREIGN_KEY_CHECKS = 1;");
     fwrite_ln($fh, "SET UNIQUE_CHECKS = 1;");
     fwrite_ln($fh, "COMMIT;");
-
     fclose($fh);
 }
 
-/**
- * Zip a folder to $zipFilePath, skipping symlinks and dot-entries.
- */
-function zipFolderStrict(string $folderPath, string $zipFilePath): void {
+function zip_uploads(string $uploadsPath, string $zipFilePath): void {
     $zip = new ZipArchive();
-    if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
-        error_log("Failed to open zip file: $zipFilePath");
-        http_response_code(500);
-        exit("Internal Server Error: Cannot open zip archive.");
+    if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        http_response_code(500); exit("Cannot create uploads zip");
     }
-
-    $folderReal = realpath($folderPath);
-    if (!$folderReal || !is_dir($folderReal)) {
-        // Create an empty archive if uploads folder doesn't exist yet
-        $zip->close();
-        return;
-    }
-
-    $files = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($folderReal, FilesystemIterator::SKIP_DOTS),
+    $real = realpath($uploadsPath);
+    if (!$real || !is_dir($real)) { $zip->close(); return; }
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($real, FilesystemIterator::SKIP_DOTS),
         RecursiveIteratorIterator::LEAVES_ONLY
     );
-
-    foreach ($files as $file) {
-        /** @var SplFileInfo $file */
-        if ($file->isDir()) continue;
-        if ($file->isLink()) continue; // skip symlinks
-        $filePath = $file->getRealPath();
-        if ($filePath === false) continue;
-
-        // ensure path is inside the folder boundary
-        if (strpos($filePath, $folderReal . DIRECTORY_SEPARATOR) !== 0 && $filePath !== $folderReal) {
-            continue;
-        }
-
-        $relativePath = substr($filePath, strlen($folderReal) + 1);
-        $zip->addFile($filePath, $relativePath);
+    foreach ($it as $file) {
+        if ($file->isDir() || $file->isLink()) continue;
+        $fp = $file->getRealPath();
+        if (!$fp || strpos($fp, $real . DIRECTORY_SEPARATOR) !== 0) continue;
+        $zip->addFile($fp, substr($fp, strlen($real) + 1));
     }
-
     $zip->close();
 }
 
-if (isset($_GET['download_backup'])) {
+/**
+ * Build a complete backup zip. Returns path to the zip (caller must delete temp files).
+ * $type: 'manual' or 'auto'
+ */
+function build_backup(mysqli $mysqli, string $type, string $backupDir): array {
+    $timestamp    = date('YmdHis');
+    $baseName     = "itflow_{$timestamp}_{$type}";
+    $sqlFile      = tempnam(sys_get_temp_dir(), $baseName . '_sql_');
+    $uploadsZip   = tempnam(sys_get_temp_dir(), $baseName . '_upl_');
+    $versionFile  = tempnam(sys_get_temp_dir(), $baseName . '_ver_');
+    $finalZip     = $backupDir . "/{$baseName}.zip";
 
+    foreach ([$sqlFile, $uploadsZip, $versionFile] as $f) @chmod($f, 0600);
+
+    dump_database_streaming($mysqli, $sqlFile);
+    zip_uploads($_SERVER['DOCUMENT_ROOT'] . '/../uploads', $uploadsZip);
+
+    $commitHash = trim(@shell_exec('git log -1 --format=%H 2>/dev/null') ?: 'N/A');
+    $dbSha      = hash_file('sha256', $sqlFile) ?: 'N/A';
+    $upSha      = hash_file('sha256', $uploadsZip) ?: 'N/A';
+
+    $meta  = "ITFlow Backup Metadata\n";
+    $meta .= "Generated: " . date('Y-m-d H:i:s') . "\n";
+    $meta .= "Type: $type\n";
+    $meta .= "Git Commit: $commitHash\n";
+    $meta .= "ITFlow Version: " . (defined('APP_VERSION') ? APP_VERSION : 'N/A') . "\n";
+    $meta .= "DB Version: " . (defined('CURRENT_DATABASE_VERSION') ? CURRENT_DATABASE_VERSION : 'N/A') . "\n";
+    $meta .= "SHA256 db.sql: $dbSha\n";
+    $meta .= "SHA256 uploads.zip: $upSha\n";
+    file_put_contents($versionFile, $meta);
+
+    $final = new ZipArchive();
+    if ($final->open($finalZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        http_response_code(500); exit("Cannot create backup zip");
+    }
+    $final->addFile($sqlFile,     'db.sql');
+    $final->addFile($uploadsZip,  'uploads.zip');
+    $final->addFile($versionFile, 'version.txt');
+    $final->close();
+    @chmod($finalZip, 0640);
+
+    @unlink($sqlFile); @unlink($uploadsZip); @unlink($versionFile);
+
+    return ['path' => $finalZip, 'name' => basename($finalZip)];
+}
+
+function prune_backups(string $backupDir, int $retainCount): void {
+    $files = glob($backupDir . '/itflow_*.zip') ?: [];
+    usort($files, fn($a, $b) => filemtime($b) - filemtime($a)); // newest first
+    foreach (array_slice($files, $retainCount) as $old) {
+        @unlink($old);
+    }
+}
+
+function safe_backup_filename(string $name): string {
+    // Strip any directory traversal and ensure it matches expected pattern
+    $base = basename($name);
+    if (!preg_match('/^itflow_\d{14}_(manual|auto)\.zip$/', $base)) return '';
+    return $base;
+}
+
+// ── Download fresh backup (stream to browser) ─────────────────────────────────
+if (isset($_GET['backup_download_fresh'])) {
     validateCSRFToken($_GET['csrf_token']);
 
-    $timestamp   = date('YmdHis');
-    $baseName    = "itflow_{$timestamp}";
-    $downloadName = $baseName . ".zip";
+    $timestamp  = date('YmdHis');
+    $baseName   = "itflow_{$timestamp}_manual";
+    $sqlFile    = tempnam(sys_get_temp_dir(), $baseName . '_sql_');
+    $uploadsZip = tempnam(sys_get_temp_dir(), $baseName . '_upl_');
+    $versionFile= tempnam(sys_get_temp_dir(), $baseName . '_ver_');
+    $finalZip   = tempnam(sys_get_temp_dir(), $baseName . '_zip_');
 
-    // === Scoped cleanup of temp files ===
-    $cleanupFiles = [];
-    $registerTempFileForCleanup = function ($file) use (&$cleanupFiles) {
-        $cleanupFiles[] = $file;
-    };
-    register_shutdown_function(function () use (&$cleanupFiles) {
-        foreach ($cleanupFiles as $file) {
-            if (is_file($file)) { @unlink($file); }
-        }
+    register_shutdown_function(function() use ($sqlFile, $uploadsZip, $versionFile, $finalZip) {
+        foreach ([$sqlFile, $uploadsZip, $versionFile, $finalZip] as $f) @unlink($f);
     });
 
-    // === Create temp files ===
-    $sqlFile     = tempnam(sys_get_temp_dir(), $baseName . "_sql_");
-    $uploadsZip  = tempnam(sys_get_temp_dir(), $baseName . "_uploads_");
-    $versionFile = tempnam(sys_get_temp_dir(), $baseName . "_version_");
-    $finalZip    = tempnam(sys_get_temp_dir(), $baseName . "_backup_");
-
-    foreach ([$sqlFile, $uploadsZip, $versionFile, $finalZip] as $f) {
-        $registerTempFileForCleanup($f);
-        @chmod($f, 0600);
-    }
-
-    // === Generate SQL Dump (streaming) ===
     dump_database_streaming($mysqli, $sqlFile);
+    zip_uploads($_SERVER['DOCUMENT_ROOT'] . '/../uploads', $uploadsZip);
 
-    // === Zip the uploads folder (strict) ===
-    zipFolderStrict("../uploads", $uploadsZip);
+    $meta  = "ITFlow Backup Metadata\n";
+    $meta .= "Generated: " . date('Y-m-d H:i:s') . "\n";
+    $meta .= "Type: manual (browser download)\n";
+    $meta .= "SHA256 db.sql: " . (hash_file('sha256', $sqlFile) ?: 'N/A') . "\n";
+    $meta .= "SHA256 uploads.zip: " . (hash_file('sha256', $uploadsZip) ?: 'N/A') . "\n";
+    file_put_contents($versionFile, $meta);
 
-    // === Gather metadata & checksums ===
-    $commitHash = (function_exists('shell_exec') ? trim(shell_exec('git log -1 --format=%H 2>/dev/null')) : '') ?: 'N/A';
-    $gitBranch  = (function_exists('shell_exec') ? trim(shell_exec('git rev-parse --abbrev-ref HEAD 2>/dev/null')) : '') ?: 'N/A';
-
-    $dbSha = hash_file('sha256', $sqlFile) ?: 'N/A';
-    $upSha = hash_file('sha256', $uploadsZip) ?: 'N/A';
-
-    $versionContent  = "ITFlow Backup Metadata\n";
-    $versionContent .= "-----------------------------\n";
-    $versionContent .= "Generated: " . date('Y-m-d H:i:s') . "\n";
-    $versionContent .= "Backup File: " . $downloadName . "\n";
-    $versionContent .= "Generated By: " . ($session_name ?? 'Unknown User') . "\n";
-    $versionContent .= "Host: " . gethostname() . "\n";
-    $versionContent .= "Git Branch: $gitBranch\n";
-    $versionContent .= "Git Commit: $commitHash\n";
-    $versionContent .= "ITFlow Version: " . (defined('APP_VERSION') ? APP_VERSION : 'Unknown') . "\n";
-    $versionContent .= "Database Version: " . (defined('CURRENT_DATABASE_VERSION') ? CURRENT_DATABASE_VERSION : 'Unknown') . "\n";
-    $versionContent .= "Checksums (SHA256):\n";
-    $versionContent .= "  db.sql: $dbSha\n";
-    $versionContent .= "  uploads.zip: $upSha\n";
-
-    file_put_contents($versionFile, $versionContent);
-    @chmod($versionFile, 0600);
-
-    // === Build final ZIP ===
     $final = new ZipArchive();
-    if ($final->open($finalZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
-        error_log("Failed to create final zip: $finalZip");
-        http_response_code(500);
-        exit("Internal Server Error: Unable to create backup archive.");
-    }
-    $final->addFile($sqlFile, "db.sql");
-    $final->addFile($uploadsZip, "uploads.zip");
-    $final->addFile($versionFile, "version.txt");
+    $final->open($finalZip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    $final->addFile($sqlFile, 'db.sql');
+    $final->addFile($uploadsZip, 'uploads.zip');
+    $final->addFile($versionFile, 'version.txt');
     $final->close();
 
-    @chmod($finalZip, 0600);
-
-    // === Serve final ZIP with a stable filename ===
+    $dlName = $baseName . '.zip';
     header('Content-Type: application/zip');
-    header('X-Content-Type-Options: nosniff');
-    header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+    header('Content-Disposition: attachment; filename="' . $dlName . '"');
     header('Content-Length: ' . filesize($finalZip));
     header('Pragma: public');
-    header('Expires: 0');
-    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-    header('Content-Transfer-Encoding: binary');
+    header('Cache-Control: must-revalidate');
+    readfile($finalZip);
 
-    // Push file
-    flush();
-    $fp = fopen($finalZip, 'rb');
-    fpassthru($fp);
-    fclose($fp);
-
-    // Log + UX
-    logAction("System", "Backup Download", ($session_name ?? 'Unknown User') . " downloaded full backup.");
-    flash_alert("Full backup downloaded.");
+    logAction('System', 'Backup Download', "$session_name downloaded a manual backup");
     exit;
 }
 
-if (isset($_POST['backup_master_key'])) {
+// ── Save backup to server ─────────────────────────────────────────────────────
+if (isset($_GET['backup_save'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    $result = build_backup($mysqli, 'manual', $BACKUP_DIR);
+    logAction('System', 'Backup Save', "$session_name saved backup {$result['name']} to server");
+    flash_alert("Backup <strong>{$result['name']}</strong> saved to server");
+    redirect();
+}
 
+// ── Serve stored backup file ──────────────────────────────────────────────────
+if (isset($_GET['backup_serve'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    $safe = safe_backup_filename($_GET['backup_serve'] ?? '');
+    if (!$safe) { flash_alert('Invalid backup filename', 'error'); redirect(); }
+    $path = $BACKUP_DIR . '/' . $safe;
+    if (!is_file($path)) { flash_alert('Backup file not found', 'error'); redirect(); }
+
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $safe . '"');
+    header('Content-Length: ' . filesize($path));
+    header('Pragma: public');
+    header('Cache-Control: must-revalidate');
+    readfile($path);
+    logAction('System', 'Backup Download', "$session_name re-downloaded stored backup $safe");
+    exit;
+}
+
+// ── Delete stored backup ──────────────────────────────────────────────────────
+if (isset($_GET['backup_delete'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    $safe = safe_backup_filename($_GET['backup_delete'] ?? '');
+    if (!$safe) { flash_alert('Invalid backup filename', 'error'); redirect(); }
+    $path = $BACKUP_DIR . '/' . $safe;
+    if (is_file($path)) {
+        @unlink($path);
+        logAction('System', 'Backup Delete', "$session_name deleted backup $safe");
+        flash_alert("Backup <strong>$safe</strong> deleted", 'error');
+    }
+    redirect();
+}
+
+// ── Save backup settings ──────────────────────────────────────────────────────
+if (isset($_POST['save_backup_settings'])) {
     validateCSRFToken($_POST['csrf_token']);
+    $auto    = isset($_POST['config_backup_auto_enabled']) ? 1 : 0;
+    $freq    = in_array($_POST['config_backup_frequency'] ?? '', ['daily','weekly']) ? $_POST['config_backup_frequency'] : 'daily';
+    $retain  = max(1, min(90, intval($_POST['config_backup_retain_count'] ?? 7)));
+    mysqli_query($mysqli, "UPDATE settings SET config_backup_auto_enabled = $auto, config_backup_frequency = '$freq', config_backup_retain_count = $retain WHERE company_id = 1");
+    logAction('Settings', 'Edit', "$session_name updated backup settings");
+    flash_alert('Backup settings saved');
+    redirect();
+}
 
+// ── Master key reveal ─────────────────────────────────────────────────────────
+if (isset($_POST['backup_master_key'])) {
+    validateCSRFToken($_POST['csrf_token']);
     $password = $_POST['password'];
-
     $sql = mysqli_query($mysqli, "SELECT * FROM users WHERE user_id = $session_user_id");
     $row = mysqli_fetch_assoc($sql);
-
     if (password_verify($password, $row['user_password'])) {
         $site_encryption_master_key = decryptUserSpecificKey($row['user_specific_encryption_ciphertext'], $password);
-
-        logAction("Master Key", "Download", "$session_name retrieved the master encryption key");
-
-        appNotify("Master Key", "$session_name retrieved the master encryption key");
-
-        echo "==============================";
-        echo "<br>Master encryption key:<br>";
-        echo "<b>$site_encryption_master_key</b>";
-        echo "<br>==============================";
-
+        logAction('Master Key', 'Download', "$session_name retrieved the master encryption key");
+        appNotify('Master Key', "$session_name retrieved the master encryption key");
+        echo "<div class='alert alert-warning mt-2'><strong>Master Encryption Key:</strong><br><code>$site_encryption_master_key</code></div>";
     } else {
-        logAction("Master Key", "Download", "$session_name attempted to retrieve the master encryption key but failed");
-
-        flash_alert("Incorrect password.", 'error');
-
+        logAction('Master Key', 'Download', "$session_name failed to retrieve the master encryption key");
+        flash_alert('Incorrect password.', 'error');
         redirect();
     }
+}
+
+// ── Cron-triggered auto-backup (called from cron.php) ────────────────────────
+if (isset($_GET['cron_backup']) && php_sapi_name() === 'cli') {
+    // Only callable from CLI (cron)
+    $result = build_backup($mysqli, 'auto', $BACKUP_DIR);
+    prune_backups($BACKUP_DIR, $config_backup_retain_count);
+    logApp('Backup', 'info', "Auto-backup completed: {$result['name']}");
+    echo "Auto-backup saved: {$result['name']}\n";
+    exit;
 }

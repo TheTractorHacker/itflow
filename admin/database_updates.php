@@ -4467,6 +4467,14 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.7'");
     }
 
+    if (CURRENT_DATABASE_VERSION == '2.4.7') {
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_backup_auto_enabled` tinyint(1) NOT NULL DEFAULT 0 AFTER `config_log_retention`");
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_backup_frequency` varchar(20) NOT NULL DEFAULT 'daily' AFTER `config_backup_auto_enabled`");
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_backup_retain_count` int(11) NOT NULL DEFAULT 7 AFTER `config_backup_frequency`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.8'");
+    }
+
 } else {
     // Up-to-date
 }

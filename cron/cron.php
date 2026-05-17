@@ -1244,6 +1244,49 @@ if ($updates->current_version !== $updates->latest_version) {
 
 /*
  * ###############################################################################################################
+ *  AUTO-BACKUP
+ * ###############################################################################################################
+ */
+
+$config_backup_auto_enabled = intval($row['config_backup_auto_enabled'] ?? 0);
+$config_backup_frequency    = $row['config_backup_frequency'] ?? 'daily';
+$config_backup_retain_count = max(1, intval($row['config_backup_retain_count'] ?? 7));
+
+if ($config_backup_auto_enabled) {
+    $backup_dir   = dirname(__DIR__) . '/backups';
+    $should_run   = false;
+
+    if ($config_backup_frequency === 'daily') {
+        // Run if no auto-backup exists from today
+        $today_pattern = $backup_dir . '/itflow_' . date('Ymd') . '*_auto.zip';
+        $should_run    = empty(glob($today_pattern));
+    } elseif ($config_backup_frequency === 'weekly') {
+        // Run if no auto-backup exists from this ISO week
+        $week_prefix  = date('YW'); // e.g. 202620
+        $all_auto     = glob($backup_dir . '/itflow_*_auto.zip') ?: [];
+        $has_this_week = false;
+        foreach ($all_auto as $f) {
+            $fdate = substr(basename($f), 7, 8); // YYYYMMDD portion
+            if (date('YW', mktime(0, 0, 0, substr($fdate,4,2), substr($fdate,6,2), substr($fdate,0,4))) === $week_prefix) {
+                $has_this_week = true;
+                break;
+            }
+        }
+        $should_run = !$has_this_week;
+    }
+
+    if ($should_run) {
+        // Inline build_backup logic (cron runs as CLI, can't call HTTP handlers)
+        require_once dirname(__DIR__) . '/admin/post/backup.php';
+        $result = build_backup($mysqli, 'auto', $backup_dir);
+        prune_backups($backup_dir, $config_backup_retain_count);
+        logApp('Backup', 'info', "Auto-backup completed: {$result['name']}");
+        appNotify('Backup', "Auto-backup saved: {$result['name']}", '/admin/backup.php');
+    }
+}
+
+/*
+ * ###############################################################################################################
  *  WEBHOOK DELIVERY
  * ###############################################################################################################
  */

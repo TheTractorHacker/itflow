@@ -119,6 +119,9 @@ $config_login_key_secret = $row['config_login_key_secret'];
 $config_login_remember_me_expire = intval($row['config_login_remember_me_expire']);
 $config_login_session_lifetime = intval($row['config_login_session_lifetime'] ?? 480);
 $config_log_retention = intval($row['config_log_retention']);
+$config_backup_auto_enabled  = intval($row['config_backup_auto_enabled'] ?? 0);
+$config_backup_frequency     = $row['config_backup_frequency'] ?? 'daily';
+$config_backup_retain_count  = max(1, intval($row['config_backup_retain_count'] ?? 7));
 
 // Locale
 $config_currency_format = "US_en";
