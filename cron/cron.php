@@ -1493,6 +1493,23 @@ if (!empty($automation_rules)) {
                     );
                     logAction("Automation", "Close", "Rule '$rule_name': auto-closed ticket $tid", $client_id, $tid);
                     break;
+
+                case 'add_worksheet':
+                    $template_id = intval($aval);
+                    if ($template_id > 0) {
+                        $exists = mysqli_fetch_assoc(mysqli_query($mysqli,
+                            "SELECT worksheet_id FROM ticket_worksheets
+                             WHERE worksheet_ticket_id = $tid AND worksheet_template_id = $template_id LIMIT 1"
+                        ));
+                        if (!$exists) {
+                            mysqli_query($mysqli,
+                                "INSERT INTO ticket_worksheets (worksheet_ticket_id, worksheet_template_id, worksheet_created_by)
+                                 VALUES ($tid, $template_id, 1)"
+                            );
+                            logAction("Automation", "Worksheet", "Rule '$rule_name': added worksheet template $template_id to ticket $tid", $client_id, $tid);
+                        }
+                    }
+                    break;
             }
         }
     }

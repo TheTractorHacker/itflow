@@ -71,6 +71,7 @@ $sql = mysqli_query($mysqli,
                     'add_note'         => 'Add internal note',
                     'notify_assignee'  => 'Notify assigned tech',
                     'close_ticket'     => 'Close ticket',
+                    'add_worksheet'    => 'Add worksheet from template',
                 ];
             ?>
                 <tr class="<?php echo $enabled ? '' : 'text-muted'; ?>">

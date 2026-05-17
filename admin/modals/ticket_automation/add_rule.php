@@ -54,13 +54,14 @@ ob_start();
                 <option value="add_note">Add internal note</option>
                 <option value="notify_assignee">Notify assigned technician</option>
                 <option value="close_ticket">Close ticket</option>
+                <option value="add_worksheet">Add worksheet from template</option>
             </select>
         </div>
 
         <div class="form-group">
             <label>Action Value</label>
-            <input type="text" name="rule_action_value" class="form-control" placeholder="e.g. critical  |  3  |  Ticket is stale - please follow up">
-            <small class="text-muted">Leave blank for notify / close actions.</small>
+            <input type="text" name="rule_action_value" class="form-control" placeholder="e.g. critical  |  3  |  Ticket is stale - please follow up  |  template ID for worksheet">
+            <small class="text-muted">Leave blank for notify / close actions. For <em>add worksheet</em>, enter the worksheet template ID.</small>
         </div>
 
         <div class="form-group">
