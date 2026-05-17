@@ -118,7 +118,7 @@ $sql = mysqli_query($mysqli,
 <div class="modal fade" id="addRuleModal" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="post/ticket_automation.php">
-            <?php echo csrf_field(); ?>
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
             <input type="hidden" name="add_rule" value="1">
             <div class="modal-content">
                 <div class="modal-header bg-dark">
