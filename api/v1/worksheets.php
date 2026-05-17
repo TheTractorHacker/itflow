@@ -36,7 +36,7 @@ if ($resource === 'tickets' && $sub === 'charges' && $method === 'GET') {
     api_response(200, ['charges' => $charges, 'total' => $total]);
 }
 
-// Worksheets list for a ticket
+// Worksheets list for a ticket (regular worksheets only — outtake forms are in ticket_outtake_forms)
 if ($resource === 'tickets' && $sub === 'worksheets' && $method === 'GET') {
     $worksheets = [];
     $sql = mysqli_query($mysqli,
@@ -44,7 +44,7 @@ if ($resource === 'tickets' && $sub === 'worksheets' && $method === 'GET') {
          FROM ticket_worksheets w
          LEFT JOIN worksheet_templates t ON w.worksheet_template_id = t.worksheet_template_id
          LEFT JOIN users u ON w.worksheet_created_by = u.user_id
-         WHERE w.worksheet_ticket_id = $id
+         WHERE w.worksheet_ticket_id = $id AND (w.worksheet_is_outtake = 0 OR w.worksheet_is_outtake IS NULL)
          ORDER BY w.worksheet_created_at DESC"
     );
     while ($row = mysqli_fetch_assoc($sql)) {
@@ -219,15 +219,11 @@ if ($resource === 'worksheets' && $id !== null && $sub === 'responses' && $metho
     api_response(200, ['ok' => true]);
 }
 
-// Create outtake form — no template required, just needs a signature
-if ($resource === 'tickets' && $sub === 'outtake' && $method === 'POST') {
-    $sign_token = bin2hex(random_bytes(32));
-    mysqli_query($mysqli,
-        "INSERT INTO ticket_worksheets (worksheet_ticket_id, worksheet_template_id,
-         worksheet_is_outtake, worksheet_sign_token, worksheet_created_by)
-         VALUES ($id, NULL, 1, '$sign_token', $uid)"
-    );
-    api_response(201, ['id' => mysqli_insert_id($mysqli)]);
+// Delete a worksheet
+if ($resource === 'worksheets' && $id !== null && $sub === null && $method === 'DELETE') {
+    mysqli_query($mysqli, "DELETE FROM ticket_worksheet_responses WHERE response_worksheet_id = $id");
+    mysqli_query($mysqli, "DELETE FROM ticket_worksheets WHERE worksheet_id = $id");
+    api_response(200, ['ok' => true]);
 }
 
 api_error(404, 'Not found');

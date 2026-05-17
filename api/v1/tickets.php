@@ -12,15 +12,19 @@ if ($method === 'GET' && $id === null) {
     $page    = max(1, intval($_GET['page'] ?? 1));
     $limit   = min(50, max(1, intval($_GET['limit'] ?? 20)));
     $offset  = ($page - 1) * $limit;
-    $search  = mysqli_real_escape_string($mysqli, $_GET['search'] ?? '');
-    $status  = $_GET['status'] ?? 'open'; // open|closed|all
-    $mine    = isset($_GET['mine']) ? intval($_GET['mine']) : 0;
+    $search   = mysqli_real_escape_string($mysqli, $_GET['search'] ?? '');
+    $status   = $_GET['status'] ?? 'open'; // open|closed|all
+    $mine     = isset($_GET['mine']) ? intval($_GET['mine']) : 0;
+    $priority = mysqli_real_escape_string($mysqli, strtolower($_GET['priority'] ?? ''));
+    $onsite   = isset($_GET['onsite']) && $_GET['onsite'] !== '' ? intval($_GET['onsite']) : -1;
 
     $where = ['t.ticket_archived_at IS NULL'];
     if ($status === 'open')   $where[] = 't.ticket_resolved_at IS NULL';
     if ($status === 'closed') $where[] = 't.ticket_resolved_at IS NOT NULL';
     if ($mine)                $where[] = "t.ticket_assigned_to = $uid";
     if ($search)              $where[] = "(t.ticket_subject LIKE '%$search%' OR t.ticket_number LIKE '%$search%')";
+    if ($priority)            $where[] = "LOWER(t.ticket_priority) = '$priority'";
+    if ($onsite !== -1)       $where[] = "t.ticket_onsite = $onsite";
 
     $where_sql = implode(' AND ', $where);
 

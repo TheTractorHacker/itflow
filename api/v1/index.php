@@ -87,8 +87,10 @@ if (!$api_user_id) {
 switch ($resource) {
     case 'dashboard':     require __DIR__ . '/dashboard.php';     break;
     case 'tickets':
-        if ($sub === 'charges' || $sub === 'worksheets' || $sub === 'outtake') {
+        if ($sub === 'charges' || $sub === 'worksheets') {
             require __DIR__ . '/worksheets.php';
+        } elseif ($sub === 'outtake' || $sub === 'outtakes') {
+            require __DIR__ . '/outtakes.php';
         } else {
             require __DIR__ . '/tickets.php';
         }
@@ -108,6 +110,7 @@ switch ($resource) {
     case 'invoices':      require __DIR__ . '/invoices.php';      break;
     case 'expenses':      require __DIR__ . '/expenses.php';      break;
     case 'worksheets':        require __DIR__ . '/worksheets.php'; break;
+    case 'outtakes':          require __DIR__ . '/outtakes.php';  break;
     case 'worksheet-responses': require __DIR__ . '/worksheets.php'; break;
     case 'worksheet-templates': require __DIR__ . '/worksheets.php'; break;
     case 'products':    require __DIR__ . '/products.php'; break;
