@@ -1422,6 +1422,7 @@ if (!empty($automation_rules)) {
             'status_id'   => $status_id,
             'assigned_to' => $assigned_to,
             'idle_hours'  => $idle_hours,
+            'category'    => intval($ticket['ticket_category']),
         ];
 
         foreach ($automation_rules as $rule) {

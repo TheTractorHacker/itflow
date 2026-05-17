@@ -4,6 +4,20 @@ require_once "includes/inc_all_admin.php";
 $sql = mysqli_query($mysqli,
     "SELECT * FROM ticket_automation_rules ORDER BY rule_order ASC, rule_id ASC"
 );
+
+// Pre-load category names for display
+$category_names = [];
+$sql_cats = mysqli_query($mysqli, "SELECT category_id, category_name FROM categories WHERE category_type = 'Ticket' AND category_archived_at IS NULL");
+while ($c = mysqli_fetch_assoc($sql_cats)) {
+    $category_names[intval($c['category_id'])] = $c['category_name'];
+}
+
+// Pre-load worksheet template names for display
+$worksheet_template_names = [];
+$sql_wt = mysqli_query($mysqli, "SELECT worksheet_template_id, worksheet_template_name FROM worksheet_templates WHERE worksheet_template_archived_at IS NULL");
+while ($wt = mysqli_fetch_assoc($sql_wt)) {
+    $worksheet_template_names[intval($wt['worksheet_template_id'])] = $wt['worksheet_template_name'];
+}
 ?>
 
 <div class="card card-dark">
@@ -56,6 +70,7 @@ $sql = mysqli_query($mysqli,
                     'status_id'    => 'Status ID',
                     'assigned_to'  => 'Assigned to (user ID)',
                     'idle_hours'   => 'Hours since last reply',
+                    'category'     => 'Ticket category',
                 ];
                 $op_labels = [
                     'equals'       => '=',
@@ -82,12 +97,26 @@ $sql = mysqli_query($mysqli,
                     <td>
                         <span class="badge badge-secondary"><?php echo $field_labels[$field] ?? $field; ?></span>
                         <span><?php echo $op_labels[$op] ?? $op; ?></span>
-                        <code><?php echo $val; ?></code>
+                        <?php
+                        // Resolve category ID to name for display
+                        $display_val = $val;
+                        if ($field === 'category' && isset($category_names[intval($rule['rule_cond_value'])])) {
+                            $display_val = nullable_htmlentities($category_names[intval($rule['rule_cond_value'])]);
+                        }
+                        ?>
+                        <code><?php echo $display_val; ?></code>
                     </td>
                     <td>
                         <span class="badge badge-primary"><?php echo $action_labels[$action] ?? $action; ?></span>
                         <?php if ($actionval): ?>
-                            <code><?php echo $actionval; ?></code>
+                            <?php
+                            // Resolve worksheet template ID to name for display
+                            $display_aval = $actionval;
+                            if ($action === 'add_worksheet' && isset($worksheet_template_names[intval($rule['rule_action_value'])])) {
+                                $display_aval = nullable_htmlentities($worksheet_template_names[intval($rule['rule_action_value'])]);
+                            }
+                            ?>
+                            <code><?php echo $display_aval; ?></code>
                         <?php endif; ?>
                     </td>
                     <td>
