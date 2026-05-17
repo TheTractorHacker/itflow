@@ -8,12 +8,22 @@ if (isset($_POST['save_comet_settings'])) {
     $user       = sanitizeInput($_POST['config_comet_admin_user']);
     $auto_ticket= isset($_POST['config_comet_auto_ticket']) ? 1 : 0;
 
+    $webhook_secret = sanitizeInput($_POST['config_comet_webhook_secret'] ?? '');
+
+    // Build SET clause — only update password/totp if provided (blank = keep existing)
+    $set = "config_comet_enabled=$enabled, config_comet_server_url='$url', config_comet_admin_user='$user', config_comet_auto_ticket=$auto_ticket, config_comet_webhook_secret='$webhook_secret'";
+
     if (!empty(trim($_POST['config_comet_admin_pass']))) {
         $pass = sanitizeInput($_POST['config_comet_admin_pass']);
-        mysqli_query($mysqli, "UPDATE settings SET config_comet_enabled=$enabled, config_comet_server_url='$url', config_comet_admin_user='$user', config_comet_admin_pass='$pass', config_comet_auto_ticket=$auto_ticket WHERE company_id=1");
-    } else {
-        mysqli_query($mysqli, "UPDATE settings SET config_comet_enabled=$enabled, config_comet_server_url='$url', config_comet_admin_user='$user', config_comet_auto_ticket=$auto_ticket WHERE company_id=1");
+        $set .= ", config_comet_admin_pass='$pass'";
     }
+    if (!empty(trim($_POST['config_comet_totp_secret']))) {
+        $totp = sanitizeInput($_POST['config_comet_totp_secret']);
+        $set .= ", config_comet_totp_secret='$totp'";
+    }
+    mysqli_query($mysqli, "UPDATE settings SET $set WHERE company_id=1");
+    // Clear cached session key so it's re-fetched with new credentials
+    mysqli_query($mysqli, "DELETE FROM comet_session_cache WHERE id=1");
     logAction('Settings', 'Edit', "$session_name updated Comet Backup settings");
     flash_alert('Comet settings saved');
     redirect();

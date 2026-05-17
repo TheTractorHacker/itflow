@@ -59,7 +59,31 @@ $connected = $config_comet_enabled ? comet_test() : null;
                 </div>
             </div>
 
-            <div class="form-group mb-0">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="text-muted small mb-1">
+                            TOTP Secret <small>(for 2FA admin accounts — base32 secret from your authenticator)</small>
+                        </label>
+                        <input type="password" class="form-control form-control-sm font-monospace"
+                               name="config_comet_totp_secret" autocomplete="new-password"
+                               placeholder="<?= $config_comet_totp_secret ? '(saved)' : 'JBSWY3DPEHPK3PXP...' ?>">
+                        <small class="text-muted">Leave blank to keep existing. Stored to generate TOTP codes automatically — a session key is cached so codes are only generated when needed.</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="text-muted small mb-1">Webhook Secret</label>
+                        <input type="text" class="form-control form-control-sm font-monospace"
+                               name="config_comet_webhook_secret" autocomplete="off"
+                               value="<?= nullable_htmlentities($config_comet_webhook_secret) ?>"
+                               placeholder="random-secret-string">
+                        <small class="text-muted">Comet sends this in the <code>X-Comet-Secret</code> header. Leave blank to skip verification.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
                 <div class="custom-control custom-switch">
                     <input type="checkbox" class="custom-control-input" id="comet_auto_ticket"
                            name="config_comet_auto_ticket" value="1"
@@ -68,8 +92,15 @@ $connected = $config_comet_enabled ? comet_test() : null;
                         Auto-create tickets on backup failure (one ticket per device, auto-resolves on success)
                     </label>
                 </div>
-                <small class="text-muted ml-4">Requires cron to be enabled. Checks every cron run.</small>
             </div>
+
+            <?php if (!empty($config_base_url)): ?>
+            <div class="alert alert-secondary py-2 mb-3">
+                <strong><i class="fas fa-link mr-1"></i>Webhook URL</strong> — add this in Comet Server → Admin → Server Settings → Webhooks:<br>
+                <code>https://<?= nullable_htmlentities($config_base_url) ?>/comet_webhook.php</code><br>
+                <small class="text-muted">Event: <strong>Job Completed (4201)</strong> &middot; Custom Header: <strong>X-Comet-Secret</strong></small>
+            </div>
+            <?php endif; ?>
 
             <hr>
             <button type="submit" name="save_comet_settings" class="btn btn-primary btn-sm">

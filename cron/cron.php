@@ -1287,118 +1287,22 @@ if ($config_backup_auto_enabled) {
 
 /*
  * ###############################################################################################################
- *  COMET BACKUP — FAILURE TICKETING
+ *  COMET BACKUP — SESSION KEY REFRESH
  * ###############################################################################################################
  */
-
-$config_comet_enabled     = intval($row['config_comet_enabled'] ?? 0);
-$config_comet_auto_ticket = intval($row['config_comet_auto_ticket'] ?? 0);
+// Failure detection is handled in real-time via webhooks (comet_webhook.php).
+// Cron just refreshes the session key so the status dashboard always has a valid API token.
+$config_comet_enabled    = intval($row['config_comet_enabled'] ?? 0);
+$config_comet_totp_secret = $row['config_comet_totp_secret'] ?? '';
 $config_comet_server_url  = $row['config_comet_server_url'] ?? '';
 $config_comet_admin_user  = $row['config_comet_admin_user'] ?? '';
 $config_comet_admin_pass  = $row['config_comet_admin_pass'] ?? '';
 
-if ($config_comet_enabled && $config_comet_auto_ticket) {
+if ($config_comet_enabled && !empty($config_comet_server_url)) {
     require_once dirname(__DIR__) . '/includes/comet.php';
-
-    $jobs = comet_get_jobs_recent() ?: []; // recent + in-progress jobs
-
-    // Build client lookup: comet_username => client_id
-    $map_result = mysqli_query($mysqli, "SELECT map_comet_username, map_client_id FROM comet_client_map");
-    $client_map = [];
-    while ($mr = mysqli_fetch_assoc($map_result)) {
-        $client_map[$mr['map_comet_username']] = intval($mr['map_client_id']);
-    }
-
-    // Load ticket settings for ticket creation
-    $config_ticket_prefix = sanitizeInput($config_ticket_prefix);
-
-    foreach ($jobs as $job) {
-        $status   = intval($job['Status'] ?? 0);
-        $username = $job['Username'] ?? '';
-        $dev_name = $job['DeviceName'] ?? 'Unknown Device';
-        $job_type = intval($job['Classification'] ?? 4001);
-        $err_msg  = $job['ErrorString'] ?? '';
-
-        if (!$username || !isset($client_map[$username])) continue;
-        $client_id = $client_map[$username];
-
-        $u_safe  = sanitizeInput($username);
-        $d_safe  = sanitizeInput($dev_name);
-
-        if ($status === 5004) {
-            // Backup FAILED — check for existing open alert
-            $existing = mysqli_fetch_assoc(mysqli_query($mysqli,
-                "SELECT alert_id, alert_ticket_id FROM comet_backup_alerts
-                 WHERE alert_comet_username = '$u_safe'
-                   AND alert_device_name = '$d_safe'
-                   AND alert_resolved_at IS NULL
-                 LIMIT 1"
-            ));
-
-            if (!$existing) {
-                // Create ticket
-                $ticket_number = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
-                    "SELECT config_ticket_next_number FROM settings WHERE company_id = 1"
-                ))['config_ticket_next_number']);
-
-                $err_safe = sanitizeInput(mb_strimwidth($err_msg, 0, 500, ''));
-                $subject  = sanitizeInput("Backup Failed: $dev_name");
-                $details  = sanitizeInput(
-                    "A Comet Backup job failed for device **$dev_name** (Comet user: $username).\n\n"
-                    . "Error: $err_msg\n\n"
-                    . "Please investigate and ensure the backup agent is running correctly."
-                );
-
-                mysqli_query($mysqli, "INSERT INTO tickets SET
-                    ticket_prefix = '$config_ticket_prefix',
-                    ticket_number = $ticket_number,
-                    ticket_source = 'Comet Backup',
-                    ticket_subject = '$subject',
-                    ticket_details = '$details',
-                    ticket_priority = 'High',
-                    ticket_status = 1,
-                    ticket_client_id = $client_id,
-                    ticket_created_by = 0,
-                    ticket_url_key = '" . bin2hex(random_bytes(16)) . "'
-                ");
-                $ticket_id = mysqli_insert_id($mysqli);
-                mysqli_query($mysqli, "UPDATE settings SET config_ticket_next_number = " . ($ticket_number + 1) . " WHERE company_id = 1");
-
-                // Record alert
-                mysqli_query($mysqli, "INSERT INTO comet_backup_alerts SET
-                    alert_comet_username = '$u_safe',
-                    alert_device_name    = '$d_safe',
-                    alert_ticket_id      = $ticket_id
-                ");
-
-                logApp('Comet', 'info', "Created backup failure ticket #$ticket_id for $dev_name ($username)");
-                appNotify('Comet Backup', "Backup failed for $dev_name — ticket #$ticket_id created", "/agent/ticket.php?ticket_id=$ticket_id&client_id=$client_id");
-            }
-
-        } elseif ($status === 5001) {
-            // Backup SUCCEEDED — resolve any open alert
-            $open = mysqli_fetch_assoc(mysqli_query($mysqli,
-                "SELECT alert_id, alert_ticket_id FROM comet_backup_alerts
-                 WHERE alert_comet_username = '$u_safe'
-                   AND alert_device_name = '$d_safe'
-                   AND alert_resolved_at IS NULL
-                 LIMIT 1"
-            ));
-            if ($open) {
-                $tid = intval($open['alert_ticket_id']);
-                mysqli_query($mysqli, "UPDATE comet_backup_alerts SET alert_resolved_at = NOW() WHERE alert_id = {$open['alert_id']}");
-                // Add a reply to the ticket noting recovery
-                mysqli_query($mysqli, "INSERT INTO ticket_replies SET
-                    ticket_reply = 'Backup succeeded — this device is now healthy. Ticket auto-resolved by Comet integration.',
-                    ticket_reply_type = 'Internal',
-                    ticket_reply_by = 0,
-                    ticket_reply_ticket_id = $tid
-                ");
-                // Resolve the ticket
-                mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 4, ticket_resolved_at = NOW() WHERE ticket_id = $tid");
-                logApp('Comet', 'info', "Backup recovered for $dev_name ($username) — ticket #$tid resolved");
-            }
-        }
+    // Refresh the session key if it's missing or about to expire
+    if (!comet_get_session_key()) {
+        comet_start_session();
     }
 }
 
