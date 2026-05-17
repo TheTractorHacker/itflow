@@ -50,11 +50,14 @@ if ($resource === 'tickets' && $sub === 'outtake' && $method === 'POST') {
 // Outtake detail
 if ($resource === 'outtakes' && $id !== null && $sub === null && $method === 'GET') {
     $row = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT ot.*, u.user_name AS created_by_name, t.ticket_subject, c.client_name
+        "SELECT ot.*, u.user_name AS created_by_name,
+                t.ticket_subject, c.client_name,
+                co.contact_name
          FROM ticket_outtake_forms ot
          LEFT JOIN users u ON ot.outtake_created_by = u.user_id
          LEFT JOIN tickets t ON ot.outtake_ticket_id = t.ticket_id
          LEFT JOIN clients c ON t.ticket_client_id = c.client_id
+         LEFT JOIN contacts co ON t.ticket_contact_id = co.contact_id
          WHERE ot.outtake_id = $id LIMIT 1"
     ));
     if (!$row) api_error(404, 'Outtake not found');
@@ -69,6 +72,7 @@ if ($resource === 'outtakes' && $id !== null && $sub === null && $method === 'GE
         'signed'         => !empty($row['outtake_signed_at']),
         'ticket_subject' => $row['ticket_subject'],
         'client'         => $row['client_name'],
+        'contact_name'   => $row['contact_name'],
     ]);
 }
 
