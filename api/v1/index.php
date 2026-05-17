@@ -71,10 +71,16 @@ if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {
     );
     $api_token_row = mysqli_fetch_assoc($sql);
     if ($api_token_row) {
-        $api_user_id    = intval($api_token_row['user_id']);
-        $session_user_id       = $api_user_id;
-        $session_name          = $api_token_row['user_name'];
-        $session_company_id    = 1;
+        // Expire tokens inactive for more than 90 days
+        $last_used = $api_token_row['token_last_used_at'] ?? $api_token_row['token_created_at'];
+        if ($last_used && (time() - strtotime($last_used)) > 90 * 86400) {
+            mysqli_query($mysqli, "DELETE FROM api_tokens WHERE token_hash = '$esc'");
+            api_error(401, 'Session expired. Please log in again.');
+        }
+        $api_user_id        = intval($api_token_row['user_id']);
+        $session_user_id    = $api_user_id;
+        $session_name       = $api_token_row['user_name'];
+        $session_company_id = 1;
         mysqli_query($mysqli, "UPDATE api_tokens SET token_last_used_at = NOW() WHERE token_hash = '$esc'");
     }
 }

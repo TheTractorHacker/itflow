@@ -116,6 +116,7 @@ if ($resource === 'worksheets' && $id !== null && $sub === 'sign' && $method ===
     if (empty($signed_name)) api_error(400, 'signed_name required');
 
     // Validate signature format
+    if ($signature && strlen($signature) > 524288) api_error(400, 'Signature payload too large');
     if ($signature && !preg_match('/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/', $signature)) {
         api_error(400, 'Invalid signature format');
     }
