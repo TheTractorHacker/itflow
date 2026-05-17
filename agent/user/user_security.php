@@ -1,6 +1,7 @@
 <?php
 require_once "includes/inc_all_user.php";
 
+$sql_api_tokens = mysqli_query($mysqli, "SELECT token_id, token_name, token_fcm_token, token_last_used_at, token_created_at FROM api_tokens WHERE token_user_id = $session_user_id ORDER BY token_created_at DESC");
 $sql_remember_tokens = mysqli_query($mysqli, "SELECT * FROM remember_tokens WHERE remember_token_user_id = $session_user_id ORDER BY remember_token_created_at DESC");
 $remember_token_count = mysqli_num_rows($sql_remember_tokens);
 ?>
@@ -275,6 +276,80 @@ function buf_to_b64u(buf) {
     const bytes = new Uint8Array(buf); let s='';
     bytes.forEach(b => s += String.fromCharCode(b));
     return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+</script>
+
+<!-- API Tokens -->
+<div class="card card-dark mt-3">
+    <div class="card-header py-2 d-flex align-items-center">
+        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-mobile-alt mr-2"></i>Mobile App Tokens</h3>
+        <span class="badge badge-secondary"><?= mysqli_num_rows($sql_api_tokens) ?> active</span>
+    </div>
+    <div class="card-body p-0">
+        <?php if (mysqli_num_rows($sql_api_tokens) > 0): ?>
+        <table class="table table-sm table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Device</th>
+                    <th>Created</th>
+                    <th>Last Used</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($tok = mysqli_fetch_assoc($sql_api_tokens)): ?>
+                <tr id="api-tok-<?= $tok['token_id'] ?>">
+                    <td>
+                        <i class="fas fa-fw fa-mobile-alt text-secondary mr-1"></i>
+                        <?= nullable_htmlentities($tok['token_name']) ?>
+                        <?php if ($tok['token_fcm_token']): ?>
+                            <i class="fas fa-bell text-success ml-1" title="Push notifications active"></i>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-muted small"><?= $tok['token_created_at'] ?></td>
+                    <td class="text-muted small"><?= $tok['token_last_used_at'] ?? 'Never' ?></td>
+                    <td class="text-right">
+                        <button class="btn btn-xs btn-danger"
+                                onclick="revokeApiToken(<?= $tok['token_id'] ?>, this)"
+                                data-csrf="<?= $_SESSION['csrf_token'] ?>">
+                            <i class="fas fa-times"></i> Revoke
+                        </button>
+                    </td>
+                </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+        <?php else: ?>
+        <div class="p-3 text-muted text-center">
+            <i class="fas fa-mobile-alt fa-2x mb-2 d-block text-secondary"></i>
+            No mobile tokens. Log in from the ITFlow MSP app to create one.
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<script>
+async function revokeApiToken(id, btn) {
+    if (!confirm('Revoke this token? The device will be logged out.')) return;
+    btn.disabled = true;
+    const csrf = btn.dataset.csrf;
+    try {
+        const r = await fetch('/agent/user/api_token_revoke.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token_id: id, csrf_token: csrf})
+        });
+        const j = await r.json();
+        if (j.ok) {
+            document.getElementById('api-tok-' + id).remove();
+        } else {
+            alert(j.error || 'Failed');
+            btn.disabled = false;
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+    }
 }
 </script>
 

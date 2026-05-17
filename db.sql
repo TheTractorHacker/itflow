@@ -103,6 +103,27 @@ CREATE TABLE `api_keys` (
 DROP TABLE IF EXISTS `app_logs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
+
+--
+-- Table structure for table `api_tokens`
+--
+
+DROP TABLE IF EXISTS `api_tokens`;
+CREATE TABLE `api_tokens` (
+  `token_id` int(11) NOT NULL AUTO_INCREMENT,
+  `token_user_id` int(11) NOT NULL,
+  `token_name` varchar(100) NOT NULL DEFAULT 'Mobile App',
+  `token_hash` char(64) NOT NULL,
+  `token_fcm_token` text DEFAULT NULL,
+  `token_enc_master_key` varchar(300) DEFAULT NULL,
+  `token_enc_master_iv` char(32) DEFAULT NULL,
+  `token_last_used_at` datetime DEFAULT NULL,
+  `token_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`token_id`),
+  UNIQUE KEY `token_hash` (`token_hash`),
+  KEY `token_user_id` (`token_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE `app_logs` (
   `app_log_id` int(11) NOT NULL AUTO_INCREMENT,
   `app_log_category` varchar(200) DEFAULT NULL,

@@ -4510,3 +4510,23 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 } else {
     // Up-to-date
 }
+
+    if (CURRENT_DATABASE_VERSION == '2.4.11') {
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `api_tokens` (
+          `token_enc_master_key` varchar(300) DEFAULT NULL,
+          `token_enc_master_iv` char(32) DEFAULT NULL,
+          `token_id` int(11) NOT NULL AUTO_INCREMENT,
+          `token_user_id` int(11) NOT NULL,
+          `token_name` varchar(100) NOT NULL DEFAULT 'Mobile App',
+          `token_hash` char(64) NOT NULL,
+          `token_fcm_token` text DEFAULT NULL,
+          `token_last_used_at` datetime DEFAULT NULL,
+          `token_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+          PRIMARY KEY (`token_id`),
+          UNIQUE KEY `token_hash` (`token_hash`),
+          KEY `token_user_id` (`token_user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET ``config_current_database_version` = '2.4.12'");
+    }
