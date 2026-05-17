@@ -161,8 +161,6 @@ if ($resource === 'worksheet-templates' && $method === 'GET') {
     api_response(200, $templates);
 }
 
-api_error(404, 'Not found');
-
 // Create ticket charge
 if ($resource === 'tickets' && $sub === 'charges' && $method === 'POST') {
     $body      = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -217,3 +215,20 @@ if ($resource === 'worksheets' && $id !== null && $sub === 'responses' && $metho
     mysqli_query($mysqli, "UPDATE ticket_worksheets SET worksheet_completed_at = NOW() WHERE worksheet_id = $id AND worksheet_completed_at IS NULL");
     api_response(200, ['ok' => true]);
 }
+
+// Create outtake form (separate from worksheet - is_outtake=1 always)
+if ($resource === 'tickets' && $sub === 'outtake' && $method === 'POST') {
+    $body        = json_decode(file_get_contents('php://input'), true) ?? [];
+    $template_id = intval($body['template_id'] ?? 0);
+    if (!$template_id) api_error(400, 'template_id required');
+
+    $sign_token = "'" . bin2hex(random_bytes(32)) . "'";
+    mysqli_query($mysqli,
+        "INSERT INTO ticket_worksheets (worksheet_ticket_id, worksheet_template_id,
+         worksheet_is_outtake, worksheet_sign_token, worksheet_created_by)
+         VALUES ($id, $template_id, 1, $sign_token, $uid)"
+    );
+    api_response(201, ['id' => mysqli_insert_id($mysqli)]);
+}
+
+api_error(404, 'Not found');

@@ -88,6 +88,7 @@ if ($method === 'GET' && $id !== null && $sub === null) {
             'body'         => $row['ticket_reply'],
             'type'         => $row['ticket_reply_type'],
             'time_worked'  => $row['ticket_reply_time_worked'],
+            'onsite'       => (bool)($row['ticket_reply_onsite'] ?? false),
             'by'           => $row['user_name'],
             'created_at'   => $row['ticket_reply_created_at'],
         ];
@@ -120,13 +121,14 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     $reply   = mysqli_real_escape_string($mysqli, trim($body['reply'] ?? ''));
     $type    = in_array($body['type'] ?? 'reply', ['reply', 'note']) ? ($body['type'] ?? 'reply') : 'reply';
     $time_w  = mysqli_real_escape_string($mysqli, trim($body['time_worked'] ?? ''));
+    $onsite  = isset($body['onsite']) ? intval($body['onsite']) : 0;
 
     if (!$reply) api_error(400, 'reply is required');
 
     $time_sql = $time_w ? "'$time_w'" : 'NULL';
     mysqli_query($mysqli,
-        "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_time_worked, ticket_reply_by, ticket_reply_ticket_id, ticket_reply_created_at)
-         VALUES ('$reply', '$type', $time_sql, $uid, $id, NOW())"
+        "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_time_worked, ticket_reply_onsite, ticket_reply_by, ticket_reply_ticket_id, ticket_reply_created_at)
+         VALUES ('$reply', '$type', $time_sql, $onsite, $uid, $id, NOW())"
     );
     $reply_id = mysqli_insert_id($mysqli);
     mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
@@ -152,6 +154,8 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
 
 api_error(404, 'Not found');
 
+// ── Additional POST routes ───────────────────────────────────────────────────
+
 // UPDATE TICKET STATUS
 if ($method === 'POST' && $id !== null && $sub === 'status') {
     $body   = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -175,3 +179,5 @@ if ($method === 'GET' && $resource === 'statuses' || ($method === 'GET' && $id =
     }
     api_response(200, $statuses);
 }
+
+api_error(404, 'Not found');

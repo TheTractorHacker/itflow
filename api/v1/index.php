@@ -87,7 +87,7 @@ if (!$api_user_id) {
 switch ($resource) {
     case 'dashboard':     require __DIR__ . '/dashboard.php';     break;
     case 'tickets':
-        if ($sub === 'charges' || $sub === 'worksheets') {
+        if ($sub === 'charges' || $sub === 'worksheets' || $sub === 'outtake') {
             require __DIR__ . '/worksheets.php';
         } else {
             require __DIR__ . '/tickets.php';
@@ -110,6 +110,7 @@ switch ($resource) {
     case 'worksheets':        require __DIR__ . '/worksheets.php'; break;
     case 'worksheet-responses': require __DIR__ . '/worksheets.php'; break;
     case 'worksheet-templates': require __DIR__ . '/worksheets.php'; break;
+    case 'products':    require __DIR__ . '/products.php'; break;
     case 'me':                  require __DIR__ . '/me.php'; break;
     case 'appointments': require __DIR__ . '/appointments.php'; break;
     case 'notifications': require __DIR__ . '/notifications.php'; break;
