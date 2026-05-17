@@ -32,16 +32,17 @@ while ($row = mysqli_fetch_assoc($sql)) {
 // Clients
 $clients = [];
 $sql = mysqli_query($mysqli,
-    "SELECT client_id, client_name, client_phone
-     FROM clients WHERE client_archived_at IS NULL
-       AND client_name LIKE '%$q%'
-     ORDER BY client_name ASC LIMIT 5"
+    "SELECT c.client_id, c.client_name, l.location_phone
+     FROM clients c
+     LEFT JOIN locations l ON l.location_client_id = c.client_id AND l.location_primary = 1
+     WHERE c.client_archived_at IS NULL AND c.client_name LIKE '%$q%'
+     ORDER BY c.client_name ASC LIMIT 5"
 );
 while ($row = mysqli_fetch_assoc($sql)) {
     $clients[] = [
         'id'    => intval($row['client_id']),
         'name'  => $row['client_name'],
-        'phone' => $row['client_phone'],
+        'phone' => $row['location_phone'],
     ];
 }
 

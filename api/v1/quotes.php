@@ -13,14 +13,14 @@ if ($id === null) {
 
     $where = ['q.quote_archived_at IS NULL'];
     if ($client_id) $where[] = "q.quote_client_id = $client_id";
-    if ($search)    $where[] = "(q.quote_subject LIKE '%$search%' OR q.quote_number LIKE '%$search%')";
+    if ($search)    $where[] = "(q.quote_scope LIKE '%$search%' OR q.quote_number LIKE '%$search%')";
     $w = implode(' AND ', $where);
 
     $total  = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS c FROM quotes q WHERE $w"))['c']);
     $quotes = [];
     $sql    = mysqli_query($mysqli,
-        "SELECT q.quote_id, q.quote_number, q.quote_subject, q.quote_status, q.quote_date,
-                q.quote_subtotal, q.quote_tax, q.quote_total, q.quote_url_key,
+        "SELECT q.quote_id, q.quote_number, q.quote_scope, q.quote_status, q.quote_date,
+                q.quote_amount, q.quote_url_key,
                 c.client_name
          FROM quotes q LEFT JOIN clients c ON q.quote_client_id = c.client_id
          WHERE $w ORDER BY q.quote_date DESC LIMIT $limit OFFSET $offset"
@@ -29,10 +29,10 @@ if ($id === null) {
         $quotes[] = [
             'id'       => intval($row['quote_id']),
             'number'   => $row['quote_number'],
-            'subject'  => $row['quote_subject'],
+            'subject'  => $row['quote_scope'],
             'status'   => $row['quote_status'],
             'date'     => $row['quote_date'],
-            'total'    => floatval($row['quote_total']),
+            'total'    => floatval($row['quote_amount']),
             'client'   => $row['client_name'],
             'guest_url'=> $row['quote_url_key'] ? '/quote.php?key=' . $row['quote_url_key'] : null,
         ];
@@ -68,16 +68,16 @@ while ($item = mysqli_fetch_assoc($isql)) {
 api_response(200, [
     'id'           => intval($row['quote_id']),
     'number'       => $row['quote_number'],
-    'subject'      => $row['quote_subject'],
+    'subject'      => $row['quote_scope'],
     'status'       => $row['quote_status'],
     'date'         => $row['quote_date'],
-    'subtotal'     => floatval($row['quote_subtotal']),
-    'tax'          => floatval($row['quote_tax']),
-    'total'        => floatval($row['quote_total']),
+    'subtotal'     => floatval($row['quote_amount']),
+    'tax'          => 0.0,
+    'total'        => floatval($row['quote_amount']),
     'client'       => $row['client_name'],
     'contact_name' => $row['contact_name'],
     'contact_email'=> $row['contact_email'],
-    'notes'        => $row['quote_notes'] ?? '',
+    'notes'        => $row['quote_note'] ?? '',
     'guest_url'    => $row['quote_url_key'] ? '/quote.php?key=' . $row['quote_url_key'] : null,
     'items'        => $items,
 ]);
