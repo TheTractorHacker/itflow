@@ -37,18 +37,17 @@ if ($id === null) {
     $total = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS c FROM credentials WHERE $w"))['c']);
     $creds = [];
     $sql   = mysqli_query($mysqli,
-        "SELECT cr.credential_id, cr.credential_name, cr.credential_username, cr.credential_uri,
+        "SELECT cr.credential_id, cr.credential_name, cr.credential_uri,
                 c.client_name
          FROM credentials cr LEFT JOIN clients c ON cr.credential_client_id = c.client_id
          WHERE $w ORDER BY cr.credential_name ASC LIMIT $limit OFFSET $offset"
     );
     while ($row = mysqli_fetch_assoc($sql)) {
         $creds[] = [
-            'id'       => intval($row['credential_id']),
-            'name'     => $row['credential_name'],
-            'username' => _api_decrypt($row['credential_username'], $raw_token, $api_token_row),
-            'uri'      => $row['credential_uri'],
-            'client'   => $row['client_name'],
+            'id'     => intval($row['credential_id']),
+            'name'   => $row['credential_name'],
+            'uri'    => $row['credential_uri'],
+            'client' => $row['client_name'],
         ];
     }
     api_response(200, ['data' => $creds, 'total' => $total]);

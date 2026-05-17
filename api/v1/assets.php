@@ -42,10 +42,13 @@ if ($id === null) {
 
 // Detail
 $row = mysqli_fetch_assoc(mysqli_query($mysqli,
-    "SELECT a.*, c.client_name, u.user_name AS assigned_to_name
+    "SELECT a.*, c.client_name, l.location_name, l.location_address,
+            l.location_city, l.location_state,
+            ct.contact_name, ct.contact_phone
      FROM assets a
      LEFT JOIN clients c ON a.asset_client_id = c.client_id
-     LEFT JOIN users u ON a.asset_assigned_to = u.user_id
+     LEFT JOIN locations l ON a.asset_location_id = l.location_id
+     LEFT JOIN contacts ct ON a.asset_contact_id = ct.contact_id
      WHERE a.asset_id = $id AND a.asset_archived_at IS NULL LIMIT 1"
 ));
 if (!$row) api_error(404, 'Asset not found');
@@ -59,9 +62,16 @@ api_response(200, [
     'serial'      => $row['asset_serial'],
     'os'          => $row['asset_os'],
     'status'      => $row['asset_status'],
-    'description' => $row['asset_description'] ?? '',
-    'location'    => $row['asset_location'] ?? '',
-    'client'      => $row['client_name'],
-    'assigned_to' => $row['assigned_to_name'],
-    'created_at'  => $row['asset_created_at'],
+    'description'    => $row['asset_description'] ?? '',
+    'physical_location' => $row['asset_physical_location'] ?? '',
+    'location_name'  => $row['location_name'] ?? '',
+    'location_city'  => $row['location_city'] ?? '',
+    'location_state' => $row['location_state'] ?? '',
+    'contact_name'   => $row['contact_name'] ?? '',
+    'contact_phone'  => $row['contact_phone'] ?? '',
+    'client'         => $row['client_name'],
+    'created_at'     => $row['asset_created_at'],
+    'purchase_date'  => $row['asset_purchase_date'] ?? '',
+    'warranty_expire'=> $row['asset_warranty_expire'] ?? '',
+    'notes'          => $row['asset_notes'] ?? '',
 ]);
