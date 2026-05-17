@@ -158,6 +158,70 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
 
 api_error(404, 'Not found');
 
+// CREATE TICKET
+if ($method === 'POST' && $id === null) {
+    $body     = json_decode(file_get_contents('php://input'), true) ?? [];
+    $subject  = mysqli_real_escape_string($mysqli, trim($body['subject'] ?? ''));
+    $details  = mysqli_real_escape_string($mysqli, trim($body['details'] ?? ''));
+    $client   = isset($body['client_id']) ? intval($body['client_id']) : 'NULL';
+    $priority = in_array($body['priority'] ?? '', ['low','medium','high','critical'])
+                ? $body['priority'] : 'low';
+    $assigned = isset($body['assigned_to']) ? intval($body['assigned_to']) : 'NULL';
+
+    if (!$subject) api_error(400, 'subject required');
+
+    $next_num = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COALESCE(MAX(ticket_number), 0) + 1 AS n FROM tickets"))['n']);
+    $status   = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT ticket_status_id FROM ticket_statuses ORDER BY ticket_status_order ASC LIMIT 1"))['ticket_status_id']);
+
+    mysqli_query($mysqli,
+        "INSERT INTO tickets (ticket_subject, ticket_details, ticket_client_id, ticket_priority,
+         ticket_status, ticket_assigned_to, ticket_number, ticket_created_at, ticket_updated_at)
+         VALUES ('$subject', '$details', $client, '$priority', $status, $assigned, $next_num, NOW(), NOW())"
+    );
+    $new_id = mysqli_insert_id($mysqli);
+    api_response(201, ['id' => $new_id, 'number' => $next_num]);
+}
+
+// UPLOAD ATTACHMENT
+if ($method === 'POST' && $id !== null && $sub === 'attachments') {
+    $file = $_FILES['file'] ?? null;
+    if (!$file || $file['error'] !== UPLOAD_ERR_OK) api_error(400, 'File upload failed');
+    if ($file['size'] > 10 * 1024 * 1024) api_error(400, 'File too large (max 10 MB)');
+
+    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+    $mime    = mime_content_type($file['tmp_name']);
+    if (!in_array($mime, $allowed)) api_error(400, 'File type not allowed');
+
+    $dir = $DOCUMENT_ROOT . "/uploads/mobile_attachments/$id";
+    if (!is_dir($dir)) mkdir($dir, 0750, true);
+
+    $ext      = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = bin2hex(random_bytes(8)) . '.' . preg_replace('/[^a-z0-9]/i', '', $ext);
+    $dest     = "$dir/$filename";
+    move_uploaded_file($file['tmp_name'], $dest);
+
+    // Store in DB — create table lazily
+    mysqli_query($mysqli,
+        "CREATE TABLE IF NOT EXISTS mobile_ticket_attachments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            ticket_id INT NOT NULL,
+            filename VARCHAR(255) NOT NULL,
+            mime_type VARCHAR(100),
+            created_by INT,
+            created_at DATETIME DEFAULT NOW()
+        )"
+    );
+    mysqli_query($mysqli,
+        "INSERT INTO mobile_ticket_attachments (ticket_id, filename, mime_type, created_by)
+         VALUES ($id, '$filename', '$mime', $uid)"
+    );
+
+    $url_path = "/uploads/mobile_attachments/$id/$filename";
+    api_response(201, ['url' => $url_path, 'filename' => $filename]);
+}
+
 // ── Additional POST routes ───────────────────────────────────────────────────
 
 // UPDATE TICKET STATUS

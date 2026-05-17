@@ -97,6 +97,8 @@ switch ($resource) {
             require __DIR__ . '/worksheets.php';
         } elseif ($sub === 'outtake' || $sub === 'outtakes') {
             require __DIR__ . '/outtakes.php';
+        } elseif ($sub === 'attachments') {
+            require __DIR__ . '/tickets.php';
         } else {
             require __DIR__ . '/tickets.php';
         }
@@ -120,7 +122,9 @@ switch ($resource) {
     case 'worksheet-responses': require __DIR__ . '/worksheets.php'; break;
     case 'worksheet-templates': require __DIR__ . '/worksheets.php'; break;
     case 'products':    require __DIR__ . '/products.php'; break;
-    case 'me':                  require __DIR__ . '/me.php'; break;
+    case 'search':      require __DIR__ . '/search.php';   break;
+    case 'reports':     require __DIR__ . '/reports.php';  break;
+    case 'me':          require __DIR__ . '/me.php';       break;
     case 'appointments': require __DIR__ . '/appointments.php'; break;
     case 'notifications': require __DIR__ . '/notifications.php'; break;
     default:              api_error(404, 'Not found');
