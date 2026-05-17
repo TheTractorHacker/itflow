@@ -865,6 +865,9 @@ CREATE TABLE `contracts` (
   `contract_created_at` datetime DEFAULT current_timestamp(),
   `contract_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
   `contract_archived_at` datetime DEFAULT NULL,
+  `contract_renewal_date` date DEFAULT NULL,
+  `contract_value` decimal(10,2) DEFAULT NULL,
+  `contract_created_by` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`contract_id`),
   KEY `contract_client_id` (`contract_client_id`),
   CONSTRAINT `contracts_ibfk_1` FOREIGN KEY (`contract_client_id`) REFERENCES `clients` (`client_id`)
@@ -913,6 +916,9 @@ CREATE TABLE `credentials` (
   `credential_accessed_at` datetime DEFAULT NULL,
   `credential_password_changed_at` datetime DEFAULT current_timestamp(),
   `credential_folder_id` int(11) NOT NULL DEFAULT 0,
+  `credential_important` tinyint(1) NOT NULL DEFAULT 0,
+  `credential_vendor_id` int(11) NOT NULL DEFAULT 0,
+  `credential_software_id` int(11) NOT NULL DEFAULT 0,
   `credential_contact_id` int(11) NOT NULL DEFAULT 0,
   `credential_asset_id` int(11) NOT NULL DEFAULT 0,
   `credential_client_id` int(11) NOT NULL DEFAULT 0,
@@ -2210,6 +2216,20 @@ CREATE TABLE `settings` (
   `config_login_key_secret` varchar(255) DEFAULT NULL,
   `config_login_remember_me_expire` int(11) NOT NULL DEFAULT 3,
   `config_log_retention` int(11) NOT NULL DEFAULT 90,
+  `config_login_session_lifetime` int(11) NOT NULL DEFAULT 480,
+  `config_backup_auto_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `config_backup_frequency` varchar(20) NOT NULL DEFAULT 'daily',
+  `config_backup_retain_count` int(11) NOT NULL DEFAULT 7,
+  `config_comet_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `config_comet_server_url` varchar(500) NOT NULL DEFAULT 'http://10.1.0.35:8060',
+  `config_comet_admin_user` varchar(200) NOT NULL DEFAULT '',
+  `config_comet_admin_pass` varchar(200) NOT NULL DEFAULT '',
+  `config_comet_auto_ticket` tinyint(1) NOT NULL DEFAULT 0,
+  `config_comet_totp_secret` varchar(200) NOT NULL DEFAULT '',
+  `config_comet_webhook_secret` varchar(200) NOT NULL DEFAULT '',
+  `config_outlook_cal_client_id` varchar(200) DEFAULT NULL,
+  `config_outlook_cal_client_secret` varchar(500) DEFAULT NULL,
+  `config_outlook_cal_tenant_id` varchar(200) DEFAULT NULL,
   `config_module_enable_ticketing` tinyint(1) NOT NULL DEFAULT 1,
   `config_theme` varchar(200) DEFAULT 'blue',
   `config_telemetry` tinyint(1) DEFAULT 0,
@@ -2727,6 +2747,12 @@ CREATE TABLE `tickets` (
   `ticket_project_id` int(11) NOT NULL DEFAULT 0,
   `ticket_recurring_ticket_id` int(11) DEFAULT 0,
   `ticket_order` int(11) NOT NULL DEFAULT 0,
+  `ticket_schedule_end` datetime DEFAULT NULL,
+  `ticket_appointment_notes` text DEFAULT NULL,
+  `ticket_contract_id` int(11) DEFAULT NULL,
+  `ticket_sla_response_due` datetime DEFAULT NULL,
+  `ticket_sla_resolution_due` datetime DEFAULT NULL,
+  `ticket_outlook_event_id` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`ticket_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -2870,6 +2896,10 @@ CREATE TABLE `users` (
   `user_created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `user_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
   `user_archived_at` datetime DEFAULT NULL,
+  `user_outlook_refresh_token` text DEFAULT NULL,
+  `user_outlook_access_token` text DEFAULT NULL,
+  `user_outlook_token_expires` datetime DEFAULT NULL,
+  `user_color` varchar(7) DEFAULT NULL,
   `user_role_id` int(11) DEFAULT 0,
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -2998,3 +3028,132 @@ CREATE TABLE `vendors` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-04-04 18:13:53
+
+--
+-- Table structure for table `comet_backup_alerts`
+--
+DROP TABLE IF EXISTS `comet_backup_alerts`;
+CREATE TABLE `comet_backup_alerts` (
+  `alert_id` int(11) NOT NULL AUTO_INCREMENT,
+  `alert_comet_username` varchar(200) NOT NULL,
+  `alert_device_name` varchar(200) NOT NULL,
+  `alert_ticket_id` int(11) NOT NULL,
+  `alert_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `alert_resolved_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`alert_id`),
+  KEY `alert_lookup` (`alert_comet_username`,`alert_device_name`,`alert_resolved_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `comet_client_map`
+--
+DROP TABLE IF EXISTS `comet_client_map`;
+CREATE TABLE `comet_client_map` (
+  `map_id` int(11) NOT NULL AUTO_INCREMENT,
+  `map_client_id` int(11) NOT NULL,
+  `map_comet_username` varchar(200) NOT NULL,
+  `map_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`map_id`),
+  UNIQUE KEY `map_client_id` (`map_client_id`),
+  KEY `map_comet_username` (`map_comet_username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `comet_session_cache`
+--
+DROP TABLE IF EXISTS `comet_session_cache`;
+CREATE TABLE `comet_session_cache` (
+  `id` tinyint(1) NOT NULL,
+  `config_value` varchar(500) NOT NULL DEFAULT '',
+  `config_expires` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `contract_documents`
+--
+DROP TABLE IF EXISTS `contract_documents`;
+CREATE TABLE `contract_documents` (
+  `doc_id` int(11) NOT NULL AUTO_INCREMENT,
+  `doc_contract_id` int(11) NOT NULL,
+  `doc_filename` varchar(500) NOT NULL,
+  `doc_original_name` varchar(500) NOT NULL,
+  `doc_mime_type` varchar(100) NOT NULL DEFAULT 'application/octet-stream',
+  `doc_size` int(11) NOT NULL DEFAULT 0,
+  `doc_uploaded_by` int(11) NOT NULL DEFAULT 0,
+  `doc_uploaded_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`doc_id`),
+  KEY `doc_contract_id` (`doc_contract_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `credential_history`
+--
+DROP TABLE IF EXISTS `credential_history`;
+CREATE TABLE `credential_history` (
+  `history_id` int(11) NOT NULL AUTO_INCREMENT,
+  `history_credential_id` int(11) NOT NULL,
+  `history_user_id` int(11) NOT NULL DEFAULT 0,
+  `history_user_name` varchar(200) NOT NULL DEFAULT '',
+  `history_field` varchar(100) NOT NULL,
+  `history_old_value` text DEFAULT NULL,
+  `history_new_value` text DEFAULT NULL,
+  `history_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`history_id`),
+  KEY `history_credential_id` (`history_credential_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `user_passkeys`
+--
+DROP TABLE IF EXISTS `user_passkeys`;
+CREATE TABLE `user_passkeys` (
+  `passkey_id` int(11) NOT NULL AUTO_INCREMENT,
+  `passkey_user_id` int(11) NOT NULL,
+  `passkey_name` varchar(200) NOT NULL DEFAULT 'Passkey',
+  `passkey_credential_id` varchar(1024) NOT NULL,
+  `passkey_public_key` text NOT NULL,
+  `passkey_sign_count` int(11) NOT NULL DEFAULT 0,
+  `passkey_aaguid` varchar(36) NOT NULL DEFAULT '',
+  `passkey_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `passkey_last_used_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`passkey_id`),
+  KEY `passkey_user_id` (`passkey_user_id`),
+  KEY `passkey_credential_id` (`passkey_credential_id`(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `webhooks`
+--
+DROP TABLE IF EXISTS `webhooks`;
+CREATE TABLE `webhooks` (
+  `webhook_id` int(11) NOT NULL AUTO_INCREMENT,
+  `webhook_name` varchar(200) NOT NULL DEFAULT '',
+  `webhook_url` varchar(2048) NOT NULL,
+  `webhook_secret` varchar(255) NOT NULL DEFAULT '',
+  `webhook_events` varchar(500) NOT NULL DEFAULT '',
+  `webhook_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `webhook_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`webhook_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `webhook_queue`
+--
+DROP TABLE IF EXISTS `webhook_queue`;
+CREATE TABLE `webhook_queue` (
+  `queue_id` int(11) NOT NULL AUTO_INCREMENT,
+  `queue_webhook_id` int(11) NOT NULL,
+  `queue_event` varchar(100) NOT NULL,
+  `queue_payload` longtext NOT NULL,
+  `queue_status` enum('pending','delivered','failed') NOT NULL DEFAULT 'pending',
+  `queue_attempts` tinyint(3) NOT NULL DEFAULT 0,
+  `queue_response_code` smallint(6) DEFAULT NULL,
+  `queue_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `queue_next_attempt_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `queue_delivered_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`queue_id`),
+  KEY `queue_status_next` (`queue_status`,`queue_next_attempt_at`),
+  KEY `queue_webhook_id` (`queue_webhook_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
