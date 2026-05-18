@@ -127,11 +127,11 @@ while ($wt = mysqli_fetch_assoc($sql_wt)) {
                         <?php endif; ?>
                     </td>
                     <td class="text-right">
-                        <a href="post/ticket_automation.php?toggle=<?php echo $rule_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>"
+                        <a href="post.php?toggle=<?php echo $rule_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>"
                            class="btn btn-sm btn-<?php echo $enabled ? 'warning' : 'success'; ?>">
                             <?php echo $enabled ? 'Disable' : 'Enable'; ?>
                         </a>
-                        <a href="post/ticket_automation.php?delete=<?php echo $rule_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>"
+                        <a href="post.php?delete=<?php echo $rule_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>"
                            class="btn btn-sm btn-danger"
                            onclick="return confirm('Delete this rule?')">
                             <i class="fas fa-trash"></i>

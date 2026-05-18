@@ -1,5 +1,6 @@
 <?php
-require_once "../includes/inc_all_admin.php";
+
+defined('FROM_POST_HANDLER') || die("Direct file access is not allowed");
 
 // Add rule
 if (isset($_POST['add_rule'])) {

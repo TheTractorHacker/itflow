@@ -17,7 +17,7 @@ ob_start();
     <h5 class="modal-title"><i class="fas fa-fw fa-robot mr-2"></i>New Automation Rule</h5>
     <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
 </div>
-<form action="/admin/post/ticket_automation.php" method="POST" autocomplete="off">
+<form action="/admin/post.php" method="POST" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
     <input type="hidden" name="add_rule" value="1">
     <div class="modal-body">
