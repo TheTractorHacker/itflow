@@ -39,6 +39,8 @@
 
 This fork adds real-world MSP dispatch and scheduling workflows that go beyond the upstream project, while staying in sync with upstream security patches and improvements.
 
+We also built a **native Android app** from scratch to go alongside this fork — giving technicians full mobile access to tickets, assets, clients, worksheets, and more. Check it out at [TheTractorHacker/itflow-msp-app](https://github.com/TheTractorHacker/itflow-msp-app).
+
 ---
 
 ## 📱 Android App
