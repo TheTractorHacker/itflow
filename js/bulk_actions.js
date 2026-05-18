@@ -106,7 +106,10 @@ document.addEventListener('DOMContentLoaded', function () {
             params.append(cb.name, cb.value);
         });
 
+        // Safety: only allow same-origin relative paths to prevent open redirect / XSS
+        if (url.origin !== window.location.origin) return;
         const finalUrl = url.pathname + '?' + params.toString();
+        if (!finalUrl.startsWith('/')) return;
 
         if (trigger.hasAttribute('data-modal-url')) {
             trigger.setAttribute('data-modal-url', finalUrl);

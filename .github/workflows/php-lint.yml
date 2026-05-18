@@ -3,6 +3,9 @@ name: PHPLint
 
 on: [pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   build:
 

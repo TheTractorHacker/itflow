@@ -5,6 +5,9 @@ on:
     paths:
       - 'db.sql'
 
+permissions:
+  contents: read
+
 jobs:
   syntax_check:
     name: Check db.sql SQL Syntax
