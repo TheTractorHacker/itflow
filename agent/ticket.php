@@ -1236,6 +1236,12 @@ if (isset($_GET['ticket_id'])) {
                                 <?php } else { ?>
                                     <span class="badge badge-<?= $ws_pct == 100 ? 'success' : 'primary' ?> mr-2"><?= $ws_pct ?>%</span>
                                 <?php } ?>
+                                <?php if ($ws_completed && !$ws_signed && lookupUserPermission("module_support") >= 2) { ?>
+                                    <a href="post.php?unfinalize_worksheet=<?= $ws_id ?>&ticket_id=<?= $ticket_id ?>&client_id=<?= $client_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                                       class="btn btn-xs btn-warning ml-1" title="Unfinalize" onclick="event.stopPropagation();">
+                                        <i class="fas fa-lock-open mr-1"></i>Unfinalize
+                                    </a>
+                                <?php } ?>
                                 <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_resolved_at)) { ?>
                                     <a href="post.php?delete_ticket_worksheet=<?= $ws_id ?>&ticket_id=<?= $ticket_id ?>&client_id=<?= $client_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-xs btn-danger confirm-link ml-1" title="Delete" onclick="event.stopPropagation();"><i class="fas fa-trash"></i></a>
                                 <?php } ?>

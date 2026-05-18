@@ -59,6 +59,22 @@ if (isset($_POST['save_worksheet']) || isset($_POST['complete_worksheet'])) {
     redirect();
 }
 
+if (isset($_GET['unfinalize_worksheet'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $worksheet_id = intval($_GET['unfinalize_worksheet']);
+    $ticket_id    = intval($_GET['ticket_id']);
+    $client_id    = intval($_GET['client_id'] ?? 0);
+
+    mysqli_query($mysqli, "UPDATE ticket_worksheets SET worksheet_completed_at = NULL WHERE worksheet_id = $worksheet_id AND worksheet_signed_at IS NULL");
+
+    logAction("Worksheet", "Unfinalize", "Unfinalized worksheet #$worksheet_id on ticket $ticket_id", $client_id, $ticket_id);
+    flash_alert("Worksheet unlocked and set back to editable.");
+    header("Location: ticket.php?ticket_id=$ticket_id" . ($client_id ? "&client_id=$client_id" : ''));
+    exit;
+}
+
 if (isset($_GET['delete_ticket_worksheet'])) {
     validateCSRFToken($_GET['csrf_token']);
     enforceUserPermission('module_support', 2);
