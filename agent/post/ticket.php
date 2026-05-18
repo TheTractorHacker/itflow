@@ -2172,6 +2172,26 @@ if (isset($_POST['redact_ticket_reply'])) {
 
 }
 
+if (isset($_GET['delete_ticket_reply'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_reply_id = intval($_GET['delete_ticket_reply']);
+    $ticket_id = intval(getFieldById('ticket_replies', $ticket_reply_id, 'ticket_reply_ticket_id'));
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+
+    if ($client_id) {
+        enforceClientAccess();
+    }
+
+    mysqli_query($mysqli, "DELETE FROM ticket_attachments WHERE ticket_attachment_reply_id = $ticket_reply_id");
+    mysqli_query($mysqli, "DELETE FROM ticket_replies WHERE ticket_reply_id = $ticket_reply_id");
+
+    logAction("Ticket Reply", "Delete", "$session_name deleted a ticket reply", $client_id, $ticket_id);
+    flash_alert("Reply deleted.", 'error');
+    redirect();
+}
+
 if (isset($_GET['archive_ticket_reply'])) {
 
     validateCSRFToken($_GET['csrf_token']);

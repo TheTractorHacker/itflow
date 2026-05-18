@@ -140,6 +140,23 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     api_response(201, ['id' => $reply_id]);
 }
 
+// DELETE REPLY
+if ($method === 'DELETE' && $id !== null && $sub === 'reply') {
+    $reply_id = isset($segments[3]) && is_numeric($segments[3]) ? intval($segments[3]) : null;
+    if (!$reply_id) api_error(400, 'reply_id required');
+
+    $reply = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT ticket_reply_id FROM ticket_replies WHERE ticket_reply_id = $reply_id AND ticket_reply_ticket_id = $id LIMIT 1"
+    ));
+    if (!$reply) api_error(404, 'Reply not found');
+
+    mysqli_query($mysqli, "DELETE FROM ticket_attachments WHERE ticket_attachment_reply_id = $reply_id");
+    mysqli_query($mysqli, "DELETE FROM ticket_replies WHERE ticket_reply_id = $reply_id");
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
+
+    api_response(200, ['ok' => true]);
+}
+
 // LOG TIME
 if ($method === 'POST' && $id !== null && $sub === 'time') {
     $body       = json_decode(file_get_contents('php://input'), true) ?? [];

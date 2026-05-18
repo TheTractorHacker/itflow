@@ -864,6 +864,9 @@ if (isset($_GET['ticket_id'])) {
                                                     <a class="dropdown-item text-danger confirm-link" href="post.php?archive_ticket_reply=<?= $ticket_reply_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                                                         <i class="fas fa-fw fa-archive mr-2"></i>Archive
                                                     </a>
+                                                    <a class="dropdown-item text-danger confirm-link" href="post.php?delete_ticket_reply=<?= $ticket_reply_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                    </a>
                                                     <?php } ?>
                                                 </div>
                                             <?php } ?>
