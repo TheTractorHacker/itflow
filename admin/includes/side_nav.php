@@ -166,6 +166,12 @@
                 <li class="nav-header">MAINTENANCE</li>
 
                 <li class="nav-item">
+                    <a href="/admin/cron.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'cron.php' ? 'active' : ''); ?>">
+                        <i class="nav-icon fas fa-clock"></i>
+                        <p>Cron</p>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="/admin/mail_queue.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'mail_queue.php' ? 'active' : ''); ?>">
                         <i class="nav-icon fas fa-mail-bulk"></i>
                         <p>Mail Queue</p>
