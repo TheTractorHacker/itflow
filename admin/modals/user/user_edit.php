@@ -205,23 +205,25 @@ ob_start();
                     </ul>
                 <?php endif; ?>
 
+                <?php if (!empty($user_token)): // Only relevant when 2FA is enabled ?>
                 <hr>
 
                 <!-- Sessions -->
                 <h6 class="text-uppercase text-muted mb-2" style="font-size:.75rem;letter-spacing:.05em">
-                    <i class="fas fa-desktop mr-1"></i>Remember-Me Sessions
+                    <i class="fas fa-desktop mr-1"></i>Trusted Devices <small class="text-muted font-weight-normal">(2FA bypass tokens)</small>
                 </h6>
                 <div class="d-flex align-items-center justify-content-between p-2 border rounded">
                     <?php if ($remember_count > 0): ?>
-                        <span><i class="fas fa-circle text-warning mr-2"></i><?= $remember_count ?> active session<?= $remember_count > 1 ? 's' : '' ?></span>
+                        <span><i class="fas fa-circle text-warning mr-2"></i><?= $remember_count ?> trusted device<?= $remember_count > 1 ? 's' : '' ?></span>
                         <a href="post.php?revoke_remember_me=<?= $user_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                            class="btn btn-sm btn-outline-warning confirm-link">
                             <i class="fas fa-ban mr-1"></i>Revoke All
                         </a>
                     <?php else: ?>
-                        <span class="text-muted"><i class="fas fa-circle text-secondary mr-2"></i>No active sessions</span>
+                        <span class="text-muted"><i class="fas fa-circle text-secondary mr-2"></i>No trusted devices</span>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
 
             </div>
 
