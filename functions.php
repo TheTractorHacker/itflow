@@ -1342,13 +1342,17 @@ function fetchUpdates() {
 
     // Fetch the latest code changes but don't apply them
     exec("git fetch fork", $output, $result);
-    $latest_version = exec("git rev-parse fork/$repo_branch");
+    $latest_version  = exec("git rev-parse fork/$repo_branch");
     $current_version = exec("git rev-parse HEAD");
+
+    // Human-readable tag-based versions (e.g. v2.6.0 or v2.6.0-3-gabcdef)
+    $current_version_tag = exec("git describe --tags HEAD 2>/dev/null") ?: $current_version;
+    $latest_version_tag  = exec("git describe --tags fork/$repo_branch 2>/dev/null") ?: $latest_version;
 
     if ($current_version == $latest_version) {
         $update_message = "No Updates available";
     } else {
-        $update_message = "New Updates are Available [$latest_version]";
+        $update_message = "New Updates are Available [$latest_version_tag]";
     }
 
 
@@ -1357,6 +1361,8 @@ function fetchUpdates() {
     $updates->result = $result;
     $updates->current_version = $current_version;
     $updates->latest_version = $latest_version;
+    $updates->current_version_tag = $current_version_tag;
+    $updates->latest_version_tag  = $latest_version_tag;
     $updates->update_message = $update_message;
 
 

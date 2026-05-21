@@ -5,11 +5,13 @@ require_once "../includes/database_version.php";
 
 $updates = fetchUpdates();
 
-$latest_version = $updates->latest_version;
-$current_version = $updates->current_version;
+$latest_version      = $updates->latest_version;
+$current_version     = $updates->current_version;
+$current_version_tag = $updates->current_version_tag;
+$latest_version_tag  = $updates->latest_version_tag;
 $result = $updates->result;
 
-$git_log = shell_exec("git log $repo_branch..origin/$repo_branch --pretty=format:'<tr><td>%h</td><td>%ar</td><td>%s</td></tr>'");
+$git_log = shell_exec("git log $repo_branch..fork/$repo_branch --pretty=format:'<tr><td>%h</td><td>%ar</td><td>%s</td></tr>'");
 
 ?>
 
@@ -24,7 +26,7 @@ $git_log = shell_exec("git log $repo_branch..origin/$repo_branch --pretty=format
                 <div class="alert alert-danger">
                     <strong>WARNING: Could not find execute 'git fetch'.</strong>
                     <br><br>
-                    <i>Error details:- <?php echo shell_exec("git fetch 2>&1"); ?></i>
+                    <i>Error details:- <?php echo htmlspecialchars(shell_exec("git fetch fork 2>&1")); ?></i>
                     <br>
                     <br>Things to check: Is Git installed? Is the Git origin/remote correct? Are web server file permissions too strict?
                     <br>Seek support on the <a href="https://forum.itflow.org">Forum</a> if required - include relevant PHP error logs & ITFlow debug output
@@ -60,9 +62,9 @@ $git_log = shell_exec("git log $repo_branch..origin/$repo_branch --pretty=format
                     <a class="btn btn-danger btn-lg confirm-link" href="post.php?update&force_update=1"><i class="fas fa-fw fa-4x fa-hammer mb-1"></i><h5>FORCE Update App</h5></a>
 
                 <?php } else { ?>
-                    <p><strong>Application Release Version:<br><strong class="text-dark"><?php echo APP_VERSION; ?></strong></p>
+                    <p><strong>Version:<br><strong class="text-dark"><?php echo htmlspecialchars($current_version_tag); ?></strong></p>
+                    <p class="text-secondary">Latest Release:<br><strong class="text-dark"><a href="https://github.com/TheTractorHacker/itflow/releases" target="_blank"><?php echo htmlspecialchars($latest_version_tag); ?></a></strong></p>
                     <p class="text-secondary">Database Version:<br><strong class="text-dark"><?php echo CURRENT_DATABASE_VERSION; ?></strong></p>
-                    <p class="text-secondary">Code Commit:<br><strong class="text-dark"><?php echo $current_version; ?></strong></p>
                     <p class="text-muted">You are up to date!<br>Everything is going to be alright</p>
                     <i class="far fa-3x text-dark fa-smile-wink"></i><br>
 
