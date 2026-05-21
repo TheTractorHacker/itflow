@@ -1345,9 +1345,9 @@ function fetchUpdates() {
     $latest_version  = exec("git rev-parse fork/$repo_branch");
     $current_version = exec("git rev-parse HEAD");
 
-    // Human-readable tag-based versions (e.g. v2.6.0 or v2.6.0-3-gabcdef)
-    $current_version_tag = exec("git describe --tags HEAD 2>/dev/null") ?: $current_version;
-    $latest_version_tag  = exec("git describe --tags fork/$repo_branch 2>/dev/null") ?: $latest_version;
+    // Human-readable tag-based versions (e.g. v2.6.0)
+    $current_version_tag = exec("git describe --tags --abbrev=0 HEAD 2>/dev/null") ?: $current_version;
+    $latest_version_tag  = exec("git describe --tags --abbrev=0 fork/$repo_branch 2>/dev/null") ?: $latest_version;
 
     if ($current_version == $latest_version) {
         $update_message = "No Updates available";
