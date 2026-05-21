@@ -189,7 +189,12 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <td><?php echo $last_login; ?></td>
                         <td>
                             <?php if ($user_id !== $session_user_id) {   // Prevent modifying self ?>
-                            <div class="dropdown dropleft text-center">
+                            <div class="d-flex align-items-center">
+                                <a class="btn btn-primary btn-sm mr-1 ajax-modal" href="#"
+                                   data-modal-url="modals/user/user_edit.php?id=<?= $user_id ?>">
+                                    <i class="fas fa-fw fa-user-edit mr-1"></i>Edit
+                                </a>
+                            <div class="dropdown dropleft">
                                 <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
                                     <i class="fas fa-ellipsis-h"></i>
                                 </button>
@@ -223,6 +228,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     </a>
                                     <?php } ?>
                                 </div>
+                            </div>
                             </div>
                             <?php } ?>
                         </td>
