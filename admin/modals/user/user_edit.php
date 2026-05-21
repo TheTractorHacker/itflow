@@ -18,6 +18,12 @@ $user_config_force_mfa = intval($row['user_config_force_mfa']);
 $user_role_id = intval($row['user_role_id']);
 $user_initials = nullable_htmlentities(initials($user_name));
 
+// Get passkeys
+$sql_passkeys = mysqli_query($mysqli, "SELECT * FROM user_passkeys WHERE passkey_user_id = $user_id ORDER BY passkey_created_at DESC");
+
+// Get remember tokens
+$remember_count = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM remember_tokens WHERE remember_token_user_id = $user_id"))[0]);
+
 // Get User Client Access Permissions
 $user_client_access_sql = mysqli_query($mysqli,"SELECT client_id FROM user_client_permissions WHERE user_id = $user_id");
 $client_access_array = [];
@@ -45,7 +51,10 @@ ob_start();
                 <a class="nav-link active" data-toggle="pill" href="#pills-user-details<?php echo $user_id; ?>">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-user-access<?php echo $user_id; ?>">Restrict Access</a>
+                <a class="nav-link" data-toggle="pill" href="#pills-user-security<?php echo $user_id; ?>">Security</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="pill" href="#pills-user-access<?php echo $user_id; ?>">Access</a>
             </li>
         </ul>
 
@@ -131,31 +140,89 @@ ob_start();
                     <input type="file" class="form-control-file" accept="image/*" name="file">
                 </div>
 
+                <p class="text-muted small"><i class="fas fa-shield-alt mr-1"></i>Manage 2FA, passkeys, and sessions in the <a href="#" data-toggle="pill" data-target="#pills-user-security<?= $user_id ?>">Security tab</a>.</p>
+            </div>
+
+            <!-- Security Tab -->
+            <div class="tab-pane fade" id="pills-user-security<?php echo $user_id; ?>">
+
+                <!-- 2FA -->
+                <h6 class="text-uppercase text-muted mb-2" style="font-size:.75rem;letter-spacing:.05em">
+                    <i class="fas fa-shield-alt mr-1"></i>Two-Factor Authentication
+                </h6>
+                <?php if (!empty($user_token)): ?>
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-3 border rounded">
+                        <span><i class="fas fa-lock text-success mr-2"></i><strong>Enabled</strong> — TOTP authenticator app</span>
+                        <a href="post.php?disable_2fa=<?= $user_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                           class="btn btn-sm btn-outline-danger confirm-link">
+                            <i class="fas fa-unlock mr-1"></i>Disable
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <div class="d-flex align-items-center p-2 mb-3 border rounded">
+                        <i class="fas fa-unlock text-danger mr-2"></i><span class="text-muted">Not configured</span>
+                    </div>
+                <?php endif; ?>
+
                 <div class="form-group">
                     <div class="custom-control custom-checkbox">
-                        <input class="custom-control-input" type="checkbox" id="forceMFACheckBox<?php echo $user_id; ?>" name="force_mfa" value="1" <?php if($user_config_force_mfa == 1){ echo "checked"; } ?>>
-                        <label for="forceMFACheckBox<?php echo $user_id; ?>" class="custom-control-label">
-                            Force MFA
-                        </label>
+                        <input class="custom-control-input" type="checkbox" id="forceMFASec<?php echo $user_id; ?>" name="force_mfa" value="1" <?php if($user_config_force_mfa == 1){ echo "checked"; } ?>>
+                        <label for="forceMFASec<?php echo $user_id; ?>" class="custom-control-label">Force MFA on next login</label>
                     </div>
                 </div>
 
-                <?php if (!empty($user_token)) { ?>
+                <hr>
 
-                    <div class="form-group">
-                        <label>2FA</label>
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text"><i class="fa fa-fw fa-id-card"></i></span>
+                <!-- Passkeys -->
+                <h6 class="text-uppercase text-muted mb-2" style="font-size:.75rem;letter-spacing:.05em">
+                    <i class="fas fa-key mr-1"></i>Passkeys
+                </h6>
+                <?php
+                $passkey_rows = [];
+                while ($pk = mysqli_fetch_assoc($sql_passkeys)) { $passkey_rows[] = $pk; }
+                if (empty($passkey_rows)): ?>
+                    <p class="text-muted small mb-3">No passkeys registered.</p>
+                <?php else: ?>
+                    <ul class="list-group mb-3">
+                    <?php foreach ($passkey_rows as $pk):
+                        $pk_id   = intval($pk['passkey_id']);
+                        $pk_name = nullable_htmlentities($pk['passkey_name']);
+                        $pk_used = nullable_htmlentities($pk['passkey_last_used_at'] ?? 'Never');
+                        $pk_created = nullable_htmlentities($pk['passkey_created_at']);
+                    ?>
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <i class="fas fa-key text-secondary mr-2"></i>
+                                <strong><?= $pk_name ?></strong>
+                                <small class="text-muted ml-2">Added <?= $pk_created ?> · Last used <?= $pk_used ?></small>
                             </div>
-                            <select class="form-control" name="2fa">
-                                <option value="">Keep enabled</option>
-                                <option value="disable">Disable</option>
-                            </select>
-                        </div>
-                    </div>
+                            <a href="post.php?delete_passkey=<?= $pk_id ?>&user_id=<?= $user_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                               class="btn btn-xs btn-outline-danger confirm-link" title="Delete passkey">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
 
-                <?php } ?>
+                <hr>
+
+                <!-- Sessions -->
+                <h6 class="text-uppercase text-muted mb-2" style="font-size:.75rem;letter-spacing:.05em">
+                    <i class="fas fa-desktop mr-1"></i>Remember-Me Sessions
+                </h6>
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded">
+                    <?php if ($remember_count > 0): ?>
+                        <span><i class="fas fa-circle text-warning mr-2"></i><?= $remember_count ?> active session<?= $remember_count > 1 ? 's' : '' ?></span>
+                        <a href="post.php?revoke_remember_me=<?= $user_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                           class="btn btn-sm btn-outline-warning confirm-link">
+                            <i class="fas fa-ban mr-1"></i>Revoke All
+                        </a>
+                    <?php else: ?>
+                        <span class="text-muted"><i class="fas fa-circle text-secondary mr-2"></i>No active sessions</span>
+                    <?php endif; ?>
+                </div>
+
             </div>
 
             <div class="tab-pane fade" id="pills-user-access<?php echo $user_id; ?>">

@@ -218,6 +218,27 @@ if (isset($_GET['disable_user'])) {
 
 }
 
+if (isset($_GET['disable_2fa'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    $user_id   = intval($_GET['disable_2fa']);
+    $user_name = sanitizeInput(getFieldById('users', $user_id, 'user_name'));
+    mysqli_query($mysqli, "UPDATE users SET user_token = NULL WHERE user_id = $user_id");
+    logAction("User", "Edit", "$session_name disabled 2FA for $user_name", 0, $user_id);
+    flash_alert("2FA disabled for <strong>$user_name</strong>.", 'warning');
+    redirect();
+}
+
+if (isset($_GET['delete_passkey'])) {
+    validateCSRFToken($_GET['csrf_token']);
+    $passkey_id = intval($_GET['delete_passkey']);
+    $user_id    = intval($_GET['user_id']);
+    $user_name  = sanitizeInput(getFieldById('users', $user_id, 'user_name'));
+    mysqli_query($mysqli, "DELETE FROM user_passkeys WHERE passkey_id = $passkey_id AND passkey_user_id = $user_id");
+    logAction("User", "Edit", "$session_name deleted a passkey for $user_name", 0, $user_id);
+    flash_alert("Passkey deleted for <strong>$user_name</strong>.", 'warning');
+    redirect();
+}
+
 if (isset($_GET['revoke_remember_me'])) {
 
     validateCSRFToken($_GET['csrf_token']);
