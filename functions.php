@@ -1341,8 +1341,8 @@ function fetchUpdates() {
     global $repo_branch;
 
     // Fetch the latest code changes but don't apply them
-    exec("git fetch", $output, $result);
-    $latest_version = exec("git rev-parse origin/$repo_branch");
+    exec("git fetch fork", $output, $result);
+    $latest_version = exec("git rev-parse fork/$repo_branch");
     $current_version = exec("git rev-parse HEAD");
 
     if ($current_version == $latest_version) {
