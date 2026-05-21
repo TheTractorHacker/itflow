@@ -188,49 +188,46 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <td class="text-center"><?php echo $mfa_status_display; ?></td>
                         <td><?php echo $last_login; ?></td>
                         <td>
-                            <?php if ($user_id !== $session_user_id) {   // Prevent modifying self ?>
                             <div class="d-flex align-items-center">
                                 <a class="btn btn-primary btn-sm mr-1 ajax-modal" href="#"
                                    data-modal-url="modals/user/user_edit.php?id=<?= $user_id ?>">
                                     <i class="fas fa-fw fa-user-edit mr-1"></i>Edit
                                 </a>
-                            <div class="dropdown dropleft">
-                                <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
-                                    <i class="fas fa-ellipsis-h"></i>
-                                </button>
-                                <div class="dropdown-menu">
-                                    <a class="dropdown-item ajax-modal" href="#"
-                                        data-modal-url="modals/user/user_edit.php?id=<?= $user_id ?>">
-                                        <i class="fas fa-fw fa-user-edit mr-2"></i>Edit
-                                    </a>
-                                    <?php if ($remember_token_count > 0) { ?>
-                                    <a class="dropdown-item" href="post.php?revoke_remember_me=<?php echo $user_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-ban mr-2"></i>Revoke <?php echo $remember_token_count; ?> Remember Tokens
-                                    </a>
-                                    <?php } ?>
-                                    <?php if ($user_status == 0) { ?>
-                                        <a class="dropdown-item text-success" href="post.php?activate_user=<?php echo $user_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-user-check mr-2"></i>Activate
+                                <?php if ($user_id !== $session_user_id) { // Disable/archive not allowed on self ?>
+                                <div class="dropdown dropleft">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        <?php if ($remember_token_count > 0) { ?>
+                                        <a class="dropdown-item" href="post.php?revoke_remember_me=<?php echo $user_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
+                                            <i class="fas fa-fw fa-ban mr-2"></i>Revoke <?php echo $remember_token_count; ?> Remember Tokens
                                         </a>
-                                    <?php }elseif ($user_status == 1) { ?>
-                                        <a class="dropdown-item text-danger" href="post.php?disable_user=<?php echo $user_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-user-slash mr-2"></i>Disable
+                                        <?php } ?>
+                                        <?php if ($user_status == 0) { ?>
+                                            <a class="dropdown-item text-success" href="post.php?activate_user=<?php echo $user_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
+                                                <i class="fas fa-fw fa-user-check mr-2"></i>Activate
+                                            </a>
+                                        <?php } elseif ($user_status == 1) { ?>
+                                            <a class="dropdown-item text-danger" href="post.php?disable_user=<?php echo $user_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
+                                                <i class="fas fa-fw fa-user-slash mr-2"></i>Disable
+                                            </a>
+                                        <?php } ?>
+                                        <?php if ($user_archived_at) { ?>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-info ajax-modal" href="#" data-modal-url="modals/user/user_restore.php?id=<?= $user_id ?>">
+                                            <i class="fas fa-fw fa-redo-alt mr-2"></i>Restore
                                         </a>
-                                    <?php } ?>
-                                    <?php if ($user_archived_at) { ?>
-                                    <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item text-info ajax-modal" href="#" data-modal-url="modals/user/user_restore.php?id=<?= $user_id ?>">
-                                        <i class="fas fa-fw fa-redo-alt mr-2"></i>Restore
-                                    </a>
-                                    <?php } else { ?>
-                                    <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item text-danger ajax-modal" href="#" data-modal-url="modals/user/user_archive.php?id=<?= $user_id ?>">
-                                        <i class="fas fa-fw fa-archive mr-2"></i>Archive
-                                    </a>
-                                    <?php } ?>
+                                        <?php } else { ?>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger ajax-modal" href="#" data-modal-url="modals/user/user_archive.php?id=<?= $user_id ?>">
+                                            <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                        </a>
+                                        <?php } ?>
+                                    </div>
                                 </div>
+                                <?php } ?>
                             </div>
-                            </div>
-                            <?php } ?>
                         </td>
                     </tr>
 
