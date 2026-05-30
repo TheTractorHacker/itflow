@@ -451,11 +451,32 @@ function generateUserSessionKey($site_encryption_master_key)
     // Give the user "their" key as a cookie
     include 'config.php';
 
+    // Match cookie lifetime to the session lifetime so credentials stay decryptable
+    $cookie_expires = time() + ($_SESSION['session_lifetime_seconds'] ?? 28800);
+
     if ($config_https_only) {
-        setcookie("user_encryption_session_key", "$user_encryption_session_key", ['path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'None']);
+        setcookie("user_encryption_session_key", "$user_encryption_session_key", ['expires' => $cookie_expires, 'path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'None']);
     } else {
-        setcookie("user_encryption_session_key", $user_encryption_session_key, 0, "/");
+        setcookie("user_encryption_session_key", $user_encryption_session_key, $cookie_expires, "/");
         $_SESSION['alert_message'] = "Unencrypted connection flag set: Using non-secure cookies.";
+    }
+}
+
+// Stores the master key encrypted in the DB + a persistent cookie so passkey logins can decrypt credentials.
+// Call this after any successful password login, passing the same $master_key used for generateUserSessionKey.
+function storePasskeyEncKey($mysqli, int $user_id, string $master_key, bool $https_only, int $lifetime): void {
+    $enc_key = randomString(32);
+    $iv      = randomString(16);
+    $ct      = openssl_encrypt($master_key, 'aes-128-cbc', $enc_key, 0, $iv);
+    if ($ct === false) return;
+    $esc_ct = mysqli_real_escape_string($mysqli, $ct);
+    $esc_iv = mysqli_real_escape_string($mysqli, base64_encode($iv));
+    mysqli_query($mysqli, "UPDATE users SET user_passkey_enc_ciphertext='$esc_ct', user_passkey_enc_iv='$esc_iv', user_passkey_bootstrap_key=NULL WHERE user_id=$user_id");
+    $expires = time() + $lifetime;
+    if ($https_only) {
+        setcookie('user_passkey_enc_key', $enc_key, ['expires' => $expires, 'path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'None']);
+    } else {
+        setcookie('user_passkey_enc_key', $enc_key, $expires, '/');
     }
 }
 

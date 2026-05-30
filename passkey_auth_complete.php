@@ -120,6 +120,22 @@ try {
     $session_user_id = $userId;
     logAction('Login', 'Success', "$user_name logged in via passkey");
 
+    // Restore credential encryption session from stored passkey enc key
+    $passkey_cookie_key = $_COOKIE['user_passkey_enc_key'] ?? null;
+    $bootstrap_key      = $userRow['user_passkey_bootstrap_key'] ?? null;
+    $active_enc_key     = $passkey_cookie_key ?? $bootstrap_key;
+    $is_bootstrap       = empty($passkey_cookie_key) && !empty($bootstrap_key);
+
+    if ($active_enc_key && !empty($userRow['user_passkey_enc_ciphertext'])) {
+        $pk_iv      = base64_decode($userRow['user_passkey_enc_iv']);
+        $master_key = openssl_decrypt($userRow['user_passkey_enc_ciphertext'], 'aes-128-cbc', $active_enc_key, 0, $pk_iv);
+        if ($master_key) {
+            generateUserSessionKey($master_key);
+            // Re-store to refresh cookie and clear any bootstrap key
+            storePasskeyEncKey($mysqli, $userId, $master_key, $config_https_only, $_SESSION['session_lifetime_seconds'] ?? 28800);
+        }
+    }
+
     $start = mysqli_fetch_assoc(mysqli_query($mysqli,
         "SELECT config_start_page FROM settings WHERE company_id = 1 LIMIT 1"
     ))['config_start_page'] ?? 'dashboard.php';

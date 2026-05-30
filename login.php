@@ -454,6 +454,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
 
                         if (!empty($site_encryption_master_key)) {
                             generateUserSessionKey($site_encryption_master_key);
+                            storePasskeyEncKey($mysqli, $user_id, $site_encryption_master_key, $config_https_only, $_SESSION['session_lifetime_seconds'] ?? 28800);
                         }
 
                         // NOW safe to clear pending sessions AFTER we used them

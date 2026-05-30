@@ -25,4 +25,7 @@ if (!isset($_SESSION)) {
 
     session_start();
 
+    // Store so generateUserSessionKey can match the encryption cookie lifetime
+    $_SESSION['session_lifetime_seconds'] = $session_lifetime_seconds;
+
 }
