@@ -155,6 +155,27 @@ $sql = mysqli_query(
 
 $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
+// RMM: bulk-load status for all visible assets in one query
+$rmm_status_map    = [];
+$rmm_alert_map     = [];
+if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
+    $sql_rmm_bulk = mysqli_query($mysqli,
+        "SELECT arl.asset_id, arl.rmm_status,
+                (SELECT COUNT(*) FROM rmm_alerts ra WHERE ra.asset_id=arl.asset_id AND ra.status='new') as alert_cnt
+         FROM asset_rmm_links arl
+         WHERE arl.asset_id IN (SELECT asset_id FROM assets
+             LEFT JOIN clients ON asset_client_id=client_id
+             WHERE $archive_query $client_query
+             GROUP BY asset_id)"
+    );
+    if ($sql_rmm_bulk) {
+        while ($rr = mysqli_fetch_assoc($sql_rmm_bulk)) {
+            $rmm_status_map[intval($rr['asset_id'])] = $rr['rmm_status'];
+            $rmm_alert_map[intval($rr['asset_id'])]  = intval($rr['alert_cnt']);
+        }
+    }
+}
+
 ?>
 
 <div class="col-sm-12 mb-3">
@@ -645,7 +666,13 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                             <div>
                                                 <?= $asset_name ?>
 
-                                                <?php if ($asset_favorite) { echo "<i class='fas fa-fw fa-star text-warning' title='Favorite'></i>"; } ?></div>
+                                                <?php if ($asset_favorite) { echo "<i class='fas fa-fw fa-star text-warning' title='Favorite'></i>"; } ?>
+                                                <?php if (isset($rmm_status_map[$asset_id])): $rs = $rmm_status_map[$asset_id]; ?>
+                                                <span class="badge badge-<?= $rs === 'online' ? 'success' : 'secondary' ?> ml-1" title="RMM: <?= htmlspecialchars($rs) ?>"><?= $rs === 'online' ? 'Online' : 'Offline' ?></span>
+                                                <?php if (!empty($rmm_alert_map[$asset_id])): ?>
+                                                <span class="badge badge-danger ml-1" title="<?= $rmm_alert_map[$asset_id] ?> open RMM alert(s)"><i class="fas fa-bell mr-1"></i><?= $rmm_alert_map[$asset_id] ?></span>
+                                                <?php endif; endif; ?>
+                                                </div>
                                             <div><small class="text-secondary"><?= $asset_description ?></small></div>
                                             <?php if ($asset_tags_display) { echo $asset_tags_display; } ?>
                                         </div>
