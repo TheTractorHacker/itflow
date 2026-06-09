@@ -84,7 +84,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                         <i class="fas fa-plug mr-1"></i>Test
                     </button>
                     <a href="#" class="btn btn-xs btn-secondary"
-                       onclick="editIntegration(<?= $intg_id ?>, '<?= addslashes($intg['name']) ?>', '<?= addslashes($intg['api_url']) ?>', <?= $intg_on ?>); return false;">
+                       onclick="editIntegration(<?= $intg_id ?>, '<?= addslashes($intg['name']) ?>', '<?= addslashes($intg['api_url']) ?>', '<?= addslashes($intg['web_url'] ?? '') ?>', <?= $intg_on ?>); return false;">
                         <i class="fas fa-edit"></i>
                     </a>
                     <form action="post.php" method="post" class="d-inline"
@@ -182,6 +182,12 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                         <small class="text-muted">Enter the API server base URL, <strong>not</strong> the dashboard URL (<code>rmm.yourdomain.com</code>). Older TRMM installs: <code>https://api.yourdomain.com</code>. Newer installs (v0.18+): <code>https://api.yourdomain.com/api/v3</code>. No trailing slash.</small>
                     </div>
                     <div class="form-group">
+                        <label class="text-muted small">Tactical RMM Dashboard URL</label>
+                        <input type="url" class="form-control form-control-sm" name="integration_web_url" id="integration_web_url"
+                               placeholder="https://rmm.yourdomain.com">
+                        <small class="text-muted">The web interface URL (used for the Connect button). Usually <code>https://rmm.yourdomain.com</code>.</small>
+                    </div>
+                    <div class="form-group">
                         <label class="text-muted small">API Key</label>
                         <input type="password" class="form-control form-control-sm" name="integration_api_key" id="integration_api_key"
                                autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
@@ -240,11 +246,12 @@ function testConnection(integrationId) {
     });
 }
 
-function editIntegration(id, name, url, enabled) {
+function editIntegration(id, name, url, weburl, enabled) {
     document.getElementById('integrationModalTitle').textContent = 'Edit Integration';
     document.getElementById('edit_integration_id').value = id;
     document.getElementById('integration_name').value = name;
     document.getElementById('integration_api_url').value = url;
+    document.getElementById('integration_web_url').value = weburl || '';
     document.getElementById('integration_enabled').checked = enabled == 1;
     document.getElementById('integration_api_key').placeholder = '(leave blank to keep existing)';
     $('#addIntegrationModal').modal('show');

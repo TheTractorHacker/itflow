@@ -7,6 +7,7 @@
 class TacticalRmmClient {
 
     private string $base_url;
+    private string $web_url;
     private string $api_key;
     private int $integration_id;
 
@@ -19,6 +20,7 @@ class TacticalRmmClient {
         }
         $this->integration_id = $id;
         $this->base_url = rtrim($row['api_url'], '/');
+        $this->web_url  = rtrim($row['web_url'] ?? $row['api_url'], '/');
         $this->api_key  = decryptSetting($row['api_key_enc'] ?? '');
         if (empty($this->api_key)) {
             throw new RuntimeException("RMM integration $id has no decryptable API key");
@@ -142,7 +144,8 @@ class TacticalRmmClient {
     }
 
     public function buildDeviceUrl(string $agent_id): string {
-        return $this->base_url . '/agents/' . urlencode($agent_id);
+        // Returns the Tactical RMM dashboard URL (web_url) — browser-accessible, not the API endpoint
+        return $this->web_url ?: $this->base_url;
     }
 
     public function buildMeshUrl(string $mesh_node_id): string {

@@ -262,7 +262,66 @@ if (isset($_GET['asset_id'])) {
 
         $linked_services = array();
 
+        // RMM Integration — load cached link data
+        $rmm_link       = null;
+        $rmm_badge      = 'badge-secondary';
+        $rmm_border     = '#6c757d';
+        $rmm_alerts_count = 0;
+        if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
+            $rmm_link = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT arl.*, i.web_url
+                 FROM asset_rmm_links arl
+                 LEFT JOIN rmm_integrations i ON i.id = arl.integration_id
+                 WHERE arl.asset_id = $asset_id LIMIT 1"
+            ));
+            if ($rmm_link) {
+                if ($rmm_link['rmm_status'] === 'online')       { $rmm_badge = 'badge-success'; $rmm_border = '#28a745'; }
+                elseif ($rmm_link['rmm_status'] === 'offline')  { $rmm_badge = 'badge-danger';  $rmm_border = '#dc3545'; }
+                $rmm_alerts_count = intval((mysqli_fetch_assoc(mysqli_query($mysqli,
+                    "SELECT COUNT(*) as c FROM rmm_alerts WHERE asset_id=$asset_id AND status='new'"
+                )) ?: ['c'=>0])['c']);
+            }
+        }
+
         ?>
+
+        <?php if ($rmm_link): ?>
+        <div class="card card-dark mb-2" style="border-left:5px solid <?= $rmm_border ?>; border-radius:4px;">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center flex-wrap" style="gap:8px">
+                    <div class="mr-auto">
+                        <strong class="h5 mb-0"><?= nullable_htmlentities($rmm_link['hostname'] ?: $asset_name) ?></strong>
+                        <span class="badge <?= $rmm_badge ?> ml-2"><?= ucfirst($rmm_link['rmm_status']) ?></span>
+                        <?php if ($rmm_alerts_count > 0): ?>
+                            <span class="badge badge-danger ml-1"><i class="fas fa-bell mr-1"></i><?= $rmm_alerts_count ?> Alert<?= $rmm_alerts_count != 1 ? 's' : '' ?></span>
+                        <?php endif; ?>
+                        <div class="text-muted small mt-1">
+                            <?php if ($rmm_link['os_name']): ?><i class="fab fa-windows mr-1"></i><?= nullable_htmlentities($rmm_link['os_name']) ?>&nbsp;<?php endif; ?>
+                            <?php if ($rmm_link['logged_in_user']): ?>&bull;&nbsp;<i class="fas fa-user mx-1"></i><?= nullable_htmlentities($rmm_link['logged_in_user']) ?>&nbsp;<?php endif; ?>
+                            <?php if ($rmm_link['last_seen']): ?>&bull;&nbsp;<i class="fas fa-clock mx-1"></i>Last seen <?= nullable_htmlentities($rmm_link['last_seen']) ?><?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center" style="gap:6px">
+                        <?php if (lookupUserPermission('module_rmm_remote_connect') >= 1 && !empty($rmm_link['tactical_agent_id'])): ?>
+                        <div class="btn-group">
+                            <button class="btn btn-success btn-sm" onclick="rmmConnect(<?= intval($rmm_link['id']) ?>, 'tactical')">
+                                <i class="fas fa-desktop mr-1"></i>Connect
+                            </button>
+                            <?php if (!empty($rmm_link['mesh_node_id'])): ?>
+                            <button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item" href="#" onclick="rmmConnect(<?= intval($rmm_link['id']) ?>, 'mesh'); return false;">
+                                    <i class="fas fa-tv mr-2"></i>MeshCentral Remote Desktop
+                                </a>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="row">
 
@@ -449,6 +508,114 @@ if (isset($_GET['asset_id'])) {
                         </div>
                     </div>
                 </div>
+
+                <?php if ($rmm_link): ?>
+                <div class="card card-dark mb-3">
+                    <div class="card-header p-0 border-bottom-0">
+                        <ul class="nav nav-tabs px-3 pt-2" id="rmmDetailTabs">
+                            <li class="nav-item">
+                                <a class="nav-link active small" data-toggle="tab" href="#rdt-overview">
+                                    <i class="fas fa-server mr-1"></i>RMM Overview
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link small" data-toggle="tab" href="#rdt-software"
+                                   onclick="loadRmmLiveData('software',<?= intval($rmm_link['id']) ?>)">
+                                    <i class="fas fa-cube mr-1"></i>Software
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link small" data-toggle="tab" href="#rdt-services"
+                                   onclick="loadRmmLiveData('services',<?= intval($rmm_link['id']) ?>)">
+                                    <i class="fas fa-cogs mr-1"></i>Services
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link small" data-toggle="tab" href="#rdt-alerts">
+                                    <i class="fas fa-bell mr-1"></i>Alerts<?php if ($rmm_alerts_count > 0): ?><span class="badge badge-danger ml-1"><?= $rmm_alerts_count ?></span><?php endif; ?>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="tab-content">
+                        <div class="tab-pane active p-3" id="rdt-overview">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <?php
+                                        $rdt = function($lbl,$val){ if(trim(strip_tags($val??''))) echo "<tr><td class='text-muted pr-3' style='width:40%;white-space:nowrap'>$lbl</td><td>$val</td></tr>"; };
+                                        $rdt('Hostname',   nullable_htmlentities($rmm_link['hostname']));
+                                        $rdt('OS',         trim(nullable_htmlentities($rmm_link['os_name']).' '.nullable_htmlentities($rmm_link['os_version'])));
+                                        $rdt('Manufacturer', nullable_htmlentities($rmm_link['manufacturer']));
+                                        $rdt('Model',      nullable_htmlentities($rmm_link['model']));
+                                        $rdt('CPU',        nullable_htmlentities($rmm_link['cpu']));
+                                        if ($rmm_link['ram_gb']) $rdt('RAM', nullable_htmlentities($rmm_link['ram_gb']).' GB');
+                                        ?>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <?php
+                                        $rdt('Logged-in User', nullable_htmlentities($rmm_link['logged_in_user']));
+                                        $rdt('Last Seen',  nullable_htmlentities($rmm_link['last_seen']));
+                                        $rdt('Last Sync',  nullable_htmlentities($rmm_link['last_sync']));
+                                        echo "<tr><td class='text-muted pr-3'>Status</td><td><span class='badge {$rmm_badge}'>".ucfirst($rmm_link['rmm_status'])."</span></td></tr>";
+                                        $rdt('Agent ID', '<code class="small">'.nullable_htmlentities($rmm_link['tactical_agent_id']).'</code>');
+                                        ?>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="rdt-software">
+                            <div class="text-center p-4 text-muted rdt-loading"><i class="fas fa-spinner fa-spin mr-2"></i>Loading from Tactical RMM...</div>
+                            <div class="table-responsive rdt-data" style="display:none">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+                                        <tr><th class="pl-3">Name</th><th>Version</th><th>Publisher</th></tr>
+                                    </thead>
+                                    <tbody class="rdt-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="rdt-services">
+                            <div class="text-center p-4 text-muted rdt-loading"><i class="fas fa-spinner fa-spin mr-2"></i>Loading from Tactical RMM...</div>
+                            <div class="table-responsive rdt-data" style="display:none">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+                                        <tr><th class="pl-3">Service</th><th>Status</th><th>Start Type</th></tr>
+                                    </thead>
+                                    <tbody class="rdt-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane p-3" id="rdt-alerts">
+                            <?php
+                            $sql_rdt_alerts = mysqli_query($mysqli, "SELECT * FROM rmm_alerts WHERE asset_id=$asset_id ORDER BY created_at DESC LIMIT 25");
+                            if (mysqli_num_rows($sql_rdt_alerts) == 0): ?>
+                            <p class="text-muted text-center mb-0">No alerts for this device.</p>
+                            <?php else: ?>
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+                                    <tr><th>Severity</th><th>Message</th><th>Status</th><th>Created</th></tr>
+                                </thead>
+                                <tbody>
+                                <?php while ($ral = mysqli_fetch_assoc($sql_rdt_alerts)):
+                                    $ral_badge = ['critical'=>'badge-danger','error'=>'badge-danger','warning'=>'badge-warning','info'=>'badge-info'][$ral['severity']] ?? 'badge-secondary';
+                                ?>
+                                <tr>
+                                    <td><span class="badge <?= $ral_badge ?>"><?= nullable_htmlentities($ral['severity']) ?></span></td>
+                                    <td class="small"><?= nullable_htmlentities($ral['message']) ?></td>
+                                    <td><span class="badge badge-secondary"><?= nullable_htmlentities($ral['status']) ?></span></td>
+                                    <td class="text-muted small"><?= nullable_htmlentities($ral['created_at']) ?></td>
+                                </tr>
+                                <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <div class="card card-dark">
                     <div class="card-header py-2">
@@ -1270,54 +1437,57 @@ if (isset($_GET['asset_id'])) {
 
 }
 
-
-// RMM Integration panel (Syncro-Beta)
-if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1 && isset($asset_id)) {
-    $rmm_link = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT arl.id, arl.rmm_status, arl.hostname, arl.last_seen, arl.os_name, arl.logged_in_user
-          FROM asset_rmm_links arl
-          WHERE arl.asset_id=$asset_id LIMIT 1"
-    ));
-    if ($rmm_link):
-        $badge_class = $rmm_link['rmm_status'] === 'online' ? 'badge-success' : ($rmm_link['rmm_status'] === 'offline' ? 'badge-danger' : 'badge-secondary');
-        $border_color = $rmm_link['rmm_status'] === 'online' ? '#28a745' : ($rmm_link['rmm_status'] === 'offline' ? '#dc3545' : '#6c757d');
+if ($config_module_enable_rmm && isset($rmm_link) && $rmm_link):
 ?>
-<div class="card card-dark mb-3" style="border-top:3px solid <?= $border_color ?>">
-    <div class="card-header py-2 d-flex align-items-center">
-        <h6 class="mb-0 mr-auto"><i class="fas fa-desktop mr-2"></i>RMM &mdash; <?= nullable_htmlentities($rmm_link['hostname']) ?>
-            <span class="badge <?= $badge_class ?> ml-2"><?= ucfirst($rmm_link['rmm_status']) ?></span>
-        </h6>
-        <a href="/agent/rmm_asset.php?id=<?= intval($rmm_link['id']) ?>" class="btn btn-info btn-sm mr-1">
-            <i class="fas fa-tachometer-alt mr-1"></i>RMM Dashboard
-        </a>
-        <?php if (lookupUserPermission('module_rmm_remote_connect') >= 1): ?>
-        <button class="btn btn-success btn-sm" onclick="rmm_connect(<?= intval($rmm_link['id']) ?>)">
-            <i class="fas fa-desktop mr-1"></i>Connect
-        </button>
-        <?php endif; ?>
-    </div>
-    <div class="card-body py-2 small">
-        <div class="row">
-            <div class="col-md-3"><span class="text-muted">OS:</span> <?= nullable_htmlentities($rmm_link['os_name']) ?></div>
-            <div class="col-md-3"><span class="text-muted">Logged In:</span> <?= nullable_htmlentities($rmm_link['logged_in_user']) ?: '&mdash;' ?></div>
-            <div class="col-md-6"><span class="text-muted">Last Seen:</span> <?= nullable_htmlentities($rmm_link['last_seen']) ?></div>
-        </div>
-    </div>
-</div>
 <script>
-function rmm_connect(linkId) {
+function rmmConnect(linkId, type) {
     fetch('/agent/post/rmm_remote.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'csrf_token=<?= $_SESSION["csrf_token"] ?>&link_id=' + linkId + '&type=tactical'
+        body: 'csrf_token=<?= $_SESSION["csrf_token"] ?>&link_id=' + linkId + '&type=' + type
     }).then(r => r.json()).then(d => {
-        if (d.success && d.url) { window.open(d.url, '_blank', 'noopener,noreferrer'); }
-        else { alert('Connect failed: ' + (d.error || 'Unknown')); }
+        if (d.success && d.url) window.open(d.url, '_blank', 'noopener,noreferrer');
+        else alert('Connect failed: ' + (d.error || 'Unknown error'));
     });
 }
+const _rmmTabLoaded = {};
+function loadRmmLiveData(type, linkId) {
+    if (_rmmTabLoaded[type]) return;
+    _rmmTabLoaded[type] = true;
+    const pane    = document.getElementById('rdt-' + type);
+    const loading = pane.querySelector('.rdt-loading');
+    const dataDiv = pane.querySelector('.rdt-data');
+    const tbody   = pane.querySelector('.rdt-body');
+    fetch('/agent/post/rmm_live_data.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=<?= $_SESSION["csrf_token"] ?>&link_id=' + linkId + '&type=' + type
+    }).then(r => r.json()).then(d => {
+        loading.style.display = 'none';
+        if (!d.success) {
+            dataDiv.innerHTML = '<p class="text-danger p-3">' + esc(d.error || 'Load failed') + '</p>';
+            dataDiv.style.display = 'block'; return;
+        }
+        const items = d.data || [];
+        if (type === 'software') {
+            tbody.innerHTML = items.length ? items.map(s =>
+                '<tr><td class="pl-3">' + esc(s.name || s.software || '') + '</td>' +
+                '<td class="text-muted small">' + esc(s.version || '') + '</td>' +
+                '<td class="text-muted small">' + esc(s.publisher || '') + '</td></tr>'
+            ).join('') : '<tr><td colspan="3" class="text-muted p-3 text-center">No software data</td></tr>';
+        } else if (type === 'services') {
+            tbody.innerHTML = items.length ? items.map(s =>
+                '<tr><td class="pl-3">' + esc(s.name || s.display_name || '') + '</td>' +
+                '<td><span class="badge ' + (String(s.status).toLowerCase()==='running'?'badge-success':'badge-secondary') + '">' + esc(s.status || '') + '</span></td>' +
+                '<td class="text-muted small">' + esc(s.start_type || '') + '</td></tr>'
+            ).join('') : '<tr><td colspan="3" class="text-muted p-3 text-center">No service data</td></tr>';
+        }
+        dataDiv.style.display = 'block';
+    }).catch(() => { loading.innerHTML = '<p class="text-danger p-3">Failed to connect to Tactical RMM</p>'; });
+}
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>
 <?php
-    endif;
-}
-?>
+endif;
+
 require_once "../includes/footer.php";

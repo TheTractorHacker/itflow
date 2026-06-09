@@ -17,6 +17,7 @@ if (isset($_POST['save_rmm_integration'])) {
     $integration_id = intval($_POST['integration_id'] ?? 0);
     $name    = mysqli_real_escape_string($mysqli, sanitizeInput($_POST['integration_name']));
     $api_url = mysqli_real_escape_string($mysqli, rtrim(sanitizeInput($_POST['integration_api_url']), '/'));
+    $web_url = mysqli_real_escape_string($mysqli, rtrim(sanitizeInput($_POST['integration_web_url'] ?? ''), '/'));
     $api_key = trim($_POST['integration_api_key'] ?? '');
     $enabled = isset($_POST['integration_enabled']) ? 1 : 0;
 
@@ -28,7 +29,7 @@ if (isset($_POST['save_rmm_integration'])) {
     }
 
     if ($integration_id > 0) {
-        $set = "name='$name', api_url='$api_url', enabled=$enabled";
+        $set = "name='$name', api_url='$api_url', web_url='$web_url', enabled=$enabled";
         if (!empty($api_key)) {
             $enc = mysqli_real_escape_string($mysqli, encryptSetting($api_key));
             $set .= ", api_key_enc='$enc'";
@@ -42,7 +43,7 @@ if (isset($_POST['save_rmm_integration'])) {
             redirect();
         }
         $enc = mysqli_real_escape_string($mysqli, encryptSetting($api_key));
-        mysqli_query($mysqli, "INSERT INTO rmm_integrations SET name='$name', api_url='$api_url', api_key_enc='$enc', enabled=$enabled, created_by=$session_user_id");
+        mysqli_query($mysqli, "INSERT INTO rmm_integrations SET name='$name', api_url='$api_url', web_url='$web_url', api_key_enc='$enc', enabled=$enabled, created_by=$session_user_id");
         $new_id = intval(mysqli_insert_id($mysqli));
         if (!$config_rmm_default_integration_id) {
             mysqli_query($mysqli, "UPDATE settings SET config_rmm_default_integration_id=$new_id WHERE company_id=1");
