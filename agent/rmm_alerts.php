@@ -110,10 +110,7 @@ $cnt = mysqli_fetch_assoc(mysqli_query($mysqli,
                 <td class="small" style="max-width:300px"><?= nullable_htmlentities($alert['message']) ?></td>
                 <td class="small">
                     <?php if ($alert['asset_id']): ?>
-                    <?php
-                    $rmm_link_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id FROM asset_rmm_links WHERE asset_id=" . intval($alert['asset_id']) . " LIMIT 1"));
-                    ?>
-                    <a href="<?= $rmm_link_row ? '/agent/rmm_asset.php?id=' . $rmm_link_row['id'] : '/agent/asset_details.php?asset_id=' . $alert['asset_id'] ?>">
+                    <a href="/agent/asset_details.php?asset_id=<?= intval($alert['asset_id']) ?>">
                         <?= nullable_htmlentities($alert['asset_name']) ?>
                     </a>
                     <?php else: ?>—<?php endif; ?>

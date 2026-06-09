@@ -1,4 +1,5 @@
 <?php
+if (defined('FROM_POST_HANDLER')) return;
 /*
  * Fetch live data from Tactical RMM for a specific asset (software, services, WMI).
  * Called via AJAX from rmm_asset.php. API key never leaves this file.
@@ -13,8 +14,8 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/class_tactical_rmm.php';
 
 header('Content-Type: application/json');
 
-$link_id = intval($_GET['link_id'] ?? 0);
-$type    = sanitizeInput($_GET['type'] ?? '');
+$link_id = intval($_POST['link_id'] ?? 0);
+$type    = sanitizeInput($_POST['type'] ?? '');
 
 if (!$link_id || !in_array($type, ['software', 'services', 'wmi'])) {
     echo json_encode(['success' => false, 'error' => 'Invalid parameters']);

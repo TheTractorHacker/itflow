@@ -1,4 +1,5 @@
 <?php
+if (defined('FROM_POST_HANDLER')) return;
 /*
  * Trigger script execution via Tactical RMM API
  */

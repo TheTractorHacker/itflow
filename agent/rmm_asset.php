@@ -19,8 +19,8 @@ $link = mysqli_fetch_assoc(mysqli_query($mysqli,
 if (!$link) { flash_alert('RMM asset not found', 'danger'); redirect('/agent/rmm_assets.php'); }
 
 $asset_id  = intval($link['asset_id']);
-$client_id = intval($link['asset_client_id']);
-if ($client_id) { enforceClientAccess($client_id); }
+// Redirect to unified asset view — rmm_asset.php is deprecated
+redirect('/agent/asset_details.php?asset_id=' . $asset_id);
 
 $status_badge = $link['rmm_status'] === 'online'
     ? '<span class="badge badge-success"><i class="fas fa-circle mr-1"></i>Online</span>'

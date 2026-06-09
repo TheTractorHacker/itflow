@@ -1,4 +1,5 @@
 <?php
+if (defined('FROM_POST_HANDLER')) return;
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/check_login.php';

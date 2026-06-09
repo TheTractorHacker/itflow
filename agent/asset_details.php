@@ -535,6 +535,13 @@ if (isset($_GET['asset_id'])) {
                                     <i class="fas fa-bell mr-1"></i>Alerts<?php if ($rmm_alerts_count > 0): ?><span class="badge badge-danger ml-1"><?= $rmm_alerts_count ?></span><?php endif; ?>
                                 </a>
                             </li>
+                            <?php if (lookupUserPermission('module_rmm_scripts') >= 1): ?>
+                            <li class="nav-item">
+                                <a class="nav-link small" data-toggle="tab" href="#rdt-scripts">
+                                    <i class="fas fa-code mr-1"></i>Scripts
+                                </a>
+                            </li>
+                            <?php endif; ?>
                         </ul>
                     </div>
                     <div class="tab-content">
@@ -544,6 +551,7 @@ if (isset($_GET['asset_id'])) {
                                     <table class="table table-sm table-borderless mb-0">
                                         <?php
                                         $rdt = function($lbl,$val){ if(trim(strip_tags($val??''))) echo "<tr><td class='text-muted pr-3' style='width:40%;white-space:nowrap'>$lbl</td><td>$val</td></tr>"; };
+                                        if ($asset_tags_display) echo "<tr><td class='text-muted pr-3' style='width:40%;white-space:nowrap'>Tags</td><td>$asset_tags_display</td></tr>";
                                         $rdt('Hostname',   nullable_htmlentities($rmm_link['hostname']));
                                         $rdt('OS',         trim(nullable_htmlentities($rmm_link['os_name']).' '.nullable_htmlentities($rmm_link['os_version'])));
                                         $rdt('Manufacturer', nullable_htmlentities($rmm_link['manufacturer']));
@@ -596,23 +604,91 @@ if (isset($_GET['asset_id'])) {
                             <?php else: ?>
                             <table class="table table-sm table-hover mb-0">
                                 <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
-                                    <tr><th>Severity</th><th>Message</th><th>Status</th><th>Created</th></tr>
+                                    <tr><th>Severity</th><th>Message</th><th>Status</th><th>Created</th><th></th></tr>
                                 </thead>
                                 <tbody>
                                 <?php while ($ral = mysqli_fetch_assoc($sql_rdt_alerts)):
                                     $ral_badge = ['critical'=>'badge-danger','error'=>'badge-danger','warning'=>'badge-warning','info'=>'badge-info'][$ral['severity']] ?? 'badge-secondary';
+                                    $ral_status_badge = ['new'=>'badge-danger','acknowledged'=>'badge-warning','resolved'=>'badge-success'][$ral['status']] ?? 'badge-secondary';
+                                    $ral_id = intval($ral['id']);
                                 ?>
-                                <tr>
+                                <tr id="ral-row-<?= $ral_id ?>">
                                     <td><span class="badge <?= $ral_badge ?>"><?= nullable_htmlentities($ral['severity']) ?></span></td>
                                     <td class="small"><?= nullable_htmlentities($ral['message']) ?></td>
-                                    <td><span class="badge badge-secondary"><?= nullable_htmlentities($ral['status']) ?></span></td>
-                                    <td class="text-muted small"><?= nullable_htmlentities($ral['created_at']) ?></td>
+                                    <td><span class="badge <?= $ral_status_badge ?>"><?= nullable_htmlentities($ral['status']) ?></span></td>
+                                    <td class="text-muted small"><?= nullable_htmlentities(substr($ral['created_at'], 0, 16)) ?></td>
+                                    <td class="text-right pr-2">
+                                        <?php if ($ral['status'] === 'new' && lookupUserPermission('module_rmm_alerts_ack') >= 1): ?>
+                                        <button class="btn btn-xs btn-warning" onclick="assetAlertAction(<?= $ral_id ?>, 'acknowledge', this)">Ack</button>
+                                        <?php endif; ?>
+                                        <?php if ($ral['status'] !== 'resolved' && lookupUserPermission('module_rmm_alerts_ack') >= 1): ?>
+                                        <button class="btn btn-xs btn-success" onclick="assetAlertAction(<?= $ral_id ?>, 'resolve', this)">Resolve</button>
+                                        <?php endif; ?>
+                                        <?php if (lookupUserPermission('module_support') >= 2): ?>
+                                        <button class="btn btn-xs btn-primary" onclick="assetAlertAction(<?= $ral_id ?>, 'create_ticket', this)">
+                                            <i class="fas fa-ticket-alt"></i>
+                                        </button>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                                 <?php endwhile; ?>
                                 </tbody>
                             </table>
                             <?php endif; ?>
                         </div>
+                        <?php if (lookupUserPermission('module_rmm_scripts') >= 1): ?>
+                        <div class="tab-pane p-3" id="rdt-scripts">
+                            <?php
+                            $sql_rdt_scripts = mysqli_query($mysqli, "SELECT * FROM rmm_scripts WHERE enabled=1 ORDER BY category, name");
+                            $sql_rdt_runs    = mysqli_query($mysqli,
+                                "SELECT sr.*, s.name as sname FROM rmm_script_runs sr
+                                 LEFT JOIN rmm_scripts s ON s.id = sr.script_id
+                                 WHERE sr.asset_id=$asset_id ORDER BY sr.started_at DESC LIMIT 10"
+                            );
+                            ?>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="mb-2 text-muted small" style="text-transform:uppercase;letter-spacing:.4px">Run a Script</h6>
+                                    <?php if (mysqli_num_rows($sql_rdt_scripts) === 0): ?>
+                                    <p class="text-muted small">No scripts configured. <a href="/agent/rmm_scripts.php">Add scripts</a> first.</p>
+                                    <?php else: ?>
+                                    <div class="form-inline mb-2">
+                                        <select id="rdt-script-select" class="form-control form-control-sm mr-2" style="min-width:200px">
+                                            <option value="">— Select Script —</option>
+                                            <?php while ($scr = mysqli_fetch_assoc($sql_rdt_scripts)): ?>
+                                            <option value="<?= intval($scr['id']) ?>" data-name="<?= nullable_htmlentities($scr['name']) ?>">
+                                                [<?= nullable_htmlentities($scr['category']) ?>] <?= nullable_htmlentities($scr['name']) ?>
+                                            </option>
+                                            <?php endwhile; ?>
+                                        </select>
+                                        <button class="btn btn-sm btn-primary" onclick="runRmmScript(<?= intval($rmm_link['id']) ?>)">
+                                            <i class="fas fa-play mr-1"></i>Run
+                                        </button>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="mb-2 text-muted small" style="text-transform:uppercase;letter-spacing:.4px">Recent Runs</h6>
+                                    <?php if (mysqli_num_rows($sql_rdt_runs) === 0): ?>
+                                    <p class="text-muted small">No scripts run yet on this asset.</p>
+                                    <?php else: ?>
+                                    <table class="table table-sm mb-0">
+                                        <?php while ($rr = mysqli_fetch_assoc($sql_rdt_runs)):
+                                            $rr_badge = ['completed'=>'success','failed'=>'danger','running'=>'warning','pending'=>'secondary'][$rr['status']] ?? 'secondary';
+                                        ?>
+                                        <tr>
+                                            <td class="small"><?= nullable_htmlentities($rr['sname'] ?? 'Manual') ?></td>
+                                            <td><span class="badge badge-<?= $rr_badge ?>"><?= $rr['status'] ?></span></td>
+                                            <td class="small text-muted"><?= nullable_htmlentities(substr($rr['started_at'], 0, 16)) ?></td>
+                                            <td><a href="/agent/rmm_script_run.php?run_id=<?= intval($rr['id']) ?>" class="btn btn-xs btn-secondary"><i class="fas fa-eye"></i></a></td>
+                                        </tr>
+                                        <?php endwhile; ?>
+                                    </table>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -1486,6 +1562,42 @@ function loadRmmLiveData(type, linkId) {
     }).catch(() => { loading.innerHTML = '<p class="text-danger p-3">Failed to connect to Tactical RMM</p>'; });
 }
 function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function assetAlertAction(alertId, action, btn) {
+    if (action === 'create_ticket' && !confirm('Create a ticket from this alert?')) return;
+    fetch('/agent/post/rmm_alert.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=<?= $_SESSION["csrf_token"] ?>&action=' + action + '&alert_id=' + alertId
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            if (d.redirect) { window.location.href = d.redirect; }
+            else {
+                const row = document.getElementById('ral-row-' + alertId);
+                if (row) row.style.opacity = '0.4';
+                if (btn) btn.disabled = true;
+            }
+        } else { alert('Failed: ' + (d.error || 'Unknown error')); }
+    });
+}
+function runRmmScript(linkId) {
+    const sel = document.getElementById('rdt-script-select');
+    const sid = sel ? sel.value : '';
+    if (!sid) { alert('Please select a script.'); return; }
+    const name = sel.options[sel.selectedIndex].dataset.name;
+    if (!confirm('Run script "' + name + '" on this device?')) return;
+    fetch('/agent/post/rmm_script_run.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=<?= $_SESSION["csrf_token"] ?>&script_id=' + sid + '&link_id=' + linkId
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            if (d.warning) alert(d.warning);
+            window.location.href = '/agent/rmm_script_run.php?run_id=' + d.run_id;
+        } else {
+            alert('Script failed: ' + (d.error || 'Unknown error'));
+        }
+    });
+}
 </script>
 <?php
 endif;

@@ -1,4 +1,5 @@
 <?php
+if (defined('FROM_POST_HANDLER')) return;
 /*
  * RMM manual asset link/unlink handler
  */

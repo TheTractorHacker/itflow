@@ -55,10 +55,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
 <div class="d-flex align-items-center mb-3">
     <h4 class="mb-0 mr-auto"><i class="fas fa-code mr-2"></i>Script Library</h4>
     <?php if (lookupUserPermission('module_rmm_scripts') >= 1): ?>
+    <button id="syncScriptsBtn" class="btn btn-info btn-sm mr-2" onclick="syncScripts()">
+        <i class="fas fa-sync mr-1"></i>Sync from Tactical RMM
+    </button>
     <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#scriptModal" onclick="openNewScript()">
         <i class="fas fa-plus mr-1"></i>New Script
     </button>
     <?php endif; ?>
+</div>
+<div id="syncBar" class="alert alert-info d-none mb-3">
+    <i class="fas fa-spinner fa-spin mr-2"></i><span id="syncBarText">Syncing scripts...</span>
 </div>
 
 <div class="card card-dark">
@@ -263,6 +269,33 @@ function editScript(scr) {
     document.getElementById('s_category').value = scr.category;
     document.getElementById('s_type').value = scr.script_type;
     $('#scriptModal').modal('show');
+}
+function syncScripts() {
+    const btn = document.getElementById('syncScriptsBtn');
+    const bar = document.getElementById('syncBar');
+    const txt = document.getElementById('syncBarText');
+    btn.disabled = true;
+    bar.classList.remove('d-none');
+    txt.textContent = 'Importing scripts from Tactical RMM...';
+    fetch('/agent/post/rmm_sync.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=<?= $_SESSION['csrf_token'] ?>&action=sync_scripts&integration_id=<?= $config_rmm_default_integration_id ?>'
+    }).then(r => r.json()).then(d => {
+        btn.disabled = false;
+        if (d.success) {
+            txt.textContent = `Sync complete: ${d.imported} imported, ${d.updated} updated (${d.total} total from Tactical).`;
+            bar.classList.replace('alert-info', 'alert-success');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            txt.textContent = 'Sync failed: ' + (d.error || 'Unknown');
+            bar.classList.replace('alert-info', 'alert-danger');
+        }
+    }).catch(() => {
+        btn.disabled = false;
+        txt.textContent = 'Network error.';
+        bar.classList.replace('alert-info', 'alert-danger');
+    });
 }
 </script>
 

@@ -1,4 +1,5 @@
 <?php
+if (defined('FROM_POST_HANDLER')) return;
 /*
  * RMM Remote Connect handler
  * Constructs remote URL server-side, logs the session, returns redirect JSON.

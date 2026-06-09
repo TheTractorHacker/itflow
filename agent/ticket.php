@@ -1648,8 +1648,8 @@ if (isset($_GET['ticket_id'])) {
                             &nbsp;&middot;&nbsp; User: <?= nullable_htmlentities($rmm_tklink['logged_in_user']) ?>
                             <?php endif; ?>
                         </div>
-                        <a href="/agent/rmm_asset.php?id=<?= intval($rmm_tklink['id']) ?>" class="btn btn-xs btn-info mt-2">
-                            <i class="fas fa-tachometer-alt mr-1"></i>Open RMM Dashboard
+                        <a href="/agent/asset_details.php?asset_id=<?= intval($rmm_tklink['asset_id'] ?? 0) ?>" class="btn btn-xs btn-info mt-2">
+                            <i class="fas fa-desktop mr-1"></i>View Asset
                         </a>
                     </div>
                 </div>

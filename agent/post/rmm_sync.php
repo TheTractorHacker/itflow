@@ -1,4 +1,5 @@
 <?php
+if (defined('FROM_POST_HANDLER')) return;
 /*
  * RMM Sync + Test Connection handler
  * Called from:
@@ -89,6 +90,45 @@ if ($action === 'sync') {
             mysqli_query($mysqli, "UPDATE rmm_sync_log SET finished_at=NOW(), status='failed', errors='" .
                 mysqli_real_escape_string($mysqli, $e->getMessage()) . "' WHERE id=$log_id");
         }
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// ---- Sync scripts from Tactical ----
+if ($action === 'sync_scripts') {
+    if (!lookupUserPermission('module_rmm_scripts')) {
+        echo json_encode(['success' => false, 'error' => 'No scripts permission']);
+        exit;
+    }
+    try {
+        $client  = new TacticalRmmClient($integration_id);
+        $scripts = $client->getScripts();
+        $imported = 0;
+        $updated  = 0;
+        foreach ($scripts as $s) {
+            $tac_id = intval($s['id'] ?? 0);
+            if (!$tac_id) continue;
+            $name    = mysqli_real_escape_string($mysqli, substr($s['name'] ?? 'Untitled', 0, 200));
+            $stype   = mysqli_real_escape_string($mysqli, $s['shell'] ?? $s['script_type'] ?? 'powershell');
+            $desc    = mysqli_real_escape_string($mysqli, substr($s['description'] ?? '', 0, 500));
+            $body    = mysqli_real_escape_string($mysqli, $s['code'] ?? $s['script_body'] ?? '');
+            $cat     = mysqli_real_escape_string($mysqli, substr($s['category'] ?? 'Uncategorized', 0, 100));
+
+            $existing = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT id FROM rmm_scripts WHERE tactical_script_id=$tac_id LIMIT 1"
+            ));
+            if ($existing) {
+                mysqli_query($mysqli, "UPDATE rmm_scripts SET name='$name', script_type='$stype', description='$desc', script_body='$body', category='$cat' WHERE tactical_script_id=$tac_id");
+                $updated++;
+            } else {
+                mysqli_query($mysqli, "INSERT INTO rmm_scripts SET name='$name', script_type='$stype', description='$desc', script_body='$body', category='$cat', tactical_script_id=$tac_id, enabled=1, created_by=$session_user_id");
+                $imported++;
+            }
+        }
+        logAction('RMM', 'Scripts Sync', "$session_name synced scripts: $imported imported, $updated updated");
+        echo json_encode(['success' => true, 'imported' => $imported, 'updated' => $updated, 'total' => count($scripts)]);
+    } catch (RuntimeException $e) {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit;

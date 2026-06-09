@@ -149,7 +149,7 @@ $sql_clients = mysqli_query($mysqli,
                 ?>
                     <tr>
                         <td class="pl-3 small">
-                            <a href="/agent/rmm_asset.php?id=<?= intval($row['id']) ?>">
+                            <a href="/agent/asset_details.php?asset_id=<?= intval($row['asset_id']) ?>">
                                 <?= nullable_htmlentities($row['hostname'] ?: $row['asset_name']) ?>
                             </a>
                         </td>

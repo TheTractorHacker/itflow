@@ -143,7 +143,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT id, name FROM rmm_integrations
                     <i class="fas <?= $icon ?>" data-toggle="tooltip" title="<?= ucfirst($status) ?>"></i>
                 </td>
                 <td>
-                    <a href="/agent/rmm_asset.php?id=<?= intval($row['id']) ?>" class="font-weight-bold">
+                    <a href="/agent/asset_details.php?asset_id=<?= intval($row['asset_id']) ?>" class="font-weight-bold">
                         <?= nullable_htmlentities($row['hostname']) ?>
                     </a>
                 </td>
@@ -165,7 +165,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT id, name FROM rmm_integrations
                     <?= $row['last_sync'] ? nullable_htmlentities($row['last_sync']) : '—' ?>
                 </td>
                 <td class="text-right pr-2">
-                    <a href="/agent/rmm_asset.php?id=<?= intval($row['id']) ?>" class="btn btn-xs btn-info" data-toggle="tooltip" title="View Dashboard">
+                    <a href="/agent/asset_details.php?asset_id=<?= intval($row['asset_id']) ?>" class="btn btn-xs btn-info" data-toggle="tooltip" title="View Asset">
                         <i class="fas fa-tachometer-alt"></i>
                     </a>
                     <a href="/agent/asset_details.php?asset_id=<?= intval($row['asset_id']) ?>" class="btn btn-xs btn-secondary" data-toggle="tooltip" title="ITFlow Asset">
