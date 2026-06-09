@@ -56,7 +56,7 @@ mysqli_query($mysqli, "INSERT INTO rmm_script_runs SET
 $run_id = intval(mysqli_insert_id($mysqli));
 
 logAction('RMM', 'Script Run',
-    "$session_name ran script '{$script['name']}' on asset ID $asset_id",
+    "$session_name ran script {$script['name']} on asset ID $asset_id",
     intval($link['asset_client_id']),
     $asset_id
 );

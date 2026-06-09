@@ -26,7 +26,7 @@ if ($action === 'unlink') {
     $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT arl.*, a.asset_name FROM asset_rmm_links arl JOIN assets a ON a.asset_id = arl.asset_id WHERE arl.id=$link_id"));
     if ($row) {
         mysqli_query($mysqli, "DELETE FROM asset_rmm_links WHERE id=$link_id");
-        logAction('RMM', 'Asset Unlinked', "$session_name unlinked RMM agent '{$row['hostname']}' from asset '{$row['asset_name']}'");
+        logAction('RMM', 'Asset Unlinked', "$session_name unlinked RMM agent {$row['hostname']} from asset {$row['asset_name']}");
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'error' => 'Link not found']);
@@ -59,7 +59,7 @@ if ($action === 'link') {
 
     $asset_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT asset_name FROM assets WHERE asset_id=$asset_id"));
     logAction('RMM', 'Asset Linked',
-        "$session_name manually linked asset '{$asset_row['asset_name']}' to Tactical agent '$tactical_agent_id'",
+        "$session_name manually linked asset {$asset_row['asset_name']} to Tactical agent $tactical_agent_id",
         0, $asset_id);
     echo json_encode(['success' => true]);
     exit;
