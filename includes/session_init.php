@@ -21,7 +21,7 @@ if (!isset($_SESSION)) {
         }
     }
     ini_set('session.gc_maxlifetime', $session_lifetime_seconds);
-    session_set_cookie_params(['lifetime' => $session_lifetime_seconds]);
+    session_set_cookie_params(['lifetime' => $session_lifetime_seconds, 'samesite' => 'Lax']);
 
     session_start();
 

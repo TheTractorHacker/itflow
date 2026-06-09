@@ -17,6 +17,7 @@ if (isset($_POST['add_task'])) {
 
     // Get Client ID from tickets using the ticket_id
     $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess($client_id);
 
     mysqli_query($mysqli, "INSERT INTO tasks SET task_name = '$task_name', task_ticket_id = $ticket_id");
 
@@ -45,6 +46,7 @@ if (isset($_POST['edit_ticket_task'])) {
     $sql = mysqli_query($mysqli, "SELECT * FROM tasks LEFT JOIN tickets ON ticket_id = task_ticket_id WHERE task_id = $task_id");
     $row = mysqli_fetch_assoc($sql);
     $client_id = intval($row['ticket_client_id']);
+    enforceClientAccess($client_id);
 
     mysqli_query($mysqli, "UPDATE tasks SET task_name = '$task_name', task_order = $task_order, task_completion_estimate = $task_completion_estimate WHERE task_id = $task_id");
 
@@ -89,6 +91,7 @@ if (isset($_GET['delete_task'])) {
     $sql = mysqli_query($mysqli, "SELECT * FROM tasks LEFT JOIN tickets ON ticket_id = task_ticket_id WHERE task_id = $task_id");
     $row = mysqli_fetch_assoc($sql);
     $client_id = intval($row['ticket_client_id']);
+    enforceClientAccess($client_id);
     $task_name = sanitizeInput($row['task_name']);
 
     mysqli_query($mysqli, "DELETE FROM tasks WHERE task_id = $task_id");
@@ -116,6 +119,7 @@ if (isset($_GET['complete_task'])) {
     $task_name = sanitizeInput($row['task_name']);
     $task_completion_estimate = intval($row['task_completion_estimate']);
     $ticket_id = intval($row['ticket_id']);
+    enforceClientAccess($client_id);
 
     mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NOW(), task_completed_by = $session_user_id WHERE task_id = $task_id");
 
@@ -149,6 +153,7 @@ if (isset($_GET['undo_complete_task'])) {
     $client_id = intval($row['ticket_client_id']);
     $task_name = sanitizeInput($row['task_name']);
     $ticket_id = intval($row['ticket_id']);
+    enforceClientAccess($client_id);
 
     mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NULL, task_completed_by = NULL WHERE task_id = $task_id");
 

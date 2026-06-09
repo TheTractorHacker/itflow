@@ -15,6 +15,17 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
         <form action="post.php" method="post" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
             <div class="form-group mb-3">
+                <label>Current Password</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-lock"></i></span>
+                    </div>
+                    <input type="password" class="form-control"
+                           name="current_password" placeholder="Enter your current password"
+                           autocomplete="current-password" required>
+                </div>
+            </div>
+            <div class="form-group mb-3">
                 <label>New Password</label>
                 <div class="input-group">
                     <div class="input-group-prepend">

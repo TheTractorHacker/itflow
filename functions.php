@@ -14,16 +14,12 @@ function randomString(int $length = 16): string {
 }
 
 // Older keygen function - only used for TOTP currently
-function key32gen() {
-    $chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    $chars .= "234567";
-    while (1) {
-        $key = '';
-        srand((float) microtime() * 1000000);
-        for ($i = 0; $i < 32; $i++) {
-            $key .= substr($chars, (rand() % (strlen($chars))), 1);
-        }
-        break;
+function key32gen(): string {
+    $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    $bytes = random_bytes(32);
+    $key = '';
+    for ($i = 0; $i < 32; $i++) {
+        $key .= $chars[ord($bytes[$i]) & 31];
     }
     return $key;
 }
@@ -457,7 +453,7 @@ function generateUserSessionKey($site_encryption_master_key)
     if ($config_https_only) {
         setcookie("user_encryption_session_key", "$user_encryption_session_key", ['expires' => $cookie_expires, 'path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'None']);
     } else {
-        setcookie("user_encryption_session_key", $user_encryption_session_key, $cookie_expires, "/");
+        setcookie("user_encryption_session_key", $user_encryption_session_key, ['expires' => $cookie_expires, 'path' => '/', 'httponly' => true]);
         $_SESSION['alert_message'] = "Unencrypted connection flag set: Using non-secure cookies.";
     }
 }

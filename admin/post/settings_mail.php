@@ -84,7 +84,7 @@ if (isset($_POST['edit_mail_smtp_settings'])) {
     $config_smtp_port                = intval($_POST['config_smtp_port'] ?? 0);
     $config_smtp_encryption          = sanitizeInput($_POST['config_smtp_encryption']);
     $config_smtp_username            = sanitizeInput($_POST['config_smtp_username']);
-    $config_smtp_password            = sanitizeInput($_POST['config_smtp_password']);
+    $config_smtp_password = mysqli_real_escape_string($mysqli, trim($_POST['config_smtp_password']));
 
     // Shared OAuth fields
     $config_mail_oauth_client_id     = sanitizeInput($_POST['config_mail_oauth_client_id']);
@@ -126,7 +126,7 @@ if (isset($_POST['edit_mail_imap_settings'])) {
     $config_imap_port                = intval($_POST['config_imap_port'] ?? 0);
     $config_imap_encryption          = sanitizeInput($_POST['config_imap_encryption']);
     $config_imap_username            = sanitizeInput($_POST['config_imap_username']);
-    $config_imap_password            = sanitizeInput($_POST['config_imap_password']);
+    $config_imap_password = mysqli_real_escape_string($mysqli, trim($_POST['config_imap_password']));
 
     // Shared OAuth fields
     $config_mail_oauth_client_id     = sanitizeInput($_POST['config_mail_oauth_client_id']);

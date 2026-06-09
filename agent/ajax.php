@@ -170,17 +170,10 @@ if (isset($_GET['share_generate_link'])) {
     if ($item_view_limit == 1) {
         $item_view_limit_wording = " and may only be viewed <strong>once</strong>, before the link is destroyed.";
     }
-    $item_expires = sanitizeInput($_GET['expires']);
-    $item_expires_friendly = "never"; // default never
-    if ($item_expires == "1 HOUR") {
-        $item_expires_friendly = "1 hour";
-    } elseif ($item_expires == "24 HOUR") {
-        $item_expires_friendly = "1 day";
-    } elseif ($item_expires == "168 HOUR") {
-        $item_expires_friendly = "1 week";
-    } elseif ($item_expires == "730 HOUR") {
-        $item_expires_friendly = "1 month";
-    }
+    $item_expires_raw = sanitizeInput($_GET['expires']);
+    $allowed_expires = ["1 HOUR" => "1 hour", "24 HOUR" => "1 day", "168 HOUR" => "1 week", "730 HOUR" => "1 month"];
+    $item_expires = isset($allowed_expires[$item_expires_raw]) ? $item_expires_raw : null;
+    $item_expires_friendly = $item_expires ? $allowed_expires[$item_expires] : "never";
 
     $item_key = randomString(32);
 
@@ -215,7 +208,8 @@ if (isset($_GET['share_generate_link'])) {
     }
 
     // Insert entry into DB
-    $sql = mysqli_query($mysqli, "INSERT INTO shared_items SET item_active = 1, item_key = '$item_key', item_type = '$item_type', item_related_id = $item_id, item_encrypted_username = '$item_encrypted_username', item_encrypted_credential = '$item_encrypted_credential', item_note = '$item_note', item_recipient = '$item_email', item_views = 0, item_view_limit = $item_view_limit, item_expire_at = NOW() + INTERVAL + $item_expires, item_client_id = $client_id");
+    $expire_sql = $item_expires ? "NOW() + INTERVAL $item_expires" : "NULL";
+    $sql = mysqli_query($mysqli, "INSERT INTO shared_items SET item_active = 1, item_key = '$item_key', item_type = '$item_type', item_related_id = $item_id, item_encrypted_username = '$item_encrypted_username', item_encrypted_credential = '$item_encrypted_credential', item_note = '$item_note', item_recipient = '$item_email', item_views = 0, item_view_limit = $item_view_limit, item_expire_at = $expire_sql, item_client_id = $client_id");
     $share_id = $mysqli->insert_id;
 
     // Return URL

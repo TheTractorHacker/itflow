@@ -66,10 +66,8 @@ if (isset($_POST['add_user'])) {
     // Send user e-mail, if specified
     if (isset($_POST['send_email']) && !empty($config_smtp_host) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
-        $password = mysqli_real_escape_string($mysqli, $_POST['password']);
-
         $subject = "Your new $company_name ITFlow account";
-        $body = "Hello $name,<br><br>An ITFlow account has been setup for you. Please change your password upon login. <br><br>Username: $email <br>Password: $password<br>Login URL: https://$config_base_url/login.php?key=$config_login_key_secret<br><br>--<br>$company_name - Support<br>$config_ticket_from_email";
+        $body = "Hello $name,<br><br>An ITFlow account has been setup for you. Please contact your administrator for your initial login credentials, then change your password upon first login.<br><br>Username: $email <br>Login URL: https://$config_base_url/login.php?key=$config_login_key_secret<br><br>--<br>$company_name - Support<br>$config_ticket_from_email";
 
         $data = [
             [
@@ -313,6 +311,8 @@ if (isset($_POST['restore_user'])) {
 }
 
 if (isset($_POST['export_users_csv'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
 
     //get records from database
     $sql = mysqli_query($mysqli, "SELECT * FROM users LEFT JOIN user_roles ON user_role_id = role_id ORDER BY user_name ASC");

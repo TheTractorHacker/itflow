@@ -93,6 +93,7 @@ if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {
 }
 
 // Legacy ?api_key= fallback for backward compatibility with old API clients
+$legacy_api_key_auth = false;
 if (!$api_user_id && isset($_GET['api_key'])) {
     $legacy_key = mysqli_real_escape_string($mysqli, $_GET['api_key']);
     $legacy_sql = mysqli_query($mysqli,
@@ -109,6 +110,7 @@ if (!$api_user_id && isset($_GET['api_key'])) {
             $session_user_id    = $api_user_id;
             $session_name       = $admin['user_name'];
             $session_company_id = 1;
+            $legacy_api_key_auth = true;
         }
     }
 }
@@ -141,7 +143,9 @@ switch ($resource) {
         break;
     case 'contacts':      require __DIR__ . '/contacts.php';      break;
     case 'assets':        require __DIR__ . '/assets.php';        break;
-    case 'credentials':   require __DIR__ . '/credentials.php';   break;
+    case 'credentials':
+        if ($legacy_api_key_auth) { api_error(403, 'Credentials endpoint requires a user API token'); }
+        require __DIR__ . '/credentials.php'; break;
     case 'quotes':        require __DIR__ . '/quotes.php';        break;
     case 'invoices':      require __DIR__ . '/invoices.php';      break;
     case 'expenses':      require __DIR__ . '/expenses.php';      break;

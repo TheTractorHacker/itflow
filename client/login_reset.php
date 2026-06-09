@@ -73,8 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
             $client = intval($row['contact_client_id']);
 
             $token = randomString(32);
+            $token_hash = hash('sha256', $token);
             $url = "https://$config_base_url/client/login_reset.php?email=$email&token=$token&client=$client";
-            mysqli_query($mysqli, "UPDATE users SET user_password_reset_token = '$token' WHERE user_id = $user_id LIMIT 1");
+            mysqli_query($mysqli, "UPDATE users SET user_password_reset_token = '$token_hash' WHERE user_id = $user_id LIMIT 1");
             mysqli_query($mysqli, "INSERT INTO logs SET log_type = 'Contact', log_action = 'Modify', log_description = 'Sent a portal password reset e-mail for $email.', log_ip = '$ip', log_user_agent = '$user_agent', log_client_id = $client");
 
             // Send reset email
@@ -113,18 +114,19 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
         }
 
         $token = sanitizeInput($_POST['token']);
+        $token_hash = mysqli_real_escape_string($mysqli, hash('sha256', $token));
         $email = sanitizeInput($_POST['email']);
         $client = intval($_POST['client']);
 
         // Query user
-        $sql = mysqli_query($mysqli, "SELECT * FROM users LEFT JOIN contacts ON user_id = contact_user_id WHERE user_email = '$email' AND user_password_reset_token = '$token' AND contact_client_id = $client AND user_auth_method = 'local' AND user_type = 2 AND user_status = 1 AND user_archived_at IS NULL LIMIT 1");
+        $sql = mysqli_query($mysqli, "SELECT * FROM users LEFT JOIN contacts ON user_id = contact_user_id WHERE user_email = '$email' AND user_password_reset_token = '$token_hash' AND contact_client_id = $client AND user_auth_method = 'local' AND user_type = 2 AND user_status = 1 AND user_archived_at IS NULL LIMIT 1");
         $user_row = mysqli_fetch_assoc($sql);
         $contact_id = intval($user_row['contact_id']);
         $user_id = intval($user_row['user_id']);
         $name = sanitizeInput($user_row['contact_name']);
 
         // Ensure the token is correct
-        if (sha1($user_row['user_password_reset_token']) == sha1($token)) {
+        if ($user_row && hash_equals((string)$user_row['user_password_reset_token'], hash('sha256', $token))) {
 
             // Set password, invalidate token, logging
             $password = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
@@ -215,11 +217,12 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                     $email = sanitizeInput($_GET['email']);
                     $client = intval($_GET['client']);
 
-                    $sql = mysqli_query($mysqli, "SELECT * FROM users LEFT JOIN contacts ON user_id = contact_user_id WHERE user_email = '$email' AND user_password_reset_token = '$token' AND contact_client_id = $client LIMIT 1");
+                    $token_hash_get = mysqli_real_escape_string($mysqli, hash('sha256', $token));
+                    $sql = mysqli_query($mysqli, "SELECT * FROM users LEFT JOIN contacts ON user_id = contact_user_id WHERE user_email = '$email' AND user_password_reset_token = '$token_hash_get' AND contact_client_id = $client LIMIT 1");
                     $user_row = mysqli_fetch_assoc($sql);
 
                     // Sanity check
-                    if (sha1($user_row['user_password_reset_token']) == sha1($token)) { ?>
+                    if ($user_row && hash_equals((string)$user_row['user_password_reset_token'], hash('sha256', $token))) { ?>
 
                         <div class="input-group mb-3">
                             <input type="password" class="form-control" placeholder="New Password" name="new_password" required minlength="8">

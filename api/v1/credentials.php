@@ -66,6 +66,21 @@ $row = mysqli_fetch_assoc(mysqli_query($mysqli,
 ));
 if (!$row) api_error(404, 'Credential not found');
 
+// Verify the API user has permission to access this credential's client
+$cred_client_id = intval($row['credential_client_id']);
+if ($cred_client_id > 0) {
+    $perm_check = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COUNT(*) AS has_perm FROM user_client_permissions
+         WHERE user_id = $api_user_id AND client_id = $cred_client_id"
+    ));
+    $total_perms = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COUNT(*) AS c FROM user_client_permissions WHERE user_id = $api_user_id"
+    ))['c']);
+    if ($total_perms > 0 && intval($perm_check['has_perm']) === 0) {
+        api_error(403, 'Access denied');
+    }
+}
+
 api_response(200, [
     'id'         => intval($row['credential_id']),
     'name'       => $row['credential_name'],

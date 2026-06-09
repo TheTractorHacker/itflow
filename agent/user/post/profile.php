@@ -106,8 +106,16 @@ if (isset($_POST['edit_your_user_password'])) {
     validateCSRFToken($_POST['csrf_token']);
 
     $new_password = trim($_POST['new_password']);
+    $current_password = $_POST['current_password'] ?? '';
 
-    if (empty($new_password)) {
+    if (empty($new_password) || empty($current_password)) {
+        redirect('user_security.php');
+    }
+
+    // Verify current password before allowing change
+    $pw_check = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT user_password FROM users WHERE user_id = $session_user_id"));
+    if (!$pw_check || !password_verify($current_password, $pw_check['user_password'])) {
+        flash_alert('Current password is incorrect', 'error');
         redirect('user_security.php');
     }
 

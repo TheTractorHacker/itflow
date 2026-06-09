@@ -239,6 +239,7 @@ function wa_verify_assertion(
         throw new RuntimeException('RP ID hash mismatch');
     }
     if (!$ad['UP']) throw new RuntimeException('User Present flag not set');
+    if (!$ad['UV']) throw new RuntimeException('User Verified flag not set');
 
     // 3. Verify signature
     $clientDataHash = hash('sha256', $clientDataJSON, true);

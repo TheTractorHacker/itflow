@@ -87,6 +87,7 @@ try {
     $_SESSION['user_id']    = $userId;
     $_SESSION['csrf_token'] = randomString(32);
     $_SESSION['logged']     = true;
+    session_regenerate_id(true);
 
     $user_name  = sanitizeInput($userRow['user_name']);
     $user_email = sanitizeInput($userRow['user_email']);

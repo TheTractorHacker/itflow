@@ -351,7 +351,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
                               AND remember_token_created_at > (NOW() - INTERVAL $config_login_remember_me_expire DAY)
                         ");
                         while ($remember_row = mysqli_fetch_assoc($remember_tokens)) {
-                            if (hash_equals($remember_row['remember_token_token'], $_COOKIE['rememberme'])) {
+                            if (hash_equals($remember_row['remember_token_token'], hash('sha256', $_COOKIE['rememberme']))) {
                                 $mfa_is_complete = true;
                                 $extended_log    = 'with 2FA remember-me cookie';
                                 break;
@@ -372,10 +372,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
                             $newRememberToken = bin2hex(random_bytes(64));
                             setcookie('rememberme', $newRememberToken, time() + 86400 * $config_login_remember_me_expire, "/", null, true, true);
 
+                            $hashedToken = hash('sha256', $newRememberToken);
                             mysqli_query($mysqli, "
                                 INSERT INTO remember_tokens
                                 SET remember_token_user_id = $user_id,
-                                    remember_token_token   = '$newRememberToken'
+                                    remember_token_token   = '$hashedToken'
                             ");
                             $extended_log .= ", generated a new remember-me token";
                         }
@@ -423,6 +424,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
                         $_SESSION['user_id']    = $user_id;
                         $_SESSION['csrf_token'] = randomString(32);
                         $_SESSION['logged']     = true;
+                        session_regenerate_id(true);
 
                         if ($force_mfa == 1 && $token == NULL) {
                             $config_start_page = "user/mfa_enforcement.php";
@@ -576,6 +578,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
 
                             // Keep consistent with agent flow (helps any shared session checks)
                             $_SESSION['logged']     = true;
+                            session_regenerate_id(true);
                             $_SESSION['csrf_token'] = randomString(32);
 
                             // Option B: set session_user_id BEFORE logAction()
