@@ -190,9 +190,10 @@ class TacticalRmmClient {
     }
 
     public function buildDeviceUrl(string $agent_id): string {
-        // Tactical RMM frontend route to a specific agent's detail page
+        // Tactical RMM "Take Control" route — opens a MeshCentral remote
+        // desktop session for the agent directly.
         $base = $this->web_url ?: $this->base_url;
-        return $base . '/#/agents/' . urlencode($agent_id);
+        return $base . '/takecontrol/' . urlencode($agent_id);
     }
 
     public function buildMeshUrl(string $mesh_node_id): string {

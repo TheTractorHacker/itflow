@@ -611,24 +611,42 @@ if (isset($_GET['asset_id'])) {
                         </div>
                         <div class="tab-pane" id="rdt-software">
                             <div class="text-center p-4 text-muted rdt-loading"><i class="fas fa-spinner fa-spin mr-2"></i>Loading from Tactical RMM...</div>
-                            <div class="table-responsive rdt-data" style="display:none">
-                                <table class="table table-sm table-hover mb-0">
-                                    <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
-                                        <tr><th class="pl-3">Name</th><th>Version</th><th>Publisher</th></tr>
-                                    </thead>
-                                    <tbody class="rdt-body"></tbody>
-                                </table>
+                            <div class="rdt-data" style="display:none">
+                                <div class="p-2 border-bottom">
+                                    <input type="text" class="form-control form-control-sm rdt-search" placeholder="Search software..." style="max-width:300px" oninput="renderRmmTable('software',1)">
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+                                            <tr><th class="pl-3">Name</th><th>Version</th><th>Publisher</th></tr>
+                                        </thead>
+                                        <tbody class="rdt-body"></tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center p-2 border-top">
+                                    <small class="text-muted rdt-pageinfo"></small>
+                                    <div class="btn-group btn-group-sm rdt-pagination"></div>
+                                </div>
                             </div>
                         </div>
                         <div class="tab-pane" id="rdt-services">
                             <div class="text-center p-4 text-muted rdt-loading"><i class="fas fa-spinner fa-spin mr-2"></i>Loading from Tactical RMM...</div>
-                            <div class="table-responsive rdt-data" style="display:none">
-                                <table class="table table-sm table-hover mb-0">
-                                    <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
-                                        <tr><th class="pl-3">Service</th><th>Status</th><th>Start Type</th></tr>
-                                    </thead>
-                                    <tbody class="rdt-body"></tbody>
-                                </table>
+                            <div class="rdt-data" style="display:none">
+                                <div class="p-2 border-bottom">
+                                    <input type="text" class="form-control form-control-sm rdt-search" placeholder="Search services..." style="max-width:300px" oninput="renderRmmTable('services',1)">
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+                                            <tr><th class="pl-3">Service</th><th>Status</th><th>Start Type</th></tr>
+                                        </thead>
+                                        <tbody class="rdt-body"></tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center p-2 border-top">
+                                    <small class="text-muted rdt-pageinfo"></small>
+                                    <div class="btn-group btn-group-sm rdt-pagination"></div>
+                                </div>
                             </div>
                         </div>
                         <div class="tab-pane p-3" id="rdt-alerts">
@@ -1562,6 +1580,8 @@ function rmmConnect(linkId, type) {
     });
 }
 const _rmmTabLoaded = {};
+const _rmmTabData = {};
+const RMM_PAGE_SIZE = 10;
 function loadRmmLiveData(type, linkId) {
     if (_rmmTabLoaded[type]) return;
     _rmmTabLoaded[type] = true;
@@ -1581,18 +1601,9 @@ function loadRmmLiveData(type, linkId) {
             dataDiv.style.display = 'block'; return;
         }
         const items = d.data || [];
-        if (type === 'software') {
-            tbody.innerHTML = items.length ? items.map(s =>
-                '<tr><td class="pl-3">' + esc(s.name || s.software || '') + '</td>' +
-                '<td class="text-muted small">' + esc(s.version || '') + '</td>' +
-                '<td class="text-muted small">' + esc(s.publisher || '') + '</td></tr>'
-            ).join('') : '<tr><td colspan="3" class="text-muted p-3 text-center">No software data</td></tr>';
-        } else if (type === 'services') {
-            tbody.innerHTML = items.length ? items.map(s =>
-                '<tr><td class="pl-3">' + esc(s.name || s.display_name || '') + '</td>' +
-                '<td><span class="badge ' + (String(s.status).toLowerCase()==='running'?'badge-success':'badge-secondary') + '">' + esc(s.status || '') + '</span></td>' +
-                '<td class="text-muted small">' + esc(s.start_type || '') + '</td></tr>'
-            ).join('') : '<tr><td colspan="3" class="text-muted p-3 text-center">No service data</td></tr>';
+        if (type === 'software' || type === 'services') {
+            _rmmTabData[type] = items;
+            renderRmmTable(type, 1);
         } else if (type === 'wmi') {
             const hw = d.data || {};
             pane.querySelector('.hw-make-model').textContent = hw.make_model || '-';
@@ -1615,6 +1626,52 @@ function loadRmmLiveData(type, linkId) {
         }
         dataDiv.style.display = 'block';
     }).catch(() => { loading.innerHTML = '<p class="text-danger p-3">Failed to connect to Tactical RMM</p>'; });
+}
+function renderRmmTable(type, page) {
+    const pane   = document.getElementById('rdt-' + type);
+    const tbody  = pane.querySelector('.rdt-body');
+    const search = (pane.querySelector('.rdt-search').value || '').trim().toLowerCase();
+    let items = _rmmTabData[type] || [];
+
+    if (search) {
+        items = items.filter(item => {
+            const fields = type === 'software'
+                ? [item.name, item.software, item.version, item.publisher]
+                : [item.name, item.display_name, item.status, item.start_type];
+            return fields.some(f => String(f || '').toLowerCase().includes(search));
+        });
+    }
+
+    const total = items.length;
+    const totalPages = Math.max(1, Math.ceil(total / RMM_PAGE_SIZE));
+    page = Math.min(Math.max(1, page), totalPages);
+    const pageItems = items.slice((page - 1) * RMM_PAGE_SIZE, page * RMM_PAGE_SIZE);
+
+    if (type === 'software') {
+        tbody.innerHTML = pageItems.length ? pageItems.map(s =>
+            '<tr><td class="pl-3">' + esc(s.name || s.software || '') + '</td>' +
+            '<td class="text-muted small">' + esc(s.version || '') + '</td>' +
+            '<td class="text-muted small">' + esc(s.publisher || '') + '</td></tr>'
+        ).join('') : '<tr><td colspan="3" class="text-muted p-3 text-center">No software found</td></tr>';
+    } else if (type === 'services') {
+        tbody.innerHTML = pageItems.length ? pageItems.map(s =>
+            '<tr><td class="pl-3">' + esc(s.name || s.display_name || '') + '</td>' +
+            '<td><span class="badge ' + (String(s.status).toLowerCase()==='running'?'badge-success':'badge-secondary') + '">' + esc(s.status || '') + '</span></td>' +
+            '<td class="text-muted small">' + esc(s.start_type || '') + '</td></tr>'
+        ).join('') : '<tr><td colspan="3" class="text-muted p-3 text-center">No services found</td></tr>';
+    }
+
+    const pageinfo = pane.querySelector('.rdt-pageinfo');
+    pageinfo.textContent = total
+        ? `Showing ${(page - 1) * RMM_PAGE_SIZE + 1}-${Math.min(page * RMM_PAGE_SIZE, total)} of ${total}`
+        : 'No results';
+
+    const pagination = pane.querySelector('.rdt-pagination');
+    pagination.innerHTML = totalPages > 1
+        ? '<button class="btn btn-outline-secondary"' + (page <= 1 ? ' disabled' : '') + ' onclick="renderRmmTable(\'' + type + '\',' + (page - 1) + ')"><i class="fas fa-chevron-left"></i></button>' +
+          '<button class="btn btn-outline-secondary disabled">' + page + ' / ' + totalPages + '</button>' +
+          '<button class="btn btn-outline-secondary"' + (page >= totalPages ? ' disabled' : '') + ' onclick="renderRmmTable(\'' + type + '\',' + (page + 1) + ')"><i class="fas fa-chevron-right"></i></button>'
+        : '';
 }
 function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function assetAlertAction(alertId, action, btn) {
