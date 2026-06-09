@@ -46,14 +46,14 @@ $sql_alerts = mysqli_query($mysqli,
 
 // Recent remote sessions
 $sql_sessions = mysqli_query($mysqli,
-    "SELECT rs.*, u.user_firstname, u.user_lastname FROM rmm_remote_sessions rs
+    "SELECT rs.*, u.user_name FROM rmm_remote_sessions rs
      LEFT JOIN users u ON u.user_id = rs.user_id
      WHERE rs.asset_id=$asset_id ORDER BY rs.created_at DESC LIMIT 5"
 );
 
 // Recent script runs
 $sql_runs = mysqli_query($mysqli,
-    "SELECT sr.*, s.name as script_name, u.user_firstname, u.user_lastname
+    "SELECT sr.*, s.name as script_name, u.user_name
      FROM rmm_script_runs sr
      LEFT JOIN rmm_scripts s ON s.id = sr.script_id
      LEFT JOIN users u ON u.user_id = sr.user_id
@@ -377,7 +377,7 @@ $sql_creds = mysqli_query($mysqli,
                                     <span class="badge badge-<?= $run_badge ?>"><?= $run['status'] ?></span>
                                     <span class="text-muted ml-2"><?= nullable_htmlentities($run['started_at']) ?></span>
                                 </div>
-                                <div class="text-muted"><?= nullable_htmlentities($run['user_firstname'] . ' ' . $run['user_lastname']) ?></div>
+                                <div class="text-muted"><?= nullable_htmlentities($run['user_name']) ?></div>
                                 <?php if ($run['output']): ?>
                                 <pre class="bg-dark text-light p-2 mt-1 rounded small" style="max-height:100px;overflow:auto"><?= nullable_htmlentities($run['output']) ?></pre>
                                 <?php endif; ?>
@@ -402,7 +402,7 @@ $sql_creds = mysqli_query($mysqli,
                         <div class="d-flex border-bottom px-3 py-2 small align-items-center">
                             <i class="fas fa-desktop mr-2 text-info"></i>
                             <span class="mr-auto">
-                                <?= nullable_htmlentities($sess['user_firstname'] . ' ' . $sess['user_lastname']) ?>
+                                <?= nullable_htmlentities($sess['user_name']) ?>
                                 <span class="text-muted ml-1">(<?= nullable_htmlentities($sess['connection_type']) ?>)</span>
                             </span>
                             <span class="text-muted"><?= nullable_htmlentities($sess['created_at']) ?></span>

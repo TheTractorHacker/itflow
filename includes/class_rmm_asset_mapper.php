@@ -1,6 +1,6 @@
 <?php
 /*
- * RmmAssetMapper — matches Tactical RMM agents to ITFlow assets and syncs data.
+ * RmmAssetMapper — matches RMM agents (Tactical or Level) to ITFlow assets.
  *
  * Match priority:
  *   1. tactical_agent_id already in asset_rmm_links (already linked)
@@ -37,36 +37,45 @@ class RmmAssetMapper {
     }
 
     private function syncAgent(array $agent): string {
-        $m            = $this->mysqli;
-        $intg_id      = $this->integration_id;
-        $agent_id     = sanitizeInput($agent['agent_id'] ?? $agent['id'] ?? '');
-        $hostname     = sanitizeInput($agent['hostname'] ?? '');
-        $serial       = sanitizeInput($agent['serial_number'] ?? '');
-        $os_name      = sanitizeInput($agent['operating_system'] ?? '');
-        $os_version   = sanitizeInput($agent['os_version'] ?? $agent['os_build_number'] ?? '');
-        $manufacturer = sanitizeInput($agent['manufacturer'] ?? $agent['make_model'] ?? '');
-        $model        = '';
-        $cpu          = sanitizeInput($agent['cpu'] ?? $agent['cpu_model'] ?? '');
-        $ram_gb       = sanitizeInput($agent['ram'] ?? $agent['total_ram'] ?? '');
-        $mesh_node_id = sanitizeInput($agent['mesh_node_id'] ?? '');
-        $_s = $agent['status'] ?? 'offline';
-        $status = in_array($_s, ['online','offline','unknown']) ? $_s : ($_s === 'online' ? 'online' : 'offline');
-        $last_seen    = sanitizeInput($agent['last_seen'] ?? '');
-        $logged_user  = sanitizeInput($agent['logged_in_user'] ?? $agent['logged_in_username'] ?? '');
-        $client_id    = 0; // We don't auto-assign clients; that's a manual step
-        $raw_json     = mysqli_real_escape_string($m, json_encode($agent));
+        $m       = $this->mysqli;
+        $intg_id = $this->integration_id;
+
+        // Coerce any field that might be an array (e.g. local_ips, tags) to a plain string
+        $str = function ($v): string {
+            if (is_array($v))  return implode(', ', array_filter(array_map('strval', $v)));
+            if (is_bool($v))   return $v ? '1' : '0';
+            return (string) ($v ?? '');
+        };
+
+        $agent_id     = sanitizeInput($str($agent['agent_id'] ?? $agent['id'] ?? ''));
+        $hostname     = sanitizeInput($str($agent['hostname'] ?? ''));
+        $serial       = sanitizeInput($str($agent['serial_number'] ?? ''));
+        $os_name      = sanitizeInput($str($agent['operating_system'] ?? ''));
+        $os_version   = sanitizeInput($str($agent['os_version'] ?? $agent['os_build_number'] ?? ''));
+        $manufacturer = sanitizeInput($str($agent['manufacturer'] ?? $agent['make_model'] ?? ''));
+        $model        = sanitizeInput($str($agent['model'] ?? ''));
+        $cpu          = sanitizeInput($str($agent['cpu'] ?? $agent['cpu_model'] ?? ''));
+        $ram_gb       = sanitizeInput($str($agent['ram'] ?? $agent['total_ram'] ?? ''));
+        $mesh_node_id = sanitizeInput($str($agent['mesh_node_id'] ?? ''));
+        $last_seen    = sanitizeInput($str($agent['last_seen'] ?? ''));
+        $logged_user  = sanitizeInput($str($agent['logged_in_user'] ?? $agent['logged_in_username'] ?? ''));
+
+        $_s     = $agent['status'] ?? 'offline';
+        $status = in_array($_s, ['online', 'offline', 'unknown']) ? $_s : 'offline';
+
+        $client_id = 0;
+        $raw_json  = mysqli_real_escape_string($m, json_encode($agent));
 
         if (empty($agent_id) || empty($hostname)) {
             return 'skipped';
         }
 
         // Normalize last_seen to MySQL datetime
-        $last_seen_sql = '';
+        $last_seen_val = 'NULL';
         if (!empty($last_seen)) {
             $ts = strtotime($last_seen);
-            $last_seen_sql = $ts ? date('Y-m-d H:i:s', $ts) : '';
+            if ($ts) { $last_seen_val = "'" . date('Y-m-d H:i:s', $ts) . "'"; }
         }
-        $last_seen_val = $last_seen_sql ? "'$last_seen_sql'" : 'NULL';
 
         // ----- Step 1: Check existing link -----
         $existing = mysqli_fetch_assoc(mysqli_query($m,
@@ -75,7 +84,6 @@ class RmmAssetMapper {
         ));
 
         if ($existing) {
-            // Already linked — just update the cached data
             $this->updateLink($existing['id'], $status, $last_seen_val, $os_name, $os_version,
                 $manufacturer, $model, $cpu, $ram_gb, $logged_user, $mesh_node_id, $raw_json);
             return 'updated';
@@ -94,8 +102,7 @@ class RmmAssetMapper {
 
         // 2b: MAC address
         if (!$asset_id) {
-            $macs = $this->extractMacs($agent);
-            foreach ($macs as $mac) {
+            foreach ($this->extractMacs($agent) as $mac) {
                 if (empty($mac)) continue;
                 $mac_esc = mysqli_real_escape_string($m, strtolower($mac));
                 $row = mysqli_fetch_assoc(mysqli_query($m,
@@ -109,11 +116,11 @@ class RmmAssetMapper {
 
         // 2c: hostname match (unique only)
         if (!$asset_id && !empty($hostname)) {
-            $h = mysqli_real_escape_string($m, $hostname);
-            $count_row = mysqli_fetch_assoc(mysqli_query($m,
-                "SELECT COUNT(*) as cnt FROM assets WHERE LOWER(asset_name)=LOWER('$h') AND asset_archived_at IS NULL"
-            ));
-            if (intval($count_row['cnt']) === 1) {
+            $h    = mysqli_real_escape_string($m, $hostname);
+            $cnt  = intval(mysqli_fetch_assoc(mysqli_query($m,
+                "SELECT COUNT(*) as c FROM assets WHERE LOWER(asset_name)=LOWER('$h') AND asset_archived_at IS NULL"
+            ))['c']);
+            if ($cnt === 1) {
                 $row = mysqli_fetch_assoc(mysqli_query($m,
                     "SELECT asset_id FROM assets WHERE LOWER(asset_name)=LOWER('$h') AND asset_archived_at IS NULL LIMIT 1"
                 ));
@@ -121,12 +128,12 @@ class RmmAssetMapper {
             }
         }
 
-        // ----- Step 3: Create new ITFlow asset if still no match -----
+        // ----- Step 3: Create new ITFlow asset if no match -----
         if (!$asset_id) {
             $asset_type = $this->guessAssetType($os_name);
-            $h = mysqli_real_escape_string($m, $hostname);
-            $s = mysqli_real_escape_string($m, $serial);
-            $o = mysqli_real_escape_string($m, "$os_name $os_version");
+            $h  = mysqli_real_escape_string($m, $hostname);
+            $s  = mysqli_real_escape_string($m, $serial);
+            $o  = mysqli_real_escape_string($m, trim("$os_name $os_version"));
             $mk = mysqli_real_escape_string($m, $manufacturer);
             mysqli_query($m,
                 "INSERT INTO assets SET
@@ -139,9 +146,9 @@ class RmmAssetMapper {
                  asset_created_at=NOW()"
             );
             $asset_id = intval(mysqli_insert_id($m));
-            $created = 'created';
+            $outcome  = 'created';
         } else {
-            $created = 'matched';
+            $outcome = 'matched';
         }
 
         // ----- Step 4: Insert the link row -----
@@ -165,7 +172,7 @@ class RmmAssetMapper {
              raw_data_json='$raw_json'"
         );
 
-        return $created;
+        return $outcome;
     }
 
     private function updateLink(int $link_id, string $status, string $last_seen_val,
@@ -193,10 +200,6 @@ class RmmAssetMapper {
 
     private function extractMacs(array $agent): array {
         $macs = [];
-        // Tactical stores network info in various places depending on version
-        if (!empty($agent['local_ips'])) {
-            // older format: comma list of IPs, no MAC — skip
-        }
         if (!empty($agent['wmi_detail']['network_config'])) {
             foreach ($agent['wmi_detail']['network_config'] as $nic) {
                 if (!empty($nic['MACAddress'])) {
@@ -216,23 +219,23 @@ class RmmAssetMapper {
 
     public function startSyncLog(): int {
         global $mysqli;
-        mysqli_query($mysqli, "INSERT INTO rmm_sync_log SET integration_id={$this->integration_id}, triggered_by={$this->triggered_by}");
+        mysqli_query($mysqli,
+            "INSERT INTO rmm_sync_log SET integration_id={$this->integration_id}, triggered_by={$this->triggered_by}"
+        );
         return intval(mysqli_insert_id($mysqli));
     }
 
     public function finishSyncLog(int $log_id, array $stats): void {
         global $mysqli;
-        $status   = empty($stats['errors']) ? 'success' : 'failed';
-        $created  = intval($stats['created']);
-        $updated  = intval($stats['updated']);
-        $matched  = intval($stats['matched']);
-        $skipped  = intval($stats['skipped']);
-        $errors   = mysqli_real_escape_string($mysqli, implode('; ', $stats['errors']));
-        mysqli_query($mysqli, "UPDATE rmm_sync_log SET
-            finished_at=NOW(), status='$status',
-            assets_created=$created, assets_updated=$updated,
-            assets_matched=$matched, assets_skipped=$skipped,
-            errors='$errors'
-            WHERE id=$log_id");
+        $status  = empty($stats['errors']) ? 'success' : 'failed';
+        $errors  = mysqli_real_escape_string($mysqli, implode('; ', $stats['errors']));
+        mysqli_query($mysqli,
+            "UPDATE rmm_sync_log SET
+             finished_at=NOW(), status='$status',
+             assets_created={$stats['created']}, assets_updated={$stats['updated']},
+             assets_matched={$stats['matched']}, assets_skipped={$stats['skipped']},
+             errors='$errors'
+             WHERE id=$log_id"
+        );
     }
 }

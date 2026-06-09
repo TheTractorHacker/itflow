@@ -273,8 +273,8 @@ const TYPE_HINTS = {
     },
     level: {
         placeholder_name:    'e.g. Level.io RMM',
-        placeholder_api_url: 'https://app.level.io',
-        help_api_url:        'Level.io API base URL. Default: <code>https://app.level.io</code>',
+        placeholder_api_url: 'https://api.level.io',  // /v2 is appended automatically
+        help_api_url:        'Level.io API server. Enter <code>https://api.level.io</code> — the <code>/v2</code> prefix is added automatically. Do NOT enter app.level.io.',
         label_web_url:       'Organization ID (optional)',
         placeholder_web_url: 'your-org-id',
         help_web_url:        'Your Level.io organization slug (leave blank if unsure — device URLs will still work).',

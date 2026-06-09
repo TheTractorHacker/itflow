@@ -60,7 +60,7 @@ if ($filter_q)    {
 }
 
 $sql_scripts = mysqli_query($mysqli,
-    "SELECT s.*, u.user_firstname, u.user_lastname,
+    "SELECT s.*, u.user_name,
             (SELECT COUNT(*) FROM rmm_script_runs sr WHERE sr.script_id = s.id) as run_count,
             (SELECT COUNT(*) FROM rmm_script_runs sr WHERE sr.script_id = s.id AND sr.status='failed') as fail_count
      FROM rmm_scripts s
@@ -87,7 +87,7 @@ $sql_online_assets = mysqli_query($mysqli,
 
 // Recent runs
 $sql_runs = mysqli_query($mysqli,
-    "SELECT sr.*, s.name as sname, a.asset_name, a.asset_id, u.user_firstname, u.user_lastname
+    "SELECT sr.*, s.name as sname, a.asset_name, a.asset_id, u.user_name
      FROM rmm_script_runs sr
      LEFT JOIN rmm_scripts s ON s.id = sr.script_id
      LEFT JOIN assets a ON a.asset_id = sr.asset_id
@@ -260,7 +260,7 @@ $sql_runs = mysqli_query($mysqli,
                     <?= nullable_htmlentities($run['asset_name']) ?>
                 </a>
             </td>
-            <td class="small text-muted"><?= nullable_htmlentities($run['user_firstname'] . ' ' . $run['user_lastname']) ?></td>
+            <td class="small text-muted"><?= nullable_htmlentities($run['user_name']) ?></td>
             <td><span class="badge badge-<?= $run_badge ?>"><?= $run['status'] ?></span></td>
             <td class="small text-muted" style="white-space:nowrap"><?= nullable_htmlentities(substr($run['started_at'], 0, 16)) ?></td>
             <td class="small" style="max-width:250px;overflow:hidden">

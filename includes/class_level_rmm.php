@@ -2,13 +2,15 @@
 /*
  * LevelRmmClient — server-side service for Level.io RMM API calls.
  *
- * API key is decrypted once in the constructor and never exposed to the browser.
+ * Level.io API:
+ *   Base URL : https://api.level.io/v2   (api_url = https://api.level.io)
+ *   Auth     : Authorization: {api_key}  (no Bearer prefix)
+ *   Devices  : GET /v2/devices
+ *   Alerts   : GET /v2/alerts
+ *   Scripts  : GET /v2/scripts
  *
- * Level.io API reference: https://levelapi.readme.io/reference/getting-started-with-your-api
- *
- * Authentication : X-API-Key header
- * Base URL       : https://app.level.io  (stored in rmm_integrations.api_url)
- * Org ID         : stored in rmm_integrations.web_url (repurposed for Level)
+ * Device status is a boolean field "online" (true/false), not a string.
+ * Client mapping uses device field "group_name" → ITFlow client name.
  */
 
 class LevelRmmClient {
@@ -28,7 +30,7 @@ class LevelRmmClient {
             throw new RuntimeException("Level RMM integration $id not found or disabled");
         }
         $this->integration_id = $id;
-        $this->base_url       = rtrim($row['api_url'], '/');
+        $this->base_url       = rtrim($row['api_url'], '/') . '/v2';
         $this->org_id         = trim($row['web_url'] ?? '');
         $this->api_key        = decryptSetting($row['api_key_enc'] ?? '');
         if (empty($this->api_key)) {
@@ -51,8 +53,10 @@ class LevelRmmClient {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 20,
             CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS      => 5,
             CURLOPT_HTTPHEADER     => [
-                'X-API-Key: ' . $this->api_key,
+                'Authorization: ' . $this->api_key,   // no Bearer prefix
                 'Content-Type: application/json',
                 'Accept: application/json',
             ],
@@ -61,23 +65,31 @@ class LevelRmmClient {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
         }
-        $raw    = curl_exec($ch);
-        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err    = curl_error($ch);
+        $raw           = curl_exec($ch);
+        $status        = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $effective_url = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+        $err           = curl_error($ch);
         curl_close($ch);
 
         if ($err) {
             throw new RuntimeException("Level API cURL error: $err");
         }
+        if (strpos($raw, '<!DOCTYPE') !== false || strpos($raw, '<html') !== false) {
+            throw new RuntimeException(
+                "Level API URL is pointing to the web UI. Set API URL to: https://api.level.io"
+            );
+        }
         if ($status === 401 || $status === 403) {
-            throw new RuntimeException("Level API: HTTP $status — check API key");
+            throw new RuntimeException("Level API: HTTP $status Unauthorized — check API key");
         }
         if ($status < 200 || $status >= 300) {
-            throw new RuntimeException("Level API returned HTTP $status: " . substr($raw, 0, 200));
+            $decoded = json_decode($raw, true);
+            $msg     = $decoded['error'] ?? $decoded['message'] ?? substr($raw, 0, 200);
+            throw new RuntimeException("Level API HTTP $status: $msg");
         }
         $decoded = json_decode($raw, true);
         if ($decoded === null && !empty($raw)) {
-            throw new RuntimeException("Invalid JSON response from Level API");
+            throw new RuntimeException("Invalid JSON from Level API: " . substr($raw, 0, 200));
         }
         return $decoded ?? [];
     }
@@ -87,8 +99,8 @@ class LevelRmmClient {
     // -----------------------------------------------------------------------
 
     public function testConnection(): bool {
-        $result = $this->get('/v1/devices?per_page=1');
-        return is_array($result);
+        $result = $this->get('/devices?per_page=1');
+        return isset($result['data']) || is_array($result);
     }
 
     // -----------------------------------------------------------------------
@@ -100,48 +112,42 @@ class LevelRmmClient {
         $page     = 1;
         $per_page = 100;
         do {
-            $result = $this->get("/v1/devices?per_page=$per_page&page=$page");
-            $items  = $result['data'] ?? (isset($result[0]) ? $result : []);
+            $result = $this->get("/devices?per_page=$per_page&page=$page");
+            $items  = $result['data'] ?? [];
             foreach ($items as $dev) {
                 $all[] = $this->normalizeDevice($dev);
             }
-            $total_pages = $result['meta']['last_page'] ?? 1;
+            $meta  = $result['meta'] ?? [];
+            $more  = !empty($meta['next_page']) || !empty($meta['next_cursor']);
             $page++;
-        } while ($page <= $total_pages && count($items) >= $per_page);
+        } while ($more && count($items) >= $per_page);
         return $all;
     }
 
     public function getAgent(string $agent_id): array {
-        $result = $this->get('/v1/devices/' . urlencode($agent_id));
+        $result = $this->get('/devices/' . urlencode($agent_id));
         $dev    = $result['data'] ?? $result;
         return $this->normalizeDevice($dev);
     }
 
     public function getAgentSoftware(string $agent_id): array {
         try {
-            $result = $this->get('/v1/devices/' . urlencode($agent_id) . '/software');
-            return $result['data'] ?? $result ?? [];
-        } catch (RuntimeException $e) {
-            return [];
-        }
+            $result = $this->get('/devices/' . urlencode($agent_id) . '/software');
+            return $result['data'] ?? [];
+        } catch (RuntimeException $e) { return []; }
     }
 
     public function getAgentServices(string $agent_id): array {
         try {
-            $result = $this->get('/v1/devices/' . urlencode($agent_id) . '/services');
-            return $result['data'] ?? $result ?? [];
-        } catch (RuntimeException $e) {
-            return [];
-        }
+            $result = $this->get('/devices/' . urlencode($agent_id) . '/services');
+            return $result['data'] ?? [];
+        } catch (RuntimeException $e) { return []; }
     }
 
     public function getAgentWmi(string $agent_id): array {
         try {
-            $agent = $this->getAgent($agent_id);
-            return $agent['hardware'] ?? [];
-        } catch (RuntimeException $e) {
-            return [];
-        }
+            return $this->getAgent($agent_id)['hardware'] ?? [];
+        } catch (RuntimeException $e) { return []; }
     }
 
     // -----------------------------------------------------------------------
@@ -151,20 +157,16 @@ class LevelRmmClient {
     public function getAlerts(bool $resolved = false): array {
         try {
             $param  = $resolved ? '' : '?status=active';
-            $result = $this->get('/v1/alerts' . $param);
-            return $result['data'] ?? $result ?? [];
-        } catch (RuntimeException $e) {
-            return [];
-        }
+            $result = $this->get('/alerts' . $param);
+            return $result['data'] ?? [];
+        } catch (RuntimeException $e) { return []; }
     }
 
     public function getAgentAlerts(string $agent_id): array {
         try {
-            $result = $this->get('/v1/alerts?device_id=' . urlencode($agent_id));
-            return $result['data'] ?? $result ?? [];
-        } catch (RuntimeException $e) {
-            return [];
-        }
+            $result = $this->get('/alerts?device_id=' . urlencode($agent_id));
+            return $result['data'] ?? [];
+        } catch (RuntimeException $e) { return []; }
     }
 
     // -----------------------------------------------------------------------
@@ -173,15 +175,13 @@ class LevelRmmClient {
 
     public function getScripts(): array {
         try {
-            $result = $this->get('/v1/scripts');
-            return $result['data'] ?? $result ?? [];
-        } catch (RuntimeException $e) {
-            return [];
-        }
+            $result = $this->get('/scripts');
+            return $result['data'] ?? [];
+        } catch (RuntimeException $e) { return []; }
     }
 
     public function runScript(string $agent_id, int $script_id, int $timeout = 120): array {
-        return $this->post('/v1/devices/' . urlencode($agent_id) . '/scripts/' . $script_id . '/run', [
+        return $this->post('/devices/' . urlencode($agent_id) . '/scripts/' . $script_id . '/run', [
             'timeout' => $timeout,
         ]);
     }
@@ -199,43 +199,44 @@ class LevelRmmClient {
     }
 
     // -----------------------------------------------------------------------
-    // Field normalisation — map Level device fields to common schema
+    // Field normalisation
+    // Level device fields: id, hostname, nickname, role, group_name, group_id,
+    //   tags (array), online (bool), platform, notes, maintenance_mode
     // -----------------------------------------------------------------------
 
     private function normalizeDevice(array $dev): array {
+        // "online" is a boolean in Level v2 API
+        $online = $dev['online'] ?? false;
+
+        // Use nickname as display name when set, otherwise hostname
+        $hostname    = $dev['hostname'] ?? '';
+        $display     = ($dev['nickname'] ?? '') ?: $hostname;
+
+        // Map Level role to a readable OS/type hint
+        $platform    = $dev['platform'] ?? '';
+
         return [
-            'id'               => $dev['id'] ?? $dev['device_id'] ?? '',
-            'agent_id'         => $dev['id'] ?? $dev['device_id'] ?? '',
-            'hostname'         => $dev['hostname'] ?? $dev['name'] ?? '',
-            'description'      => $dev['description'] ?? '',
-            'status'           => $this->mapStatus($dev['status'] ?? $dev['connection_status'] ?? 'unknown'),
-            'last_seen'        => $dev['last_seen'] ?? $dev['last_contact'] ?? null,
-            'logged_in_user'   => $dev['logged_in_user'] ?? $dev['current_user'] ?? '',
-            'operating_system' => $dev['os_name'] ?? $dev['os'] ?? '',
-            'os_version'       => $dev['os_version'] ?? '',
-            'plat'             => $dev['platform'] ?? '',
-            'manufacturer'     => $dev['manufacturer'] ?? '',
-            'model'            => $dev['model'] ?? '',
-            'cpu'              => $dev['cpu'] ?? $dev['processor'] ?? '',
-            'ram'              => isset($dev['ram_total_gb']) ? $dev['ram_total_gb'].' GB'
-                                : (isset($dev['memory_gb'])   ? $dev['memory_gb'].' GB' : ''),
-            'serial_number'    => $dev['serial_number'] ?? $dev['serial'] ?? '',
-            'local_ips'        => $dev['local_ips'] ?? $dev['ip_addresses'] ?? [],
-            'tags'             => $dev['tags'] ?? $dev['labels'] ?? [],
+            'id'               => $dev['id'] ?? '',
+            'agent_id'         => $dev['id'] ?? '',
+            'hostname'         => $hostname,
+            'description'      => $dev['notes'] ?? '',
+            'status'           => $online ? 'online' : 'offline',
+            'last_seen'        => $dev['last_seen'] ?? null,
+            'logged_in_user'   => '',
+            'operating_system' => $platform,
+            'os_version'       => '',
+            'plat'             => $platform,
+            'manufacturer'     => '',
+            'model'            => $dev['role'] ?? '',
+            'cpu'              => '',
+            'ram'              => '',
+            'serial_number'    => '',
+            'local_ips'        => [],
+            'tags'             => $dev['tags'] ?? [],
+            'group_name'       => $dev['group_name'] ?? '',
+            'display_name'     => $display,
             '_provider'        => 'level',
             '_raw'             => $dev,
         ];
-    }
-
-    private function mapStatus(string $status): string {
-        $map = [
-            'online'       => 'online',
-            'connected'    => 'online',
-            'active'       => 'online',
-            'offline'      => 'offline',
-            'disconnected' => 'offline',
-            'inactive'     => 'offline',
-        ];
-        return $map[strtolower($status)] ?? 'unknown';
     }
 }

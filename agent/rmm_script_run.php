@@ -9,7 +9,7 @@ $run = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT sr.*, s.name as script_name, s.script_type, s.description as script_desc,
             a.asset_name, a.asset_client_id,
             c.client_name,
-            u.user_firstname, u.user_lastname
+            u.user_name
      FROM rmm_script_runs sr
      LEFT JOIN rmm_scripts s ON s.id = sr.script_id
      JOIN assets a ON a.asset_id = sr.asset_id
@@ -50,7 +50,7 @@ $badge = ['completed'=>'success','failed'=>'danger','running'=>'warning','pendin
                         <td><a href="/agent/asset_details.php?asset_id=<?= intval($run['asset_id']) ?>"><?= nullable_htmlentities($run['asset_name']) ?></a></td></tr>
                     <tr><td class="text-muted">Client</td>
                         <td><a href="/agent/client_details.php?client_id=<?= intval($run['asset_client_id']) ?>"><?= nullable_htmlentities($run['client_name']) ?></a></td></tr>
-                    <tr><td class="text-muted">Run By</td><td><?= nullable_htmlentities($run['user_firstname'] . ' ' . $run['user_lastname']) ?></td></tr>
+                    <tr><td class="text-muted">Run By</td><td><?= nullable_htmlentities($run['user_name']) ?></td></tr>
                     <tr><td class="text-muted">Status</td><td><span class="badge badge-<?= $badge ?>" id="run-status"><?= $run['status'] ?></span></td></tr>
                     <tr><td class="text-muted">Started</td><td class="small text-muted"><?= nullable_htmlentities($run['started_at']) ?></td></tr>
                     <?php if ($run['finished_at']): ?>

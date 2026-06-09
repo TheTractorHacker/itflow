@@ -24,7 +24,7 @@ if ($filter_search) {
 
 $sql_alerts = mysqli_query($mysqli,
     "SELECT a.*, ast.asset_name, c.client_name,
-            u.user_firstname, u.user_lastname
+            u.user_name
      FROM rmm_alerts a
      LEFT JOIN assets ast ON ast.asset_id = a.asset_id
      LEFT JOIN clients c ON c.client_id = a.client_id
@@ -224,8 +224,8 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                 </td>
                 <td>
                     <span class="badge badge-<?= $status_color ?>"><?= $alert['status'] ?></span>
-                    <?php if ($alert['status'] === 'acknowledged' && $alert['user_firstname']): ?>
-                    <br><small class="text-muted"><?= nullable_htmlentities($alert['user_firstname'] . ' ' . $alert['user_lastname']) ?></small>
+                    <?php if ($alert['status'] === 'acknowledged' && $alert['user_name']): ?>
+                    <br><small class="text-muted"><?= nullable_htmlentities($alert['user_name']) ?></small>
                     <?php endif; ?>
                 </td>
                 <td class="text-muted small" style="white-space:nowrap">

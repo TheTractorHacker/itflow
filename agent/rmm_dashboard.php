@@ -53,7 +53,7 @@ $sql_new_alerts = mysqli_query($mysqli,
 
 // Recent remote sessions
 $sql_recent_sessions = mysqli_query($mysqli,
-    "SELECT rs.*, a.asset_name, a.asset_id, u.user_firstname, u.user_lastname
+    "SELECT rs.*, a.asset_name, a.asset_id, u.user_name
      FROM rmm_remote_sessions rs
      JOIN assets a ON a.asset_id = rs.asset_id
      LEFT JOIN users u ON u.user_id = rs.user_id
@@ -63,7 +63,7 @@ $sql_recent_sessions = mysqli_query($mysqli,
 
 // Recent script runs
 $sql_recent_runs = mysqli_query($mysqli,
-    "SELECT sr.*, s.name as script_name, a.asset_name, a.asset_id, u.user_firstname, u.user_lastname
+    "SELECT sr.*, s.name as script_name, a.asset_name, a.asset_id, u.user_name
      FROM rmm_script_runs sr
      LEFT JOIN rmm_scripts s ON s.id = sr.script_id
      JOIN assets a ON a.asset_id = sr.asset_id
@@ -385,7 +385,7 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                     <a href="/agent/asset_details.php?asset_id=<?= intval($sess['asset_id']) ?>" class="mr-auto font-weight-bold">
                         <?= nullable_htmlentities($sess['asset_name']) ?>
                     </a>
-                    <span class="text-muted"><?= nullable_htmlentities($sess['user_firstname'] . ' ' . $sess['user_lastname']) ?></span>
+                    <span class="text-muted"><?= nullable_htmlentities($sess['user_name']) ?></span>
                     <span class="text-muted ml-2" style="font-size:10px"><?= nullable_htmlentities(date('M j g:ia', strtotime($sess['created_at']))) ?></span>
                 </div>
                 <?php endwhile; ?>
@@ -415,7 +415,7 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="text-muted" style="font-size:10px"><?= nullable_htmlentities($run['user_firstname'] . ' ' . $run['user_lastname']) ?></div>
+                        <div class="text-muted" style="font-size:10px"><?= nullable_htmlentities($run['user_name']) ?></div>
                         <a href="/agent/rmm_script_run.php?run_id=<?= intval($run['id']) ?>" class="btn btn-xs btn-outline-secondary mt-1">
                             <i class="fas fa-eye"></i>
                         </a>
