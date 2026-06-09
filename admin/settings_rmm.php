@@ -179,7 +179,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                         <label class="text-muted small">Tactical RMM API URL</label>
                         <input type="url" class="form-control form-control-sm" name="integration_api_url" id="integration_api_url"
                                placeholder="https://api.yourdomain.com" required>
-                        <small class="text-muted">Use the <strong>API server URL</strong> (e.g. <code>https://api.yourdomain.com</code>), not the dashboard URL (<code>https://rmm.yourdomain.com</code>). No trailing slash.</small>
+                        <small class="text-muted">Enter the API server base URL, <strong>not</strong> the dashboard URL (<code>rmm.yourdomain.com</code>). Older TRMM installs: <code>https://api.yourdomain.com</code>. Newer installs (v0.18+): <code>https://api.yourdomain.com/api/v3</code>. No trailing slash.</small>
                     </div>
                     <div class="form-group">
                         <label class="text-muted small">API Key</label>

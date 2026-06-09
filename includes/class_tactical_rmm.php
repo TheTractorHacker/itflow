@@ -34,7 +34,7 @@ class TacticalRmmClient {
     }
 
     private function request(string $method, string $endpoint, array $body = []): array {
-        $url = $this->base_url . '/api/v3' . $endpoint;
+        $url = $this->base_url . $endpoint;
         $ch  = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
