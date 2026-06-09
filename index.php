@@ -11,6 +11,7 @@ if (file_exists("config.php")) {
     }
 
     // Start the session
+    require_once "functions.php";
     require_once "includes/session_init.php";
 
     // If user is an agent
