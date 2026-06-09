@@ -203,10 +203,55 @@ $sql_asset_retired = mysqli_query(
     ORDER BY asset_install_date ASC"
 );
 
+// RMM: client health summary
+$rmm_client_stats = null;
+if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
+    $rmm_client_stats = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT
+            SUM(arl.rmm_status='online')  as online_cnt,
+            SUM(arl.rmm_status='offline') as offline_cnt,
+            COUNT(arl.id)                   as total_cnt,
+            (SELECT COUNT(*) FROM rmm_alerts ra
+             JOIN asset_rmm_links al2 ON al2.asset_id=ra.asset_id
+             JOIN assets a2 ON a2.asset_id=al2.asset_id
+             WHERE a2.asset_client_id=$client_id AND ra.status='new'
+               AND ra.severity IN ('critical','error')) as crit_alerts,
+            (SELECT COUNT(*) FROM rmm_alerts ra
+             JOIN asset_rmm_links al2 ON al2.asset_id=ra.asset_id
+             JOIN assets a2 ON a2.asset_id=al2.asset_id
+             WHERE a2.asset_client_id=$client_id AND ra.status='new') as total_alerts
+         FROM asset_rmm_links arl
+         JOIN assets a ON a.asset_id=arl.asset_id
+         WHERE a.asset_client_id=$client_id AND a.asset_archived_at IS NULL"
+    ));
+}
 
 ?>
 
 <div class="row">
+
+    <?php if ($rmm_client_stats && intval($rmm_client_stats['total_cnt']) > 0): ?>
+    <div class="col-md-12 mb-2">
+        <div class="card card-dark" style="border-left:4px solid <?= intval($rmm_client_stats['crit_alerts']) ? '#dc3545' : (intval($rmm_client_stats['offline_cnt']) ? '#ffc107' : '#28a745') ?>">
+            <div class="card-body py-2 d-flex align-items-center flex-wrap" style="gap:16px">
+                <span class="font-weight-bold text-muted small"><i class="fas fa-heartbeat mr-1"></i>RMM</span>
+                <span><span class="badge badge-success mr-1"><?= intval($rmm_client_stats['online_cnt']) ?> Online</span>
+                      <span class="badge badge-secondary"><?= intval($rmm_client_stats['offline_cnt']) ?> Offline</span></span>
+                <?php if (intval($rmm_client_stats['total_alerts']) > 0): ?>
+                <a href="/agent/rmm_alerts.php?client_id=<?= $client_id ?>&status=new" class="text-decoration-none">
+                    <span class="badge badge-danger"><i class="fas fa-bell mr-1"></i><?= intval($rmm_client_stats['total_alerts']) ?> Alert<?= $rmm_client_stats['total_alerts'] != 1 ? 's' : '' ?></span>
+                    <?php if ($rmm_client_stats['crit_alerts'] > 0): ?>
+                    <span class="badge badge-danger ml-1"><?= intval($rmm_client_stats['crit_alerts']) ?> Critical</span>
+                    <?php endif; ?>
+                </a>
+                <?php endif; ?>
+                <a href="/agent/rmm_assets.php?client_id=<?= $client_id ?>" class="btn btn-xs btn-outline-secondary ml-auto">
+                    <i class="fas fa-desktop mr-1"></i>View RMM Assets
+                </a>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Notes -->
 
