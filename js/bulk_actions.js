@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Safety: only allow same-origin relative paths to prevent open redirect / XSS
         if (url.origin !== window.location.origin) return;
-        const finalUrl = url.pathname + '?' + params.toString();
+        const finalUrl = url.pathname + url.search; // url.search is already encoded by the URL object
         if (!finalUrl.startsWith('/')) return;
 
         if (trigger.hasAttribute('data-modal-url')) {
