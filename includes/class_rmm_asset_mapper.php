@@ -43,15 +43,16 @@ class RmmAssetMapper {
         $hostname     = sanitizeInput($agent['hostname'] ?? '');
         $serial       = sanitizeInput($agent['serial_number'] ?? '');
         $os_name      = sanitizeInput($agent['operating_system'] ?? '');
-        $os_version   = sanitizeInput($agent['os_build_number'] ?? '');
-        $manufacturer = sanitizeInput($agent['make_model'] ?? '');
+        $os_version   = sanitizeInput($agent['os_version'] ?? $agent['os_build_number'] ?? '');
+        $manufacturer = sanitizeInput($agent['manufacturer'] ?? $agent['make_model'] ?? '');
         $model        = '';
-        $cpu          = sanitizeInput($agent['cpu_model'] ?? '');
-        $ram_gb       = sanitizeInput($agent['total_ram'] ?? '');
+        $cpu          = sanitizeInput($agent['cpu'] ?? $agent['cpu_model'] ?? '');
+        $ram_gb       = sanitizeInput($agent['ram'] ?? $agent['total_ram'] ?? '');
         $mesh_node_id = sanitizeInput($agent['mesh_node_id'] ?? '');
-        $status       = isset($agent['status']) && $agent['status'] === 'online' ? 'online' : 'offline';
+        $_s = $agent['status'] ?? 'offline';
+        $status = in_array($_s, ['online','offline','unknown']) ? $_s : ($_s === 'online' ? 'online' : 'offline');
         $last_seen    = sanitizeInput($agent['last_seen'] ?? '');
-        $logged_user  = sanitizeInput($agent['logged_in_username'] ?? '');
+        $logged_user  = sanitizeInput($agent['logged_in_user'] ?? $agent['logged_in_username'] ?? '');
         $client_id    = 0; // We don't auto-assign clients; that's a manual step
         $raw_json     = mysqli_real_escape_string($m, json_encode($agent));
 

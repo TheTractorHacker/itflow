@@ -9,7 +9,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/check_login.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_global_settings.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_user_session.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/class_tactical_rmm.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/rmm_client_factory.php';
 
 header('Content-Type: application/json');
 
@@ -65,7 +65,7 @@ logAction('RMM', 'Script Run',
 // If script has a Tactical ID, fire it via API
 if (!empty($script['tactical_script_id'])) {
     try {
-        $client = new TacticalRmmClient(intval($link['integration_id']));
+        $client = getRmmClient(intval($link['integration_id']));
         mysqli_query($mysqli, "UPDATE rmm_script_runs SET status='running' WHERE id=$run_id");
         $result = $client->runScript($link['tactical_agent_id'], intval($script['tactical_script_id']));
         $job_id = mysqli_real_escape_string($mysqli, $result['job_id'] ?? $result['id'] ?? '');

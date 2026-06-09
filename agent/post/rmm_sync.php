@@ -12,7 +12,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/check_login.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_global_settings.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_user_session.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/class_tactical_rmm.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/rmm_client_factory.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/class_rmm_asset_mapper.php';
 
 header('Content-Type: application/json');
@@ -38,7 +38,7 @@ if ($integration_id <= 0) {
 // ---- Test connection ----
 if ($action === 'test') {
     try {
-        $client = new TacticalRmmClient($integration_id);
+        $client = getRmmClient($integration_id);
         $ok     = $client->testConnection();
         echo json_encode(['success' => $ok, 'error' => $ok ? null : 'Could not reach Tactical RMM API']);
     } catch (RuntimeException $e) {
@@ -65,7 +65,7 @@ if ($action === 'sync') {
     }
 
     try {
-        $client  = new TacticalRmmClient($integration_id);
+        $client  = getRmmClient($integration_id);
         $mapper  = new RmmAssetMapper($mysqli, $integration_id, $session_user_id);
         $log_id  = $mapper->startSyncLog();
 
@@ -102,7 +102,7 @@ if ($action === 'sync_scripts') {
         exit;
     }
     try {
-        $client  = new TacticalRmmClient($integration_id);
+        $client  = getRmmClient($integration_id);
         $scripts = $client->getScripts();
         $imported = 0;
         $updated  = 0;

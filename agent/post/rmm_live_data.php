@@ -10,7 +10,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/check_login.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_global_settings.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_user_session.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/class_tactical_rmm.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/rmm_client_factory.php';
 
 header('Content-Type: application/json');
 
@@ -38,7 +38,7 @@ if (!$link) {
 if ($link['asset_client_id']) { enforceClientAccess(intval($link['asset_client_id'])); }
 
 try {
-    $client   = new TacticalRmmClient(intval($link['integration_id']));
+    $client   = getRmmClient(intval($link['integration_id']));
     $agent_id = $link['tactical_agent_id'];
 
     if ($type === 'software') {
