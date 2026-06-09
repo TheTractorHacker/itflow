@@ -1622,6 +1622,42 @@ if (isset($_GET['ticket_id'])) {
                 <?php } // End if asset_id ?>
                 <!-- End Asset card -->
 
+                <!-- RMM Asset Status card (Syncro-Beta) -->
+                <?php
+                if ($config_module_enable_rmm && lookupUserPermission("module_rmm") >= 1 && $asset_id) {
+                    $rmm_tklink = mysqli_fetch_assoc(mysqli_query($mysqli,
+                        "SELECT arl.id, arl.rmm_status, arl.hostname, arl.last_seen, arl.os_name, arl.logged_in_user
+                          FROM asset_rmm_links arl WHERE arl.asset_id=$asset_id LIMIT 1"
+                    ));
+                    if ($rmm_tklink):
+                        $rmm_badge = $rmm_tklink['rmm_status'] === 'online' ? 'badge-success' : ($rmm_tklink['rmm_status'] === 'offline' ? 'badge-danger' : 'badge-secondary');
+                ?>
+                <div class="card mb-3" style="border-top:2px solid #17a2b8">
+                    <div class="card-header px-3 py-2">
+                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-desktop mr-2"></i>RMM Status</h5>
+                    </div>
+                    <div class="card-body p-3 small">
+                        <div class="d-flex align-items-center mb-2">
+                            <strong class="mr-2"><?= nullable_htmlentities($rmm_tklink['hostname']) ?></strong>
+                            <span class="badge <?= $rmm_badge ?>"><?= ucfirst($rmm_tklink['rmm_status']) ?></span>
+                        </div>
+                        <div class="text-muted">
+                            OS: <?= nullable_htmlentities($rmm_tklink['os_name']) ?>
+                            &nbsp;&middot;&nbsp; Last seen: <?= nullable_htmlentities($rmm_tklink['last_seen']) ?>
+                            <?php if ($rmm_tklink['logged_in_user']): ?>
+                            &nbsp;&middot;&nbsp; User: <?= nullable_htmlentities($rmm_tklink['logged_in_user']) ?>
+                            <?php endif; ?>
+                        </div>
+                        <a href="/agent/rmm_asset.php?id=<?= intval($rmm_tklink['id']) ?>" class="btn btn-xs btn-info mt-2">
+                            <i class="fas fa-tachometer-alt mr-1"></i>Open RMM Dashboard
+                        </a>
+                    </div>
+                </div>
+                <?php
+                    endif;
+                }
+                ?>
+
                 <!-- Vendor card -->
                 <?php if ($vendor_id) { ?>
                     <div class="card mb-3">

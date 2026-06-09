@@ -1270,4 +1270,54 @@ if (isset($_GET['asset_id'])) {
 
 }
 
+
+// RMM Integration panel (Syncro-Beta)
+if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1 && isset($asset_id)) {
+    $rmm_link = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT arl.id, arl.rmm_status, arl.hostname, arl.last_seen, arl.os_name, arl.logged_in_user
+          FROM asset_rmm_links arl
+          WHERE arl.asset_id=$asset_id LIMIT 1"
+    ));
+    if ($rmm_link):
+        $badge_class = $rmm_link['rmm_status'] === 'online' ? 'badge-success' : ($rmm_link['rmm_status'] === 'offline' ? 'badge-danger' : 'badge-secondary');
+        $border_color = $rmm_link['rmm_status'] === 'online' ? '#28a745' : ($rmm_link['rmm_status'] === 'offline' ? '#dc3545' : '#6c757d');
+?>
+<div class="card card-dark mb-3" style="border-top:3px solid <?= $border_color ?>">
+    <div class="card-header py-2 d-flex align-items-center">
+        <h6 class="mb-0 mr-auto"><i class="fas fa-desktop mr-2"></i>RMM &mdash; <?= nullable_htmlentities($rmm_link['hostname']) ?>
+            <span class="badge <?= $badge_class ?> ml-2"><?= ucfirst($rmm_link['rmm_status']) ?></span>
+        </h6>
+        <a href="/agent/rmm_asset.php?id=<?= intval($rmm_link['id']) ?>" class="btn btn-info btn-sm mr-1">
+            <i class="fas fa-tachometer-alt mr-1"></i>RMM Dashboard
+        </a>
+        <?php if (lookupUserPermission('module_rmm_remote_connect') >= 1): ?>
+        <button class="btn btn-success btn-sm" onclick="rmm_connect(<?= intval($rmm_link['id']) ?>)">
+            <i class="fas fa-desktop mr-1"></i>Connect
+        </button>
+        <?php endif; ?>
+    </div>
+    <div class="card-body py-2 small">
+        <div class="row">
+            <div class="col-md-3"><span class="text-muted">OS:</span> <?= nullable_htmlentities($rmm_link['os_name']) ?></div>
+            <div class="col-md-3"><span class="text-muted">Logged In:</span> <?= nullable_htmlentities($rmm_link['logged_in_user']) ?: '&mdash;' ?></div>
+            <div class="col-md-6"><span class="text-muted">Last Seen:</span> <?= nullable_htmlentities($rmm_link['last_seen']) ?></div>
+        </div>
+    </div>
+</div>
+<script>
+function rmm_connect(linkId) {
+    fetch('/agent/post/rmm_remote.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=<?= $_SESSION["csrf_token"] ?>&link_id=' + linkId + '&type=tactical'
+    }).then(r => r.json()).then(d => {
+        if (d.success && d.url) { window.open(d.url, '_blank', 'noopener,noreferrer'); }
+        else { alert('Connect failed: ' + (d.error || 'Unknown')); }
+    });
+}
+</script>
+<?php
+    endif;
+}
+?>
 require_once "../includes/footer.php";

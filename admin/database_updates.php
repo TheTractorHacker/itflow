@@ -4530,3 +4530,132 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET ``config_current_database_version` = '2.4.12'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.4.12') {
+
+        // RMM Integration tables (Syncro-Beta)
+
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_module_enable_rmm` tinyint(1) NOT NULL DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS `config_rmm_default_integration_id` int(11) DEFAULT NULL
+        ");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `rmm_integrations` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `name` varchar(200) NOT NULL,
+          `type` varchar(50) NOT NULL DEFAULT 'tactical_rmm',
+          `api_url` varchar(500) NOT NULL,
+          `api_key_enc` text NOT NULL,
+          `enabled` tinyint(1) NOT NULL DEFAULT 1,
+          `created_at` datetime DEFAULT current_timestamp(),
+          `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+          `created_by` int(11) DEFAULT 0,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `asset_rmm_links` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `asset_id` int(11) NOT NULL,
+          `integration_id` int(11) NOT NULL,
+          `tactical_agent_id` varchar(200) DEFAULT NULL,
+          `mesh_node_id` varchar(200) DEFAULT NULL,
+          `hostname` varchar(200) DEFAULT NULL,
+          `rmm_status` varchar(20) DEFAULT 'unknown',
+          `last_seen` datetime DEFAULT NULL,
+          `os_name` varchar(200) DEFAULT NULL,
+          `os_version` varchar(200) DEFAULT NULL,
+          `manufacturer` varchar(200) DEFAULT NULL,
+          `model` varchar(200) DEFAULT NULL,
+          `cpu` varchar(300) DEFAULT NULL,
+          `ram_gb` varchar(50) DEFAULT NULL,
+          `logged_in_user` varchar(200) DEFAULT NULL,
+          `last_sync` datetime DEFAULT NULL,
+          `raw_data_json` longtext DEFAULT NULL,
+          `created_at` datetime DEFAULT current_timestamp(),
+          `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+          PRIMARY KEY (`id`),
+          UNIQUE KEY `asset_integration` (`asset_id`,`integration_id`),
+          KEY `tactical_agent_id` (`tactical_agent_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `rmm_sync_log` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `integration_id` int(11) NOT NULL,
+          `started_at` datetime DEFAULT current_timestamp(),
+          `finished_at` datetime DEFAULT NULL,
+          `status` varchar(20) DEFAULT 'running',
+          `assets_created` int(11) DEFAULT 0,
+          `assets_updated` int(11) DEFAULT 0,
+          `assets_matched` int(11) DEFAULT 0,
+          `assets_skipped` int(11) DEFAULT 0,
+          `errors` text DEFAULT NULL,
+          `triggered_by` int(11) DEFAULT 0,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `rmm_alerts` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `asset_id` int(11) DEFAULT NULL,
+          `client_id` int(11) DEFAULT NULL,
+          `integration_id` int(11) NOT NULL,
+          `tactical_alert_id` varchar(200) DEFAULT NULL,
+          `severity` varchar(50) DEFAULT NULL,
+          `status` varchar(20) DEFAULT 'new',
+          `message` text DEFAULT NULL,
+          `acknowledged_by` int(11) DEFAULT NULL,
+          `acknowledged_at` datetime DEFAULT NULL,
+          `resolved_at` datetime DEFAULT NULL,
+          `raw_data_json` longtext DEFAULT NULL,
+          `created_at` datetime DEFAULT current_timestamp(),
+          PRIMARY KEY (`id`),
+          KEY `asset_id` (`asset_id`),
+          KEY `client_id` (`client_id`),
+          KEY `tactical_alert_id` (`tactical_alert_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `rmm_scripts` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `name` varchar(200) NOT NULL,
+          `category` varchar(100) DEFAULT NULL,
+          `description` text DEFAULT NULL,
+          `script_type` varchar(20) DEFAULT 'powershell',
+          `script_body` longtext DEFAULT NULL,
+          `tactical_script_id` int(11) DEFAULT NULL,
+          `enabled` tinyint(1) DEFAULT 1,
+          `created_by` int(11) DEFAULT 0,
+          `created_at` datetime DEFAULT current_timestamp(),
+          `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `rmm_script_runs` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `script_id` int(11) DEFAULT NULL,
+          `asset_id` int(11) NOT NULL,
+          `user_id` int(11) NOT NULL,
+          `status` varchar(20) DEFAULT 'pending',
+          `tactical_job_id` varchar(200) DEFAULT NULL,
+          `output` longtext DEFAULT NULL,
+          `error_message` text DEFAULT NULL,
+          `started_at` datetime DEFAULT current_timestamp(),
+          `finished_at` datetime DEFAULT NULL,
+          PRIMARY KEY (`id`),
+          KEY `asset_id` (`asset_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `rmm_remote_sessions` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `asset_id` int(11) NOT NULL,
+          `client_id` int(11) DEFAULT NULL,
+          `user_id` int(11) NOT NULL,
+          `connection_type` varchar(50) DEFAULT NULL,
+          `connection_url` varchar(1000) DEFAULT NULL,
+          `source_ip` varchar(100) DEFAULT NULL,
+          `user_agent` varchar(300) DEFAULT NULL,
+          `created_at` datetime DEFAULT current_timestamp(),
+          PRIMARY KEY (`id`),
+          KEY `asset_id` (`asset_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.0'");
+    }

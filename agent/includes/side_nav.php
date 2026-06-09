@@ -179,6 +179,41 @@
                     </li>
                 <?php } ?>
 
+                <?php if ($config_module_enable_rmm && lookupUserPermission("module_rmm") >= 1) { ?>
+                <li class="nav-header mt-3">RMM</li>
+                <li class="nav-item">
+                    <a href="/agent/rmm_dashboard.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_dashboard.php') { echo 'active'; } ?>">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <p>RMM Dashboard</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/agent/rmm_assets.php" class="nav-link <?php if (in_array(basename($_SERVER['PHP_SELF']), ['rmm_assets.php','rmm_asset.php'])) { echo 'active'; } ?>">
+                        <i class="nav-icon fas fa-desktop"></i>
+                        <p>
+                            Assets
+                            <?php
+                            $num_rmm_alerts = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) as c FROM rmm_alerts WHERE status='new'"))['c'] ?? 0);
+                            if ($num_rmm_alerts) { ?>
+                                <span class="right badge badge-danger" data-toggle="tooltip" title="Open RMM Alerts"><?php echo $num_rmm_alerts; ?></span>
+                            <?php } ?>
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/agent/rmm_alerts.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_alerts.php') { echo 'active'; } ?>">
+                        <i class="nav-icon fas fa-bell"></i>
+                        <p>Alerts</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/agent/rmm_scripts.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_scripts.php') { echo 'active'; } ?>">
+                        <i class="nav-icon fas fa-code"></i>
+                        <p>Scripts</p>
+                    </a>
+                </li>
+                <?php } ?>
+
                 <?php if (lookupUserPermission("module_client") >= 1) { ?>
                 <li class="nav-item mt-3">
                     <a href="/agent/contacts.php" class="nav-link">
