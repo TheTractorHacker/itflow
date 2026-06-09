@@ -110,6 +110,15 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
         <i class="fas fa-bell mr-1"></i>Alerts<?php if ($alert_counts['new_cnt'] > 0): ?> <span class="badge badge-light"><?= intval($alert_counts['new_cnt']) ?></span><?php endif; ?>
     </a>
     <?php if (lookupUserPermission('module_rmm_sync') >= 1 && $default_intg): ?>
+    <?php if (count($integrations) > 1): ?>
+    <select id="syncIntegrationId" class="form-control form-control-sm d-inline-block w-auto mr-2">
+        <?php foreach ($integrations as $i): ?>
+        <option value="<?= intval($i['id']) ?>" <?= $i['id'] == $default_intg ? 'selected' : '' ?>>
+            <?= nullable_htmlentities($i['name']) ?>
+        </option>
+        <?php endforeach; ?>
+    </select>
+    <?php endif; ?>
     <button class="btn btn-success btn-sm" onclick="quickSync()">
         <i class="fas fa-sync mr-1"></i>Sync Now
     </button>
@@ -435,13 +444,15 @@ const CSRF = '<?= $_SESSION['csrf_token'] ?>';
 function quickSync() {
     const bar = document.getElementById('syncBar');
     const txt = document.getElementById('syncBarText');
+    const select = document.getElementById('syncIntegrationId');
+    const integrationId = select ? select.value : <?= intval($default_intg) ?>;
     bar.classList.remove('d-none');
     bar.className = bar.className.replace(/alert-\w+/g, 'alert') + ' alert-info';
-    txt.textContent = 'Syncing assets from Tactical RMM...';
+    txt.textContent = 'Syncing assets...';
     fetch('/agent/post/rmm_sync.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'csrf_token=' + CSRF + '&action=sync&integration_id=<?= intval($default_intg) ?>'
+        body: 'csrf_token=' + CSRF + '&action=sync&integration_id=' + integrationId
     })
     .then(r => r.json())
     .then(d => {

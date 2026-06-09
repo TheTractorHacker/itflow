@@ -1565,7 +1565,8 @@ const _rmmTabLoaded = {};
 function loadRmmLiveData(type, linkId) {
     if (_rmmTabLoaded[type]) return;
     _rmmTabLoaded[type] = true;
-    const pane    = document.getElementById('rdt-' + type);
+    const paneId  = type === 'wmi' ? 'rdt-hardware' : 'rdt-' + type;
+    const pane    = document.getElementById(paneId);
     const loading = pane.querySelector('.rdt-loading');
     const dataDiv = pane.querySelector('.rdt-data');
     const tbody   = pane.querySelector('.rdt-body');
