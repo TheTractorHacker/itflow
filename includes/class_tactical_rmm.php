@@ -71,13 +71,9 @@ class TacticalRmmClient {
     }
 
     public function testConnection(): bool {
-        try {
-            // A simple GET on /agents/ that returns an array — non-empty means connected
-            $result = $this->get('/agents/');
-            return is_array($result);
-        } catch (RuntimeException $e) {
-            return false;
-        }
+        // Let exceptions propagate — callers handle error reporting
+        $result = $this->get('/agents/');
+        return is_array($result);
     }
 
     public function getAgents(): array {
