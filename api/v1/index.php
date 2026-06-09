@@ -39,6 +39,13 @@ $resource = $segments[0] ?? '';
 $id       = isset($segments[1]) && is_numeric($segments[1]) ? intval($segments[1]) : null;
 $sub      = $id !== null ? ($segments[2] ?? null) : ($segments[1] ?? null);
 
+// Normalize legacy-style URLs (e.g. /clients/read.php → resource=clients, sub=null)
+$resource = preg_replace('/\.php$/', '', $resource);
+if (is_string($sub)) {
+    $sub = preg_replace('/\.php$/', '', $sub);
+    if ($sub === 'read' || $sub === '') $sub = null;
+}
+
 // Public endpoint: auth
 if ($resource === 'auth') {
     require __DIR__ . '/auth.php';
@@ -85,6 +92,27 @@ if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {
     }
 }
 
+// Legacy ?api_key= fallback for backward compatibility with old API clients
+if (!$api_user_id && isset($_GET['api_key'])) {
+    $legacy_key = mysqli_real_escape_string($mysqli, $_GET['api_key']);
+    $legacy_sql = mysqli_query($mysqli,
+        "SELECT * FROM api_keys WHERE api_key_secret = '$legacy_key' AND api_key_expire > NOW() LIMIT 1"
+    );
+    if (mysqli_num_rows($legacy_sql) === 1) {
+        $admin = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT user_id, user_name FROM users
+             WHERE user_type = 1 AND user_status = 1 AND user_archived_at IS NULL
+             ORDER BY user_id LIMIT 1"
+        ));
+        if ($admin) {
+            $api_user_id        = intval($admin['user_id']);
+            $session_user_id    = $api_user_id;
+            $session_name       = $admin['user_name'];
+            $session_company_id = 1;
+        }
+    }
+}
+
 if (!$api_user_id) {
     api_error(401, 'Unauthorized');
 }
@@ -127,5 +155,6 @@ switch ($resource) {
     case 'me':          require __DIR__ . '/me.php';       break;
     case 'appointments': require __DIR__ . '/appointments.php'; break;
     case 'notifications': require __DIR__ . '/notifications.php'; break;
+    case 'validate_api_key': api_response(200, ['success' => 'True', 'message' => 'API key is valid']); break;
     default:              api_error(404, 'Not found');
 }
