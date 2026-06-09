@@ -143,6 +143,39 @@ class TacticalRmmClient {
         ]);
     }
 
+
+    // -----------------------------------------------------------------------
+    // Check management
+    // -----------------------------------------------------------------------
+
+    public function getAgentChecks(string $agent_id): array {
+        try {
+            return $this->get('/agents/' . urlencode($agent_id) . '/checks/');
+        } catch (RuntimeException $e) {
+            return [];
+        }
+    }
+
+    public function createCheck(string $agent_id, array $payload): array {
+        return $this->post('/agents/' . urlencode($agent_id) . '/checks/', $payload);
+    }
+
+    public function deleteCheck(int $check_id): bool {
+        $url = $this->base_url . '/checks/' . $check_id . '/';
+        $ch  = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_CUSTOMREQUEST  => 'DELETE',
+            CURLOPT_HTTPHEADER     => ['X-API-KEY: ' . $this->api_key, 'Content-Type: application/json'],
+        ]);
+        curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return $status >= 200 && $status < 300;
+    }
+
     public function buildDeviceUrl(string $agent_id): string {
         // Returns the Tactical RMM dashboard URL (web_url) — browser-accessible, not the API endpoint
         return $this->web_url ?: $this->base_url;

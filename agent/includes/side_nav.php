@@ -212,6 +212,12 @@
                         <p>Scripts</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/agent/rmm_checks.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_checks.php') { echo 'active'; } ?>">
+                        <i class="nav-icon fas fa-heartbeat"></i>
+                        <p>Check Policies</p>
+                    </a>
+                </li>
                 <?php } ?>
 
                 <?php if (lookupUserPermission("module_client") >= 1) { ?>
