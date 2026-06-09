@@ -58,3 +58,10 @@
     position: static;
     margin: 0;
 }
+
+/* Form controls inside dark cards inherit white text — force readable colors */
+.card-dark .form-control,
+.card-dark .custom-select {
+    color: #495057;
+    background-color: #fff;
+}
