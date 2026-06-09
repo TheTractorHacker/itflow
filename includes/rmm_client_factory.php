@@ -5,6 +5,7 @@
  * Currently supports:
  *   tactical_rmm  → TacticalRmmClient
  *   level         → LevelRmmClient
+ *   action1       → Action1RmmClient
  *
  * Callers require this file; they don't need to know which class to use.
  */
@@ -22,6 +23,9 @@ function getRmmClient(int $integration_id): object {
         case 'level':
             require_once __DIR__ . '/class_level_rmm.php';
             return new LevelRmmClient($id);
+        case 'action1':
+            require_once __DIR__ . '/class_action1_rmm.php';
+            return new Action1RmmClient($id);
         case 'tactical_rmm':
         default:
             require_once __DIR__ . '/class_tactical_rmm.php';

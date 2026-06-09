@@ -87,24 +87,37 @@ class TacticalRmmClient {
     }
 
     public function getAgentWmi(string $agent_id): array {
+        // Tactical RMM has no GET /agents/{id}/wmi/ endpoint — hardware
+        // details are embedded in the agent detail response.
         try {
-            return $this->get('/agents/' . urlencode($agent_id) . '/wmi/');
+            $agent = $this->getAgent($agent_id);
         } catch (RuntimeException $e) {
             return [];
         }
+        return [
+            'make_model'     => $agent['make_model'] ?? '',
+            'cpu_model'      => $agent['cpu_model'] ?? [],
+            'total_ram'      => $agent['total_ram'] ?? null,
+            'disks'          => $agent['disks'] ?? [],
+            'physical_disks' => $agent['physical_disks'] ?? [],
+            'graphics'       => $agent['graphics'] ?? '',
+            'local_ips'      => $agent['local_ips'] ?? '',
+            'wmi_detail'     => $agent['wmi_detail'] ?? [],
+        ];
     }
 
     public function getAgentSoftware(string $agent_id): array {
         try {
-            return $this->get('/agents/' . urlencode($agent_id) . '/software/');
+            $result = $this->get('/software/' . urlencode($agent_id) . '/');
         } catch (RuntimeException $e) {
             return [];
         }
+        return $result['software'] ?? [];
     }
 
     public function getAgentServices(string $agent_id): array {
         try {
-            return $this->get('/agents/' . urlencode($agent_id) . '/runningservices/');
+            return $this->get('/services/' . urlencode($agent_id) . '/');
         } catch (RuntimeException $e) {
             return [];
         }
@@ -177,8 +190,9 @@ class TacticalRmmClient {
     }
 
     public function buildDeviceUrl(string $agent_id): string {
-        // Returns the Tactical RMM dashboard URL (web_url) — browser-accessible, not the API endpoint
-        return $this->web_url ?: $this->base_url;
+        // Tactical RMM frontend route to a specific agent's detail page
+        $base = $this->web_url ?: $this->base_url;
+        return $base . '/#/agents/' . urlencode($agent_id);
     }
 
     public function buildMeshUrl(string $mesh_node_id): string {

@@ -66,7 +66,7 @@ if ($action === 'sync') {
 
     try {
         $client  = getRmmClient($integration_id);
-        $mapper  = new RmmAssetMapper($mysqli, $integration_id, $session_user_id);
+        $mapper  = new RmmAssetMapper($mysqli, $integration_id, $session_user_id, $client);
         $log_id  = $mapper->startSyncLog();
 
         $agents = $client->getAgents();

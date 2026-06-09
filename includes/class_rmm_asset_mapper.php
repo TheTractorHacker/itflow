@@ -14,11 +14,13 @@ class RmmAssetMapper {
     private $mysqli;
     private int $integration_id;
     private int $triggered_by;
+    private $rmmClient;
 
-    public function __construct($mysqli, int $integration_id, int $triggered_by = 0) {
+    public function __construct($mysqli, int $integration_id, int $triggered_by = 0, $rmmClient = null) {
         $this->mysqli         = $mysqli;
         $this->integration_id = $integration_id;
         $this->triggered_by   = $triggered_by;
+        $this->rmmClient      = $rmmClient;
     }
 
     public function syncAgents(array $agents): array {
@@ -86,6 +88,7 @@ class RmmAssetMapper {
         if ($existing) {
             $this->updateLink($existing['id'], $status, $last_seen_val, $os_name, $os_version,
                 $manufacturer, $model, $cpu, $ram_gb, $logged_user, $mesh_node_id, $raw_json);
+            $this->syncInterfaces(intval($existing['asset_id']), $this->resolveWmiDetail($agent, $agent_id));
             return 'updated';
         }
 
@@ -172,6 +175,8 @@ class RmmAssetMapper {
              raw_data_json='$raw_json'"
         );
 
+        $this->syncInterfaces($asset_id, $this->resolveWmiDetail($agent, $agent_id));
+
         return $outcome;
     }
 
@@ -196,6 +201,101 @@ class RmmAssetMapper {
              raw_data_json='$raw_json'
              WHERE id=$link_id"
         );
+    }
+
+    private function resolveWmiDetail(array $agent, string $agent_id): array {
+        if (!empty($agent['wmi_detail'])) {
+            return $agent['wmi_detail'];
+        }
+        // The /agents/ list endpoint doesn't include wmi_detail — fetch agent detail
+        if ($this->rmmClient) {
+            try {
+                $detail = $this->rmmClient->getAgentWmi($agent_id);
+                return $detail['wmi_detail'] ?? [];
+            } catch (\Throwable $e) {
+                return [];
+            }
+        }
+        return [];
+    }
+
+    private function syncInterfaces(int $asset_id, array $wmiDetail): void {
+        $m = $this->mysqli;
+        $netConfig = $wmiDetail['network_config'] ?? [];
+
+        foreach ($netConfig as $entry) {
+            // WMI returns each adapter wrapped in its own single-element array
+            $nic = (is_array($entry) && isset($entry[0]) && is_array($entry[0])) ? $entry[0] : $entry;
+            if (!is_array($nic)) continue;
+
+            $ips = $nic['IPAddress'] ?? null;
+            if (empty($ips)) continue; // skip adapters with no configured IP
+
+            $caption = (string) ($nic['Description'] ?? $nic['Caption'] ?? '');
+            $mac     = strtolower(str_replace('-', ':', (string) ($nic['MACAddress'] ?? '')));
+
+            if (str_contains(strtolower($caption), 'bluetooth')) continue;
+
+            if (preg_match('/wi-?fi|wireless/i', $caption)) {
+                $type = 'WiFi';
+            } elseif (preg_match('/vmware|hyper-v|virtual|tap-windows|tunnel|wintun|miniport|kernel debug|ras async|loopback/i', $caption)) {
+                $type = 'Virtual';
+            } else {
+                $type = 'Ethernet';
+            }
+
+            $ipv4 = ''; $ipv6 = '';
+            foreach ((array) $ips as $ip) {
+                if (str_contains((string) $ip, ':')) {
+                    if (!$ipv6) $ipv6 = $ip;
+                } else {
+                    if (!$ipv4) $ipv4 = $ip;
+                }
+            }
+
+            $name = preg_replace('/^\[\d+\]\s*/', '', $caption);
+            $name = mysqli_real_escape_string($m, substr($name, 0, 200));
+            $type_esc = mysqli_real_escape_string($m, $type);
+            $mac_esc  = mysqli_real_escape_string($m, $mac);
+            $ipv4_esc = mysqli_real_escape_string($m, $ipv4);
+            $ipv6_esc = mysqli_real_escape_string($m, $ipv6);
+
+            $existing = null;
+            if ($mac) {
+                $existing = mysqli_fetch_assoc(mysqli_query($m,
+                    "SELECT interface_id FROM asset_interfaces
+                     WHERE interface_asset_id=$asset_id AND LOWER(interface_mac)='$mac_esc' LIMIT 1"
+                ));
+            }
+            if (!$existing) {
+                $existing = mysqli_fetch_assoc(mysqli_query($m,
+                    "SELECT interface_id FROM asset_interfaces
+                     WHERE interface_asset_id=$asset_id AND interface_name='$name' AND interface_archived_at IS NULL LIMIT 1"
+                ));
+            }
+
+            if ($existing) {
+                mysqli_query($m,
+                    "UPDATE asset_interfaces SET
+                     interface_type='$type_esc',
+                     interface_mac='$mac_esc',
+                     interface_ip='$ipv4_esc',
+                     interface_ipv6='$ipv6_esc'
+                     WHERE interface_id={$existing['interface_id']}"
+                );
+            } else {
+                mysqli_query($m,
+                    "INSERT INTO asset_interfaces SET
+                     interface_asset_id=$asset_id,
+                     interface_name='$name',
+                     interface_type='$type_esc',
+                     interface_mac='$mac_esc',
+                     interface_ip='$ipv4_esc',
+                     interface_ipv6='$ipv6_esc',
+                     interface_primary=0"
+                );
+            }
+        }
     }
 
     private function extractMacs(array $agent): array {

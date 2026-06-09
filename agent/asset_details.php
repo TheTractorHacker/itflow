@@ -519,6 +519,12 @@ if (isset($_GET['asset_id'])) {
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link small" data-toggle="tab" href="#rdt-hardware"
+                                   onclick="loadRmmLiveData('wmi',<?= intval($rmm_link['id']) ?>)">
+                                    <i class="fas fa-microchip mr-1"></i>Hardware
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link small" data-toggle="tab" href="#rdt-software"
                                    onclick="loadRmmLiveData('software',<?= intval($rmm_link['id']) ?>)">
                                     <i class="fas fa-cube mr-1"></i>Software
@@ -570,6 +576,35 @@ if (isset($_GET['asset_id'])) {
                                         echo "<tr><td class='text-muted pr-3'>Status</td><td><span class='badge {$rmm_badge}'>".ucfirst($rmm_link['rmm_status'])."</span></td></tr>";
                                         $rdt('Agent ID', '<code class="small">'.nullable_htmlentities($rmm_link['tactical_agent_id']).'</code>');
                                         ?>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane p-3" id="rdt-hardware">
+                            <div class="text-center p-4 text-muted rdt-loading"><i class="fas fa-spinner fa-spin mr-2"></i>Loading from Tactical RMM...</div>
+                            <div class="rdt-data" style="display:none">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <table class="table table-sm table-borderless mb-0">
+                                            <tr><td class="text-muted pr-3" style="width:40%">Make / Model</td><td class="hw-make-model"></td></tr>
+                                            <tr><td class="text-muted pr-3">CPU</td><td class="hw-cpu"></td></tr>
+                                            <tr><td class="text-muted pr-3">RAM</td><td class="hw-ram"></td></tr>
+                                            <tr><td class="text-muted pr-3">Graphics</td><td class="hw-graphics"></td></tr>
+                                            <tr><td class="text-muted pr-3">Local IPs</td><td class="hw-local-ips"></td></tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted small mb-2" style="text-transform:uppercase;letter-spacing:.4px">Physical Disks</h6>
+                                        <ul class="hw-physical-disks small mb-0 pl-3"></ul>
+                                    </div>
+                                </div>
+                                <h6 class="text-muted small mb-2" style="text-transform:uppercase;letter-spacing:.4px">Disk Volumes</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+                                            <tr><th class="pl-3">Drive</th><th>Filesystem</th><th>Used</th><th>Free</th><th>Total</th><th>Usage</th></tr>
+                                        </thead>
+                                        <tbody class="rdt-body"></tbody>
                                     </table>
                                 </div>
                             </div>
@@ -1557,6 +1592,25 @@ function loadRmmLiveData(type, linkId) {
                 '<td><span class="badge ' + (String(s.status).toLowerCase()==='running'?'badge-success':'badge-secondary') + '">' + esc(s.status || '') + '</span></td>' +
                 '<td class="text-muted small">' + esc(s.start_type || '') + '</td></tr>'
             ).join('') : '<tr><td colspan="3" class="text-muted p-3 text-center">No service data</td></tr>';
+        } else if (type === 'wmi') {
+            const hw = d.data || {};
+            pane.querySelector('.hw-make-model').textContent = hw.make_model || '-';
+            pane.querySelector('.hw-cpu').textContent = Array.isArray(hw.cpu_model) ? hw.cpu_model.join(', ') : (hw.cpu_model || '-');
+            pane.querySelector('.hw-ram').textContent = hw.total_ram ? hw.total_ram + ' GB' : '-';
+            pane.querySelector('.hw-graphics').textContent = hw.graphics || '-';
+            pane.querySelector('.hw-local-ips').textContent = hw.local_ips || '-';
+            const pdList = pane.querySelector('.hw-physical-disks');
+            pdList.innerHTML = (hw.physical_disks || []).length
+                ? hw.physical_disks.map(pd => '<li>' + esc(pd) + '</li>').join('')
+                : '<li class="text-muted">No data</li>';
+            tbody.innerHTML = (hw.disks || []).length ? hw.disks.map(disk =>
+                '<tr><td class="pl-3">' + esc(disk.device || '') + '</td>' +
+                '<td class="text-muted small">' + esc(disk.fstype || '') + '</td>' +
+                '<td class="text-muted small">' + esc(disk.used || '') + '</td>' +
+                '<td class="text-muted small">' + esc(disk.free || '') + '</td>' +
+                '<td class="text-muted small">' + esc(disk.total || '') + '</td>' +
+                '<td class="small">' + esc(String(disk.percent ?? '')) + '%</td></tr>'
+            ).join('') : '<tr><td colspan="6" class="text-muted p-3 text-center">No disk data</td></tr>';
         }
         dataDiv.style.display = 'block';
     }).catch(() => { loading.innerHTML = '<p class="text-danger p-3">Failed to connect to Tactical RMM</p>'; });

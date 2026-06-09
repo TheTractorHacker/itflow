@@ -16,11 +16,12 @@ if (isset($_POST['save_rmm_integration'])) {
     validateCSRFToken($_POST['csrf_token']);
     $integration_id = intval($_POST['integration_id'] ?? 0);
     $name    = mysqli_real_escape_string($mysqli, sanitizeInput($_POST['integration_name']));
-    $type    = in_array($_POST['integration_type'] ?? '', ['tactical_rmm','level']) ? $_POST['integration_type'] : 'tactical_rmm';
+    $type    = in_array($_POST['integration_type'] ?? '', ['tactical_rmm','level','action1']) ? $_POST['integration_type'] : 'tactical_rmm';
     $type    = mysqli_real_escape_string($mysqli, $type);
     $api_url = mysqli_real_escape_string($mysqli, rtrim(sanitizeInput($_POST['integration_api_url']), '/'));
     $web_url = mysqli_real_escape_string($mysqli, rtrim(sanitizeInput($_POST['integration_web_url'] ?? ''), '/'));
     $api_key = trim($_POST['integration_api_key'] ?? '');
+    $client_secret = trim($_POST['integration_client_secret'] ?? '');
     $enabled = isset($_POST['integration_enabled']) ? 1 : 0;
 
     // Validate URL is HTTPS
@@ -32,7 +33,22 @@ if (isset($_POST['save_rmm_integration'])) {
 
     if ($integration_id > 0) {
         $set = "name='$name', type='$type', api_url='$api_url', web_url='$web_url', enabled=$enabled";
-        if (!empty($api_key)) {
+        if ($type === 'action1') {
+            if (!empty($api_key) || !empty($client_secret)) {
+                $existing = ['client_id' => '', 'client_secret' => ''];
+                $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT api_key_enc FROM rmm_integrations WHERE id=$integration_id"));
+                if ($row) {
+                    $decoded = json_decode(decryptSetting($row['api_key_enc'] ?? ''), true);
+                    if (is_array($decoded)) { $existing = array_merge($existing, $decoded); }
+                }
+                $creds = [
+                    'client_id'     => $api_key !== '' ? $api_key : $existing['client_id'],
+                    'client_secret' => $client_secret !== '' ? $client_secret : $existing['client_secret'],
+                ];
+                $enc = mysqli_real_escape_string($mysqli, encryptSetting(json_encode($creds)));
+                $set .= ", api_key_enc='$enc'";
+            }
+        } elseif (!empty($api_key)) {
             $enc = mysqli_real_escape_string($mysqli, encryptSetting($api_key));
             $set .= ", api_key_enc='$enc'";
         }
@@ -40,11 +56,22 @@ if (isset($_POST['save_rmm_integration'])) {
         logAction('RMM Settings', 'Edit', "$session_name updated RMM integration $name");
         flash_alert('Integration updated');
     } else {
-        if (empty($api_key)) {
-            flash_alert('API key is required for new integrations', 'warning');
-            redirect();
+        if ($type === 'action1') {
+            if (empty($api_key) || empty($client_secret)) {
+                flash_alert('Client ID and Client Secret are required for new Action1 integrations', 'warning');
+                redirect();
+            }
+            $enc = mysqli_real_escape_string($mysqli, encryptSetting(json_encode([
+                'client_id'     => $api_key,
+                'client_secret' => $client_secret,
+            ])));
+        } else {
+            if (empty($api_key)) {
+                flash_alert('API key is required for new integrations', 'warning');
+                redirect();
+            }
+            $enc = mysqli_real_escape_string($mysqli, encryptSetting($api_key));
         }
-        $enc = mysqli_real_escape_string($mysqli, encryptSetting($api_key));
         mysqli_query($mysqli, "INSERT INTO rmm_integrations SET name='$name', type='$type', api_url='$api_url', web_url='$web_url', api_key_enc='$enc', enabled=$enabled, created_by=$session_user_id");
         $new_id = intval(mysqli_insert_id($mysqli));
         if (!$config_rmm_default_integration_id) {

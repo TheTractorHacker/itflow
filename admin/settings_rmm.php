@@ -70,8 +70,8 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                 $last_sync_row = mysqli_fetch_assoc(mysqli_query($mysqli,
                     "SELECT MAX(finished_at) as ls, status FROM rmm_sync_log WHERE integration_id=$intg_id ORDER BY id DESC LIMIT 1"
                 ));
-                $provider_label = ['tactical_rmm' => 'Tactical RMM', 'level' => 'Level.io'][$intg_type] ?? $intg_type;
-                $provider_color = ['tactical_rmm' => 'info', 'level' => 'primary'][$intg_type] ?? 'secondary';
+                $provider_label = ['tactical_rmm' => 'Tactical RMM', 'level' => 'Level.io', 'action1' => 'Action1'][$intg_type] ?? $intg_type;
+                $provider_color = ['tactical_rmm' => 'info', 'level' => 'primary', 'action1' => 'warning'][$intg_type] ?? 'secondary';
             ?>
             <tr>
                 <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
@@ -154,7 +154,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                 <td class="pl-3">
                     <?= nullable_htmlentities($lr['integration_name']) ?>
                     <?php $tp = $lr['integration_type'] ?? ''; if ($tp): ?>
-                    <span class="badge badge-secondary ml-1" style="font-size:10px"><?= $tp === 'level' ? 'Level.io' : 'Tactical' ?></span>
+                    <span class="badge badge-secondary ml-1" style="font-size:10px"><?= ['level' => 'Level.io', 'action1' => 'Action1'][$tp] ?? 'Tactical' ?></span>
                     <?php endif; ?>
                 </td>
                 <td class="text-muted small"><?= nullable_htmlentities($lr['started_at']) ?></td>
@@ -194,14 +194,19 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                             <input type="radio" class="btn-check" name="integration_type" id="type_tactical"
                                    value="tactical_rmm" checked onchange="updateModalLabels('tactical_rmm')">
                             <label class="btn btn-outline-info flex-fill" for="type_tactical" id="lbl_tactical"
-                                   style="border-radius:4px 0 0 4px">
+                                   style="border-radius:4px 0 0 0">
                                 <i class="fas fa-server mr-1"></i>Tactical RMM
                             </label>
                             <input type="radio" class="btn-check" name="integration_type" id="type_level"
                                    value="level" onchange="updateModalLabels('level')">
-                            <label class="btn btn-outline-primary flex-fill" for="type_level" id="lbl_level"
-                                   style="border-radius:0 4px 4px 0">
+                            <label class="btn btn-outline-primary flex-fill" for="type_level" id="lbl_level">
                                 <i class="fas fa-layer-group mr-1"></i>Level.io
+                            </label>
+                            <input type="radio" class="btn-check" name="integration_type" id="type_action1"
+                                   value="action1" onchange="updateModalLabels('action1')">
+                            <label class="btn btn-outline-warning flex-fill" for="type_action1" id="lbl_action1"
+                                   style="border-radius:0 4px 4px 0">
+                                <i class="fas fa-shield-alt mr-1"></i>Action1
                             </label>
                         </div>
                     </div>
@@ -231,11 +236,20 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                     </div>
 
                     <div class="form-group">
-                        <label class="text-muted small">API Key</label>
+                        <label class="text-muted small" id="label_api_key">API Key</label>
                         <input type="password" class="form-control form-control-sm" name="integration_api_key" id="integration_api_key"
                                autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
                         <small class="text-muted" id="help_api_key">
                             Stored encrypted. Generate in Tactical RMM → Settings → Global Settings → API Keys.
+                        </small>
+                    </div>
+
+                    <div class="form-group" id="client_secret_group" style="display:none">
+                        <label class="text-muted small">Client Secret</label>
+                        <input type="password" class="form-control form-control-sm" name="integration_client_secret" id="integration_client_secret"
+                               autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
+                        <small class="text-muted">
+                            Stored encrypted. Generate in Action1 → Automation → API → Add API Credential.
                         </small>
                     </div>
 
@@ -280,6 +294,16 @@ const TYPE_HINTS = {
         help_web_url:        'Your Level.io organization slug (leave blank if unsure — device URLs will still work).',
         help_api_key:        'Generate in Level.io → Settings → API Keys.',
     },
+    action1: {
+        placeholder_name:    'e.g. Action1 RMM',
+        placeholder_api_url: 'https://app.action1.com/api/3.0',
+        help_api_url:        'Action1 API base URL. e.g. <code>https://app.action1.com/api/3.0</code>',
+        label_web_url:       'Dashboard URL',
+        placeholder_web_url: 'https://app.action1.com',
+        help_web_url:        'Browser dashboard URL (used for Connect button). e.g. <code>https://app.action1.com</code>',
+        label_api_key:       'Client ID',
+        help_api_key:        'Generate in Action1 → Automation → API → Add API Credential.',
+    },
 };
 
 function updateModalLabels(type) {
@@ -290,17 +314,24 @@ function updateModalLabels(type) {
     document.getElementById('label_web_url').textContent       = h.label_web_url;
     document.getElementById('integration_web_url').placeholder = h.placeholder_web_url;
     document.getElementById('help_web_url').innerHTML          = h.help_web_url;
-    document.getElementById('help_api_key').textContent        = h.help_api_key;
+    document.getElementById('label_api_key').textContent       = h.label_api_key || 'API Key';
+    document.getElementById('help_api_key').innerHTML          = h.help_api_key;
 
     // Highlight the selected type button
     document.getElementById('lbl_tactical').className = type === 'tactical_rmm'
         ? 'btn btn-info flex-fill' : 'btn btn-outline-info flex-fill';
     document.getElementById('lbl_level').className = type === 'level'
         ? 'btn btn-primary flex-fill' : 'btn btn-outline-primary flex-fill';
+    document.getElementById('lbl_action1').className = type === 'action1'
+        ? 'btn btn-warning flex-fill' : 'btn btn-outline-warning flex-fill';
 
     // Fix border-radius back (gets clobbered by bootstrap button-group)
-    document.getElementById('lbl_tactical').style.borderRadius = '4px 0 0 4px';
-    document.getElementById('lbl_level').style.borderRadius    = '0 4px 4px 0';
+    document.getElementById('lbl_tactical').style.borderRadius = '4px 0 0 0';
+    document.getElementById('lbl_level').style.borderRadius    = '0';
+    document.getElementById('lbl_action1').style.borderRadius  = '0 4px 4px 0';
+
+    // Client Secret field only applies to Action1 (OAuth2 client credentials)
+    document.getElementById('client_secret_group').style.display = type === 'action1' ? '' : 'none';
 }
 
 function resetModal() {
@@ -310,6 +341,8 @@ function resetModal() {
     document.getElementById('integration_api_url').value = '';
     document.getElementById('integration_web_url').value = '';
     document.getElementById('integration_api_key').value = '';
+    document.getElementById('integration_client_secret').value = '';
+    document.getElementById('integration_api_key').placeholder = '(leave blank to keep existing when editing)';
     document.getElementById('integration_enabled').checked = true;
     document.getElementById('type_tactical').checked = true;
     document.getElementById('test_result').innerHTML = '';
@@ -323,12 +356,15 @@ function editIntegration(data) {
     document.getElementById('integration_api_url').value    = data.api_url;
     document.getElementById('integration_web_url').value    = data.web_url || '';
     document.getElementById('integration_api_key').value    = '';
+    document.getElementById('integration_client_secret').value = '';
     document.getElementById('integration_enabled').checked  = data.enabled == 1;
     document.getElementById('integration_api_key').placeholder = '(leave blank to keep existing)';
+    document.getElementById('integration_client_secret').placeholder = '(leave blank to keep existing)';
     document.getElementById('test_result').innerHTML = '';
 
     // Set type radio
-    const typeRadio = document.getElementById(data.type === 'level' ? 'type_level' : 'type_tactical');
+    const typeIds = {level: 'type_level', action1: 'type_action1', tactical_rmm: 'type_tactical'};
+    const typeRadio = document.getElementById(typeIds[data.type] || 'type_tactical');
     if (typeRadio) typeRadio.checked = true;
     updateModalLabels(data.type || 'tactical_rmm');
 
