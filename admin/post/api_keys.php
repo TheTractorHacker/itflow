@@ -13,7 +13,8 @@ if (isset($_POST['add_api_key'])) {
     $name = sanitizeInput($_POST['name']);
     $expire = sanitizeInput($_POST['expire']);
     $client_id = intval($_POST['client']);
-    $secret = sanitizeInput($_POST['key']); // API Key
+    $secret_raw = trim($_POST['key']); // API Key (plaintext - used transiently then hashed)
+    $secret = hash('sha256', $secret_raw); // Store only the hash
 
     // Credential decryption password
     $password = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);

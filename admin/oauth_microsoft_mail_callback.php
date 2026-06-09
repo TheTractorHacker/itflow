@@ -85,8 +85,8 @@ $refresh_token = (string) $json['refresh_token'];
 $access_token = (string) $json['access_token'];
 $expires_at = date('Y-m-d H:i:s', time() + (int)($json['expires_in'] ?? 3600));
 
-$refresh_token_esc = mysqli_real_escape_string($mysqli, $refresh_token);
-$access_token_esc = mysqli_real_escape_string($mysqli, $access_token);
+$refresh_token_esc = mysqli_real_escape_string($mysqli, encryptSetting($refresh_token));
+$access_token_esc = mysqli_real_escape_string($mysqli, encryptSetting($access_token));
 $expires_at_esc = mysqli_real_escape_string($mysqli, $expires_at);
 
 mysqli_query($mysqli, "UPDATE settings SET

@@ -6,7 +6,7 @@ if (isset($_POST['save_outlook_cal_settings'])) {
 
     $tenant_id     = sanitizeInput($_POST['outlook_cal_tenant_id']);
     $client_id     = sanitizeInput($_POST['outlook_cal_client_id']);
-    $client_secret = sanitizeInput($_POST['outlook_cal_client_secret']);
+    $client_secret = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['outlook_cal_client_secret'] ?? '')));
 
     if ($client_secret) {
         mysqli_query($mysqli, "UPDATE settings SET

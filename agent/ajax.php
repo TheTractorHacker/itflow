@@ -205,11 +205,19 @@ if (isset($_GET['share_generate_link'])) {
         $iv = randomString();
         $password_ciphertext = openssl_encrypt($credential_password_cleartext, 'aes-128-cbc', $credential_encryption_key, 0, $iv);
         $item_encrypted_credential = $iv . $password_ciphertext;
+
+        $otp_plain = decryptOtpSecret($row['credential_otp_secret'] ?? '');
+        $item_encrypted_otp = '';
+        if (!empty($otp_plain)) {
+            $iv_otp = randomString();
+            $otp_ct = openssl_encrypt($otp_plain, 'aes-128-cbc', $credential_encryption_key, 0, $iv_otp);
+            $item_encrypted_otp = $iv_otp . $otp_ct;
+        }
     }
 
     // Insert entry into DB
     $expire_sql = $item_expires ? "NOW() + INTERVAL $item_expires" : "NULL";
-    $sql = mysqli_query($mysqli, "INSERT INTO shared_items SET item_active = 1, item_key = '$item_key', item_type = '$item_type', item_related_id = $item_id, item_encrypted_username = '$item_encrypted_username', item_encrypted_credential = '$item_encrypted_credential', item_note = '$item_note', item_recipient = '$item_email', item_views = 0, item_view_limit = $item_view_limit, item_expire_at = $expire_sql, item_client_id = $client_id");
+    $sql = mysqli_query($mysqli, "INSERT INTO shared_items SET item_active = 1, item_key = '$item_key', item_type = '$item_type', item_related_id = $item_id, item_encrypted_username = '$item_encrypted_username', item_encrypted_credential = '$item_encrypted_credential', item_encrypted_otp = '$item_encrypted_otp', item_note = '$item_note', item_recipient = '$item_email', item_views = 0, item_view_limit = $item_view_limit, item_expire_at = $expire_sql, item_client_id = $client_id");
     $share_id = $mysqli->insert_id;
 
     // Return URL
@@ -394,7 +402,8 @@ if (isset($_GET['get_totp_token_via_id'])) {
 
     $sql = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT credential_name, credential_otp_secret, credential_client_id FROM credentials WHERE credential_id = $credential_id"));
     $name = sanitizeInput($sql['credential_name']);
-    $totp_secret = $sql['credential_otp_secret'];
+    $totp_secret_raw = $sql['credential_otp_secret'];
+    $totp_secret = decryptOtpSecret($totp_secret_raw);
     $client_id = intval($sql['credential_client_id']);
 
     enforceClientAccess();

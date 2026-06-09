@@ -188,10 +188,17 @@ if ($item_type == "Document") {
     $password_ciphertext = substr($row['item_encrypted_credential'], 16);
     $credential_password = nullable_htmlentities(openssl_decrypt($password_ciphertext, 'aes-128-cbc', $encryption_key, 0, $password_iv));
 
-    $credential_otp = nullable_htmlentities($credential_row['credential_otp_secret']);
+    // Read OTP from the share item (re-encrypted with the share key) rather than from the credentials table
+    $credential_otp_raw = '';
+    if (!empty($row['item_encrypted_otp'])) {
+        $otp_iv = substr($row['item_encrypted_otp'], 0, 16);
+        $otp_ct = substr($row['item_encrypted_otp'], 16);
+        $credential_otp_raw = openssl_decrypt($otp_ct, 'aes-128-cbc', $encryption_key, 0, $otp_iv) ?: '';
+    }
+    $credential_otp = nullable_htmlentities($credential_otp_raw);
 
-    $credential_otp_secret = nullable_htmlentities($credential_row['credential_otp_secret']);
-    $credential_id_with_secret = '"' . $credential_row['credential_id'] . '","' . $credential_row['credential_otp_secret'] . '"';
+    $credential_otp_secret = nullable_htmlentities($credential_otp_raw);
+    $credential_id_with_secret = '"' . $credential_row['credential_id'] . '","' . $credential_otp_raw . '"';
     if (empty($credential_otp_secret)) {
         $otp_display = "-";
     } else {

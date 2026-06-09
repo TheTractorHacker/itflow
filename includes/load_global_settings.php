@@ -9,11 +9,11 @@ DEFINE("CURRENT_DATABASE_VERSION", $row['config_current_database_version']);
 
 // Microsoft OAuth (SSO / Identity Provider)
 $config_azure_client_id = $row['config_azure_client_id'];
-$config_azure_client_secret = $row['config_azure_client_secret'];
+$config_azure_client_secret = decryptSetting($row['config_azure_client_secret'] ?? '');
 
 // Outlook Calendar Sync
 $config_outlook_cal_client_id     = $row['config_outlook_cal_client_id'] ?? '';
-$config_outlook_cal_client_secret = $row['config_outlook_cal_client_secret'] ?? '';
+$config_outlook_cal_client_secret = decryptSetting($row['config_outlook_cal_client_secret'] ?? '');
 $config_outlook_cal_tenant_id     = $row['config_outlook_cal_tenant_id'] ?? '';
 
 // Mail - SMTP
@@ -22,7 +22,7 @@ $config_smtp_host = $row['config_smtp_host'];
 $config_smtp_port = intval($row['config_smtp_port']);
 $config_smtp_encryption = $row['config_smtp_encryption'];
 $config_smtp_username = $row['config_smtp_username'];
-$config_smtp_password = $row['config_smtp_password'];
+$config_smtp_password = decryptSetting($row['config_smtp_password'] ?? '');
 $config_mail_from_email = $row['config_mail_from_email'];
 $config_mail_from_name = $row['config_mail_from_name'];
 
@@ -32,14 +32,14 @@ $config_imap_host = $row['config_imap_host'];
 $config_imap_port = intval($row['config_imap_port']);
 $config_imap_encryption = $row['config_imap_encryption'];
 $config_imap_username = $row['config_imap_username'];
-$config_imap_password = $row['config_imap_password'];
+$config_imap_password = decryptSetting($row['config_imap_password'] ?? '');
 
 // Mail OAUTH2
 $config_mail_oauth_client_id = $row['config_mail_oauth_client_id'];
-$config_mail_oauth_client_secret = $row['config_mail_oauth_client_secret'];
+$config_mail_oauth_client_secret = decryptSetting($row['config_mail_oauth_client_secret'] ?? '');
 $config_mail_oauth_tenant_id = $row['config_mail_oauth_tenant_id'];
-$config_mail_oauth_refresh_token = $row['config_mail_oauth_refresh_token'];
-$config_mail_oauth_access_token = $row['config_mail_oauth_access_token'];
+$config_mail_oauth_refresh_token = decryptSetting($row['config_mail_oauth_refresh_token'] ?? '');
+$config_mail_oauth_access_token = decryptSetting($row['config_mail_oauth_access_token'] ?? '');
 $config_mail_oauth_access_token_expires_at = $row['config_mail_oauth_access_token_expires_at'];
 
 // Defaults
@@ -126,7 +126,7 @@ $config_backup_retain_count  = max(1, intval($row['config_backup_retain_count'] 
 $config_comet_enabled      = intval($row['config_comet_enabled'] ?? 0);
 $config_comet_server_url   = $row['config_comet_server_url'] ?? 'http://10.1.0.35:8060';
 $config_comet_admin_user   = $row['config_comet_admin_user'] ?? '';
-$config_comet_admin_pass   = $row['config_comet_admin_pass'] ?? '';
+$config_comet_admin_pass   = decryptSetting($row['config_comet_admin_pass'] ?? '');
 $config_comet_auto_ticket    = intval($row['config_comet_auto_ticket'] ?? 0);
 $config_comet_totp_secret    = $row['config_comet_totp_secret'] ?? '';
 $config_comet_webhook_secret = $row['config_comet_webhook_secret'] ?? '';

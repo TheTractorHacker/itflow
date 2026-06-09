@@ -7,7 +7,7 @@ if (isset($_POST['edit_identity_provider'])) {
     validateCSRFToken($_POST['csrf_token']);
 
     $azure_client_id = sanitizeInput($_POST['azure_client_id']);
-    $azure_client_secret = sanitizeInput($_POST['azure_client_secret']);
+    $azure_client_secret = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['azure_client_secret'] ?? '')));
 
     mysqli_query($mysqli,"UPDATE settings SET config_azure_client_id = '$azure_client_id', config_azure_client_secret = '$azure_client_secret' WHERE company_id = 1");
 

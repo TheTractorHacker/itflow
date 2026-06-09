@@ -95,7 +95,8 @@ if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {
 // Legacy ?api_key= fallback for backward compatibility with old API clients
 $legacy_api_key_auth = false;
 if (!$api_user_id && isset($_GET['api_key'])) {
-    $legacy_key = mysqli_real_escape_string($mysqli, $_GET['api_key']);
+    $legacy_key_raw = $_GET['api_key'];
+    $legacy_key = mysqli_real_escape_string($mysqli, hash('sha256', $legacy_key_raw));
     $legacy_sql = mysqli_query($mysqli,
         "SELECT * FROM api_keys WHERE api_key_secret = '$legacy_key' AND api_key_expire > NOW() LIMIT 1"
     );

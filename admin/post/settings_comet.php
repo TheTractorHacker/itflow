@@ -14,7 +14,7 @@ if (isset($_POST['save_comet_settings'])) {
     $set = "config_comet_enabled=$enabled, config_comet_server_url='$url', config_comet_admin_user='$user', config_comet_auto_ticket=$auto_ticket, config_comet_webhook_secret='$webhook_secret'";
 
     if (!empty(trim($_POST['config_comet_admin_pass']))) {
-        $pass = sanitizeInput($_POST['config_comet_admin_pass']);
+        $pass = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_comet_admin_pass'])));
         $set .= ", config_comet_admin_pass='$pass'";
     }
     if (!empty(trim($_POST['config_comet_totp_secret']))) {

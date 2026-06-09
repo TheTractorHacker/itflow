@@ -553,7 +553,7 @@ ob_start();
 
                                 $credential_password = nullable_htmlentities(decryptCredentialEntry($row['credential_password']));
 
-                                $credential_otp_secret = nullable_htmlentities($row['credential_otp_secret']);
+                                $credential_otp_secret = nullable_htmlentities(decryptOtpSecret($row['credential_otp_secret'] ?? ''));
                                 if (empty($credential_otp_secret)) {
                                     $otp_display = "-";
                                 } else {

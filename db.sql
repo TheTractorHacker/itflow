@@ -2287,6 +2287,7 @@ CREATE TABLE `shared_items` (
   `item_created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `item_expire_at` datetime DEFAULT NULL,
   `item_client_id` int(11) NOT NULL,
+  `item_encrypted_otp` varchar(500) DEFAULT NULL,
   PRIMARY KEY (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

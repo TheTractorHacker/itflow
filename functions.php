@@ -541,6 +541,33 @@ function apiEncryptCredentialEntry(#[\SensitiveParameter]$credential_cleartext, 
     return $iv . $ciphertext;
 }
 
+
+// Encrypts an OTP/TOTP secret using the site master key (same as credential fields).
+// Stores an 'enc:' prefix so plaintext legacy values can be distinguished.
+function encryptOtpSecret(string $otp_plain): string {
+    if (empty($otp_plain)) return '';
+    $iv = randomString();
+    $user_encryption_session_ciphertext = $_SESSION['user_encryption_session_ciphertext'];
+    $user_encryption_session_iv = $_SESSION['user_encryption_session_iv'];
+    $user_encryption_session_key = $_COOKIE['user_encryption_session_key'];
+    $master_key = openssl_decrypt($user_encryption_session_ciphertext, 'aes-128-cbc', $user_encryption_session_key, 0, $user_encryption_session_iv);
+    $ct = openssl_encrypt($otp_plain, 'aes-128-cbc', $master_key, 0, $iv);
+    return 'enc:' . $iv . $ct;
+}
+
+// Decrypts an OTP secret. If the value does not have the 'enc:' prefix it is returned as-is
+// (backward-compatible with existing plaintext secrets).
+function decryptOtpSecret(string $otp_stored): string {
+    if (empty($otp_stored) || !str_starts_with($otp_stored, 'enc:')) return $otp_stored;
+    $payload = substr($otp_stored, 4);
+    $iv = substr($payload, 0, 16);
+    $ct = substr($payload, 16);
+    $user_encryption_session_ciphertext = $_SESSION['user_encryption_session_ciphertext'];
+    $user_encryption_session_iv = $_SESSION['user_encryption_session_iv'];
+    $user_encryption_session_key = $_COOKIE['user_encryption_session_key'];
+    $master_key = openssl_decrypt($user_encryption_session_ciphertext, 'aes-128-cbc', $user_encryption_session_key, 0, $user_encryption_session_iv);
+    return openssl_decrypt($ct, 'aes-128-cbc', $master_key, 0, $iv) ?: '';
+}
 // Get domain general info (whois + NS/A/MX records)
 function getDomainRecords($name)
 {
@@ -2345,5 +2372,29 @@ function queueWebhookEvent($event, $data) {
             "INSERT INTO webhook_queue SET queue_webhook_id = $wid, queue_event = '$event_safe', queue_payload = '$payload_safe'"
         );
     }
+}
+
+// Encrypts a sensitive settings value (SMTP password, OAuth secret, etc.) using
+// a per-installation key from config.php. Values are prefixed with "ENC:" so
+// legacy plaintext can still be read transparently (backward-compatible).
+function encryptSetting(string $plaintext): string {
+    global $config_settings_enc_key;
+    if (empty($plaintext) || empty($config_settings_enc_key)) return $plaintext;
+    $key = substr(hash('sha256', $config_settings_enc_key, true), 0, 16);
+    $iv  = random_bytes(16);
+    $ct  = openssl_encrypt($plaintext, 'aes-128-cbc', $key, OPENSSL_RAW_DATA, $iv);
+    return 'ENC:' . base64_encode($iv . $ct);
+}
+
+function decryptSetting(string $ciphertext): string {
+    global $config_settings_enc_key;
+    if (empty($ciphertext) || empty($config_settings_enc_key)) return $ciphertext;
+    if (!str_starts_with($ciphertext, 'ENC:')) return $ciphertext; // legacy plaintext
+    $data = base64_decode(substr($ciphertext, 4));
+    if (strlen($data) <= 16) return '';
+    $key = substr(hash('sha256', $config_settings_enc_key, true), 0, 16);
+    $iv  = substr($data, 0, 16);
+    $ct  = substr($data, 16);
+    return openssl_decrypt($ct, 'aes-128-cbc', $key, OPENSSL_RAW_DATA, $iv) ?: '';
 }
 

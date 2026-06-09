@@ -70,7 +70,9 @@ if (isset($_POST['api_key'])) {
 if (isset($api_key)) {
     $api_key = sanitizeInput($api_key);
 
-    $sql = mysqli_query($mysqli, "SELECT * FROM api_keys WHERE api_key_secret = '$api_key' AND api_key_expire > NOW() LIMIT 1");
+    $api_key_hash = hash('sha256', $api_key);
+    $api_key_hash = mysqli_real_escape_string($mysqli, $api_key_hash);
+    $sql = mysqli_query($mysqli, "SELECT * FROM api_keys WHERE api_key_secret = '$api_key_hash' AND api_key_expire > NOW() LIMIT 1");
 
     // Failed
     if (mysqli_num_rows($sql) !== 1) {

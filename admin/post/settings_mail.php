@@ -14,10 +14,10 @@ if (isset($_POST['oauth_connect_microsoft_mail'])) {
     $config_imap_provider = sanitizeInput($_POST['config_imap_provider'] ?? '');
     $config_imap_username = sanitizeInput($_POST['config_imap_username'] ?? '');
     $config_mail_oauth_client_id = sanitizeInput($_POST['config_mail_oauth_client_id'] ?? '');
-    $config_mail_oauth_client_secret = sanitizeInput($_POST['config_mail_oauth_client_secret'] ?? '');
+    $config_mail_oauth_client_secret = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_client_secret'] ?? '')));
     $config_mail_oauth_tenant_id = sanitizeInput($_POST['config_mail_oauth_tenant_id'] ?? '');
-    $config_mail_oauth_refresh_token = sanitizeInput($_POST['config_mail_oauth_refresh_token'] ?? '');
-    $config_mail_oauth_access_token = sanitizeInput($_POST['config_mail_oauth_access_token'] ?? '');
+    $config_mail_oauth_refresh_token = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_refresh_token'] ?? '')));
+    $config_mail_oauth_access_token = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_access_token'] ?? '')));
 
     mysqli_query($mysqli, "UPDATE settings SET
         config_imap_provider = '$config_imap_provider',
@@ -84,14 +84,14 @@ if (isset($_POST['edit_mail_smtp_settings'])) {
     $config_smtp_port                = intval($_POST['config_smtp_port'] ?? 0);
     $config_smtp_encryption          = sanitizeInput($_POST['config_smtp_encryption']);
     $config_smtp_username            = sanitizeInput($_POST['config_smtp_username']);
-    $config_smtp_password = mysqli_real_escape_string($mysqli, trim($_POST['config_smtp_password']));
+    $config_smtp_password = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_smtp_password'])));
 
     // Shared OAuth fields
     $config_mail_oauth_client_id     = sanitizeInput($_POST['config_mail_oauth_client_id']);
-    $config_mail_oauth_client_secret = sanitizeInput($_POST['config_mail_oauth_client_secret']);
+    $config_mail_oauth_client_secret = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_client_secret'])));
     $config_mail_oauth_tenant_id     = sanitizeInput($_POST['config_mail_oauth_tenant_id']);
-    $config_mail_oauth_refresh_token = sanitizeInput($_POST['config_mail_oauth_refresh_token']);
-    $config_mail_oauth_access_token  = sanitizeInput($_POST['config_mail_oauth_access_token']);
+    $config_mail_oauth_refresh_token = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_refresh_token'])));
+    $config_mail_oauth_access_token  = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_access_token'])));
 
     mysqli_query($mysqli, "
         UPDATE settings SET
@@ -126,14 +126,14 @@ if (isset($_POST['edit_mail_imap_settings'])) {
     $config_imap_port                = intval($_POST['config_imap_port'] ?? 0);
     $config_imap_encryption          = sanitizeInput($_POST['config_imap_encryption']);
     $config_imap_username            = sanitizeInput($_POST['config_imap_username']);
-    $config_imap_password = mysqli_real_escape_string($mysqli, trim($_POST['config_imap_password']));
+    $config_imap_password = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_imap_password'])));
 
     // Shared OAuth fields
     $config_mail_oauth_client_id     = sanitizeInput($_POST['config_mail_oauth_client_id']);
-    $config_mail_oauth_client_secret = sanitizeInput($_POST['config_mail_oauth_client_secret']);
+    $config_mail_oauth_client_secret = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_client_secret'])));
     $config_mail_oauth_tenant_id     = sanitizeInput($_POST['config_mail_oauth_tenant_id']);
-    $config_mail_oauth_refresh_token = sanitizeInput($_POST['config_mail_oauth_refresh_token']);
-    $config_mail_oauth_access_token  = sanitizeInput($_POST['config_mail_oauth_access_token']);
+    $config_mail_oauth_refresh_token = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_refresh_token'])));
+    $config_mail_oauth_access_token  = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_access_token'])));
 
     mysqli_query($mysqli, "
         UPDATE settings SET
@@ -362,12 +362,12 @@ if (isset($_POST['test_email_imap'])) {
             $expires_at = date('Y-m-d H:i:s', time() + (int)($json['expires_in'] ?? 3600));
             $refresh_token_to_save = $json['refresh_token'] ?? null;
 
-            $token_esc = mysqli_real_escape_string($mysqli, $password);
+            $token_esc = mysqli_real_escape_string($mysqli, encryptSetting($password));
             $expires_at_esc = mysqli_real_escape_string($mysqli, $expires_at);
 
             $refresh_sql = '';
             if (!empty($refresh_token_to_save)) {
-                $refresh_token_esc = mysqli_real_escape_string($mysqli, $refresh_token_to_save);
+                $refresh_token_esc = mysqli_real_escape_string($mysqli, encryptSetting($refresh_token_to_save));
                 $refresh_sql = ", config_mail_oauth_refresh_token = '{$refresh_token_esc}'";
             }
 
@@ -563,12 +563,12 @@ if (isset($_POST['test_oauth_token_refresh'])) {
     $new_expires_at = date('Y-m-d H:i:s', time() + (int)($json['expires_in'] ?? 3600));
     $new_refresh_token = !empty($json['refresh_token']) ? sanitizeInput($json['refresh_token']) : '';
 
-    $new_access_token_esc = mysqli_real_escape_string($mysqli, $new_access_token);
+    $new_access_token_esc = mysqli_real_escape_string($mysqli, encryptSetting((string)$json['access_token']));
     $new_expires_at_esc = mysqli_real_escape_string($mysqli, $new_expires_at);
 
     $refresh_sql = '';
     if (!empty($new_refresh_token)) {
-        $new_refresh_token_esc = mysqli_real_escape_string($mysqli, $new_refresh_token);
+        $new_refresh_token_esc = mysqli_real_escape_string($mysqli, encryptSetting($new_refresh_token));
         $refresh_sql = ", config_mail_oauth_refresh_token = '$new_refresh_token_esc'";
     }
 

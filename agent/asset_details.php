@@ -655,7 +655,7 @@ if (isset($_GET['asset_id'])) {
                                         $credential_username_display = "$credential_username<button class='btn btn-sm clipboardjs' data-clipboard-text='$credential_username'><i class='far fa-copy text-secondary'></i></button>";
                                     }
                                     $credential_password = nullable_htmlentities(decryptCredentialEntry($row['credential_password']));
-                                    $credential_otp_secret = nullable_htmlentities($row['credential_otp_secret']);
+                                    $credential_otp_secret = nullable_htmlentities(decryptOtpSecret($row['credential_otp_secret'] ?? ''));
                                     $credential_id_with_secret = '"' . $row['credential_id'] . '","' . $row['credential_otp_secret'] . '"';
                                     if (empty($credential_otp_secret)) {
                                         $otp_display = "-";
