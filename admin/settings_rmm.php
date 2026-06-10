@@ -199,7 +199,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
 
                     <!-- Provider type selector -->
                     <div class="form-group">
-                        <label class="text-muted small">Provider Type</label>
+                        <label class="text-light small">Provider Type</label>
                         <div class="btn-group btn-group-sm w-100" role="group">
                             <input type="radio" class="btn-check" name="integration_type" id="type_tactical"
                                    value="tactical_rmm" checked onchange="updateModalLabels('tactical_rmm')">
@@ -222,13 +222,13 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                     </div>
 
                     <div class="form-group">
-                        <label class="text-muted small">Integration Name</label>
+                        <label class="text-light small">Integration Name</label>
                         <input type="text" class="form-control form-control-sm" name="integration_name" id="integration_name" required
                                placeholder="e.g. Primary Tactical RMM">
                     </div>
 
                     <div class="form-group">
-                        <label class="text-muted small" id="label_api_url">API URL</label>
+                        <label class="text-light small" id="label_api_url">API URL</label>
                         <input type="url" class="form-control form-control-sm" name="integration_api_url" id="integration_api_url"
                                placeholder="https://api.yourdomain.com" required>
                         <small class="text-muted" id="help_api_url">
@@ -237,7 +237,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                     </div>
 
                     <div class="form-group" id="web_url_group">
-                        <label class="text-muted small" id="label_web_url">Dashboard / Web URL</label>
+                        <label class="text-light small" id="label_web_url">Dashboard / Web URL</label>
                         <input type="url" class="form-control form-control-sm" name="integration_web_url" id="integration_web_url"
                                placeholder="https://rmm.yourdomain.com">
                         <small class="text-muted" id="help_web_url">
@@ -246,7 +246,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                     </div>
 
                     <div class="form-group">
-                        <label class="text-muted small" id="label_api_key">API Key</label>
+                        <label class="text-light small" id="label_api_key">API Key</label>
                         <input type="password" class="form-control form-control-sm" name="integration_api_key" id="integration_api_key"
                                autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
                         <small class="text-muted" id="help_api_key">
@@ -255,7 +255,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                     </div>
 
                     <div class="form-group" id="client_secret_group" style="display:none">
-                        <label class="text-muted small">Client Secret</label>
+                        <label class="text-light small">Client Secret</label>
                         <input type="password" class="form-control form-control-sm" name="integration_client_secret" id="integration_client_secret"
                                autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
                         <small class="text-muted">
