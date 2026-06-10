@@ -1390,6 +1390,8 @@ mysqli_query($mysqli, "DELETE FROM webhook_queue WHERE queue_status IN ('deliver
  * ###############################################################################################################
  */
 
+require_once dirname(__DIR__) . '/includes/automation_functions.php';
+
 $automation_rules = [];
 $sql_rules = mysqli_query($mysqli,
     "SELECT * FROM ticket_automation_rules WHERE rule_enabled = 1 ORDER BY rule_order ASC, rule_id ASC"
@@ -1399,127 +1401,150 @@ while ($r = mysqli_fetch_assoc($sql_rules)) {
 }
 
 if (!empty($automation_rules)) {
-    // Fetch all open (non-resolved, non-closed) tickets
-    $sql_open = mysqli_query($mysqli,
-        "SELECT t.*, ts.ticket_status_name, u.user_email AS assignee_email, u.user_name AS assignee_name
-         FROM tickets t
-         LEFT JOIN ticket_statuses ts ON t.ticket_status = ts.ticket_status_id
-         LEFT JOIN users u ON t.ticket_assigned_to = u.user_id
-         WHERE t.ticket_archived_at IS NULL
-           AND t.ticket_resolved_at IS NULL"
-    );
+    $schedule_rules      = array_filter($automation_rules, function ($r) { return ($r['rule_trigger'] ?: 'schedule') === 'schedule'; });
+    $rmm_alert_rules     = array_filter($automation_rules, function ($r) { return $r['rule_trigger'] === 'rmm_alert'; });
+    $asset_offline_rules = array_filter($automation_rules, function ($r) { return $r['rule_trigger'] === 'asset_offline'; });
+    $asset_online_rules  = array_filter($automation_rules, function ($r) { return $r['rule_trigger'] === 'asset_online'; });
 
-    while ($ticket = mysqli_fetch_assoc($sql_open)) {
-        $tid          = intval($ticket['ticket_id']);
-        $age_hours    = round((time() - strtotime($ticket['ticket_created_at'])) / 3600, 1);
-        $priority     = strtolower($ticket['ticket_priority'] ?? '');
-        $status_id    = intval($ticket['ticket_status']);
-        $assigned_to  = intval($ticket['ticket_assigned_to']);
-        $client_id    = intval($ticket['ticket_client_id']);
+    // ----- Trigger: schedule (open tickets evaluated on every run) -----
+    if (!empty($schedule_rules)) {
+        $sql_open = mysqli_query($mysqli,
+            "SELECT t.*, ts.ticket_status_name, u.user_email AS assignee_email, u.user_name AS assignee_name
+             FROM tickets t
+             LEFT JOIN ticket_statuses ts ON t.ticket_status = ts.ticket_status_id
+             LEFT JOIN users u ON t.ticket_assigned_to = u.user_id
+             WHERE t.ticket_archived_at IS NULL
+               AND t.ticket_resolved_at IS NULL"
+        );
 
-        // Hours since last reply
-        $last_reply = mysqli_fetch_assoc(mysqli_query($mysqli,
-            "SELECT MAX(ticket_reply_created_at) AS lr FROM ticket_replies WHERE ticket_reply_ticket_id = $tid"
-        ));
-        $idle_since = $last_reply['lr'] ? $last_reply['lr'] : $ticket['ticket_created_at'];
-        $idle_hours = round((time() - strtotime($idle_since)) / 3600, 1);
+        while ($ticket = mysqli_fetch_assoc($sql_open)) {
+            $tid          = intval($ticket['ticket_id']);
+            $age_hours    = round((time() - strtotime($ticket['ticket_created_at'])) / 3600, 1);
+            $priority     = strtolower($ticket['ticket_priority'] ?? '');
+            $status_id    = intval($ticket['ticket_status']);
+            $assigned_to  = intval($ticket['ticket_assigned_to']);
+            $client_id    = intval($ticket['ticket_client_id']);
 
-        $ticket_vals = [
-            'age_hours'   => $age_hours,
-            'priority'    => $priority,
-            'status_id'   => $status_id,
-            'assigned_to' => $assigned_to,
-            'idle_hours'  => $idle_hours,
-            'category'    => intval($ticket['ticket_category']),
-        ];
+            // Hours since last reply
+            $last_reply = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT MAX(ticket_reply_created_at) AS lr FROM ticket_replies WHERE ticket_reply_ticket_id = $tid"
+            ));
+            $idle_since = $last_reply['lr'] ? $last_reply['lr'] : $ticket['ticket_created_at'];
+            $idle_hours = round((time() - strtotime($idle_since)) / 3600, 1);
 
-        foreach ($automation_rules as $rule) {
-            $field = $rule['rule_cond_field'];
-            $op    = $rule['rule_cond_op'];
-            $rval  = $rule['rule_cond_value'];
-            $act   = $rule['rule_action'];
-            $aval  = $rule['rule_action_value'];
+            $context = [
+                'age_hours'   => $age_hours,
+                'priority'    => $priority,
+                'status_id'   => $status_id,
+                'assigned_to' => $assigned_to,
+                'idle_hours'  => $idle_hours,
+                'category'    => intval($ticket['ticket_category']),
+                'tid'         => $tid,
+                'client_id'   => $client_id,
+                'asset_id'    => intval($ticket['ticket_asset_id']),
+            ];
 
-            $tval = $ticket_vals[$field] ?? null;
-            if ($tval === null) continue;
+            foreach ($schedule_rules as $rule) {
+                $conditions = automationGetConditions($rule);
+                if (!automationConditionsMatch($conditions, $context)) continue;
 
-            // Evaluate condition
-            $match = false;
-            $tval_cmp = is_numeric($tval) ? floatval($tval) : strtolower($tval);
-            $rval_cmp = is_numeric($rval) ? floatval($rval) : strtolower($rval);
+                $summaries = [];
+                foreach (automationGetActions($rule) as $action) {
+                    $summary = automationExecuteAction($mysqli, $action, $context, $rule);
+                    if ($summary !== null) $summaries[] = $summary;
+                }
+                if (!empty($summaries)) {
+                    automationLogRun($mysqli, $rule, 'schedule', $context, implode('; ', $summaries));
+                }
+            }
+        }
+    }
 
-            switch ($op) {
-                case 'greater_than': $match = ($tval_cmp > $rval_cmp);  break;
-                case 'less_than':    $match = ($tval_cmp < $rval_cmp);  break;
-                case 'equals':       $match = ($tval_cmp == $rval_cmp); break;
-                case 'not_equals':   $match = ($tval_cmp != $rval_cmp); break;
+    // ----- Trigger: rmm_alert (new alerts not yet processed by automation) -----
+    if (!empty($rmm_alert_rules)) {
+        $sql_alerts = mysqli_query($mysqli,
+            "SELECT ra.*, arl.hostname, arl.tactical_agent_id
+             FROM rmm_alerts ra
+             LEFT JOIN asset_rmm_links arl ON arl.asset_id = ra.asset_id AND arl.integration_id = ra.integration_id
+             WHERE ra.automation_processed_at IS NULL"
+        );
+
+        while ($alert = mysqli_fetch_assoc($sql_alerts)) {
+            $context = [
+                'severity'       => strtolower($alert['severity'] ?? ''),
+                'message'        => $alert['message'] ?? '',
+                'asset_id'       => intval($alert['asset_id'] ?? 0),
+                'client_id'      => intval($alert['client_id'] ?? 0),
+                'integration_id' => intval($alert['integration_id']),
+                'hostname'       => $alert['hostname'] ?? '',
+                'status'         => $alert['status'],
+                'alert_id'       => intval($alert['id']),
+                'alert'          => $alert,
+            ];
+
+            foreach ($rmm_alert_rules as $rule) {
+                $conditions = automationGetConditions($rule);
+                if (!automationConditionsMatch($conditions, $context)) continue;
+
+                $summaries = [];
+                foreach (automationGetActions($rule) as $action) {
+                    $summary = automationExecuteAction($mysqli, $action, $context, $rule);
+                    if ($summary !== null) $summaries[] = $summary;
+                }
+                if (!empty($summaries)) {
+                    automationLogRun($mysqli, $rule, 'rmm_alert', $context, implode('; ', $summaries));
+                }
             }
 
-            if (!$match) continue;
+            mysqli_query($mysqli, "UPDATE rmm_alerts SET automation_processed_at = NOW() WHERE id = " . intval($alert['id']));
+        }
+    }
 
-            // Execute action
-            $esc_aval = mysqli_real_escape_string($mysqli, $aval);
-            $rule_name = mysqli_real_escape_string($mysqli, $rule['rule_name']);
+    // ----- Trigger: asset_offline / asset_online (RMM status transitions) -----
+    if (!empty($asset_offline_rules) || !empty($asset_online_rules)) {
+        $sql_assets = mysqli_query($mysqli,
+            "SELECT arl.*, a.asset_client_id AS client_id FROM asset_rmm_links arl
+             JOIN assets a ON a.asset_id = arl.asset_id
+             WHERE arl.rmm_status_changed_at IS NOT NULL
+               AND (arl.automation_processed_at IS NULL OR arl.automation_processed_at < arl.rmm_status_changed_at)"
+        );
 
-            switch ($act) {
-                case 'set_priority':
-                    $p = mysqli_real_escape_string($mysqli, strtolower($aval));
-                    mysqli_query($mysqli, "UPDATE tickets SET ticket_priority = '$p' WHERE ticket_id = $tid");
-                    logAction("Automation", "Update", "Rule '$rule_name': set priority=$p on ticket $tid", $client_id, $tid);
-                    break;
-
-                case 'assign_to':
-                    $uid = intval($aval);
-                    mysqli_query($mysqli, "UPDATE tickets SET ticket_assigned_to = $uid WHERE ticket_id = $tid");
-                    logAction("Automation", "Update", "Rule '$rule_name': assigned ticket $tid to user $uid", $client_id, $tid);
-                    break;
-
-                case 'set_status':
-                    $sid = intval($aval);
-                    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $sid WHERE ticket_id = $tid");
-                    logAction("Automation", "Update", "Rule '$rule_name': set status=$sid on ticket $tid", $client_id, $tid);
-                    break;
-
-                case 'add_note':
-                    $note = mysqli_real_escape_string($mysqli, "🤖 Automation: $aval");
-                    mysqli_query($mysqli,
-                        "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_ticket_id, ticket_reply_created_at)
-                         VALUES ('$note', 'Automation', $tid, NOW())"
-                    );
-                    break;
-
-                case 'notify_assignee':
-                    if (!empty($ticket['assignee_email'])) {
-                        appNotify("Automation", "Rule '$rule_name' triggered on ticket #$tid", "/agent/ticket.php?ticket_id=$tid", $client_id);
-                    }
-                    break;
-
-                case 'close_ticket':
-                    $closer = $assigned_to > 0 ? $assigned_to : 1;
-                    mysqli_query($mysqli,
-                        "UPDATE tickets SET ticket_status = 5, ticket_closed_at = NOW(), ticket_closed_by = $closer
-                         WHERE ticket_id = $tid AND ticket_resolved_at IS NULL"
-                    );
-                    logAction("Automation", "Close", "Rule '$rule_name': auto-closed ticket $tid", $client_id, $tid);
-                    break;
-
-                case 'add_worksheet':
-                    $template_id = intval($aval);
-                    if ($template_id > 0) {
-                        $exists = mysqli_fetch_assoc(mysqli_query($mysqli,
-                            "SELECT worksheet_id FROM ticket_worksheets
-                             WHERE worksheet_ticket_id = $tid AND worksheet_template_id = $template_id LIMIT 1"
-                        ));
-                        if (!$exists) {
-                            mysqli_query($mysqli,
-                                "INSERT INTO ticket_worksheets (worksheet_ticket_id, worksheet_template_id, worksheet_created_by)
-                                 VALUES ($tid, $template_id, 1)"
-                            );
-                            logAction("Automation", "Worksheet", "Rule '$rule_name': added worksheet template $template_id to ticket $tid", $client_id, $tid);
-                        }
-                    }
-                    break;
+        while ($link = mysqli_fetch_assoc($sql_assets)) {
+            $trigger_type = null;
+            $rules_for_status = [];
+            if ($link['rmm_status'] === 'offline') {
+                $trigger_type     = 'asset_offline';
+                $rules_for_status = $asset_offline_rules;
+            } elseif ($link['rmm_status'] === 'online') {
+                $trigger_type     = 'asset_online';
+                $rules_for_status = $asset_online_rules;
             }
+
+            if ($trigger_type !== null && !empty($rules_for_status)) {
+                $context = [
+                    'asset_id'       => intval($link['asset_id']),
+                    'client_id'      => intval($link['client_id']),
+                    'hostname'       => $link['hostname'] ?? '',
+                    'integration_id' => intval($link['integration_id']),
+                    'rmm_status'     => $link['rmm_status'],
+                ];
+
+                foreach ($rules_for_status as $rule) {
+                    $conditions = automationGetConditions($rule);
+                    if (!automationConditionsMatch($conditions, $context)) continue;
+
+                    $summaries = [];
+                    foreach (automationGetActions($rule) as $action) {
+                        $summary = automationExecuteAction($mysqli, $action, $context, $rule);
+                        if ($summary !== null) $summaries[] = $summary;
+                    }
+                    if (!empty($summaries)) {
+                        automationLogRun($mysqli, $rule, $trigger_type, $context, implode('; ', $summaries));
+                    }
+                }
+            }
+
+            mysqli_query($mysqli, "UPDATE asset_rmm_links SET automation_processed_at = NOW() WHERE id = " . intval($link['id']));
         }
     }
 

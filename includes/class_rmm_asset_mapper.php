@@ -81,12 +81,12 @@ class RmmAssetMapper {
 
         // ----- Step 1: Check existing link -----
         $existing = mysqli_fetch_assoc(mysqli_query($m,
-            "SELECT id, asset_id FROM asset_rmm_links
+            "SELECT id, asset_id, rmm_status FROM asset_rmm_links
              WHERE integration_id=$intg_id AND tactical_agent_id='$agent_id'"
         ));
 
         if ($existing) {
-            $this->updateLink($existing['id'], $status, $last_seen_val, $os_name, $os_version,
+            $this->updateLink($existing['id'], $existing['rmm_status'], $status, $last_seen_val, $os_name, $os_version,
                 $manufacturer, $model, $cpu, $ram_gb, $logged_user, $mesh_node_id, $raw_json);
             $this->syncInterfaces(intval($existing['asset_id']), $this->resolveWmiDetail($agent, $agent_id));
             return 'updated';
@@ -180,14 +180,18 @@ class RmmAssetMapper {
         return $outcome;
     }
 
-    private function updateLink(int $link_id, string $status, string $last_seen_val,
+    private function updateLink(int $link_id, ?string $old_status, string $status, string $last_seen_val,
         string $os_name, string $os_version, string $manufacturer, string $model,
         string $cpu, string $ram_gb, string $logged_user, string $mesh_node_id, string $raw_json): void
     {
         $m = $this->mysqli;
+        $status_changed_sql = ($old_status !== null && $old_status !== $status)
+            ? "rmm_status_changed_at=NOW(),"
+            : "";
         mysqli_query($m,
             "UPDATE asset_rmm_links SET
              rmm_status='$status',
+             $status_changed_sql
              last_seen=$last_seen_val,
              os_name='$os_name',
              os_version='$os_version',

@@ -4685,3 +4685,35 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.3'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.3') {
+
+        mysqli_query($mysqli, "ALTER TABLE `ticket_automation_rules`
+            ADD `rule_conditions_json` LONGTEXT NULL AFTER `rule_cond_value`,
+            ADD `rule_actions_json` LONGTEXT NULL AFTER `rule_action_value`");
+
+        mysqli_query($mysqli, "ALTER TABLE `asset_rmm_links`
+            ADD `rmm_status_changed_at` DATETIME NULL,
+            ADD `automation_processed_at` DATETIME NULL");
+
+        mysqli_query($mysqli, "ALTER TABLE `rmm_alerts`
+            ADD `automation_processed_at` DATETIME NULL");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `ticket_automation_runs` (
+            `id` INT(11) NOT NULL AUTO_INCREMENT,
+            `rule_id` INT(11) NOT NULL,
+            `rule_name` VARCHAR(100) DEFAULT NULL,
+            `trigger_type` VARCHAR(30) NOT NULL,
+            `ticket_id` INT(11) DEFAULT NULL,
+            `asset_id` INT(11) DEFAULT NULL,
+            `alert_id` INT(11) DEFAULT NULL,
+            `client_id` INT(11) DEFAULT NULL,
+            `summary` TEXT DEFAULT NULL,
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `rule_id` (`rule_id`),
+            KEY `ticket_id` (`ticket_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.4'");
+    }
