@@ -5,6 +5,16 @@ enforceUserPermission('module_admin');
 $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER BY name ASC");
 ?>
 
+<style>
+/* Bootstrap 5's .btn-check (hidden radio behind a styled button label) doesn't
+   exist in Bootstrap 4 -- hide the raw radio inputs so only the labels show. */
+.btn-check {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    pointer-events: none;
+}
+</style>
+
 <div class="card card-dark mb-3" style="border-top:3px solid #17a2b8;">
     <div class="card-header py-2 d-flex align-items-center">
         <h3 class="card-title mr-auto">
