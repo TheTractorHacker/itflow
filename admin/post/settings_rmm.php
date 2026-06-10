@@ -11,6 +11,18 @@ if (isset($_POST['save_rmm_module_settings'])) {
     redirect();
 }
 
+// Save auto-ticket severity settings
+if (isset($_POST['save_rmm_auto_ticket_settings'])) {
+    validateCSRFToken($_POST['csrf_token']);
+    $allowed_severities = ['critical', 'error', 'warning', 'info'];
+    $selected = array_intersect($_POST['auto_ticket_severities'] ?? [], $allowed_severities);
+    $severities = mysqli_real_escape_string($mysqli, implode(',', $selected));
+    mysqli_query($mysqli, "UPDATE settings SET config_rmm_auto_ticket_severities='$severities' WHERE company_id=1");
+    logAction('Settings', 'Edit', "$session_name updated RMM auto-ticket severities to: " . ($severities ?: 'none'));
+    flash_alert('Auto-ticket settings saved');
+    redirect();
+}
+
 // Save/create integration
 if (isset($_POST['save_rmm_integration'])) {
     validateCSRFToken($_POST['csrf_token']);

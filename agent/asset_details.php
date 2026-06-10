@@ -723,7 +723,7 @@ if (isset($_GET['asset_id'])) {
                         </div>
                         <div class="tab-pane p-3" id="rdt-alerts">
                             <?php
-                            $sql_rdt_alerts = mysqli_query($mysqli, "SELECT * FROM rmm_alerts WHERE asset_id=$asset_id ORDER BY created_at DESC LIMIT 25");
+                            $sql_rdt_alerts = mysqli_query($mysqli, "SELECT a.*, t.ticket_prefix, t.ticket_number FROM rmm_alerts a LEFT JOIN tickets t ON t.ticket_id = a.ticket_id WHERE a.asset_id=$asset_id ORDER BY a.created_at DESC LIMIT 25");
                             if (mysqli_num_rows($sql_rdt_alerts) == 0): ?>
                             <p class="text-muted text-center mb-0">No alerts for this device.</p>
                             <?php else: ?>
@@ -749,7 +749,11 @@ if (isset($_GET['asset_id'])) {
                                         <?php if ($ral['status'] !== 'resolved' && lookupUserPermission('module_rmm_alerts_ack') >= 1): ?>
                                         <button class="btn btn-xs btn-success" onclick="assetAlertAction(<?= $ral_id ?>, 'resolve', this)">Resolve</button>
                                         <?php endif; ?>
-                                        <?php if (lookupUserPermission('module_support') >= 2): ?>
+                                        <?php if ($ral['ticket_id']): ?>
+                                        <a href="/agent/ticket.php?ticket_id=<?= intval($ral['ticket_id']) ?>" class="btn btn-xs btn-outline-primary" title="View linked ticket">
+                                            <i class="fas fa-ticket-alt mr-1"></i><?= nullable_htmlentities($ral['ticket_prefix'] . $ral['ticket_number']) ?>
+                                        </a>
+                                        <?php elseif (lookupUserPermission('module_support') >= 2): ?>
                                         <button class="btn btn-xs btn-primary" onclick="assetAlertAction(<?= $ral_id ?>, 'create_ticket', this)">
                                             <i class="fas fa-ticket-alt"></i>
                                         </button>

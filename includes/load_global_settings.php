@@ -115,6 +115,7 @@ $config_client_portal_enable = intval($row['config_client_portal_enable']);
 // RMM Integration (Syncro-Beta)
 $config_module_enable_rmm = intval($row['config_module_enable_rmm'] ?? 0);
 $config_rmm_default_integration_id = intval($row['config_rmm_default_integration_id'] ?? 0);
+$config_rmm_auto_ticket_severities = sanitizeInput($row['config_rmm_auto_ticket_severities'] ?? '');
 
 // Login
 $config_login_message = $row['config_login_message'];

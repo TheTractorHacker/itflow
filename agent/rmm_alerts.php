@@ -24,11 +24,12 @@ if ($filter_search) {
 
 $sql_alerts = mysqli_query($mysqli,
     "SELECT a.*, ast.asset_name, c.client_name,
-            u.user_name
+            u.user_name, t.ticket_prefix, t.ticket_number
      FROM rmm_alerts a
      LEFT JOIN assets ast ON ast.asset_id = a.asset_id
      LEFT JOIN clients c ON c.client_id = a.client_id
      LEFT JOIN users u ON u.user_id = a.acknowledged_by
+     LEFT JOIN tickets t ON t.ticket_id = a.ticket_id
      WHERE $where
      ORDER BY FIELD(a.severity,'critical','error','warning','info'), a.created_at DESC
      LIMIT 300"
@@ -243,7 +244,11 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                         <i class="fas fa-check"></i>
                     </button>
                     <?php endif; ?>
-                    <?php if (lookupUserPermission('module_support') >= 2): ?>
+                    <?php if ($alert['ticket_id']): ?>
+                    <a href="/agent/ticket.php?ticket_id=<?= intval($alert['ticket_id']) ?>" class="btn btn-xs btn-outline-primary ml-1" title="View linked ticket">
+                        <i class="fas fa-ticket-alt mr-1"></i><?= nullable_htmlentities($alert['ticket_prefix'] . $alert['ticket_number']) ?>
+                    </a>
+                    <?php elseif (lookupUserPermission('module_support') >= 2): ?>
                     <button class="btn btn-xs btn-primary ml-1" onclick="alertAction(<?= $aid ?>, 'create_ticket')" title="Create Ticket">
                         <i class="fas fa-ticket-alt"></i>
                     </button>

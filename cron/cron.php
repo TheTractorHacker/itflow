@@ -1518,6 +1518,39 @@ if (!empty($automation_rules)) {
     logApp("Cron", "info", "Ticket automation rules processed (" . count($automation_rules) . " rules)");
 }
 
+/*
+ * ###############################################################################################################
+ *  RMM ALERT AUTO-TICKETING (Syncro-Beta)
+ * ###############################################################################################################
+ */
+
+if ($config_module_enable_rmm && !empty($config_rmm_auto_ticket_severities)) {
+    require_once dirname(__DIR__) . '/includes/rmm_functions.php';
+
+    $auto_ticket_severities = array_filter(explode(',', $config_rmm_auto_ticket_severities));
+    if (!empty($auto_ticket_severities)) {
+        $severity_list = implode("','", array_map(function ($s) use ($mysqli) {
+            return mysqli_real_escape_string($mysqli, $s);
+        }, $auto_ticket_severities));
+
+        $sql_new_alerts = mysqli_query($mysqli,
+            "SELECT * FROM rmm_alerts
+             WHERE status = 'new' AND ticket_id IS NULL
+               AND severity IN ('$severity_list')"
+        );
+
+        $auto_ticket_count = 0;
+        while ($alert = mysqli_fetch_assoc($sql_new_alerts)) {
+            createTicketFromRmmAlert($mysqli, $alert, 0, 'RMM Automation');
+            $auto_ticket_count++;
+        }
+
+        if ($auto_ticket_count > 0) {
+            logApp("Cron", "info", "RMM auto-ticketing created $auto_ticket_count ticket(s) from new alerts");
+        }
+    }
+}
+
 // Send Alert to inform Cron was run
 appNotify("Cron", "Cron successfully executed", "/admin/audit_log.php");
 

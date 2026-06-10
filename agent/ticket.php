@@ -1658,6 +1658,63 @@ if (isset($_GET['ticket_id'])) {
                 }
                 ?>
 
+                <!-- Linked RMM Alerts card (Syncro-Beta) -->
+                <?php
+                if ($config_module_enable_rmm && lookupUserPermission("module_rmm_alerts") >= 1) {
+                    $sql_linked_alerts = mysqli_query($mysqli, "SELECT * FROM rmm_alerts WHERE ticket_id = $ticket_id ORDER BY created_at DESC");
+                    if (mysqli_num_rows($sql_linked_alerts) > 0):
+                ?>
+                <div class="card mb-3" style="border-top:2px solid #17a2b8">
+                    <div class="card-header px-3 py-2">
+                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-bell mr-2"></i>Linked RMM Alerts</h5>
+                    </div>
+                    <div class="card-body p-3 small">
+                        <?php while ($linked_alert = mysqli_fetch_assoc($sql_linked_alerts)):
+                            $la_id = intval($linked_alert['id']);
+                            $la_sev_color = ['critical'=>'danger','error'=>'danger','warning'=>'warning','info'=>'info'][$linked_alert['severity']] ?? 'secondary';
+                            $la_status_color = ['new'=>'danger','acknowledged'=>'warning','resolved'=>'success'][$linked_alert['status']] ?? 'secondary';
+                        ?>
+                        <div class="border-bottom pb-2 mb-2" id="linked-alert-<?= $la_id ?>">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="badge badge-<?= $la_sev_color ?> mr-1"><?= ucfirst($linked_alert['severity']) ?></span>
+                                <span class="badge badge-<?= $la_status_color ?>"><?= ucfirst($linked_alert['status']) ?></span>
+                                <span class="text-muted ml-auto"><?= nullable_htmlentities($linked_alert['created_at']) ?></span>
+                            </div>
+                            <div class="mb-1"><?= nullable_htmlentities($linked_alert['message']) ?></div>
+                            <?php if ($linked_alert['status'] !== 'resolved' && lookupUserPermission('module_rmm_alerts_ack') >= 1): ?>
+                            <div>
+                                <?php if ($linked_alert['status'] === 'new'): ?>
+                                <button class="btn btn-xs btn-outline-warning" onclick="ticketAlertAction(<?= $la_id ?>, 'acknowledge')">Acknowledge</button>
+                                <?php endif; ?>
+                                <button class="btn btn-xs btn-outline-success" onclick="ticketAlertAction(<?= $la_id ?>, 'resolve')">Resolve</button>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endwhile; ?>
+                    </div>
+                </div>
+                <script>
+                function ticketAlertAction(alertId, action) {
+                    fetch('/agent/post/rmm_alert.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: `csrf_token=<?= urlencode($_SESSION['csrf_token']) ?>&action=${action}&alert_id=${alertId}`
+                    })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            window.location.reload();
+                        } else {
+                            alert('Failed: ' + (d.error || 'Unknown error'));
+                        }
+                    });
+                }
+                </script>
+                <?php
+                    endif;
+                }
+                ?>
+
                 <!-- Vendor card -->
                 <?php if ($vendor_id) { ?>
                     <div class="card mb-3">

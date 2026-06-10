@@ -4667,3 +4667,12 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.1'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.1') {
+
+        mysqli_query($mysqli, "ALTER TABLE `rmm_alerts` ADD `ticket_id` INT(11) NULL DEFAULT NULL, ADD KEY `ticket_id` (`ticket_id`)");
+
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD `config_rmm_auto_ticket_severities` VARCHAR(100) NOT NULL DEFAULT ''");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.2'");
+    }

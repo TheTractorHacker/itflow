@@ -44,6 +44,37 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
     </div>
 </div>
 
+<!-- Auto-Ticket Settings -->
+<?php if ($config_module_enable_rmm): ?>
+<div class="card card-dark mb-3">
+    <div class="card-header py-2">
+        <h3 class="card-title"><i class="fas fa-fw fa-ticket-alt mr-2"></i>Automatic Ticket Creation</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small">When a new RMM alert comes in with one of the selected severities, a ticket will be created automatically.</p>
+        <form action="post.php" method="post">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+            <?php
+            $auto_ticket_severities = array_filter(explode(',', $config_rmm_auto_ticket_severities));
+            foreach (['critical' => 'Critical', 'error' => 'Error', 'warning' => 'Warning', 'info' => 'Info'] as $sev => $label):
+            ?>
+            <div class="custom-control custom-checkbox custom-control-inline">
+                <input type="checkbox" class="custom-control-input" id="auto_ticket_<?= $sev ?>"
+                       name="auto_ticket_severities[]" value="<?= $sev ?>"
+                       <?= in_array($sev, $auto_ticket_severities) ? 'checked' : '' ?>>
+                <label class="custom-control-label" for="auto_ticket_<?= $sev ?>"><?= $label ?></label>
+            </div>
+            <?php endforeach; ?>
+            <div class="mt-3">
+                <button type="submit" name="save_rmm_auto_ticket_settings" class="btn btn-primary btn-sm">
+                    <i class="fas fa-check mr-1"></i>Save Automation Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Integration List -->
 <div class="card card-dark mb-3">
     <div class="card-header py-2 d-flex align-items-center">
