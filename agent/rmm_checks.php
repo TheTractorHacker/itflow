@@ -74,7 +74,7 @@ foreach ($platform_order as $plat):
     if (empty($policies_by_platform[$plat])) continue;
     $pm = $platform_meta[$plat];
 ?>
-<div class="card card-dark mb-3">
+<div class="card card-dark mb-3" id="platform-card-<?= $plat ?>">
     <div class="card-header py-2 d-flex align-items-center">
         <h6 class="mb-0 mr-auto">
             <i class="<?= $pm['icon'] ?> mr-2 text-<?= $pm['color'] ?>"></i>
@@ -146,6 +146,7 @@ foreach ($platform_order as $plat):
             </td>
             <td class="text-right pr-2" style="white-space:nowrap">
                 <button class="btn btn-xs btn-success mr-1" title="Push to matching agents"
+                        data-policy-id="<?= $pid ?>" data-policy-name="<?= nullable_htmlentities($pol['name']) ?>"
                         onclick="pushPolicy(<?= $pid ?>, '<?= nullable_htmlentities($pol['name']) ?>')">
                     <i class="fas fa-cloud-upload-alt"></i>
                 </button>
@@ -174,6 +175,25 @@ foreach ($platform_order as $plat):
     </div>
 </div>
 <?php endif; ?>
+
+<!-- Confirm Action Modal -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header py-2">
+                <h6 class="modal-title mb-0">Please Confirm</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body" id="confirmActionBody"></div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="confirmActionBtn">
+                    <i class="fas fa-check mr-1"></i>Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Add/Edit Modal -->
 <div class="modal fade" id="policyModal" tabindex="-1">
@@ -270,46 +290,92 @@ function showMsg(text, type) {
     setTimeout(() => el.classList.add('d-none'), 5000);
 }
 
-function pushPolicy(policyId, name) {
-    if (!confirm('Push "' + name + '" to all matching agents in selected integration?')) return;
-    showMsg('Pushing checks…', 'info');
+let _confirmActionCallback = null;
+document.getElementById('confirmActionBtn').addEventListener('click', function() {
+    $('#confirmActionModal').modal('hide');
+    const cb = _confirmActionCallback;
+    _confirmActionCallback = null;
+    if (cb) cb();
+});
+
+function confirmAction(message, callback) {
+    document.getElementById('confirmActionBody').textContent = message;
+    _confirmActionCallback = callback;
+    $('#confirmActionModal').modal('show');
+}
+
+function doPushPolicy(policyId, cb) {
     fetch('/agent/post/rmm_check.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: `csrf_token=${CSRF}&action=push_policy&policy_id=${policyId}&integration_id=${selectedIntegration}`
-    }).then(r => r.json()).then(d => {
-        if (d.success) {
-            let msg = `Pushed to ${d.pushed} agent(s), ${d.skipped} already deployed.`;
-            if (d.errors && d.errors.length) msg += ' Errors: ' + d.errors.join('; ');
-            showMsg(msg, d.errors && d.errors.length ? 'warning' : 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showMsg('Failed: ' + (d.error || 'Unknown error'), 'danger');
-        }
+    }).then(r => r.json()).then(cb);
+}
+
+function pushPolicy(policyId, name) {
+    confirmAction('Push "' + name + '" to all matching agents in selected integration?', () => {
+        showMsg('Pushing checks…', 'info');
+        doPushPolicy(policyId, d => {
+            if (d.success) {
+                let msg = `Pushed to ${d.pushed} agent(s), ${d.skipped} already deployed.`;
+                if (d.errors && d.errors.length) msg += ' Errors: ' + d.errors.join('; ');
+                showMsg(msg, d.errors && d.errors.length ? 'warning' : 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showMsg('Failed: ' + (d.error || 'Unknown error'), 'danger');
+            }
+        });
     });
 }
 
 function pushAll(platform) {
-    if (!confirm('Push all ' + platform + ' check policies to matching agents?')) return;
-    document.querySelectorAll('.btn-success[onclick*="pushPolicy"]').forEach(btn => {
-        const row = btn.closest('tr');
-        if (row) btn.click();
+    const card = document.getElementById('platform-card-' + platform);
+    if (!card) return;
+    const buttons = card.querySelectorAll('.btn-success[data-policy-id]');
+    if (!buttons.length) return;
+
+    confirmAction('Push all ' + buttons.length + ' ' + platform + ' check policies to matching agents?', () => {
+        showMsg('Pushing checks…', 'info');
+        let remaining = buttons.length;
+        let totalPushed = 0, totalSkipped = 0;
+        const errors = [];
+
+        buttons.forEach(btn => {
+            const pid = btn.getAttribute('data-policy-id');
+            doPushPolicy(pid, d => {
+                if (d.success) {
+                    totalPushed += d.pushed;
+                    totalSkipped += d.skipped;
+                    if (d.errors && d.errors.length) errors.push(...d.errors);
+                } else {
+                    errors.push(d.error || 'Unknown error');
+                }
+                remaining--;
+                if (remaining === 0) {
+                    let msg = `Pushed to ${totalPushed} agent(s) total, ${totalSkipped} already deployed.`;
+                    if (errors.length) msg += ' Errors: ' + errors.join('; ');
+                    showMsg(msg, errors.length ? 'warning' : 'success');
+                    setTimeout(() => location.reload(), 1500);
+                }
+            });
+        });
     });
 }
 
 function deletePolicy(id, name) {
-    if (!confirm('Delete policy "' + name + '" and all its deployments?')) return;
-    fetch('/agent/post/rmm_check.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `csrf_token=${CSRF}&action=delete_policy&policy_id=${id}`
-    }).then(r => r.json()).then(d => {
-        if (d.success) {
-            document.getElementById('pol-row-' + id)?.remove();
-            showMsg('Policy deleted.', 'success');
-        } else {
-            showMsg('Failed: ' + d.error, 'danger');
-        }
+    confirmAction('Delete policy "' + name + '" and all its deployments?', () => {
+        fetch('/agent/post/rmm_check.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `csrf_token=${CSRF}&action=delete_policy&policy_id=${id}`
+        }).then(r => r.json()).then(d => {
+            if (d.success) {
+                document.getElementById('pol-row-' + id)?.remove();
+                showMsg('Policy deleted.', 'success');
+            } else {
+                showMsg('Failed: ' + d.error, 'danger');
+            }
+        });
     });
 }
 
