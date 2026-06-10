@@ -63,11 +63,23 @@ class TacticalRmmClient {
             throw new RuntimeException("Tactical RMM API: 401 Unauthorized — check API key");
         }
         if ($status < 200 || $status >= 300) {
-            throw new RuntimeException("Tactical RMM API returned HTTP $status");
+            $detail = '';
+            $decoded_err = json_decode($raw, true);
+            if (is_array($decoded_err)) {
+                $detail = implode('; ', array_map(function ($v) {
+                    return is_array($v) ? json_encode($v) : (string) $v;
+                }, $decoded_err));
+            } elseif (is_string($decoded_err)) {
+                $detail = $decoded_err;
+            }
+            throw new RuntimeException("Tactical RMM API returned HTTP $status" . ($detail !== '' ? ": $detail" : ""));
         }
         $decoded = json_decode($raw, true);
         if ($decoded === null && !empty($raw)) {
             throw new RuntimeException("Invalid JSON response from Tactical RMM");
+        }
+        if (!is_array($decoded)) {
+            return ['message' => $decoded];
         }
         return $decoded ?? [];
     }
@@ -170,7 +182,37 @@ class TacticalRmmClient {
     }
 
     public function createCheck(string $agent_id, array $payload): array {
-        return $this->post('/agents/' . urlencode($agent_id) . '/checks/', $payload);
+        $payload['agent'] = $agent_id;
+        $this->post('/checks/', $payload);
+        // The create endpoint only returns a confirmation message, so look up
+        // the newly created check on the agent to get its id.
+        return $this->findCheck($agent_id, $payload) ?? [];
+    }
+
+    /**
+     * Find an existing check on an agent matching the given check payload
+     * (by check_type plus the field that distinguishes multiple checks of
+     * the same type, e.g. disk letter, service name, or ping target).
+     */
+    public function findCheck(string $agent_id, array $payload): ?array {
+        foreach ($this->getAgentChecks($agent_id) as $c) {
+            if (($c['check_type'] ?? null) !== ($payload['check_type'] ?? null)) {
+                continue;
+            }
+            switch ($payload['check_type']) {
+                case 'diskspace':
+                    if (($c['disk'] ?? null) !== ($payload['disk'] ?? null)) continue 2;
+                    break;
+                case 'winsvc':
+                    if (($c['svc_name'] ?? null) !== ($payload['svc_name'] ?? null)) continue 2;
+                    break;
+                case 'ping':
+                    if (($c['ip'] ?? null) !== ($payload['ip'] ?? null)) continue 2;
+                    break;
+            }
+            return $c;
+        }
+        return null;
     }
 
     public function deleteCheck(int $check_id): bool {

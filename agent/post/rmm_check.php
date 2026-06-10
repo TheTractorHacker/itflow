@@ -88,16 +88,24 @@ if ($action === 'push_policy') {
         try {
             $result   = $client->createCheck($agent_id, $payload);
             $check_id = $result['id'] ?? $result['check_id'] ?? null;
-            $cid_val  = $check_id ? "'$check_id'" : 'NULL';
-            mysqli_query($mysqli,
-                "INSERT INTO rmm_check_deployments SET
-                 policy_id=$policy_id, link_id=$link_id,
-                 tactical_check_id=$cid_val, status='active'"
-            );
-            $pushed++;
         } catch (RuntimeException $e) {
-            $errors[] = $ag['hostname'] . ': ' . $e->getMessage();
+            if (stripos($e->getMessage(), 'already exists') !== false) {
+                // Check already exists on the agent (e.g. created manually) -- record it as deployed.
+                $existing = $client->findCheck($agent_id, $payload);
+                $check_id = $existing['id'] ?? null;
+            } else {
+                $errors[] = $ag['hostname'] . ': ' . $e->getMessage();
+                continue;
+            }
         }
+
+        $cid_val = $check_id ? "'$check_id'" : 'NULL';
+        mysqli_query($mysqli,
+            "INSERT INTO rmm_check_deployments SET
+             policy_id=$policy_id, link_id=$link_id,
+             tactical_check_id=$cid_val, status='active'"
+        );
+        $pushed++;
     }
 
     logAction('RMM', 'Check Push',
@@ -204,48 +212,54 @@ echo json_encode(['success' => false, 'error' => 'Unknown action']);
 // -----------------------------------------------------------------------
 function buildTacticalCheckPayload(array $policy, array $params): array {
     $base = [
-        'check_type'       => $policy['check_type'],
-        'check_interval'   => intval($policy['check_interval']),
-        'email_alert'      => false,
-        'text_alert'       => false,
-        'dashboard_alert'  => true,
-        'failures'         => 3,
+        'check_type'      => $policy['check_type'],
+        'run_interval'    => intval($policy['check_interval']),
+        'email_alert'     => false,
+        'text_alert'      => false,
+        'dashboard_alert' => true,
+        'fails_b4_alert'  => 3,
     ];
 
     switch ($policy['check_type']) {
         case 'diskspace':
-            $base['disk']              = $params['disk'] ?? 'C';
-            $base['threshold']         = $policy['critical_threshold'] ?? 90;
-            $base['warning_threshold'] = $policy['warning_threshold']  ?? 80;
+            $disk = strtoupper(rtrim($params['disk'] ?? 'C', ':'));
+            $base['disk'] = $disk . ':'; // model field max_length=2, e.g. "C:"
+            // Tactical's diskspace thresholds are "% free space remaining" (check fails
+            // when free% < threshold), but ITFlow policies store "% used" -- invert.
+            $base['error_threshold']   = 100 - intval($policy['critical_threshold'] ?? 90);
+            $base['warning_threshold'] = 100 - intval($policy['warning_threshold']  ?? 80);
             break;
 
         case 'cpuload':
-            $base['cpuload']           = $policy['critical_threshold'] ?? 95;
-            $base['warning_threshold'] = $policy['warning_threshold']  ?? 80;
+            $base['error_threshold']   = intval($policy['critical_threshold'] ?? 95);
+            $base['warning_threshold'] = intval($policy['warning_threshold']  ?? 80);
             break;
 
         case 'memory':
-            $base['threshold']         = $policy['critical_threshold'] ?? 95;
-            $base['warning_threshold'] = $policy['warning_threshold']  ?? 85;
+            $base['error_threshold']   = intval($policy['critical_threshold'] ?? 95);
+            $base['warning_threshold'] = intval($policy['warning_threshold']  ?? 85);
             break;
 
         case 'ping':
-            $base['ip']        = $params['ip'] ?? '8.8.8.8';
-            $base['failures']  = $params['failures'] ?? 5;
+            $base['ip']             = $params['ip'] ?? '8.8.8.8';
+            $base['fails_b4_alert'] = intval($params['failures'] ?? 5);
             break;
 
         case 'winsvc':
-            $base['svc_name']          = $params['svc_name'] ?? '';
+            $base['svc_name']              = $params['svc_name'] ?? '';
+            $base['svc_display_name']      = $params['svc_name'] ?? '';
             $base['pass_if_start_pending'] = false;
-            $base['restart_if_stopped']    = $params['restart_if_stopped'] ?? false;
+            $base['restart_if_stopped']    = !empty($params['restart_if_stopped']);
             break;
 
         case 'eventlog':
-            $base['log_name']    = $params['log_name'] ?? 'Application';
-            $base['event_id']    = $params['event_id'] ?? '';
-            $base['event_type']  = $params['event_type'] ?? 'ERROR';
-            $base['fail_count']  = $params['fail_count'] ?? 1;
-            $base['search_last_days'] = $params['search_last_days'] ?? 1;
+            $base['log_name']                  = $params['log_name'] ?? 'Application';
+            $base['event_id']                  = intval($params['event_id'] ?? 0);
+            $base['event_id_is_wildcard']      = empty($params['event_id']);
+            $base['event_type']                = $params['event_type'] ?? 'ERROR';
+            $base['fail_when']                 = 'contains';
+            $base['number_of_events_b4_alert'] = intval($params['fail_count'] ?? 1);
+            $base['search_last_days']          = intval($params['search_last_days'] ?? 1);
             break;
     }
     return $base;
