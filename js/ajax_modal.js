@@ -48,6 +48,12 @@ $(document).on('click', '.ajax-modal', function (e) {
       const $modal = $('#' + modalId);
       $modal.modal('show');
 
+      // Optionally jump straight to a specific pill/tab inside the modal
+      const modalTab = $trigger.data('modal-tab');
+      if (modalTab) {
+        $modal.find('a[href="#' + modalTab + '"]').tab('show');
+      }
+
       $modal.on('hidden.bs.modal', function () {
         $(this).remove();
       });

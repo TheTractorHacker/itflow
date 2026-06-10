@@ -358,7 +358,7 @@ if (isset($_GET['asset_id'])) {
                     <div class="card-body">
                         <div class="mb-1">
                             <?= $asset_tags_display ?>
-                            <a href="#" class="btn btn-xs btn-outline-secondary ajax-modal" data-modal-url="modals/asset/asset_edit.php?id=<?= $asset_id ?>" title="Manage tags"><i class="fa fa-fw fa-tag mr-1"></i>+ Tag</a>
+                            <a href="#" class="btn btn-xs btn-outline-secondary ajax-modal" data-modal-url="modals/asset/asset_edit.php?id=<?= $asset_id ?>" data-modal-tab="pills-notes" title="Manage tags"><i class="fa fa-fw fa-tag mr-1"></i>+ Tag</a>
                         </div>
                         <?php if ($asset_type) { ?>
                             <div class="mt-1"><i class="fa fa-fw fa-tag text-secondary mr-2"></i><?= $asset_type; ?></div>
