@@ -55,14 +55,23 @@ try {
         $url = $client->buildMeshUrl($link['mesh_node_id']);
         $type = 'meshcentral';
     } else {
-        $url  = $client->buildDeviceUrl($link['tactical_agent_id']);
-        $type = 'tactical';
+        // Try MeshCentral one-time login link first so the technician
+        // doesn't have to log in to either Tactical RMM or MeshCentral
+        $mesh = $client->getAgentMesh($link['tactical_agent_id']);
+        if (!empty($mesh['control'])) {
+            $url  = $mesh['control'];
+            $type = 'meshcentral';
+        } else {
+            $url  = $client->buildDeviceUrl($link['tactical_agent_id']);
+            $type = 'tactical';
+        }
     }
 
-    // Log the session (URL stored server-side only for audit, not returned to browser as-is)
+    // Log the session (redact one-time login tokens before storing)
     $ip       = mysqli_real_escape_string($mysqli, getIP());
     $ua       = mysqli_real_escape_string($mysqli, substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 300));
-    $url_log  = mysqli_real_escape_string($mysqli, $url);
+    $url_redacted = preg_replace('/([?&]login=)[^&]+/', '$1[redacted]', $url);
+    $url_log  = mysqli_real_escape_string($mysqli, $url_redacted);
     mysqli_query($mysqli,
         "INSERT INTO rmm_remote_sessions SET
          asset_id=$asset_id,

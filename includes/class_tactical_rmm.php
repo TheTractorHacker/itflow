@@ -189,6 +189,14 @@ class TacticalRmmClient {
         return $status >= 200 && $status < 300;
     }
 
+    public function getAgentMesh(string $agent_id): array {
+        try {
+            return $this->get('/agents/' . urlencode($agent_id) . '/meshcentral/');
+        } catch (RuntimeException $e) {
+            return [];
+        }
+    }
+
     public function buildDeviceUrl(string $agent_id): string {
         // Tactical RMM "Take Control" route — opens a MeshCentral remote
         // desktop session for the agent directly.
