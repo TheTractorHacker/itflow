@@ -128,7 +128,7 @@ function build_backup(mysqli $mysqli, string $type, string $backupDir): array {
     foreach ([$sqlFile, $uploadsZip, $versionFile] as $f) @chmod($f, 0600);
 
     dump_database_streaming($mysqli, $sqlFile);
-    zip_uploads($_SERVER['DOCUMENT_ROOT'] . '/../uploads', $uploadsZip);
+    zip_uploads(dirname(__DIR__, 2) . '/uploads', $uploadsZip);
 
     $commitHash = trim(@shell_exec('git log -1 --format=%H 2>/dev/null') ?: 'N/A');
     $dbSha      = hash_file('sha256', $sqlFile) ?: 'N/A';
@@ -190,7 +190,7 @@ if (isset($_GET['backup_download_fresh'])) {
     });
 
     dump_database_streaming($mysqli, $sqlFile);
-    zip_uploads($_SERVER['DOCUMENT_ROOT'] . '/../uploads', $uploadsZip);
+    zip_uploads(dirname(__DIR__, 2) . '/uploads', $uploadsZip);
 
     $meta  = "ITFlow Backup Metadata\n";
     $meta .= "Generated: " . date('Y-m-d H:i:s') . "\n";

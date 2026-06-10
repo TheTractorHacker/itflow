@@ -18,6 +18,10 @@ $sql_companies = mysqli_query($mysqli, "SELECT * FROM companies, settings WHERE 
 
 $row = mysqli_fetch_assoc($sql_companies);
 
+// $row gets reassigned by many query loops below -- keep a stable copy of the
+// companies+settings row for config values needed later (auto-backup, RMM).
+$settings_row = $row;
+
 // Company Details
 $company_name = sanitizeInput($row['company_name']);
 $company_phone = sanitizeInput(formatPhoneNumber($row['company_phone'], $row['company_phone_country_code']));
@@ -1248,9 +1252,9 @@ if ($updates->current_version !== $updates->latest_version) {
  * ###############################################################################################################
  */
 
-$config_backup_auto_enabled = intval($row['config_backup_auto_enabled'] ?? 0);
-$config_backup_frequency    = $row['config_backup_frequency'] ?? 'daily';
-$config_backup_retain_count = max(1, intval($row['config_backup_retain_count'] ?? 7));
+$config_backup_auto_enabled = intval($settings_row['config_backup_auto_enabled'] ?? 0);
+$config_backup_frequency    = $settings_row['config_backup_frequency'] ?? 'daily';
+$config_backup_retain_count = max(1, intval($settings_row['config_backup_retain_count'] ?? 7));
 
 if ($config_backup_auto_enabled) {
     $backup_dir   = dirname(__DIR__) . '/backups';
@@ -1277,6 +1281,10 @@ if ($config_backup_auto_enabled) {
 
     if ($should_run) {
         // Inline build_backup logic (cron runs as CLI, can't call HTTP handlers)
+        // backup.php guards against direct access -- mark this as an authorized include.
+        if (!defined('FROM_POST_HANDLER')) {
+            define('FROM_POST_HANDLER', true);
+        }
         require_once dirname(__DIR__) . '/admin/post/backup.php';
         $result = build_backup($mysqli, 'auto', $backup_dir);
         prune_backups($backup_dir, $config_backup_retain_count);
@@ -1523,6 +1531,9 @@ if (!empty($automation_rules)) {
  *  RMM ALERT AUTO-TICKETING (Syncro-Beta)
  * ###############################################################################################################
  */
+
+$config_module_enable_rmm          = intval($settings_row['config_module_enable_rmm'] ?? 0);
+$config_rmm_auto_ticket_severities = sanitizeInput($settings_row['config_rmm_auto_ticket_severities'] ?? '');
 
 if ($config_module_enable_rmm && !empty($config_rmm_auto_ticket_severities)) {
     require_once dirname(__DIR__) . '/includes/rmm_functions.php';
