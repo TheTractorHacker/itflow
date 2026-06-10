@@ -336,7 +336,15 @@ if (isset($_GET['asset_id'])) {
         </div>
         <?php endif; ?>
 
-        <div class="row">
+        <style>
+            #asset-details-content { font-size: 1.05rem; }
+            #asset-details-content .small,
+            #asset-details-content small { font-size: 92%; }
+            #asset-details-content [style*="font-size:11px"] { font-size: 12px !important; }
+            #asset-details-content [style*="font-size:13px"] { font-size: 14px !important; }
+        </style>
+
+        <div class="row" id="asset-details-content">
 
             <div class="col-md-3">
 
@@ -1587,7 +1595,7 @@ if (isset($_GET['asset_id'])) {
 
             </div>
 
-        </div>
+        </div><!-- /#asset-details-content -->
 
         <?php
 
