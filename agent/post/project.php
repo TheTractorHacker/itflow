@@ -42,6 +42,82 @@ if (isset($_POST['add_project'])) {
 
     $project_id = mysqli_insert_id($mysqli);
 
+    // Optionally apply a contract template to this client - creates a real contract
+    // and surfaces its terms on the onboarding ticket(s) created below
+    $contract_template_id = intval($_POST['contract_template_id'] ?? 0);
+    $contract_info_html = '';
+
+    if ($contract_template_id && $client_id) {
+        $contract_template = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM contract_templates WHERE contract_template_id = $contract_template_id LIMIT 1"));
+
+        if ($contract_template) {
+            $ct_name = mysqli_real_escape_string($mysqli, $contract_template['contract_template_name']);
+            $ct_type = mysqli_real_escape_string($mysqli, $contract_template['contract_template_type']);
+            $ct_freq = $contract_template['contract_template_renewal_frequency'] !== null && $contract_template['contract_template_renewal_frequency'] !== ''
+                ? "'" . mysqli_real_escape_string($mysqli, $contract_template['contract_template_renewal_frequency']) . "'" : 'NULL';
+            $ct_rate_standard = $contract_template['contract_template_rate_standard'] !== null ? floatval($contract_template['contract_template_rate_standard']) : 'NULL';
+            $ct_rate_after_hours = $contract_template['contract_template_rate_after_hours'] !== null ? floatval($contract_template['contract_template_rate_after_hours']) : 'NULL';
+            $ct_net_terms = mysqli_real_escape_string($mysqli, $contract_template['contract_template_net_terms']);
+            $ct_support_hours = mysqli_real_escape_string($mysqli, $contract_template['contract_template_support_hours']);
+            $ct_details = mysqli_real_escape_string($mysqli, $contract_template['contract_template_details']);
+            $ct_sla_lr = intval($contract_template['contract_template_sla_low_response_time']);
+            $ct_sla_lres = intval($contract_template['contract_template_sla_low_resolution_time']);
+            $ct_sla_mr = intval($contract_template['contract_template_sla_medium_response_time']);
+            $ct_sla_mres = intval($contract_template['contract_template_sla_medium_resolution_time']);
+            $ct_sla_hr = intval($contract_template['contract_template_sla_high_response_time']);
+            $ct_sla_hres = intval($contract_template['contract_template_sla_high_resolution_time']);
+
+            mysqli_query($mysqli, "INSERT INTO contracts SET
+                contract_client_id = $client_id,
+                contract_name = '$ct_name',
+                contract_type = '$ct_type',
+                contract_status = 'Active',
+                contract_renewal_frequency = $ct_freq,
+                contract_start_date = CURDATE(),
+                contract_rate_standard = $ct_rate_standard,
+                contract_rate_after_hours = $ct_rate_after_hours,
+                contract_net_terms = '$ct_net_terms',
+                contract_support_hours = '$ct_support_hours',
+                contract_details = '$ct_details',
+                contract_sla_low_response_time = $ct_sla_lr,
+                contract_sla_low_resolution_time = $ct_sla_lres,
+                contract_sla_medium_response_time = $ct_sla_mr,
+                contract_sla_medium_resolution_time = $ct_sla_mres,
+                contract_sla_high_response_time = $ct_sla_hr,
+                contract_sla_high_resolution_time = $ct_sla_hres,
+                contract_created_by = $session_user_id
+            ");
+
+            logAction("Contract", "Add", "$session_name applied contract template " . $contract_template['contract_template_name'] . " during onboarding", $client_id);
+
+            // Build a summary to surface the client's contract terms on the onboarding ticket(s)
+            $contract_info_html = '<hr><p><strong>Contract: ' . nullable_htmlentities($contract_template['contract_template_name']) . '</strong>';
+            if ($contract_template['contract_template_type']) {
+                $contract_info_html .= ' (' . nullable_htmlentities($contract_template['contract_template_type']) . ')';
+            }
+            $contract_info_html .= '</p><ul>';
+            if ($contract_template['contract_template_support_hours']) {
+                $contract_info_html .= '<li>Support Hours: ' . nullable_htmlentities($contract_template['contract_template_support_hours']) . '</li>';
+            }
+            if ($contract_template['contract_template_rate_standard'] !== null) {
+                $contract_info_html .= '<li>Standard Rate: $' . number_format($contract_template['contract_template_rate_standard'], 2) . '/hr</li>';
+            }
+            if ($contract_template['contract_template_rate_after_hours'] !== null) {
+                $contract_info_html .= '<li>After Hours Rate: $' . number_format($contract_template['contract_template_rate_after_hours'], 2) . '/hr</li>';
+            }
+            if ($contract_template['contract_template_net_terms']) {
+                $contract_info_html .= '<li>Net Terms: ' . nullable_htmlentities($contract_template['contract_template_net_terms']) . '</li>';
+            }
+            if ($ct_sla_lr || $ct_sla_mr || $ct_sla_hr) {
+                $contract_info_html .= "<li>SLA Response/Resolution (hrs) &mdash; Low: $ct_sla_lr/$ct_sla_lres, Medium: $ct_sla_mr/$ct_sla_mres, High: $ct_sla_hr/$ct_sla_hres</li>";
+            }
+            $contract_info_html .= '</ul>';
+            if ($contract_template['contract_template_details']) {
+                $contract_info_html .= '<div>' . $contract_template['contract_template_details'] . '</div>';
+            }
+        }
+    }
+
     // If project template is selected add Ticket Templates and convert them to real tickets
     if($project_template_id) {
          // Get Associated Ticket Templates
@@ -55,6 +131,10 @@ if (isset($_POST['add_project'])) {
             $ticket_template_order = intval($row['ticket_template_order']);
             $ticket_template_subject = sanitizeInput($row['ticket_template_subject']);
             $ticket_template_details = mysqli_escape_string($mysqli, $row['ticket_template_details']);
+
+            if ($contract_info_html) {
+                $ticket_template_details .= mysqli_escape_string($mysqli, $contract_info_html);
+            }
 
             // Atomically increment and get the new ticket number
             mysqli_query($mysqli, "

@@ -72,6 +72,27 @@ ob_start();
             </div>
         </div>
 
+        <?php if ($client_id) { ?>
+        <div class="form-group">
+            <label>Apply Contract <small class="text-secondary">(optional)</small></label>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fa fa-fw fa-file-contract"></i></span>
+                </div>
+                <select class="form-control select2" name="contract_template_id">
+                    <option value="">- None -</option>
+                    <?php
+                    $sql_contract_templates = mysqli_query($mysqli, "SELECT contract_template_id, contract_template_name FROM contract_templates WHERE contract_template_archived_at IS NULL ORDER BY contract_template_name ASC");
+                    while ($contract_template_row = mysqli_fetch_assoc($sql_contract_templates)) {
+                    ?>
+                    <option value="<?= intval($contract_template_row['contract_template_id']) ?>"><?= nullable_htmlentities($contract_template_row['contract_template_name']) ?></option>
+                    <?php } ?>
+                </select>
+            </div>
+            <small class="form-text text-secondary">Creates a contract for this client from the template and adds its terms to the onboarding ticket(s).</small>
+        </div>
+        <?php } ?>
+
         <div class="form-group">
             <label>Description</label>
             <div class="input-group">
