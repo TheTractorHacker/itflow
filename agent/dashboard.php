@@ -599,6 +599,16 @@ if ($user_config_dashboard_technical_enable == 1) {
         ORDER BY ticket_number DESC
     ");
 
+    $sql_your_automation_runs = mysqli_query($mysqli, "
+        SELECT r.*, t.ticket_subject, t.ticket_number, t.ticket_prefix, t.ticket_client_id, c.client_name
+        FROM ticket_automation_runs r
+        INNER JOIN tickets t ON t.ticket_id = r.ticket_id
+        LEFT JOIN clients c ON c.client_id = t.ticket_client_id
+        WHERE t.ticket_assigned_to = $session_user_id
+        ORDER BY r.id DESC
+        LIMIT 10
+    ");
+
     // Ticket metrics
     $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE ticket_closed_at IS NULL AND (ticket_assigned_to IS NULL OR ticket_assigned_to = 0)"));
     $unassigned_tickets = intval($row['c']);
@@ -1006,6 +1016,7 @@ if ($user_config_dashboard_technical_enable == 1) {
                                     <th>Contact</th>
                                     <th>Priority</th>
                                     <th>Status</th>
+                                    <th>SLA</th>
                                     <th>Last Response</th>
                                 </tr>
                             </thead>
@@ -1038,6 +1049,20 @@ if ($user_config_dashboard_technical_enable == 1) {
 
                                     $ticket_priority_color = $ticket_priority == "High" ? "danger" : ($ticket_priority == "Medium" ? "warning" : "info");
                                     $contact_display = empty($contact_name) ? "-" : "<a href='contact_details.php?client_id=$client_id&contact_id=$contact_id'>$contact_name</a>";
+
+                                    $_sla_due = null;
+                                    if (empty($row['ticket_first_response_at']) && !empty($row['ticket_sla_response_due'])) {
+                                        $_sla_due = $row['ticket_sla_response_due'];
+                                    } elseif (!empty($row['ticket_sla_resolution_due'])) {
+                                        $_sla_due = $row['ticket_sla_resolution_due'];
+                                    }
+                                    $sla_badge = "<span class='text-muted'>-</span>";
+                                    if ($_sla_due) {
+                                        $_sla_breached = $_sla_due < date('Y-m-d H:i:s');
+                                        $_sla_color = $_sla_breached ? 'danger' : (strtotime($_sla_due) - time() < 7200 ? 'warning' : 'success');
+                                        $_sla_label = $_sla_breached ? 'Breached' : 'OK';
+                                        $sla_badge = "<span class='badge badge-pill badge-$_sla_color'>$_sla_label</span>";
+                                    }
                                 ?>
                                     <tr class="<?php echo empty($ticket_updated_at) ? 'text-bold' : ''; ?>">
                                         <td>
@@ -1050,7 +1075,73 @@ if ($user_config_dashboard_technical_enable == 1) {
                                         <td><?php echo $contact_display; ?></td>
                                         <td><span class='p-2 badge badge-pill badge-<?php echo $ticket_priority_color; ?>'><?php echo $ticket_priority; ?></span></td>
                                         <td><span class='badge badge-pill text-light p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span></td>
+                                        <td><?php echo $sla_badge; ?></td>
                                         <td><?php echo $ticket_updated_at_display; ?></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php } ?>
+
+    <?php if (mysqli_num_rows($sql_your_automation_runs) > 0) { ?>
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-dark mb-3">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>Recent Automation Activity</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive-sm">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Rule</th>
+                                    <th>Trigger</th>
+                                    <th>Ticket</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $automation_trigger_labels = [
+                                    'schedule'      => 'Scheduled check',
+                                    'rmm_alert'     => 'New RMM alert',
+                                    'asset_offline' => 'Asset offline',
+                                    'asset_online'  => 'Asset online',
+                                ];
+                                while ($ar = mysqli_fetch_assoc($sql_your_automation_runs)) {
+                                    $ar_time_ago = timeAgo($ar['created_at']);
+                                    $ar_rule_name = nullable_htmlentities($ar['rule_name']);
+                                    $ar_trigger = $automation_trigger_labels[$ar['trigger_type']] ?? nullable_htmlentities($ar['trigger_type']);
+                                    $ar_summary = nullable_htmlentities($ar['summary']);
+                                    $ar_ticket_id = intval($ar['ticket_id']);
+                                    $ar_ticket_client_id = intval($ar['ticket_client_id']);
+                                    $ar_ticket_label = nullable_htmlentities($ar['ticket_prefix'] . $ar['ticket_number']);
+                                    $ar_ticket_subject = nullable_htmlentities($ar['ticket_subject']);
+                                ?>
+                                    <tr>
+                                        <td><?php echo $ar_time_ago; ?></td>
+                                        <td><?php echo $ar_rule_name; ?></td>
+                                        <td><span class="badge badge-info"><?php echo $ar_trigger; ?></span></td>
+                                        <td>
+                                            <?php if ($ar_ticket_id) { ?>
+                                                <a href="ticket.php?ticket_id=<?php echo $ar_ticket_id; ?>&client_id=<?php echo $ar_ticket_client_id; ?>">
+                                                    <?php echo $ar_ticket_label; ?> <?php echo $ar_ticket_subject; ?>
+                                                </a>
+                                            <?php } else { ?>
+                                                -
+                                            <?php } ?>
+                                        </td>
+                                        <td><?php echo $ar_summary; ?></td>
                                     </tr>
                                 <?php } ?>
                             </tbody>
