@@ -134,7 +134,7 @@ if (isset($_GET['contact_id'])) {
         }
 
         $contact_tag_id_array[] = $contact_tag_id;
-        $contact_tag_name_display_array[] = "<a href='client_contacts.php?client_id=$client_id&q=$contact_tag_name'><span class='badge text-light p-1 mr-1' style='background-color: $contact_tag_color;'><i class='fa fa-fw fa-$contact_tag_icon mr-2'></i>$contact_tag_name</span></a>";
+        $contact_tag_name_display_array[] = "<a href='client_contacts.php?client_id=$client_id&q=$contact_tag_name'><span class='badge " . tagTextClass($contact_tag_color) . " p-1 mr-1' style='background-color: $contact_tag_color;'><i class='fa fa-fw fa-$contact_tag_icon mr-2'></i>$contact_tag_name</span></a>";
     }
     $contact_tags_display = implode('', $contact_tag_name_display_array);
 
@@ -427,7 +427,7 @@ if (isset($_GET['contact_id'])) {
                                     }
 
                                     $asset_tag_id_array[] = $asset_tag_id;
-                                    $asset_tag_name_display_array[] = "<a href='assets.php?$client_url tags[]=$asset_tag_id'><span class='badge text-light p-1 mr-1' style='background-color: $asset_tag_color;'><i class='fa fa-fw fa-$asset_tag_icon mr-2'></i>$asset_tag_name</span></a>";
+                                    $asset_tag_name_display_array[] = "<a href='assets.php?$client_url tags[]=$asset_tag_id'><span class='badge " . tagTextClass($asset_tag_color) . " p-1 mr-1' style='background-color: $asset_tag_color;'><i class='fa fa-fw fa-$asset_tag_icon mr-2'></i>$asset_tag_name</span></a>";
                                 }
                                 $asset_tags_display = implode('', $asset_tag_name_display_array);
 
@@ -583,7 +583,7 @@ if (isset($_GET['contact_id'])) {
                                     }
 
                                     $credential_tag_id_array[] = $credential_tag_id;
-                                    $credential_tag_name_display_array[] = "<a href='credentials.php?client_id=$client_id&tags[]=$credential_tag_id'><span class='badge text-light p-1 mr-1' style='background-color: $credential_tag_color;'><i class='fa fa-fw fa-$credential_tag_icon mr-2'></i>$credential_tag_name</span></a>";
+                                    $credential_tag_name_display_array[] = "<a href='credentials.php?client_id=$client_id&tags[]=$credential_tag_id'><span class='badge " . tagTextClass($credential_tag_color) . " p-1 mr-1' style='background-color: $credential_tag_color;'><i class='fa fa-fw fa-$credential_tag_icon mr-2'></i>$credential_tag_name</span></a>";
                                 }
                                 $credential_tags_display = implode('', $credential_tag_name_display_array);
 

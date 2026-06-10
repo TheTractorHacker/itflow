@@ -12,6 +12,9 @@ $tag_type = intval($row['tag_type']);
 $tag_color = nullable_htmlentities($row['tag_color']);
 $tag_icon = nullable_htmlentities($row['tag_icon']);
 
+$tag_color_palette = tagColorPalette();
+$tag_color_is_custom = !in_array(strtolower($tag_color), array_map('strtolower', $tag_color_palette));
+
 if ($tag_type == 1) {
     $tag_type_display = "Client";
 } elseif ( $tag_type == 2) {
@@ -54,13 +57,50 @@ ob_start();
 
         <div class="form-group">
             <label>Color <strong class="text-danger">*</strong></label>
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text"><i class="fa fa-fw fa-paint-brush"></i></span>
-                </div>
-                <input type="color" class="form-control col-3" name="color" value="<?php echo $tag_color; ?>" required>
+            <input type="hidden" name="color" id="tag_color_value" value="<?= $tag_color ?>" required>
+            <div class="tag-color-palette">
+                <?php foreach ($tag_color_palette as $i => $hex) { ?>
+                <span class="tag-color-swatch<?= (!$tag_color_is_custom && strtolower($hex) === strtolower($tag_color)) ? ' selected' : '' ?>" data-color="<?= $hex ?>" style="background-color: <?= $hex ?>;"></span>
+                <?php } ?>
+                <label class="tag-color-swatch tag-color-custom<?= $tag_color_is_custom ? ' selected' : '' ?>" title="Custom color" style="<?= $tag_color_is_custom ? 'background-color: ' . $tag_color . ';' : '' ?>">
+                    <i class="fa fa-fw fa-eye-dropper"></i>
+                    <input type="color" id="tag_color_custom" value="<?= $tag_color_is_custom ? $tag_color : $tag_color_palette[0] ?>">
+                </label>
             </div>
         </div>
+
+        <style>
+        .tag-color-palette { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag-color-swatch { width: 30px; height: 30px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; color: #6c757d; }
+        .tag-color-swatch.selected { border-color: #343a40; box-shadow: 0 0 0 2px #fff inset; }
+        .tag-color-custom { border: 2px dashed #aaa; position: relative; overflow: hidden; }
+        .tag-color-custom input[type=color] { position: absolute; top: -4px; left: -4px; width: 40px; height: 40px; opacity: 0; cursor: pointer; }
+        </style>
+
+        <script>
+        (function(){
+            var swatches = document.querySelectorAll('.tag-color-swatch[data-color]');
+            var hiddenInput = document.getElementById('tag_color_value');
+            var customInput = document.getElementById('tag_color_custom');
+            var customLabel = document.querySelector('.tag-color-custom');
+
+            swatches.forEach(function(s){
+                s.addEventListener('click', function(){
+                    swatches.forEach(function(o){ o.classList.remove('selected'); });
+                    customLabel.classList.remove('selected');
+                    s.classList.add('selected');
+                    hiddenInput.value = s.dataset.color;
+                });
+            });
+
+            customInput.addEventListener('input', function(){
+                swatches.forEach(function(o){ o.classList.remove('selected'); });
+                customLabel.classList.add('selected');
+                customLabel.style.backgroundColor = customInput.value;
+                hiddenInput.value = customInput.value;
+            });
+        })();
+        </script>
 
         <div class="form-group">
             <label>Icon</label>

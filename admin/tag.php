@@ -136,7 +136,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td>
                                 <a class="ajax-modal" href="#"
                                     data-modal-url="modals/tag/tag_edit.php?id=<?= $tag_id ?>">
-                                    <span class='badge text-light p-2 mr-1' style="background-color: <?php echo $tag_color; ?>"><i class="fa fa-fw fa-<?php echo $tag_icon; ?> mr-2"></i><?php echo $tag_name; ?></span>
+                                    <span class='badge <?php echo tagTextClass($tag_color); ?> p-2 mr-1' style="background-color: <?php echo $tag_color; ?>"><i class="fa fa-fw fa-<?php echo $tag_icon; ?> mr-2"></i><?php echo $tag_name; ?></span>
                                 </a>
                             </td>
                             <td>

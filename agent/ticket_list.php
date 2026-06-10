@@ -253,7 +253,7 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                 $ticket_tag_name = nullable_htmlentities($tag_row['tag_name']);
                                 $ticket_tag_color = nullable_htmlentities($tag_row['tag_color']) ?: 'dark';
                                 $ticket_tag_icon = nullable_htmlentities($tag_row['tag_icon']) ?: 'tag';
-                                $ticket_tags_display .= "<span class='badge text-light p-1 mr-1' style='background-color: $ticket_tag_color;'><i class='fa fa-fw fa-$ticket_tag_icon mr-1'></i>$ticket_tag_name</span>";
+                                $ticket_tags_display .= "<span class='badge " . tagTextClass($ticket_tag_color) . " p-1 mr-1' style='background-color: $ticket_tag_color;'><i class='fa fa-fw fa-$ticket_tag_icon mr-1'></i>$ticket_tag_name</span>";
                             }
 
                             ?>

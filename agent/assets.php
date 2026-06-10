@@ -647,7 +647,7 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
                             }
 
                             $asset_tag_id_array[] = $asset_tag_id;
-                            $asset_tag_name_display_array[] = "<a href='assets.php?$client_url tags[]=$asset_tag_id'><span class='badge text-light p-1 mr-1' style='background-color: $asset_tag_color;'><i class='fa fa-fw fa-$asset_tag_icon mr-1'></i>$asset_tag_name</span></a>";
+                            $asset_tag_name_display_array[] = "<a href='assets.php?$client_url tags[]=$asset_tag_id'><span class='badge " . tagTextClass($asset_tag_color) . " p-1 mr-1' style='background-color: $asset_tag_color;'><i class='fa fa-fw fa-$asset_tag_icon mr-1'></i>$asset_tag_name</span></a>";
                         }
                         $asset_tags_display = implode('', $asset_tag_name_display_array);
 

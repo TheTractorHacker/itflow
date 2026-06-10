@@ -459,7 +459,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             }
 
                             $contact_tag_id_array[] = $contact_tag_id;
-                            $contact_tag_name_display_array[] = "<a href='contacts.php?$client_url tags[]=$contact_tag_id'><span class='badge text-light p-1 mr-1' style='background-color: $contact_tag_color;'><i class='fa fa-fw fa-$contact_tag_icon mr-2'></i>$contact_tag_name</span></a>";
+                            $contact_tag_name_display_array[] = "<a href='contacts.php?$client_url tags[]=$contact_tag_id'><span class='badge " . tagTextClass($contact_tag_color) . " p-1 mr-1' style='background-color: $contact_tag_color;'><i class='fa fa-fw fa-$contact_tag_icon mr-2'></i>$contact_tag_name</span></a>";
                         }
                         $contact_tags_display = implode('', $contact_tag_name_display_array);
 

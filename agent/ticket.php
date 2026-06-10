@@ -1700,7 +1700,7 @@ if (isset($_GET['ticket_id'])) {
                                 $ticket_tag_color = nullable_htmlentities($tag_row['tag_color']) ?: 'dark';
                                 $ticket_tag_icon = nullable_htmlentities($tag_row['tag_icon']) ?: 'tag';
                                 ?>
-                                <span class='badge text-light p-1 mr-1' style='background-color: <?= $ticket_tag_color ?>;'><i class='fa fa-fw fa-<?= $ticket_tag_icon ?> mr-1'></i><?= $ticket_tag_name ?></span>
+                                <span class='badge <?= tagTextClass($ticket_tag_color) ?> p-1 mr-1' style='background-color: <?= $ticket_tag_color ?>;'><i class='fa fa-fw fa-<?= $ticket_tag_icon ?> mr-1'></i><?= $ticket_tag_name ?></span>
                             <?php }
                         } else { ?>
                             <span class="text-muted">No tags</span>

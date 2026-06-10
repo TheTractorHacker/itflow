@@ -366,7 +366,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 }
 
                                 $credential_tag_id_array[] = $credential_tag_id;
-                                $credential_tag_name_display_array[] = "<a href='credentials.php?$client_url tags[]=$credential_tag_id'><span class='badge text-light p-1 mr-1' style='background-color: $credential_tag_color;'><i class='fa fa-fw fa-$credential_tag_icon mr-2'></i>$credential_tag_name</span></a>";
+                                $credential_tag_name_display_array[] = "<a href='credentials.php?$client_url tags[]=$credential_tag_id'><span class='badge " . tagTextClass($credential_tag_color) . " p-1 mr-1' style='background-color: $credential_tag_color;'><i class='fa fa-fw fa-$credential_tag_icon mr-2'></i>$credential_tag_name</span></a>";
                             }
                             $credential_tags_display = implode('', $credential_tag_name_display_array);
 
