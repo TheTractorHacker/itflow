@@ -382,6 +382,24 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                         <?= $ticket_priority ?>
                                     </span>
                                     <?php } ?>
+                                    <?php
+                                    // SLA badge - worst-case of response (if not yet first-responded) / resolution
+                                    $_sla_due = null;
+                                    if (empty($row['ticket_first_response_at']) && !empty($row['ticket_sla_response_due'])) {
+                                        $_sla_due = $row['ticket_sla_response_due'];
+                                    } elseif (!empty($row['ticket_sla_resolution_due'])) {
+                                        $_sla_due = $row['ticket_sla_resolution_due'];
+                                    }
+                                    if ($_sla_due && empty($ticket_closed_at)) {
+                                        $_sla_breached = $_sla_due < date('Y-m-d H:i:s');
+                                        $_sla_color = $_sla_breached ? 'danger' : (strtotime($_sla_due) - time() < 7200 ? 'warning' : 'success');
+                                        $_sla_label = $_sla_breached ? 'SLA breached' : 'SLA ok';
+                                    ?>
+                                    <br>
+                                    <span class="badge badge-<?= $_sla_color ?> mt-1" title="SLA due <?= date('M j, Y g:i A', strtotime($_sla_due)) ?>">
+                                        <i class="fas fa-stopwatch mr-1"></i><?= $_sla_label ?>
+                                    </span>
+                                    <?php } ?>
                                 </td>
 
                                 <!-- Ticket Status -->

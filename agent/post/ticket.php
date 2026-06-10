@@ -6,6 +6,8 @@
 
 defined('FROM_POST_HANDLER') || die("Direct file access is not allowed");
 
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/sla_functions.php';
+
 if (isset($_POST['add_ticket'])) {
 
     validateCSRFToken($_POST['csrf_token']);
@@ -255,6 +257,8 @@ if (isset($_POST['edit_ticket'])) {
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_category = $category_id, ticket_subject = '$ticket_subject', ticket_priority = '$ticket_priority', ticket_billable = $billable, ticket_details = '$details', ticket_due_at = $due, ticket_vendor_ticket_number = '$vendor_ticket_number', ticket_contact_id = $contact_id, ticket_assigned_to = $assigned_to, ticket_vendor_id = $vendor_id, ticket_location_id = $location_id, ticket_asset_id = $asset_id, ticket_project_id = $project_id WHERE ticket_id = $ticket_id");
 
+    recalculateTicketSla($mysqli, $ticket_id);
+
     // Add Additional Assets
     if (isset($_POST['additional_assets'])) {
         mysqli_query($mysqli, "DELETE FROM ticket_assets WHERE ticket_id = $ticket_id");
@@ -361,6 +365,8 @@ if (isset($_POST['edit_ticket_priority'])) {
     }
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_priority = '$priority' WHERE ticket_id = $ticket_id");
+
+    recalculateTicketSla($mysqli, $ticket_id);
 
     // Update Ticket History
     mysqli_query($mysqli, "INSERT INTO ticket_history SET ticket_history_status = '$ticket_status', ticket_history_description = '$session_name changed priority from $original_priority to $priority', ticket_history_ticket_id = $ticket_id");
@@ -1281,6 +1287,8 @@ if (isset($_POST['bulk_edit_ticket_priority'])) {
 
             // Update ticket & insert reply
             mysqli_query($mysqli, "UPDATE tickets SET ticket_priority = '$priority' WHERE ticket_id = $ticket_id");
+
+            recalculateTicketSla($mysqli, $ticket_id);
 
             mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$session_name updated the priority from $current_ticket_priority to $priority', ticket_reply_type = 'System', ticket_reply_time_worked = '00:01:00', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 

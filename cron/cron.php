@@ -1432,16 +1432,19 @@ if (!empty($automation_rules)) {
             $idle_since = $last_reply['lr'] ? $last_reply['lr'] : $ticket['ticket_created_at'];
             $idle_hours = round((time() - strtotime($idle_since)) / 3600, 1);
 
+            $now_str = date('Y-m-d H:i:s');
             $context = [
-                'age_hours'   => $age_hours,
-                'priority'    => $priority,
-                'status_id'   => $status_id,
-                'assigned_to' => $assigned_to,
-                'idle_hours'  => $idle_hours,
-                'category'    => intval($ticket['ticket_category']),
-                'tid'         => $tid,
-                'client_id'   => $client_id,
-                'asset_id'    => intval($ticket['ticket_asset_id']),
+                'age_hours'               => $age_hours,
+                'priority'                => $priority,
+                'status_id'               => $status_id,
+                'assigned_to'             => $assigned_to,
+                'idle_hours'              => $idle_hours,
+                'category'                => intval($ticket['ticket_category']),
+                'tid'                     => $tid,
+                'client_id'               => $client_id,
+                'asset_id'                => intval($ticket['ticket_asset_id']),
+                'sla_response_breached'   => (!empty($ticket['ticket_sla_response_due']) && empty($ticket['ticket_first_response_at']) && $ticket['ticket_sla_response_due'] < $now_str) ? 1 : 0,
+                'sla_resolution_breached' => (!empty($ticket['ticket_sla_resolution_due']) && $ticket['ticket_sla_resolution_due'] < $now_str) ? 1 : 0,
             ];
 
             foreach ($schedule_rules as $rule) {

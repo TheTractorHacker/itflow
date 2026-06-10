@@ -113,6 +113,8 @@ ob_start();
             ['status_id',   'Status ID'],
             ['assigned_to', 'Assigned to (user ID)'],
             ['category',    'Ticket category'],
+            ['sla_response_breached',   'SLA response breached (1/0)'],
+            ['sla_resolution_breached', 'SLA resolution breached (1/0)'],
         ],
         rmm_alert: [
             ['severity',       'Alert severity'],
