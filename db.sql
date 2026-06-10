@@ -462,6 +462,24 @@ CREATE TABLE `calendars` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `canned_responses`
+--
+
+DROP TABLE IF EXISTS `canned_responses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `canned_responses` (
+  `canned_response_id` int(11) NOT NULL AUTO_INCREMENT,
+  `canned_response_name` varchar(255) NOT NULL,
+  `canned_response_message` mediumtext NOT NULL,
+  `canned_response_created_at` datetime DEFAULT current_timestamp(),
+  `canned_response_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+  `canned_response_archived_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`canned_response_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `categories`
 --
 
@@ -2672,6 +2690,23 @@ CREATE TABLE `ticket_statuses` (
   `ticket_status_active` tinyint(1) NOT NULL DEFAULT 1,
   `ticket_status_order` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`ticket_status_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `ticket_tags`
+--
+
+DROP TABLE IF EXISTS `ticket_tags`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ticket_tags` (
+  `ticket_tag_ticket_id` int(11) NOT NULL,
+  `ticket_tag_tag_id` int(11) NOT NULL,
+  PRIMARY KEY (`ticket_tag_ticket_id`,`ticket_tag_tag_id`),
+  KEY `fk_ticket_tag_tag` (`ticket_tag_tag_id`),
+  CONSTRAINT `fk_ticket_tag_tag` FOREIGN KEY (`ticket_tag_tag_id`) REFERENCES `tags` (`tag_id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ticket_tag_ticket` FOREIGN KEY (`ticket_tag_ticket_id`) REFERENCES `tickets` (`ticket_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

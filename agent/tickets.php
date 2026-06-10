@@ -88,6 +88,16 @@ if (isset($_GET['project']) & !empty($_GET['project']) && $_GET['project'] > '0'
     $ticket_project_filter_id = intval($_GET['project']);
 }
 
+// Tags Filter
+if (isset($_GET['tags']) && is_array($_GET['tags']) && !empty($_GET['tags'])) {
+    $ticket_tag_filter = array_map('intval', $_GET['tags']);
+    $ticket_tag_filter_string = implode(",", $ticket_tag_filter);
+    $ticket_tag_query = "AND ticket_id IN (SELECT ticket_tag_ticket_id FROM ticket_tags WHERE ticket_tag_tag_id IN ($ticket_tag_filter_string))";
+} else {
+    $ticket_tag_filter = array();
+    $ticket_tag_query = '';
+}
+
 // Ticket client access overide - This is the only way to show tickets without a client to agents with restricted client access
 $access_permission_query_overide = '';
 if ($client_access_string) {
@@ -111,6 +121,7 @@ $query =
     AND (CONCAT(ticket_prefix,ticket_number) LIKE '%$q%' OR client_name LIKE '%$q%' OR ticket_subject LIKE '%$q%' OR ticket_status_name LIKE '%$q%' OR ticket_priority LIKE '%$q%' OR user_name LIKE '%$q%' OR contact_name LIKE '%$q%' OR asset_name LIKE '%$q%' OR vendor_name LIKE '%$q%' OR ticket_vendor_ticket_number LIKE '%q%')
     $ticket_billable_snippet
     $ticket_project_snippet
+    $ticket_tag_query
     $access_permission_query_overide
     $client_query
     ORDER BY
@@ -397,6 +408,25 @@ $sql_categories_filter = mysqli_query(
                                         $project_name = nullable_htmlentities($row['project_name']);
                                         ?>
                                         <option <?php if ($ticket_project_filter_id == $project_id) { echo "selected"; } ?> value="<?php echo $project_id; ?>"><?php echo $project_prefix . $project_number . " - " . $project_name; ?></option>
+                                        <?php
+                                    }
+                                    ?>
+
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Tags</label>
+                                <select onchange="this.form.submit()" class="form-control select2" name="tags[]" data-placeholder="Any" multiple>
+
+                                    <?php
+                                    $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_type = 6 ORDER BY tag_name ASC");
+                                    while ($row = mysqli_fetch_assoc($sql_ticket_tags_filter)) {
+                                        $tag_id = intval($row['tag_id']);
+                                        $tag_name = nullable_htmlentities($row['tag_name']);
+                                        ?>
+                                        <option value="<?php echo $tag_id; ?>" <?php if (in_array($tag_id, $ticket_tag_filter)) { echo "selected"; } ?>><?php echo $tag_name; ?></option>
                                         <?php
                                     }
                                     ?>

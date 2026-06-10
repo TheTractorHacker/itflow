@@ -541,6 +541,37 @@ if (isset($_POST['edit_ticket_project'])) {
 
 }
 
+if (isset($_POST['update_ticket_tags'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id = intval($_POST['ticket_id']);
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+
+    // Don't Enforce Client Access if Ticket doesn't have an assigned client
+    if ($client_id) {
+        enforceClientAccess();
+    }
+
+    // Delete existing tags
+    mysqli_query($mysqli, "DELETE FROM ticket_tags WHERE ticket_tag_ticket_id = $ticket_id");
+
+    // Add new tags
+    if (isset($_POST['tags'])) {
+        foreach ($_POST['tags'] as $tag) {
+            $tag = intval($tag);
+            mysqli_query($mysqli, "INSERT INTO ticket_tags SET ticket_tag_ticket_id = $ticket_id, ticket_tag_tag_id = $tag");
+        }
+    }
+
+    flash_alert("Tags updated");
+
+    redirect();
+
+}
+
 if (isset($_POST['add_ticket_watcher'])) {
 
     validateCSRFToken($_POST['csrf_token']);

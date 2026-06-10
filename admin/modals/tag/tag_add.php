@@ -17,6 +17,8 @@ if (isset($_GET['type'])) {
         $type_display = "Credential";
     } elseif ($type === 5) {
         $type_display = "Asset";
+    } elseif ($type === 6) {
+        $type_display = "Ticket";
     }
 }
 ob_start();
@@ -63,6 +65,7 @@ ob_start();
                     <option value="3">Contact Tag</option>
                     <option value="4">Credential Tag</option>
                     <option value="5">Asset Tag</option>
+                    <option value="6">Ticket Tag</option>
                 </select>
             </div>
         </div>

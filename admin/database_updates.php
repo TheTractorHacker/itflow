@@ -4717,3 +4717,27 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.4'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.4') {
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `ticket_tags` (
+            `ticket_tag_ticket_id` INT(11) NOT NULL,
+            `ticket_tag_tag_id` INT(11) NOT NULL,
+            PRIMARY KEY (`ticket_tag_ticket_id`, `ticket_tag_tag_id`),
+            KEY `fk_ticket_tag_tag` (`ticket_tag_tag_id`),
+            CONSTRAINT `fk_ticket_tag_ticket` FOREIGN KEY (`ticket_tag_ticket_id`) REFERENCES `tickets` (`ticket_id`) ON DELETE CASCADE,
+            CONSTRAINT `fk_ticket_tag_tag` FOREIGN KEY (`ticket_tag_tag_id`) REFERENCES `tags` (`tag_id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `canned_responses` (
+            `canned_response_id` INT(11) NOT NULL AUTO_INCREMENT,
+            `canned_response_name` VARCHAR(255) NOT NULL,
+            `canned_response_message` MEDIUMTEXT NOT NULL,
+            `canned_response_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `canned_response_updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+            `canned_response_archived_at` DATETIME DEFAULT NULL,
+            PRIMARY KEY (`canned_response_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.5'");
+    }

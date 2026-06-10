@@ -246,6 +246,16 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                 $tasks_completed_percent = round(($completed_task_count / $task_count) * 100);
                             }
 
+                            // Get Tags
+                            $ticket_tags_display = '';
+                            $sql_ticket_tags_row = mysqli_query($mysqli, "SELECT tag_name, tag_color, tag_icon FROM ticket_tags LEFT JOIN tags ON ticket_tag_tag_id = tag_id WHERE ticket_tag_ticket_id = $ticket_id ORDER BY tag_name ASC");
+                            while ($tag_row = mysqli_fetch_assoc($sql_ticket_tags_row)) {
+                                $ticket_tag_name = nullable_htmlentities($tag_row['tag_name']);
+                                $ticket_tag_color = nullable_htmlentities($tag_row['tag_color']) ?: 'dark';
+                                $ticket_tag_icon = nullable_htmlentities($tag_row['tag_icon']) ?: 'tag';
+                                $ticket_tags_display .= "<span class='badge text-light p-1 mr-1' style='background-color: $ticket_tag_color;'><i class='fa fa-fw fa-$ticket_tag_icon mr-1'></i>$ticket_tag_name</span>";
+                            }
+
                             ?>
 
                             <tr class="<?php if(empty($ticket_closed_at) && empty($ticket_updated_at)) { echo "text-bold"; }?> <?php if (empty($ticket_closed_at) && $ticket_reply_type == "Client") { echo "table-warning"; } ?>">
@@ -279,6 +289,9 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                     <div class="mt-1" style="height: 15px; background-color:#e9ecef;">
                                         <p class="text-center" ><?php echo $completed_task_count.' / '.$task_count; ?></p>
                                     </div>
+                                    <?php } ?>
+                                    <?php if ($ticket_tags_display) { ?>
+                                    <div class="mt-1"><?php echo $ticket_tags_display; ?></div>
                                     <?php } ?>
                                 </td>
 

@@ -488,7 +488,36 @@ while ($row = mysqli_fetch_assoc($sql_resolved_tickets_to_close)) {
 
     customAction('ticket_close', $ticket_id);
 
-    //TODO: Add client notifs if $config_ticket_client_general_notifications is on
+    // Notify the client their ticket was automatically closed
+    if (!empty($config_smtp_host) && $config_ticket_client_general_notifications == 1) {
+
+        $contact_sql = mysqli_query($mysqli, "SELECT contact_name, contact_email, ticket_url_key FROM tickets
+            LEFT JOIN contacts ON ticket_contact_id = contact_id
+            WHERE ticket_id = $ticket_id
+        ");
+        $contact_row = mysqli_fetch_assoc($contact_sql);
+
+        $contact_name = sanitizeInput($contact_row['contact_name']);
+        $contact_email = sanitizeInput($contact_row['contact_email']);
+        $url_key = sanitizeInput($contact_row['ticket_url_key']);
+
+        if (filter_var($contact_email, FILTER_VALIDATE_EMAIL)) {
+
+            $email_subject = "Ticket closed - [$ticket_prefix$ticket_number] - $ticket_subject | (do not reply)";
+            $email_body = "Hello $contact_name,<br><br>Your ticket regarding \"$ticket_subject\" has been automatically closed after a period of inactivity. <br><br> We hope the request/issue was resolved to your satisfaction, please provide your feedback <a href='https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key'>here</a>. <br>If you need further assistance, please raise a new ticket using the below details. Please do not reply to this email. <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$config_base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+
+            $email = [
+                'from' => $config_ticket_from_email,
+                'from_name' => $config_ticket_from_name,
+                'recipient' => $contact_email,
+                'recipient_name' => $contact_name,
+                'subject' => $email_subject,
+                'body' => $email_body
+            ];
+
+            addToMailQueue([$email]);
+        }
+    }
 }
 
 if ($config_send_invoice_reminders == 1) {

@@ -676,6 +676,26 @@ if (isset($_GET['ticket_id'])) {
                                         <button type="button" id="draft-discard-btn" class="btn btn-sm btn-outline-secondary">Discard</button>
                                     </div>
                                 </div>
+                                <?php
+                                $sql_canned_responses = mysqli_query($mysqli, "SELECT canned_response_id, canned_response_name, canned_response_message FROM canned_responses WHERE canned_response_archived_at IS NULL ORDER BY canned_response_name ASC");
+                                $canned_responses_list = [];
+                                while ($cr = mysqli_fetch_assoc($sql_canned_responses)) $canned_responses_list[] = $cr;
+                                ?>
+                                <?php if ($canned_responses_list) { ?>
+                                <div class="dropdown mb-2">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="cannedResponseDropdown" data-toggle="dropdown">
+                                        <i class="fas fa-fw fa-comment-dots mr-1"></i>Insert Canned Response
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        <?php foreach ($canned_responses_list as $cr) {
+                                            $cr_name = nullable_htmlentities($cr['canned_response_name']);
+                                            $cr_message_json = json_encode($cr['canned_response_message'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                                        ?>
+                                            <a class="dropdown-item insert-canned-response" href="#" data-message='<?= $cr_message_json ?>'><?= $cr_name ?></a>
+                                        <?php } ?>
+                                    </div>
+                                </div>
+                                <?php } ?>
                                 <textarea
                                     id="ticket-reply-editor"
                                     class="form-control tinymceTicket" name="ticket_reply"
@@ -1579,6 +1599,36 @@ if (isset($_GET['ticket_id'])) {
                 <?php } ?>
                 <!-- End Ticket watchers card -->
 
+                <!-- Ticket tags card -->
+                <div class="card">
+                    <div class="card-header px-3 py-2">
+                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-tags mr-2"></i>Tags</h5>
+                        <?php if (lookupUserPermission("module_support") >= 2) { ?>
+                        <div class="card-tools">
+                            <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_tags.php?id=<?= $ticket_id ?>">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                        <?php } ?>
+                    </div>
+                    <div class="card-body p-3">
+                        <?php
+                        $sql_ticket_tags_display = mysqli_query($mysqli, "SELECT * FROM ticket_tags LEFT JOIN tags ON ticket_tag_tag_id = tag_id WHERE ticket_tag_ticket_id = $ticket_id ORDER BY tag_name ASC");
+                        if (mysqli_num_rows($sql_ticket_tags_display) > 0) {
+                            while ($tag_row = mysqli_fetch_assoc($sql_ticket_tags_display)) {
+                                $ticket_tag_name = nullable_htmlentities($tag_row['tag_name']);
+                                $ticket_tag_color = nullable_htmlentities($tag_row['tag_color']) ?: 'dark';
+                                $ticket_tag_icon = nullable_htmlentities($tag_row['tag_icon']) ?: 'tag';
+                                ?>
+                                <span class='badge text-light p-1 mr-1' style='background-color: <?= $ticket_tag_color ?>;'><i class='fa fa-fw fa-<?= $ticket_tag_icon ?> mr-1'></i><?= $ticket_tag_name ?></span>
+                            <?php }
+                        } else { ?>
+                            <span class="text-muted">No tags</span>
+                        <?php } ?>
+                    </div>
+                </div>
+                <!-- End Ticket tags card -->
+
                 <!-- Asset card -->
                 <?php if ($asset_id) { ?>
                     <div class="card mb-3">
@@ -1919,6 +1969,15 @@ if (_tasksTbody) new Sortable(_tasksTbody, {
         localStorage.removeItem(draftKey);
     });
 })();
+
+// Insert canned response into the reply editor
+$(document).on('click', '.insert-canned-response', function(e) {
+    e.preventDefault();
+    var ed = tinymce.get('ticket-reply-editor');
+    if (!ed) return;
+    var message = $(this).data('message');
+    ed.execCommand('mceInsertContent', false, message);
+});
 
 // Inline quick-assign on ticket detail
 $(document).on('change', '#quickAssignSelect', function() {
