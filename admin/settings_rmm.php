@@ -231,7 +231,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                         <label class="text-light small" id="label_api_url">API URL</label>
                         <input type="url" class="form-control form-control-sm" name="integration_api_url" id="integration_api_url"
                                placeholder="https://api.yourdomain.com" required>
-                        <small class="text-muted" id="help_api_url">
+                        <small class="text-light" id="help_api_url">
                             Tactical RMM: enter API server base URL (no trailing slash). e.g. <code>https://api.yourdomain.com</code>
                         </small>
                     </div>
@@ -240,7 +240,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                         <label class="text-light small" id="label_web_url">Dashboard / Web URL</label>
                         <input type="url" class="form-control form-control-sm" name="integration_web_url" id="integration_web_url"
                                placeholder="https://rmm.yourdomain.com">
-                        <small class="text-muted" id="help_web_url">
+                        <small class="text-light" id="help_web_url">
                             The browser-accessible dashboard URL (used for Connect button).
                         </small>
                     </div>
@@ -249,7 +249,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                         <label class="text-light small" id="label_api_key">API Key</label>
                         <input type="password" class="form-control form-control-sm" name="integration_api_key" id="integration_api_key"
                                autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
-                        <small class="text-muted" id="help_api_key">
+                        <small class="text-light" id="help_api_key">
                             Stored encrypted. Generate in Tactical RMM → Settings → Global Settings → API Keys.
                         </small>
                     </div>
@@ -258,7 +258,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                         <label class="text-light small">Client Secret</label>
                         <input type="password" class="form-control form-control-sm" name="integration_client_secret" id="integration_client_secret"
                                autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
-                        <small class="text-muted">
+                        <small class="text-light">
                             Stored encrypted. Generate in Action1 → Automation → API → Add API Credential.
                         </small>
                     </div>
