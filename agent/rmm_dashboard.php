@@ -42,7 +42,7 @@ $sql_offline = mysqli_query($mysqli,
 
 // Active alerts with asset link
 $sql_new_alerts = mysqli_query($mysqli,
-    "SELECT a.*, ast.asset_name, ast.asset_id as ast_id, c.client_name
+    "SELECT a.*, ast.asset_name, ast.asset_id as ast_id, ast.asset_client_id, c.client_name
      FROM rmm_alerts a
      LEFT JOIN assets ast ON ast.asset_id = a.asset_id
      LEFT JOIN clients c ON c.client_id = a.client_id
@@ -53,7 +53,7 @@ $sql_new_alerts = mysqli_query($mysqli,
 
 // Recent remote sessions
 $sql_recent_sessions = mysqli_query($mysqli,
-    "SELECT rs.*, a.asset_name, a.asset_id, u.user_name
+    "SELECT rs.*, a.asset_name, a.asset_id, a.asset_client_id, u.user_name
      FROM rmm_remote_sessions rs
      JOIN assets a ON a.asset_id = rs.asset_id
      LEFT JOIN users u ON u.user_id = rs.user_id
@@ -63,7 +63,7 @@ $sql_recent_sessions = mysqli_query($mysqli,
 
 // Recent script runs
 $sql_recent_runs = mysqli_query($mysqli,
-    "SELECT sr.*, s.name as script_name, a.asset_name, a.asset_id, u.user_name
+    "SELECT sr.*, s.name as script_name, a.asset_name, a.asset_id, a.asset_client_id, u.user_name
      FROM rmm_script_runs sr
      LEFT JOIN rmm_scripts s ON s.id = sr.script_id
      JOIN assets a ON a.asset_id = sr.asset_id
@@ -235,7 +235,7 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                     <tr>
                         <td class="pl-3 small">
                             <i class="fas fa-circle text-danger mr-1" style="font-size:8px"></i>
-                            <a href="/agent/asset_details.php?asset_id=<?= intval($row['asset_id']) ?>" class="font-weight-bold">
+                            <a href="/agent/asset_details.php?client_id=<?= intval($row['asset_client_id']) ?>&asset_id=<?= intval($row['asset_id']) ?>" class="font-weight-bold">
                                 <?= nullable_htmlentities($row['hostname'] ?: $row['asset_name']) ?>
                             </a>
                             <?php if ($row['os_name']): ?>
@@ -282,7 +282,7 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                         <div>
                             <span class="badge badge-<?= $sev_color ?> mr-1"><?= nullable_htmlentities($alert['severity']) ?></span>
                             <?php if ($alert['asset_id']): ?>
-                            <a href="/agent/asset_details.php?asset_id=<?= intval($alert['asset_id']) ?>" class="text-white font-weight-bold">
+                            <a href="/agent/asset_details.php?client_id=<?= intval($alert['asset_client_id'] ?? 0) ?>&asset_id=<?= intval($alert['asset_id']) ?>" class="text-white font-weight-bold">
                                 <?= nullable_htmlentities($alert['asset_name']) ?>
                             </a>
                             <?php endif; ?>
@@ -391,7 +391,7 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                 <?php while ($sess = mysqli_fetch_assoc($sql_recent_sessions)): ?>
                 <div class="d-flex border-bottom px-3 py-2 small align-items-center">
                     <i class="fas fa-desktop mr-2 text-info"></i>
-                    <a href="/agent/asset_details.php?asset_id=<?= intval($sess['asset_id']) ?>" class="mr-auto font-weight-bold">
+                    <a href="/agent/asset_details.php?client_id=<?= intval($sess['asset_client_id'] ?? 0) ?>&asset_id=<?= intval($sess['asset_id']) ?>" class="mr-auto font-weight-bold">
                         <?= nullable_htmlentities($sess['asset_name']) ?>
                     </a>
                     <span class="text-muted"><?= nullable_htmlentities($sess['user_name']) ?></span>
@@ -420,7 +420,7 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                     <div class="mr-auto">
                         <div class="font-weight-bold"><?= nullable_htmlentities($run['script_name'] ?? 'Manual') ?></div>
                         <div class="text-muted" style="font-size:10px">
-                            <a href="/agent/asset_details.php?asset_id=<?= intval($run['asset_id']) ?>"><?= nullable_htmlentities($run['asset_name']) ?></a>
+                            <a href="/agent/asset_details.php?client_id=<?= intval($run['asset_client_id'] ?? 0) ?>&asset_id=<?= intval($run['asset_id']) ?>"><?= nullable_htmlentities($run['asset_name']) ?></a>
                         </div>
                     </div>
                     <div class="text-right">

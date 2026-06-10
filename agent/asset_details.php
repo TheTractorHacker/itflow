@@ -317,6 +317,18 @@ if (isset($_GET['asset_id'])) {
                             <?php endif; ?>
                         </div>
                         <?php endif; ?>
+                        <?php if (lookupUserPermission('module_rmm_sync') >= 1): ?>
+                        <div class="dropdown dropleft">
+                            <button type="button" class="btn btn-outline-light btn-sm" data-toggle="dropdown" title="More RMM actions">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item text-danger" href="#" onclick="rmmUnlink(<?= intval($rmm_link['id']) ?>); return false;">
+                                    <i class="fas fa-unlink mr-2"></i>Remove from RMM
+                                </a>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -344,11 +356,10 @@ if (isset($_GET['asset_id'])) {
                         <?php } ?>
                     </div>
                     <div class="card-body">
-                        <?php if ($asset_tags_display) { ?>
-                            <div>
-                                <?= $asset_tags_display ?>
-                            </div>
-                        <?php } ?>
+                        <div class="mb-1">
+                            <?= $asset_tags_display ?>
+                            <a href="#" class="btn btn-xs btn-outline-secondary ajax-modal" data-modal-url="modals/asset/asset_edit.php?id=<?= $asset_id ?>" title="Manage tags"><i class="fa fa-fw fa-tag mr-1"></i>+ Tag</a>
+                        </div>
                         <?php if ($asset_type) { ?>
                             <div class="mt-1"><i class="fa fa-fw fa-tag text-secondary mr-2"></i><?= $asset_type; ?></div>
                         <?php }
@@ -373,22 +384,14 @@ if (isset($_GET['asset_id'])) {
                     </div>
                 </div>
 
+                <?php if ($asset_uri || $asset_uri_2 || $asset_uri_client): ?>
                 <div class="card card-dark">
                     <div class="card-header">
-                        <h5 class="card-title">Primary Network Interface</h5>
+                        <h5 class="card-title">Links</h5>
                     </div>
                     <div class="card-body">
-                        <?php if ($asset_ip) { ?>
-                            <div><i class="fa fa-fw fa-globe text-secondary mr-2"></i><?= $asset_ip; ?></div>
-                        <?php } ?>
-                        <?php if ($asset_nat_ip) { ?>
-                            <div class="mt-2"><i class="fa fa-fw fa-random text-secondary mr-2"></i><?= $asset_nat_ip; ?></div>
-                        <?php }
-                        if ($asset_mac) { ?>
-                            <div class="mt-2"><i class="fa fa-fw fa-ethernet text-secondary mr-2"></i><?= $asset_mac; ?></div>
-                        <?php }
-                        if ($asset_uri) { ?>
-                            <div class="mt-2"><i class="fa fa-fw fa-link text-secondary mr-2"></i><a href="<?= $asset_uri; ?>" target="_blank" title="<?= $asset_uri; ?>"><?= truncate($asset_uri, 40); ?></a></div>
+                        <?php if ($asset_uri) { ?>
+                            <div><i class="fa fa-fw fa-link text-secondary mr-2"></i><a href="<?= $asset_uri; ?>" target="_blank" title="<?= $asset_uri; ?>"><?= truncate($asset_uri, 40); ?></a></div>
                         <?php }
                         if ($asset_uri_2) { ?>
                             <div class="mt-2"><i class="fa fa-fw fa-link text-secondary mr-2"></i><a href="<?= $asset_uri_2; ?>" target="_blank" title="<?= $asset_uri_2; ?>"><?= truncate($asset_uri_2, 40); ?></a></div>
@@ -399,6 +402,7 @@ if (isset($_GET['asset_id'])) {
                         <?php } ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
 
                 <div class="card card-dark">
@@ -537,6 +541,11 @@ if (isset($_GET['asset_id'])) {
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link small" data-toggle="tab" href="#rdt-tickets">
+                                    <i class="fas fa-life-ring mr-1"></i>Tickets<?php if ($ticket_count > 0): ?><span class="badge badge-secondary ml-1"><?= $ticket_count ?></span><?php endif; ?>
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link small" data-toggle="tab" href="#rdt-alerts">
                                     <i class="fas fa-bell mr-1"></i>Alerts<?php if ($rmm_alerts_count > 0): ?><span class="badge badge-danger ml-1"><?= $rmm_alerts_count ?></span><?php endif; ?>
                                 </a>
@@ -583,30 +592,56 @@ if (isset($_GET['asset_id'])) {
                         <div class="tab-pane p-3" id="rdt-hardware">
                             <div class="text-center p-4 text-muted rdt-loading"><i class="fas fa-spinner fa-spin mr-2"></i>Loading from Tactical RMM...</div>
                             <div class="rdt-data" style="display:none">
-                                <div class="row mb-3">
+                                <div class="row mb-2">
+                                    <div class="col-6 col-md-3 mb-3">
+                                        <div class="info-box bg-light shadow-sm mb-0">
+                                            <span class="info-box-icon"><i class="fas fa-desktop"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Make / Model</span>
+                                                <span class="info-box-number hw-make-model" style="font-size:13px"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 mb-3">
+                                        <div class="info-box bg-light shadow-sm mb-0">
+                                            <span class="info-box-icon"><i class="fas fa-microchip"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">CPU</span>
+                                                <span class="info-box-number hw-cpu" style="font-size:13px"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 mb-3">
+                                        <div class="info-box bg-light shadow-sm mb-0">
+                                            <span class="info-box-icon"><i class="fas fa-memory"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">RAM</span>
+                                                <span class="info-box-number hw-ram"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 mb-3">
+                                        <div class="info-box bg-light shadow-sm mb-0">
+                                            <span class="info-box-icon"><i class="fas fa-tv"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Graphics</span>
+                                                <span class="info-box-number hw-graphics" style="font-size:13px"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
                                     <div class="col-md-6">
-                                        <table class="table table-sm table-borderless mb-0">
-                                            <tr><td class="text-muted pr-3" style="width:40%">Make / Model</td><td class="hw-make-model"></td></tr>
-                                            <tr><td class="text-muted pr-3">CPU</td><td class="hw-cpu"></td></tr>
-                                            <tr><td class="text-muted pr-3">RAM</td><td class="hw-ram"></td></tr>
-                                            <tr><td class="text-muted pr-3">Graphics</td><td class="hw-graphics"></td></tr>
-                                            <tr><td class="text-muted pr-3">Local IPs</td><td class="hw-local-ips"></td></tr>
-                                        </table>
+                                        <h6 class="text-muted small mb-2" style="text-transform:uppercase;letter-spacing:.4px"><i class="fas fa-network-wired mr-1"></i>Local IPs</h6>
+                                        <p class="hw-local-ips small"></p>
                                     </div>
                                     <div class="col-md-6">
-                                        <h6 class="text-muted small mb-2" style="text-transform:uppercase;letter-spacing:.4px">Physical Disks</h6>
+                                        <h6 class="text-muted small mb-2" style="text-transform:uppercase;letter-spacing:.4px"><i class="fas fa-hdd mr-1"></i>Physical Disks</h6>
                                         <ul class="hw-physical-disks small mb-0 pl-3"></ul>
                                     </div>
                                 </div>
                                 <h6 class="text-muted small mb-2" style="text-transform:uppercase;letter-spacing:.4px">Disk Volumes</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover mb-0">
-                                        <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
-                                            <tr><th class="pl-3">Drive</th><th>Filesystem</th><th>Used</th><th>Free</th><th>Total</th><th>Usage</th></tr>
-                                        </thead>
-                                        <tbody class="rdt-body"></tbody>
-                                    </table>
-                                </div>
+                                <div class="hw-volumes"></div>
                             </div>
                         </div>
                         <div class="tab-pane" id="rdt-software">
@@ -648,6 +683,31 @@ if (isset($_GET['asset_id'])) {
                                     <div class="btn-group btn-group-sm rdt-pagination"></div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="tab-pane p-3" id="rdt-tickets">
+                            <?php if ($ticket_count == 0): ?>
+                            <p class="text-muted text-center mb-0">No tickets for this asset.</p>
+                            <?php else: ?>
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+                                    <tr><th>Number</th><th>Subject</th><th>Priority</th><th>Status</th><th>Updated</th></tr>
+                                </thead>
+                                <tbody>
+                                <?php while ($trow = mysqli_fetch_assoc($sql_related_tickets)):
+                                    $tr_priority = nullable_htmlentities($trow['ticket_priority']);
+                                    $tr_priority_badge = ['High'=>'badge-danger','Medium'=>'badge-warning','Low'=>'badge-info'][$tr_priority] ?? 'badge-secondary';
+                                ?>
+                                <tr>
+                                    <td><a href="ticket.php?client_id=<?= $client_id; ?>&ticket_id=<?= intval($trow['ticket_id']); ?>"><span class="badge badge-pill badge-secondary p-2"><?= nullable_htmlentities($trow['ticket_prefix']) . intval($trow['ticket_number']); ?></span></a></td>
+                                    <td><a href="ticket.php?client_id=<?= $client_id; ?>&ticket_id=<?= intval($trow['ticket_id']); ?>"><?= nullable_htmlentities($trow['ticket_subject']); ?></a></td>
+                                    <td><?php if ($tr_priority): ?><span class="badge <?= $tr_priority_badge ?>"><?= $tr_priority ?></span><?php else: ?>-<?php endif; ?></td>
+                                    <td><span class="badge badge-pill text-light p-2" style="background-color: <?= nullable_htmlentities($trow['ticket_status_color']); ?>"><?= nullable_htmlentities($trow['ticket_status_name']); ?></span></td>
+                                    <td class="text-muted small"><?= nullable_htmlentities(substr($trow['ticket_updated_at'] ?: $trow['ticket_created_at'], 0, 16)); ?></td>
+                                </tr>
+                                <?php endwhile; mysqli_data_seek($sql_related_tickets, 0); ?>
+                                </tbody>
+                            </table>
+                            <?php endif; ?>
                         </div>
                         <div class="tab-pane p-3" id="rdt-alerts">
                             <?php
@@ -700,42 +760,53 @@ if (isset($_GET['asset_id'])) {
                             );
                             ?>
                             <div class="row">
-                                <div class="col-md-6">
-                                    <h6 class="mb-2 text-muted small" style="text-transform:uppercase;letter-spacing:.4px">Run a Script</h6>
-                                    <?php if (mysqli_num_rows($sql_rdt_scripts) === 0): ?>
-                                    <p class="text-muted small">No scripts configured. <a href="/agent/rmm_scripts.php">Add scripts</a> first.</p>
-                                    <?php else: ?>
-                                    <div class="form-inline mb-2">
-                                        <select id="rdt-script-select" class="form-control form-control-sm mr-2" style="min-width:200px">
-                                            <option value="">— Select Script —</option>
-                                            <?php while ($scr = mysqli_fetch_assoc($sql_rdt_scripts)): ?>
-                                            <option value="<?= intval($scr['id']) ?>" data-name="<?= nullable_htmlentities($scr['name']) ?>">
-                                                [<?= nullable_htmlentities($scr['category']) ?>] <?= nullable_htmlentities($scr['name']) ?>
-                                            </option>
-                                            <?php endwhile; ?>
-                                        </select>
-                                        <button class="btn btn-sm btn-primary" onclick="runRmmScript(<?= intval($rmm_link['id']) ?>)">
-                                            <i class="fas fa-play mr-1"></i>Run
-                                        </button>
+                                <div class="col-md-5 mb-3">
+                                    <div class="card card-outline card-secondary mb-0 h-100">
+                                        <div class="card-header py-2">
+                                            <h6 class="card-title mb-0"><i class="fas fa-play-circle mr-1"></i>Run a Script</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <?php if (mysqli_num_rows($sql_rdt_scripts) === 0): ?>
+                                            <p class="text-muted small mb-0">No scripts configured. <a href="/agent/rmm_scripts.php">Add scripts</a> first.</p>
+                                            <?php else: ?>
+                                            <div class="form-group mb-2">
+                                                <select id="rdt-script-select" class="form-control form-control-sm">
+                                                    <option value="">— Select Script —</option>
+                                                    <?php while ($scr = mysqli_fetch_assoc($sql_rdt_scripts)): ?>
+                                                    <option value="<?= intval($scr['id']) ?>" data-name="<?= nullable_htmlentities($scr['name']) ?>">
+                                                        [<?= nullable_htmlentities($scr['category']) ?>] <?= nullable_htmlentities($scr['name']) ?>
+                                                    </option>
+                                                    <?php endwhile; ?>
+                                                </select>
+                                            </div>
+                                            <button class="btn btn-sm btn-primary btn-block" onclick="runRmmScript(<?= intval($rmm_link['id']) ?>)">
+                                                <i class="fas fa-play mr-1"></i>Run Script
+                                            </button>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
-                                    <?php endif; ?>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-7">
                                     <h6 class="mb-2 text-muted small" style="text-transform:uppercase;letter-spacing:.4px">Recent Runs</h6>
                                     <?php if (mysqli_num_rows($sql_rdt_runs) === 0): ?>
                                     <p class="text-muted small">No scripts run yet on this asset.</p>
                                     <?php else: ?>
-                                    <table class="table table-sm mb-0">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="border-bottom text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+                                            <tr><th class="pl-2">Script</th><th>Status</th><th>Started</th><th></th></tr>
+                                        </thead>
+                                        <tbody>
                                         <?php while ($rr = mysqli_fetch_assoc($sql_rdt_runs)):
                                             $rr_badge = ['completed'=>'success','failed'=>'danger','running'=>'warning','pending'=>'secondary'][$rr['status']] ?? 'secondary';
                                         ?>
                                         <tr>
-                                            <td class="small"><?= nullable_htmlentities($rr['sname'] ?? 'Manual') ?></td>
-                                            <td><span class="badge badge-<?= $rr_badge ?>"><?= $rr['status'] ?></span></td>
+                                            <td class="pl-2 small"><?= nullable_htmlentities($rr['sname'] ?? 'Manual') ?></td>
+                                            <td><span class="badge badge-<?= $rr_badge ?>"><?= ucfirst($rr['status']) ?></span></td>
                                             <td class="small text-muted"><?= nullable_htmlentities(substr($rr['started_at'], 0, 16)) ?></td>
-                                            <td><a href="/agent/rmm_script_run.php?run_id=<?= intval($rr['id']) ?>" class="btn btn-xs btn-secondary"><i class="fas fa-eye"></i></a></td>
+                                            <td class="text-right pr-2"><a href="/agent/rmm_script_run.php?run_id=<?= intval($rr['id']) ?>" class="btn btn-xs btn-secondary"><i class="fas fa-eye"></i></a></td>
                                         </tr>
                                         <?php endwhile; ?>
+                                        </tbody>
                                     </table>
                                     <?php endif; ?>
                                 </div>
@@ -1579,6 +1650,17 @@ function rmmConnect(linkId, type) {
         else alert('Connect failed: ' + (d.error || 'Unknown error'));
     });
 }
+function rmmUnlink(linkId) {
+    if (!confirm('Remove this asset from RMM monitoring? The asset will remain in ITFlow, but RMM data, alerts, and remote connect options will be removed.')) return;
+    fetch('/agent/post/rmm_unlink.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=<?= $_SESSION["csrf_token"] ?>&link_id=' + linkId
+    }).then(r => r.json()).then(d => {
+        if (d.success) location.reload();
+        else alert('Failed: ' + (d.error || 'Unknown error'));
+    });
+}
 const _rmmTabLoaded = {};
 const _rmmTabData = {};
 const RMM_PAGE_SIZE = 10;
@@ -1615,14 +1697,19 @@ function loadRmmLiveData(type, linkId) {
             pdList.innerHTML = (hw.physical_disks || []).length
                 ? hw.physical_disks.map(pd => '<li>' + esc(pd) + '</li>').join('')
                 : '<li class="text-muted">No data</li>';
-            tbody.innerHTML = (hw.disks || []).length ? hw.disks.map(disk =>
-                '<tr><td class="pl-3">' + esc(disk.device || '') + '</td>' +
-                '<td class="text-muted small">' + esc(disk.fstype || '') + '</td>' +
-                '<td class="text-muted small">' + esc(disk.used || '') + '</td>' +
-                '<td class="text-muted small">' + esc(disk.free || '') + '</td>' +
-                '<td class="text-muted small">' + esc(disk.total || '') + '</td>' +
-                '<td class="small">' + esc(String(disk.percent ?? '')) + '%</td></tr>'
-            ).join('') : '<tr><td colspan="6" class="text-muted p-3 text-center">No disk data</td></tr>';
+            const volumes = pane.querySelector('.hw-volumes');
+            volumes.innerHTML = (hw.disks || []).length ? hw.disks.map(disk => {
+                const pct = Number(disk.percent ?? 0);
+                const barColor = pct >= 90 ? 'bg-danger' : pct >= 75 ? 'bg-warning' : 'bg-success';
+                return '<div class="mb-2">' +
+                    '<div class="d-flex justify-content-between small mb-1">' +
+                    '<span><i class="fas fa-hdd mr-1 text-secondary"></i>' + esc(disk.device || '') + ' <span class="text-muted">(' + esc(disk.fstype || '') + ')</span></span>' +
+                    '<span class="text-muted">' + esc(disk.used || '') + ' used / ' + esc(disk.free || '') + ' free / ' + esc(disk.total || '') + ' total</span>' +
+                    '</div>' +
+                    '<div class="progress" style="height:6px">' +
+                    '<div class="progress-bar ' + barColor + '" style="width:' + pct + '%"></div>' +
+                    '</div></div>';
+            }).join('') : '<p class="text-muted text-center mb-0">No disk data</p>';
         }
         dataDiv.style.display = 'block';
     }).catch(() => { loading.innerHTML = '<p class="text-danger p-3">Failed to connect to Tactical RMM</p>'; });
