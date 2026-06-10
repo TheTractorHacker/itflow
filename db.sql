@@ -324,6 +324,7 @@ CREATE TABLE `assets` (
   `asset_id` int(11) NOT NULL AUTO_INCREMENT,
   `asset_type` varchar(200) NOT NULL,
   `asset_name` varchar(200) NOT NULL,
+  `asset_tag` varchar(100) DEFAULT NULL,
   `asset_description` varchar(255) DEFAULT NULL,
   `asset_make` varchar(200) NOT NULL,
   `asset_model` varchar(200) DEFAULT NULL,

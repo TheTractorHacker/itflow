@@ -5,4 +5,4 @@
  * It is used in conjunction with database_updates.php
  */
 
-DEFINE("LATEST_DATABASE_VERSION", "2.5.0");
+DEFINE("LATEST_DATABASE_VERSION", "2.5.1");

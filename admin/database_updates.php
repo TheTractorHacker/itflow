@@ -4660,3 +4660,10 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.0'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.0') {
+
+        mysqli_query($mysqli, "ALTER TABLE `assets` ADD `asset_tag` VARCHAR(100) NULL DEFAULT NULL AFTER `asset_name`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.1'");
+    }

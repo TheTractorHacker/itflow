@@ -129,6 +129,16 @@ ob_start();
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>Asset Tag</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-fw fa-barcode"></i></span>
+                        </div>
+                        <input type="text" class="form-control" name="asset_tag" placeholder="e.g. 25500" maxlength="100">
+                    </div>
+                </div>
+
                 <?php //Do not display Make Model or Serial if Virtual is selected
                 if ($type !== 'Virtual') { ?>
                     <div class="form-group">

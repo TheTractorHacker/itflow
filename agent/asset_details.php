@@ -35,6 +35,7 @@ if (isset($_GET['asset_id'])) {
         $asset_id = intval($row['asset_id']);
         $asset_type = nullable_htmlentities($row['asset_type']);
         $asset_name = nullable_htmlentities($row['asset_name']);
+        $asset_tag = nullable_htmlentities($row['asset_tag']);
         $asset_description = nullable_htmlentities($row['asset_description']);
         $asset_make = nullable_htmlentities($row['asset_make']);
         $asset_model = nullable_htmlentities($row['asset_model']);
@@ -348,6 +349,9 @@ if (isset($_GET['asset_id'])) {
                         <h4 class="text-bold"><i class="fa fa-fw text-secondary fa-<?= $device_icon; ?> mr-2"></i><?= $asset_name; ?>
                             <?php if ($asset_favorite) { ?><i class="fas fa-fw text-warning fa-star" title="Favorite"></i><?php } ?>
                         </h4>
+                        <?php if ($asset_tag) { ?>
+                            <div class="text-secondary small"><i class="fa fa-fw fa-barcode mr-1"></i>Asset Tag: <?= $asset_tag; ?></div>
+                        <?php } ?>
                         <?php if ($asset_photo) { ?>
                             <img class="img-fluid img-circle p-3" alt="asset_photo" src="<?= "../uploads/clients/$client_id/$asset_photo"; ?>">
                         <?php } ?>

@@ -2,6 +2,7 @@
 defined('FROM_POST_HANDLER') || die("Direct file access is not allowed");
 
 $name = sanitizeInput($_POST['name']);
+$asset_tag = sanitizeInput($_POST['asset_tag'] ?? '');
 $description = sanitizeInput($_POST['description']);
 $type = sanitizeInput($_POST['type']);
 $make = sanitizeInput($_POST['make']);

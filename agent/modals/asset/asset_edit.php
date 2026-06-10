@@ -14,6 +14,7 @@ $client_id = intval($row['asset_client_id']);
 $asset_id = intval($row['asset_id']);
 $asset_type = nullable_htmlentities($row['asset_type']);
 $asset_name = nullable_htmlentities($row['asset_name']);
+$asset_tag = nullable_htmlentities($row['asset_tag']);
 $asset_description = nullable_htmlentities($row['asset_description']);
 $asset_make = nullable_htmlentities($row['asset_make']);
 $asset_model = nullable_htmlentities($row['asset_model']);
@@ -121,7 +122,7 @@ ob_start();
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-fw fa-tag"></i></span>
                         </div>
-                        <input type="text" class="form-control" name="name" placeholder="Asset name or asset tag" maxlength="200" value="<?= $asset_name ?>" required>
+                        <input type="text" class="form-control" name="name" placeholder="Asset name" maxlength="200" value="<?= $asset_name ?>" required>
                         <div class="input-group-append">
                             <div class="input-group-text">
                                 <label class="star-toggle mb-0" title="Favorite">
@@ -133,6 +134,16 @@ ob_start();
                                 </label>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Asset Tag</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-fw fa-barcode"></i></span>
+                        </div>
+                        <input type="text" class="form-control" name="asset_tag" placeholder="e.g. 25500" maxlength="100" value="<?= $asset_tag ?>">
                     </div>
                 </div>
 
