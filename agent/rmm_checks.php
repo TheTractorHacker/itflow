@@ -85,16 +85,16 @@ foreach ($platform_order as $plat):
         </button>
     </div>
     <div class="card-body p-0">
-    <table class="table table-sm table-hover mb-0">
+    <table class="table table-sm table-hover mb-0" style="table-layout:fixed">
         <thead class="text-muted border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
             <tr>
-                <th class="pl-3">Check Name</th>
-                <th>Type</th>
-                <th>Thresholds</th>
-                <th>Interval</th>
-                <th>Deployed</th>
-                <th>Status</th>
-                <th></th>
+                <th class="pl-3" style="width:26%">Check Name</th>
+                <th class="text-center" style="width:16%;font-size:12px">Type</th>
+                <th class="text-center" style="width:14%;font-size:12px">Thresholds</th>
+                <th class="text-center" style="width:9%;font-size:12px">Interval</th>
+                <th class="text-center" style="width:11%;font-size:12px">Deployed</th>
+                <th class="text-center" style="width:10%;font-size:12px">Status</th>
+                <th style="width:14%"></th>
             </tr>
         </thead>
         <tbody>
@@ -110,7 +110,7 @@ foreach ($platform_order as $plat):
                 <div class="text-muted small"><?= nullable_htmlentities($pol['description']) ?></div>
                 <?php endif; ?>
             </td>
-            <td class="small">
+            <td class="text-center">
                 <i class="<?= $tm['icon'] ?> mr-1 text-muted"></i><?= $tm['label'] ?>
                 <?php if (!empty($params['disk'])): ?>
                 <code class="ml-1"><?= htmlspecialchars($params['disk']) ?>:</code>
@@ -120,29 +120,29 @@ foreach ($platform_order as $plat):
                 <code class="ml-1"><?= htmlspecialchars($params['ip']) ?></code>
                 <?php endif; ?>
             </td>
-            <td class="small">
+            <td class="text-center">
                 <?php if ($pol['warning_threshold']): ?>
-                <span class="badge badge-warning">Warn <?= intval($pol['warning_threshold']) ?>%</span>
+                <span class="badge badge-warning" style="font-size:90%">Warn <?= intval($pol['warning_threshold']) ?>%</span>
                 <?php endif; ?>
                 <?php if ($pol['critical_threshold']): ?>
-                <span class="badge badge-danger">Crit <?= intval($pol['critical_threshold']) ?>%</span>
+                <span class="badge badge-danger" style="font-size:90%">Crit <?= intval($pol['critical_threshold']) ?>%</span>
                 <?php endif; ?>
                 <?php if (!$pol['warning_threshold'] && !$pol['critical_threshold']): ?>
                 <span class="text-muted">—</span>
                 <?php endif; ?>
             </td>
-            <td class="small text-muted"><?= intval($pol['check_interval']) ?>s</td>
-            <td class="small text-center">
+            <td class="text-center text-muted"><?= intval($pol['check_interval']) ?>s</td>
+            <td class="text-center">
                 <?php if ($pol['deployed_count'] > 0): ?>
-                <span class="badge badge-success"><?= intval($pol['deployed_count']) ?> agents</span>
+                <span class="badge badge-success" style="font-size:90%"><?= intval($pol['deployed_count']) ?> agents</span>
                 <?php else: ?>
                 <span class="text-muted">Not deployed</span>
                 <?php endif; ?>
             </td>
-            <td>
+            <td class="text-center">
                 <?= $pol['enabled']
-                    ? '<span class="badge badge-success">Active</span>'
-                    : '<span class="badge badge-secondary">Disabled</span>' ?>
+                    ? '<span class="badge badge-success" style="font-size:90%">Active</span>'
+                    : '<span class="badge badge-secondary" style="font-size:90%">Disabled</span>' ?>
             </td>
             <td class="text-right pr-2" style="white-space:nowrap">
                 <button class="btn btn-xs btn-success mr-1" title="Push to matching agents"

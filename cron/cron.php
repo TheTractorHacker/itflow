@@ -1484,7 +1484,7 @@ if (!empty($automation_rules)) {
                     $note = mysqli_real_escape_string($mysqli, "🤖 Automation: $aval");
                     mysqli_query($mysqli,
                         "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_ticket_id, ticket_reply_created_at)
-                         VALUES ('$note', 'note', $tid, NOW())"
+                         VALUES ('$note', 'Automation', $tid, NOW())"
                     );
                     break;
 

@@ -127,7 +127,7 @@ if (isset($_GET['complete_task'])) {
     $time_worked = gmdate("H:i:s", $task_completion_estimate * 60); // Convert minutes to HH:MM:SS
 
     // Add reply
-    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Completed Task - $task_name', ticket_reply_time_worked = '$time_worked', ticket_reply_type = 'Internal', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Completed Task - $task_name', ticket_reply_time_worked = '$time_worked', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 
     $ticket_reply_id = mysqli_insert_id($mysqli);
 
@@ -158,7 +158,7 @@ if (isset($_GET['undo_complete_task'])) {
     mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NULL, task_completed_by = NULL WHERE task_id = $task_id");
 
     // Add reply
-    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Undo Completed Task - $task_name', ticket_reply_time_worked = '00:01:00', ticket_reply_type = 'Internal', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Undo Completed Task - $task_name', ticket_reply_time_worked = '00:01:00', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 
     $ticket_reply_id = mysqli_insert_id($mysqli);
 
@@ -427,7 +427,7 @@ if (isset($_GET['complete_all_tasks'])) {
     mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NOW(), task_completed_by = $session_user_id WHERE task_ticket_id = $ticket_id AND task_completed_at IS NULL");
 
     // Add reply
-    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Marked all tasks complete', ticket_reply_type = 'Internal', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Marked all tasks complete', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 
     $ticket_reply_id = mysqli_insert_id($mysqli);
 
@@ -453,7 +453,7 @@ if (isset($_GET['undo_complete_all_tasks'])) {
     mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NULL, task_completed_by = NULL WHERE task_ticket_id = $ticket_id AND task_completed_at IS NOT NULL");
 
     // Add reply
-    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Marked all tasks incomplete', ticket_reply_type = 'Internal', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Marked all tasks incomplete', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 
     $ticket_reply_id = mysqli_insert_id($mysqli);
 

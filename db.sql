@@ -2647,7 +2647,7 @@ DROP TABLE IF EXISTS `ticket_replies`;
 CREATE TABLE `ticket_replies` (
   `ticket_reply_id` int(11) NOT NULL AUTO_INCREMENT,
   `ticket_reply` longtext NOT NULL,
-  `ticket_reply_type` varchar(10) NOT NULL,
+  `ticket_reply_type` varchar(20) NOT NULL,
   `ticket_reply_time_worked` time DEFAULT NULL,
   `ticket_reply_created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `ticket_reply_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),

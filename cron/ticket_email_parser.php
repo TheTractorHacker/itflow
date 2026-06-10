@@ -293,7 +293,7 @@ function addReply($from_email, $date, $subject, $ticket_number, $message, $attac
             if ($row2) {
                 $ticket_reply_contact = intval($row2['contact_id']);
             } else {
-                $ticket_reply_type = 'Internal';
+                $ticket_reply_type = 'System';
                 $ticket_reply_contact = '0';
                 $message = "<b>WARNING: Contact email mismatch</b><br>$message";
                 $message_esc = mysqli_real_escape_string($mysqli, $message);

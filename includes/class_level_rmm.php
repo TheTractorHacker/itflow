@@ -191,7 +191,7 @@ class LevelRmmClient {
     // -----------------------------------------------------------------------
 
     public function buildDeviceUrl(string $agent_id): string {
-        return 'https://app.level.io/devices/' . urlencode($agent_id);
+        return 'https://app.level.io/device/' . urlencode($agent_id);
     }
 
     public function getIntegrationId(): int {

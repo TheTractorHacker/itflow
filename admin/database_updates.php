@@ -4676,3 +4676,12 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.2'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.2') {
+
+        mysqli_query($mysqli, "ALTER TABLE `ticket_replies` MODIFY `ticket_reply_type` VARCHAR(20) NOT NULL");
+
+        mysqli_query($mysqli, "UPDATE `ticket_replies` SET `ticket_reply_type` = 'Automation' WHERE `ticket_reply_type` = 'note'");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.3'");
+    }

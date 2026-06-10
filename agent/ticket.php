@@ -247,7 +247,7 @@ if (isset($_GET['ticket_id'])) {
         $row = mysqli_fetch_assoc($ticket_all_comments_sql);
         $ticket_all_comments_count = intval($row['ticket_all_comments_count']);
 
-        $ticket_internal_notes_sql = mysqli_query($mysqli, "SELECT COUNT(ticket_reply_id) AS ticket_internal_notes_count FROM ticket_replies WHERE ticket_reply_archived_at IS NULL AND ticket_reply_type = 'Internal' AND ticket_reply_ticket_id = $ticket_id");
+        $ticket_internal_notes_sql = mysqli_query($mysqli, "SELECT COUNT(ticket_reply_id) AS ticket_internal_notes_count FROM ticket_replies WHERE ticket_reply_archived_at IS NULL AND ticket_reply_type IN ('Internal','System','Automation','RMM Alert','Labor') AND ticket_reply_ticket_id = $ticket_id");
         $row = mysqli_fetch_assoc($ticket_internal_notes_sql);
         $ticket_internal_notes_count = intval($row['ticket_internal_notes_count']);
 
@@ -776,6 +776,8 @@ if (isset($_GET['ticket_id'])) {
                     $ticket_reply_id = intval($row['ticket_reply_id']);
                     $ticket_reply = $purifier->purify($row['ticket_reply']);
                     $ticket_reply_type = nullable_htmlentities($row['ticket_reply_type']);
+                    $ticket_reply_type_border = ['Internal' => 'dark', 'Public' => 'warning', 'Client' => 'warning', 'System' => 'secondary', 'Automation' => 'primary', 'RMM Alert' => 'danger', 'Labor' => 'success'][$ticket_reply_type] ?? 'info';
+                    $ticket_reply_type_label = ['Internal' => 'Internal Note', 'Public' => 'Client Reply', 'Client' => 'Client Reply', 'System' => 'System Note', 'Automation' => 'Automation Note', 'RMM Alert' => 'RMM Alert Note', 'Labor' => 'Labor Note'][$ticket_reply_type] ?? $ticket_reply_type;
                     $ticket_reply_created_at = nullable_htmlentities($row['ticket_reply_created_at']);
                     $ticket_reply_created_at_ago = timeAgo($row['ticket_reply_created_at']);
                     $ticket_reply_updated_at = nullable_htmlentities($row['ticket_reply_updated_at']);
@@ -806,7 +808,7 @@ if (isset($_GET['ticket_id'])) {
                     ?>
 
                     <!-- Begin ticket reply card -->
-                    <div class="card border-left border-<?php if ($ticket_reply_type == 'Internal') { echo "dark"; } elseif ($ticket_reply_type == 'Client') { echo "warning"; } else { echo "info"; } ?> mb-3" style="border-left-width: 8px !important;">
+                    <div class="card border-left border-<?= $ticket_reply_type_border ?> mb-3" style="border-left-width: 8px !important;">
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center w-100">
                                 <!-- Left side content -->
@@ -855,12 +857,14 @@ if (isset($_GET['ticket_id'])) {
                                                     </a>
                                                     <?php if ($ticket_reply_type !== "Client" && empty($ticket_closed_at)) { ?>
                                                     <div class="dropdown-divider"></div>
+                                                    <?php if (in_array($ticket_reply_type, ['Internal', 'Public'])) { ?>
                                                     <a href="#" class="dropdown-item ajax-modal"
                                                        data-modal-size = "lg"
                                                        data-modal-url="modals/ticket/ticket_reply_edit.php?id=<?=$ticket_reply_id ?>">
                                                         <i class="fas fa-fw fa-edit text-secondary mr-2"></i>Edit
                                                     </a>
                                                     <div class="dropdown-divider"></div>
+                                                    <?php } ?>
                                                     <a class="dropdown-item text-danger confirm-link" href="post.php?archive_ticket_reply=<?= $ticket_reply_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                                                         <i class="fas fa-fw fa-archive mr-2"></i>Archive
                                                     </a>
@@ -875,7 +879,7 @@ if (isset($_GET['ticket_id'])) {
 
                                     <small class="text-muted">
                                         <div title="Created: <?php echo $ticket_reply_created_at; if ($ticket_reply_updated_at) { echo '. Edited: ' . $ticket_reply_updated_at; } ?>">
-                                            <?php echo $ticket_reply_type . " - " .  $ticket_reply_created_at_ago; if ($ticket_reply_updated_at) { echo '*'; } ?>
+                                            <?php echo $ticket_reply_type_label . " - " .  $ticket_reply_created_at_ago; if ($ticket_reply_updated_at) { echo '*'; } ?>
                                         </div>
                                     </small>
 
