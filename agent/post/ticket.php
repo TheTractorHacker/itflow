@@ -2003,8 +2003,17 @@ if (isset($_POST['add_ticket_reply'])) {
         logAction("Ticket", "Resolved", "$session_name resolved Ticket ticket ID $ticket_id", $client_id, $ticket_id);
     }
 
-    // Process reply actions, if we have a reply to work with (e.g. we're not just editing the status)
-    if (!empty($ticket_reply)) {
+    // Time was logged via the timer/manual entry fields
+    $ticket_reply_time_logged = ($hours > 0 || $minutes > 0 || $seconds > 0);
+
+    // Process reply actions, if we have a reply to work with (e.g. we're not just editing the status), or if time was logged with no reply text
+    if (!empty($ticket_reply) || $ticket_reply_time_logged) {
+
+        // No reply text, but time was logged - record it as a Labor note so the time isn't lost
+        if (empty($ticket_reply)) {
+            $ticket_reply_type = 'Labor';
+            $ticket_reply = 'Time logged';
+        }
 
         // Add reply
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$ticket_reply', ticket_reply_time_worked = '$ticket_reply_time_worked', ticket_reply_type = '$ticket_reply_type', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
@@ -2138,19 +2147,27 @@ if (isset($_POST['add_ticket_reply'])) {
         }
 
         // Custom action/notif handler
-        if ($ticket_reply_type == 'Internal') {
+        if ($ticket_reply_type == 'Internal' || $ticket_reply_type == 'Labor') {
             customAction('ticket_reply_agent_internal', $ticket_id);
         } else {
             customAction('reply_reply_agent_public', $ticket_id);
         }
 
-        flash_alert("Ticket <strong>$ticket_prefix$ticket_number</strong> has been updated with your reply and was <strong>$ticket_reply_type</strong>");
+        if ($ticket_reply_type == 'Labor') {
+            flash_alert("Logged <strong>" . formatDuration($ticket_reply_time_worked) . "</strong> of time on Ticket <strong>$ticket_prefix$ticket_number</strong>");
+        } else {
+            flash_alert("Ticket <strong>$ticket_prefix$ticket_number</strong> has been updated with your reply and was <strong>$ticket_reply_type</strong>");
+        }
 
     } else {
         flash_alert("Ticket updated");
     }
 
-    logAction("Ticket", "Reply", "$session_name replied to ticket $ticket_prefix$ticket_number - $ticket_subject and was a $ticket_reply_type reply", $client_id, $ticket_id);
+    if ($ticket_reply_type == 'Labor') {
+        logAction("Ticket", "Time Log", "$session_name logged " . formatDuration($ticket_reply_time_worked) . " on ticket $ticket_prefix$ticket_number - $ticket_subject", $client_id, $ticket_id);
+    } else {
+        logAction("Ticket", "Reply", "$session_name replied to ticket $ticket_prefix$ticket_number - $ticket_subject and was a $ticket_reply_type reply", $client_id, $ticket_id);
+    }
     queueWebhookEvent('ticket.replied', getWebhookTicketPayload($ticket_id));
 
     redirect();
