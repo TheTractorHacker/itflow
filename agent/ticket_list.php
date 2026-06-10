@@ -281,14 +281,12 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                     <a href="ticket.php?ticket_id=<?= "$ticket_id$has_client" ?>"><?= $ticket_subject ?></a>
 
                                     <?php if($task_count && $completed_task_count > 0) { ?>
-                                    <div class="progress mt-1" style="height: 15px;">
-                                        <div class="progress-bar" style="width: <?php echo $tasks_completed_percent; ?>%;"><?php echo $completed_task_count.' / '.$task_count; ?></div>
+                                    <div class="progress mt-1" style="height: 15px; font-size: 10px;">
+                                        <div class="progress-bar" style="width: <?php echo $tasks_completed_percent; ?>%; line-height: 15px;"><?php echo $completed_task_count.' / '.$task_count; ?></div>
                                     </div>
                                     <?php } ?>
                                     <?php if($task_count && $completed_task_count == 0) { ?>
-                                    <div class="mt-1" style="height: 15px; background-color:#e9ecef;">
-                                        <p class="text-center" ><?php echo $completed_task_count.' / '.$task_count; ?></p>
-                                    </div>
+                                    <div class="mt-1 text-center" style="height: 15px; line-height: 15px; font-size: 10px; background-color:#e9ecef;"><?php echo $completed_task_count.' / '.$task_count; ?></div>
                                     <?php } ?>
                                     <?php if ($ticket_tags_display) { ?>
                                     <div class="mt-1"><?php echo $ticket_tags_display; ?></div>

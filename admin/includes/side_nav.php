@@ -41,184 +41,240 @@
                         <p>API Keys</p>
                     </a>
                 </li>
-                <li class="nav-header">TAGS & CATEGORIES</li>
 
-                <li class="nav-item">
-                    <a href="/admin/tag.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'tag.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-tags"></i>
-                        <p>Tags</p>
+                <li class="nav-header">CONFIGURATION</li>
+
+                <!-- TAGS & CATEGORIES Section -->
+                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['tag.php', 'category.php', 'custom_link.php', 'ai_provider.php', 'ai_model.php']) ? 'menu-open' : ''); ?>">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-sliders-h"></i>
+                        <p>
+                            Tags &amp; Categories
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
                     </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="/admin/tag.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'tag.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-tags"></i>
+                                <p>Tags</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/category.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'category.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-list-ul"></i>
+                                <p>Categories</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/custom_link.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'custom_link.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-external-link-alt"></i>
+                                <p>Custom Links</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/ai_provider.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['ai_provider.php', 'ai_model.php']) ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-robot"></i>
+                                <p>AI Providers</p>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
-                <li class="nav-item">
-                    <a href="/admin/category.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'category.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-list-ul"></i>
-                        <p>Categories</p>
-                    </a>
-                </li>
+
                 <?php if ($config_module_enable_accounting) { ?>
-                    <li class="nav-item">
-                        <a href="/admin/tax.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'tax.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-balance-scale"></i>
-                            <p>Taxes</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/payment_method.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'payment_method.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-hand-holding-usd"></i>
-                            <p>Payment Methods</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/payment_provider.php"
-                           class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['payment_provider.php', 'saved_payment_method.php']) ? 'active' : ''); ?>">
-                            <i class="nav-icon far fa-credit-card"></i>
-                            <p>Payment Providers</p>
-                        </a>
-                    </li>
+                <!-- BILLING Section -->
+                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['tax.php', 'payment_method.php', 'payment_provider.php', 'saved_payment_method.php']) ? 'menu-open' : ''); ?>">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-hand-holding-usd"></i>
+                        <p>
+                            Billing
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="/admin/tax.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'tax.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-balance-scale"></i>
+                                <p>Taxes</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/payment_method.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'payment_method.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-money-check-alt"></i>
+                                <p>Payment Methods</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/payment_provider.php"
+                               class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['payment_provider.php', 'saved_payment_method.php']) ? 'active' : ''); ?>">
+                                <i class="nav-icon far fa-credit-card"></i>
+                                <p>Payment Providers</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
                 <?php } ?>
-                    <li class="nav-item">
-                        <a href="/admin/ai_provider.php"
-                        class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['ai_provider.php', 'ai_model.php']) ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-robot"></i>
-                            <p>AI Providers</p>
-                        </a>
-                    </li>
 
                 <?php if ($config_module_enable_ticketing) { ?>
-                    <li class="nav-item">
-                        <a href="/admin/ticket_status.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'ticket_status.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-info-circle"></i>
-                            <p>Ticket Statuses</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/labor_type.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'labor_type.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-clock"></i>
-                            <p>Labor Types</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/ticket_automation.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'ticket_automation.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-robot"></i>
-                            <p>Ticket Automation</p>
-                        </a>
-                    </li>
-                <?php } ?>
-                <li class="nav-item">
-                    <a href="/admin/custom_link.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'custom_link.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-external-link-alt"></i>
-                        <p>Custom Links</p>
+                <!-- TICKETING Section -->
+                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['ticket_status.php', 'labor_type.php', 'ticket_automation.php']) ? 'menu-open' : ''); ?>">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-life-ring"></i>
+                        <p>
+                            Ticketing
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
                     </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="/admin/ticket_status.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'ticket_status.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-info-circle"></i>
+                                <p>Ticket Statuses</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/labor_type.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'labor_type.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-clock"></i>
+                                <p>Labor Types</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/ticket_automation.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'ticket_automation.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-robot"></i>
+                                <p>Ticket Automation</p>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
+                <?php } ?>
 
                 <?php if ($config_module_enable_itdoc) { ?>
-                    <li class="nav-header">TEMPLATES</li>
-
-                    <!-- 2025-11-16 JQ - Hide Contracts not yet ready
-                    <li class="nav-item">
-                        <a href="/admin/contract_template.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'contract_template.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-file-contract"></i>
-                            <p>
-                                <span href="#" class="fas fa-plus-circle right ajax-modal" data-modal-url="/admin/modals/contract_template/contract_template_add.php" data-modal-size="lg"></span>
-                                Contract Templates
-                            </p>
-                        </a>
-                    </li>
-                    -->
-                    <li class="nav-item">
-                        <a href="/admin/project_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['project_template.php', 'project_template_details.php']) ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-project-diagram"></i>
-                            <p>Project Templates</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/ticket_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['ticket_template.php', 'ticket_template_details.php']) ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-life-ring"></i>
-                            <p>Ticket Templates</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/canned_responses.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'canned_responses.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-comment-dots"></i>
-                            <p>Canned Responses</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/worksheet_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['worksheet_template.php', 'worksheet_template_details.php']) ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-clipboard-list"></i>
-                            <p>Worksheet Templates</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/vendor_template.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'vendor_template.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-building"></i>
-                            <p>Vendor Templates</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/software_template.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'software_template.php' ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-rocket"></i>
-                            <p>License Templates</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/admin/document_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['document_template.php', 'document_template_details.php']) ? 'active' : ''); ?>">
-                            <i class="nav-icon fas fa-file-alt"></i>
-                            <p>Document Templates</p>
-                        </a>
-                    </li>
+                <!-- TEMPLATES Section -->
+                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['contract_template.php', 'contract_template_details.php', 'project_template.php', 'project_template_details.php', 'ticket_template.php', 'ticket_template_details.php', 'canned_responses.php', 'worksheet_template.php', 'worksheet_template_details.php', 'vendor_template.php', 'software_template.php', 'document_template.php', 'document_template_details.php']) ? 'menu-open' : ''); ?>">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-copy"></i>
+                        <p>
+                            Templates
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="/admin/contract_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['contract_template.php', 'contract_template_details.php']) ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-file-contract"></i>
+                                <p>
+                                    <span href="#" class="fas fa-plus-circle right ajax-modal" data-modal-url="/admin/modals/contract_template/contract_template_add.php" data-modal-size="lg"></span>
+                                    Contract Templates
+                                </p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/project_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['project_template.php', 'project_template_details.php']) ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-project-diagram"></i>
+                                <p>Project Templates</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/ticket_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['ticket_template.php', 'ticket_template_details.php']) ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-life-ring"></i>
+                                <p>Ticket Templates</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/canned_responses.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'canned_responses.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-comment-dots"></i>
+                                <p>Canned Responses</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/worksheet_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['worksheet_template.php', 'worksheet_template_details.php']) ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-clipboard-list"></i>
+                                <p>Worksheet Templates</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/vendor_template.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'vendor_template.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-building"></i>
+                                <p>Vendor Templates</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/software_template.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'software_template.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-rocket"></i>
+                                <p>License Templates</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/document_template.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['document_template.php', 'document_template_details.php']) ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-file-alt"></i>
+                                <p>Document Templates</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
                 <?php } ?>
 
-                <li class="nav-header">MAINTENANCE</li>
-
-                <li class="nav-item">
-                    <a href="/admin/cron.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'cron.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-clock"></i>
-                        <p>Cron</p>
+                <!-- MAINTENANCE Section -->
+                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['cron.php', 'mail_queue.php', 'audit_log.php', 'app_log.php', 'backup.php', 'debug.php', 'update.php']) ? 'menu-open' : ''); ?>">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-tools"></i>
+                        <p>
+                            Maintenance
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
                     </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/admin/mail_queue.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'mail_queue.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-mail-bulk"></i>
-                        <p>Mail Queue</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/admin/audit_log.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'audit_log.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-history"></i>
-                        <p>Audit Logs</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/admin/app_log.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'app_log.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-history"></i>
-                        <p>App Logs</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/admin/backup.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'backup.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-cloud-upload-alt"></i>
-                        <p>Backup</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/admin/debug.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'debug.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-bug"></i>
-                        <p>Debug</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/admin/update.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'update.php' ? 'active' : ''); ?>">
-                        <i class="nav-icon fas fa-download"></i>
-                        <p>Update</p>
-                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="/admin/cron.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'cron.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-clock"></i>
+                                <p>Cron</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/mail_queue.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'mail_queue.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-mail-bulk"></i>
+                                <p>Mail Queue</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/audit_log.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'audit_log.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-history"></i>
+                                <p>Audit Logs</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/app_log.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'app_log.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-history"></i>
+                                <p>App Logs</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/backup.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'backup.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-cloud-upload-alt"></i>
+                                <p>Backup</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/debug.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'debug.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-bug"></i>
+                                <p>Debug</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/update.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'update.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-download"></i>
+                                <p>Update</p>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <!-- SETTINGS Section -->
                 <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['settings_company.php', 'settings_localization.php', 'settings_theme.php', 'settings_security.php', 'settings_mail.php', 'settings_notification.php', 'settings_default.php', 'settings_invoice.php', 'settings_quote.php', 'settings_online_payment.php', 'settings_online_payment_clients.php', 'settings_project.php', 'settings_ticket.php', 'settings_ai.php', 'identity_provider.php', 'settings_telemetry.php', 'settings_module.php', 'settings_calendar_sync.php', 'settings_webhooks.php', 'settings_comet.php', 'comet_status.php', 'settings_rmm.php']) ? 'menu-open' : ''); ?>">
                     <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-cog"></i>
                         <p>
-                            SETTINGS
+                            Settings
                             <i class="right fas fa-angle-left"></i>
                         </p>
                     </a>

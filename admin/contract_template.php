@@ -63,7 +63,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             $id = intval($row['contract_template_id']);
                             $name = nullable_htmlentities($row['contract_template_name']);
                             $type = nullable_htmlentities($row['contract_template_type']);
-                            $freq = nullable_htmlentities($row['contract_template_update_frequency']);
+                            $freq = nullable_htmlentities($row['contract_template_renewal_frequency']);
                             $sla_low_resp = nullable_htmlentities($row['sla_low_response_time']);
                             $sla_med_resp = nullable_htmlentities($row['sla_medium_response_time']);
                             $sla_high_resp = nullable_htmlentities($row['sla_high_response_time']);
@@ -79,7 +79,8 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     ?>
                     <tr>
                         <td>
-                            <a class="text-bold" href="contract_template_details.php?contract_template_id=<?php echo $id; ?>">
+                            <a class="text-bold ajax-modal" href="#" data-modal-size="xl"
+                                data-modal-url="modals/contract_template/contract_template_edit.php?id=<?= $id ?>">
                                 <i class="fas fa-fw fa-file-alt text-dark"></i> <?php echo $name; ?>
                             </a>
                             <div class="mt-1 text-secondary"><?php echo nullable_htmlentities($row['contract_template_description']); ?></div>
@@ -104,6 +105,11 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                         data-modal-size="xl"
                                         data-modal-url="modals/contract_template/contract_template_edit.php?id=<?= $id ?>">
                                         <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                    </a>
+                                    <a class="dropdown-item ajax-modal" href="#"
+                                        data-modal-size="lg"
+                                        data-modal-url="modals/contract_template/contract_template_apply.php?id=<?= $id ?>">
+                                        <i class="fas fa-fw fa-copy mr-2"></i>Apply to Clients
                                     </a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item text-danger text-bold" href="post.php?delete_contract_template=<?php echo $id; ?>">

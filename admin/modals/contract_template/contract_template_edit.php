@@ -4,7 +4,7 @@ require_once '../../../includes/modal_header.php';
 $contract_template_id = intval($_GET['id']);
 
 $contract_types_array = ['Fully Managed', 'Partialy Managed', 'Break/Fix'];
-$update_frequency_array = ['Manual', 'Annually', '2 Year', '3 Year', '5 Year', '7 Year'];
+$renewal_frequency_array = ['Manual', 'Annually', '2 Year', '3 Year', '5 Year', '7 Year'];
 
 // Fetch existing template
 $sql = mysqli_query($mysqli, "SELECT * FROM contract_templates WHERE contract_template_id = $contract_template_id LIMIT 1");
@@ -21,10 +21,10 @@ $sla_high_resp = intval($row['contract_template_sla_high_response_time']);
 $sla_low_res   = intval($row['contract_template_sla_low_resolution_time']);
 $sla_med_res   = intval($row['contract_template_sla_medium_resolution_time']);
 $sla_high_res  = intval($row['contract_template_sla_high_resolution_time']);
-$hourly_rate   = intval($row['contract_template_rate_standard']);
-$after_hours   = intval($row['contract_template_rate_after_hours']);
+$rate_standard = nullable_htmlentities($row['contract_template_rate_standard']);
+$rate_after_hours = nullable_htmlentities($row['contract_template_rate_after_hours']);
 $support_hours = nullable_htmlentities($row['contract_template_support_hours']);
-$net_terms     = intval($row['contract_template_net_terms']);
+$net_terms     = nullable_htmlentities($row['contract_template_net_terms']);
 $details       = nullable_htmlentities($row['contract_template_details']);
 
 ob_start();

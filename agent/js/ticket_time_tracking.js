@@ -88,17 +88,28 @@
             localStorage.removeItem("ticket-timer-running-" + ticketID);
         }
 
-        function resetTimer() {
-            if (confirm("Are you sure you want to reset the timer?")) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-                elapsedSecs = 0;
-                clearTimeStorage();
-                displayTime();
-                let btn = document.getElementById("startStopTimer");
-                if (btn) btn.innerHTML = "<i class='fas fa-play'></i>";
-            }
+        function doResetTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            elapsedSecs = 0;
+            clearTimeStorage();
+            displayTime();
+            let btn = document.getElementById("startStopTimer");
+            if (btn) btn.innerHTML = "<i class='fas fa-play'></i>";
             localStorage.setItem("ticket-timer-running-" + ticketID, "false");
+        }
+
+        function resetTimer() {
+            var confirmModal = (typeof $ !== "undefined") ? $("#confirmationModal") : [];
+            if (confirmModal.length) {
+                confirmModal.modal('show');
+                $("#confirmSubmitBtn").off('click').on('click', function() {
+                    confirmModal.modal('hide');
+                    doResetTimer();
+                });
+            } else if (confirm("Are you sure you want to reset the timer?")) {
+                doResetTimer();
+            }
         }
 
         function forceResetTimer() {

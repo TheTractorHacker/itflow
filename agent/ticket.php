@@ -1036,6 +1036,86 @@ if (isset($_GET['ticket_id'])) {
                 </div>
                 <!-- End details card -->
 
+                <!-- Asset card -->
+                <?php if ($asset_id) { ?>
+                    <div class="card">
+                        <div class="card-header px-3 py-2">
+                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-desktop mr-2"></i>Assets</h5>
+                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
+                            <div class="card-tools">
+                                <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_edit_asset.php?id=<?= $ticket_id ?>">
+                                    <i class="fas fa-fw fa-edit"></i>
+                                </a>
+                            </div>
+                            <?php } ?>
+                        </div>
+                        <div class="card-body p-3">
+                            <div>
+                                <a class="ajax-modal" href="#" data-modal-size="lg"
+                                    data-modal-url="modals/asset/asset_details.php?<?= $client_url ?>&id=<?= $asset_id ?>">
+                                    <i class="fa fa-fw fa-<?php echo $asset_icon; ?> text-secondary mr-2"></i><strong><?php echo $asset_name; ?></strong>
+                                </a>
+                            </div>
+
+                            <?php
+                            // RMM status for the primary asset (Syncro-Beta)
+                            if ($config_module_enable_rmm && lookupUserPermission("module_rmm") >= 1) {
+                                $rmm_tklink = mysqli_fetch_assoc(mysqli_query($mysqli,
+                                    "SELECT arl.id, arl.rmm_status, arl.hostname, arl.last_seen, arl.os_name, arl.logged_in_user
+                                      FROM asset_rmm_links arl WHERE arl.asset_id=$asset_id LIMIT 1"
+                                ));
+                                if ($rmm_tklink) {
+                                    $rmm_badge = $rmm_tklink['rmm_status'] === 'online' ? 'badge-success' : ($rmm_tklink['rmm_status'] === 'offline' ? 'badge-danger' : 'badge-secondary');
+                                    ?>
+                                    <div class="mt-2 pt-2 border-top small">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-fw fa-server text-secondary mr-2"></i>
+                                            <span class="mr-2"><?= nullable_htmlentities($rmm_tklink['hostname']) ?></span>
+                                            <span class="badge <?= $rmm_badge ?>"><?= ucfirst($rmm_tklink['rmm_status']) ?></span>
+                                        </div>
+                                        <div class="text-muted">
+                                            OS: <?= nullable_htmlentities($rmm_tklink['os_name']) ?>
+                                            &nbsp;&middot;&nbsp; Last seen: <?= nullable_htmlentities($rmm_tklink['last_seen']) ?>
+                                            <?php if ($rmm_tklink['logged_in_user']): ?>
+                                            &nbsp;&middot;&nbsp; User: <?= nullable_htmlentities($rmm_tklink['logged_in_user']) ?>
+                                            <?php endif; ?>
+                                        </div>
+                                        <a href="/agent/asset_details.php?asset_id=<?= $asset_id ?>" class="btn btn-xs btn-info mt-2">
+                                            <i class="fas fa-desktop mr-1"></i>View Asset
+                                        </a>
+                                    </div>
+                                    <?php
+                                }
+                            }
+                            ?>
+
+                            <?php
+                            while ($row = mysqli_fetch_assoc($sql_additional_assets)) {
+                                $additional_asset_id = intval($row['asset_id']);
+                                $additional_asset_name = nullable_htmlentities($row['asset_name']);
+                                $additional_asset_type = nullable_htmlentities($row['asset_type']);
+                                $additional_asset_icon = getAssetIcon($additional_asset_type);
+                                ?>
+                                <div class="mt-1">
+                                    <a class="ajax-modal" href="#" data-modal-size="lg"
+                                        data-modal-url="modals/asset/asset_details.php?<?= $client_url ?>&id=<?= $additional_asset_id ?>">
+                                        <i class="fa fa-fw fa-<?php echo $additional_asset_icon; ?> text-secondary mr-2"></i><?php echo $additional_asset_name; ?>
+                                    </a>
+                                    <?php if (empty($ticket_closed_at)) { ?>
+                                        <a class="confirm-link float-right" href="post.php?delete_ticket_additional_asset=<?= $additional_asset_id; ?>&ticket_id=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" title="Remove asset from ticket">
+                                            <i class="fas fa-fw fa-times text-secondary"></i>
+                                        </a>
+                                    <?php } ?>
+                                </div>
+                            <?php
+
+                            }
+                            ?>
+                        </div>
+                    </div>
+                <?php } // End if asset_id ?>
+                <!-- End Asset card -->
+
                 <!-- Tasks Card -->
                 <?php if (empty($ticket_resolved_at) || (!empty($ticket_resolved_at) && $task_count > 0)) { ?>
                     <div class="card">
@@ -1628,89 +1708,6 @@ if (isset($_GET['ticket_id'])) {
                     </div>
                 </div>
                 <!-- End Ticket tags card -->
-
-                <!-- Asset card -->
-                <?php if ($asset_id) { ?>
-                    <div class="card mb-3">
-                        <div class="card-header px-3 py-2">
-                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-desktop mr-2"></i>Assets</h5>
-                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
-                            <div class="card-tools">
-                                <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_edit_asset.php?id=<?= $ticket_id ?>">
-                                    <i class="fas fa-fw fa-edit"></i>
-                                </a>
-                            </div>
-                            <?php } ?>
-                        </div>
-                        <div class="card-body p-3">
-                            <div>
-                                <a class="ajax-modal" href="#" data-modal-size="lg"
-                                    data-modal-url="modals/asset/asset_details.php?<?= $client_url ?>&id=<?= $asset_id ?>">
-                                    <i class="fa fa-fw fa-<?php echo $asset_icon; ?> text-secondary mr-2"></i><strong><?php echo $asset_name; ?></strong>
-                                </a>
-                            </div>
-                            <?php
-                            while ($row = mysqli_fetch_assoc($sql_additional_assets)) {
-                                $additional_asset_id = intval($row['asset_id']);
-                                $additional_asset_name = nullable_htmlentities($row['asset_name']);
-                                $additional_asset_type = nullable_htmlentities($row['asset_type']);
-                                $additional_asset_icon = getAssetIcon($additional_asset_type);
-                                ?>
-                                <div class="mt-1">
-                                    <a class="ajax-modal" href="#" data-modal-size="lg"
-                                        data-modal-url="modals/asset/asset_details.php?<?= $client_url ?>&id=<?= $additional_asset_id ?>">
-                                        <i class="fa fa-fw fa-<?php echo $additional_asset_icon; ?> text-secondary mr-2"></i><?php echo $additional_asset_name; ?>
-                                    </a>
-                                    <?php if (empty($ticket_closed_at)) { ?>
-                                        <a class="confirm-link float-right" href="post.php?delete_ticket_additional_asset=<?= $additional_asset_id; ?>&ticket_id=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" title="Remove asset from ticket">
-                                            <i class="fas fa-fw fa-times text-secondary"></i>
-                                        </a>
-                                    <?php } ?>
-                                </div>
-                            <?php
-
-                            }
-                            ?>
-                        </div>
-                    </div>
-                <?php } // End if asset_id ?>
-                <!-- End Asset card -->
-
-                <!-- RMM Asset Status card (Syncro-Beta) -->
-                <?php
-                if ($config_module_enable_rmm && lookupUserPermission("module_rmm") >= 1 && $asset_id) {
-                    $rmm_tklink = mysqli_fetch_assoc(mysqli_query($mysqli,
-                        "SELECT arl.id, arl.rmm_status, arl.hostname, arl.last_seen, arl.os_name, arl.logged_in_user
-                          FROM asset_rmm_links arl WHERE arl.asset_id=$asset_id LIMIT 1"
-                    ));
-                    if ($rmm_tklink):
-                        $rmm_badge = $rmm_tklink['rmm_status'] === 'online' ? 'badge-success' : ($rmm_tklink['rmm_status'] === 'offline' ? 'badge-danger' : 'badge-secondary');
-                ?>
-                <div class="card mb-3" style="border-top:2px solid #17a2b8">
-                    <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-desktop mr-2"></i>RMM Status</h5>
-                    </div>
-                    <div class="card-body p-3 small">
-                        <div class="d-flex align-items-center mb-2">
-                            <strong class="mr-2"><?= nullable_htmlentities($rmm_tklink['hostname']) ?></strong>
-                            <span class="badge <?= $rmm_badge ?>"><?= ucfirst($rmm_tklink['rmm_status']) ?></span>
-                        </div>
-                        <div class="text-muted">
-                            OS: <?= nullable_htmlentities($rmm_tklink['os_name']) ?>
-                            &nbsp;&middot;&nbsp; Last seen: <?= nullable_htmlentities($rmm_tklink['last_seen']) ?>
-                            <?php if ($rmm_tklink['logged_in_user']): ?>
-                            &nbsp;&middot;&nbsp; User: <?= nullable_htmlentities($rmm_tklink['logged_in_user']) ?>
-                            <?php endif; ?>
-                        </div>
-                        <a href="/agent/asset_details.php?asset_id=<?= intval($rmm_tklink['asset_id'] ?? 0) ?>" class="btn btn-xs btn-info mt-2">
-                            <i class="fas fa-desktop mr-1"></i>View Asset
-                        </a>
-                    </div>
-                </div>
-                <?php
-                    endif;
-                }
-                ?>
 
                 <!-- Linked RMM Alerts card (Syncro-Beta) -->
                 <?php

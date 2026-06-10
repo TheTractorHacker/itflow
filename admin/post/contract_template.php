@@ -23,9 +23,9 @@ if (isset($_POST['add_contract_template'])) {
     $sla_low_res = intval($_POST['sla_low_resolution_time']);
     $sla_med_res = intval($_POST['sla_medium_resolution_time']);
     $sla_high_res = intval($_POST['sla_high_resolution_time']);
-    $rate_standard = intval($_POST['rate_standard']);
-    $rate_after_hours = intval($_POST['hourly_rate_after_hours']);
-    $net_terms = intval($_POST['net_terms']);
+    $rate_standard = is_numeric($_POST['rate_standard'] ?? '') ? floatval($_POST['rate_standard']) : 'NULL';
+    $rate_after_hours = is_numeric($_POST['rate_after_hours'] ?? '') ? floatval($_POST['rate_after_hours']) : 'NULL';
+    $net_terms = sanitizeInput($_POST['net_terms']);
 
     // Insert into database (numbers not quoted)
     mysqli_query($mysqli, "
@@ -44,7 +44,7 @@ if (isset($_POST['add_contract_template'])) {
         contract_template_rate_standard = $rate_standard,
         contract_template_rate_after_hours = $rate_after_hours,
         contract_template_support_hours = '$support_hours',
-        contract_template_net_terms = $net_terms
+        contract_template_net_terms = '$net_terms'
     ");
 
     $contract_template_id = mysqli_insert_id($mysqli);
@@ -74,9 +74,9 @@ if (isset($_POST['edit_contract_template'])) {
     $sla_low_res   = intval($_POST['sla_low_resolution_time']);
     $sla_med_res   = intval($_POST['sla_medium_resolution_time']);
     $sla_high_res  = intval($_POST['sla_high_resolution_time']);
-    $rate_standard   = intval($_POST['rate_standard']);
-    $rate_after_hours = intval($_POST['rate_after_hours']);
-    $net_terms     = intval($_POST['net_terms']);
+    $rate_standard   = is_numeric($_POST['rate_standard'] ?? '') ? floatval($_POST['rate_standard']) : 'NULL';
+    $rate_after_hours = is_numeric($_POST['rate_after_hours'] ?? '') ? floatval($_POST['rate_after_hours']) : 'NULL';
+    $net_terms     = sanitizeInput($_POST['net_terms']);
 
     mysqli_query($mysqli, "
         UPDATE contract_templates SET
@@ -94,7 +94,7 @@ if (isset($_POST['edit_contract_template'])) {
             contract_template_rate_standard = $rate_standard,
             contract_template_rate_after_hours = $rate_after_hours,
             contract_template_support_hours = '$support_hours',
-            contract_template_net_terms = $net_terms
+            contract_template_net_terms = '$net_terms'
         WHERE contract_template_id = $contract_template_id
     ");
 
@@ -151,6 +151,74 @@ if (isset($_GET['delete_contract_template'])) {
 
     logAction("Contract Template", "Delete", "$session_name deleted contract template $name", 0, $contract_template_id);
     flash_alert("Contract Template <strong>$name</strong> deleted", "danger");
+    redirect();
+}
+
+if (isset($_POST['apply_contract_template'])) {
+    validateCSRFToken($_POST['csrf_token']);
+
+    $contract_template_id = intval($_POST['contract_template_id']);
+    $client_ids = array_map('intval', $_POST['client_ids'] ?? []);
+    $contract_status = sanitizeInput($_POST['contract_status'] ?? 'Active');
+    $start_date = sanitizeInput($_POST['contract_start_date'] ?? '');
+    $start_sql = $start_date ? "'$start_date'" : 'NULL';
+
+    $template = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM contract_templates WHERE contract_template_id = $contract_template_id LIMIT 1"));
+
+    if (!$template) {
+        flash_alert("Contract template not found", "danger");
+        redirect();
+    }
+
+    $name = mysqli_real_escape_string($mysqli, $template['contract_template_name']);
+    $type = mysqli_real_escape_string($mysqli, $template['contract_template_type']);
+    $freq = $template['contract_template_renewal_frequency'] !== null && $template['contract_template_renewal_frequency'] !== ''
+        ? "'" . mysqli_real_escape_string($mysqli, $template['contract_template_renewal_frequency']) . "'" : 'NULL';
+    $rate_standard = $template['contract_template_rate_standard'] !== null ? floatval($template['contract_template_rate_standard']) : 'NULL';
+    $rate_after_hours = $template['contract_template_rate_after_hours'] !== null ? floatval($template['contract_template_rate_after_hours']) : 'NULL';
+    $net_terms = mysqli_real_escape_string($mysqli, $template['contract_template_net_terms']);
+    $support_hours = mysqli_real_escape_string($mysqli, $template['contract_template_support_hours']);
+    $details = mysqli_real_escape_string($mysqli, $template['contract_template_details']);
+    $sla_lr = intval($template['contract_template_sla_low_response_time']);
+    $sla_lres = intval($template['contract_template_sla_low_resolution_time']);
+    $sla_mr = intval($template['contract_template_sla_medium_response_time']);
+    $sla_mres = intval($template['contract_template_sla_medium_resolution_time']);
+    $sla_hr = intval($template['contract_template_sla_high_response_time']);
+    $sla_hres = intval($template['contract_template_sla_high_resolution_time']);
+
+    $applied = 0;
+    foreach ($client_ids as $cid) {
+        if ($cid <= 0) continue;
+
+        mysqli_query($mysqli, "INSERT INTO contracts SET
+            contract_client_id = $cid,
+            contract_name = '$name',
+            contract_type = '$type',
+            contract_status = '$contract_status',
+            contract_renewal_frequency = $freq,
+            contract_start_date = $start_sql,
+            contract_rate_standard = $rate_standard,
+            contract_rate_after_hours = $rate_after_hours,
+            contract_net_terms = '$net_terms',
+            contract_support_hours = '$support_hours',
+            contract_details = '$details',
+            contract_sla_low_response_time = $sla_lr,
+            contract_sla_low_resolution_time = $sla_lres,
+            contract_sla_medium_response_time = $sla_mr,
+            contract_sla_medium_resolution_time = $sla_mres,
+            contract_sla_high_response_time = $sla_hr,
+            contract_sla_high_resolution_time = $sla_hres,
+            contract_created_by = $session_user_id
+        ");
+        $applied++;
+    }
+
+    if ($applied > 0) {
+        logAction("Contract Template", "Apply", "$session_name applied contract template $name to $applied client(s)", 0, $contract_template_id);
+        flash_alert("Contract template <strong>$name</strong> applied to <strong>$applied</strong> client(s).");
+    } else {
+        flash_alert("No clients selected.", "danger");
+    }
     redirect();
 }
 
