@@ -8,6 +8,7 @@ $sql = mysqli_query($mysqli, "SELECT * FROM project_templates WHERE project_temp
 $row = mysqli_fetch_assoc($sql);
 $project_template_name = nullable_htmlentities($row['project_template_name']);
 $project_template_description = nullable_htmlentities($row['project_template_description']);
+$project_template_default_contract_template_id = intval($row['project_template_default_contract_template_id']);
 
 ob_start();
 
@@ -42,6 +43,25 @@ ob_start();
                 </div>
                 <input type="text" class="form-control" name="description" placeholder="Description" value="<?php echo $project_template_description; ?>">
             </div>
+        </div>
+
+        <div class="form-group">
+            <label>Default Contract Template <small class="text-secondary">(optional)</small></label>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fa fa-fw fa-file-contract"></i></span>
+                </div>
+                <select class="form-control select2" name="default_contract_template_id">
+                    <option value="">- None -</option>
+                    <?php
+                    $sql_contract_templates = mysqli_query($mysqli, "SELECT contract_template_id, contract_template_name FROM contract_templates WHERE contract_template_archived_at IS NULL ORDER BY contract_template_name ASC");
+                    while ($contract_template_row = mysqli_fetch_assoc($sql_contract_templates)) {
+                    ?>
+                    <option value="<?= intval($contract_template_row['contract_template_id']) ?>" <?= $project_template_default_contract_template_id === intval($contract_template_row['contract_template_id']) ? 'selected' : '' ?>><?= nullable_htmlentities($contract_template_row['contract_template_name']) ?></option>
+                    <?php } ?>
+                </select>
+            </div>
+            <small class="form-text text-secondary">Pre-selected when creating a project from this template, so the client gets this contract automatically.</small>
         </div>
 
     </div>

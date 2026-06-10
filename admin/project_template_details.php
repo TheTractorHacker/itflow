@@ -25,6 +25,12 @@ if (isset($_GET['project_template_id'])) {
     $project_template_description = nullable_htmlentities($row['project_template_description']);
     $project_template_created_at = date("Y-m-d", strtotime($row['project_template_created_at']));
     $project_template_updated_at = nullable_htmlentities($row['project_template_updated_at']);
+    $project_template_default_contract_template_id = intval($row['project_template_default_contract_template_id']);
+
+    $project_template_default_contract_template_name = '';
+    if ($project_template_default_contract_template_id) {
+        $project_template_default_contract_template_name = nullable_htmlentities(getFieldById('contract_templates', $project_template_default_contract_template_id, 'contract_template_name'));
+    }
 
     // Get Associated Ticket Templates
     $sql_ticket_templates = mysqli_query($mysqli, "SELECT * FROM ticket_templates, project_template_ticket_templates
@@ -59,7 +65,7 @@ if (isset($_GET['project_template_id'])) {
 <!-- Project Header -->
 <div class="card card-body">
     <div class="row">
-        <div class="col-sm-4">
+        <div class="col-sm-3">
             <div class="media">
                 <i class="fa fa-fw fa-2x fa-project-diagram text-secondary mr-3"></i>
                 <div class="media-body">
@@ -85,6 +91,16 @@ if (isset($_GET['project_template_id'])) {
                 <div class="media-body">
                     <div>Task Templates</div>
                     <h3 class="mb-0"><?php echo $task_template_count; ?></h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-2">
+            <div class="media">
+                <i class="fa fa-fw fa-2x fa-file-contract text-secondary mr-3"></i>
+                <div class="media-body">
+                    <div>Default Contract</div>
+                    <h6 class="mb-0"><?php echo $project_template_default_contract_template_name ?: '-'; ?></h6>
                 </div>
             </div>
         </div>

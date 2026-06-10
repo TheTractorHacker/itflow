@@ -8,8 +8,9 @@ if (isset($_POST['add_project_template'])) {
 
     $name = sanitizeInput($_POST['name']);
     $description = sanitizeInput($_POST['description']);
+    $default_contract_template_id = !empty($_POST['default_contract_template_id']) ? intval($_POST['default_contract_template_id']) : 'NULL';
 
-    mysqli_query($mysqli, "INSERT INTO project_templates SET project_template_name = '$name', project_template_description = '$description'");
+    mysqli_query($mysqli, "INSERT INTO project_templates SET project_template_name = '$name', project_template_description = '$description', project_template_default_contract_template_id = $default_contract_template_id");
 
     $project_template_id = mysqli_insert_id($mysqli);
 
@@ -28,8 +29,9 @@ if (isset($_POST['edit_project_template'])) {
     $project_template_id = intval($_POST['project_template_id']);
     $name = sanitizeInput($_POST['name']);
     $description = sanitizeInput($_POST['description']);
+    $default_contract_template_id = !empty($_POST['default_contract_template_id']) ? intval($_POST['default_contract_template_id']) : 'NULL';
 
-    mysqli_query($mysqli, "UPDATE project_templates SET project_template_name = '$name', project_template_description = '$description' WHERE project_template_id = $project_template_id");
+    mysqli_query($mysqli, "UPDATE project_templates SET project_template_name = '$name', project_template_description = '$description', project_template_default_contract_template_id = $default_contract_template_id WHERE project_template_id = $project_template_id");
 
     logAction("Project Template", "Edit", "$session_name edited project template $name", 0, $project_template_id);
 

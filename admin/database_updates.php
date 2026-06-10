@@ -4741,3 +4741,11 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.5'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.5') {
+
+        mysqli_query($mysqli, "ALTER TABLE `project_templates`
+            ADD COLUMN `project_template_default_contract_template_id` INT(11) DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.6'");
+    }

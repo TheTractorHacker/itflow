@@ -58,15 +58,16 @@ ob_start();
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fa fa-fw fa-cube"></i></span>
                 </div>
-                <select class="form-control select2" name="project_template_id">
+                <select class="form-control select2" name="project_template_id" id="project_template_id">
                     <option value="">- Template -</option>
                     <?php
                     $sql = mysqli_query($mysqli, "SELECT * FROM project_templates WHERE project_template_archived_at IS NULL ORDER BY project_template_name ASC");
                     while ($row = mysqli_fetch_assoc($sql)) {
                         $project_template_id = intval($row['project_template_id']);
                         $project_template_name = nullable_htmlentities($row['project_template_name']);
+                        $project_template_default_contract_template_id = intval($row['project_template_default_contract_template_id']);
                     ?>
-                    <option value="<?php echo $project_template_id; ?>"><?php echo $project_template_name; ?></option>
+                    <option value="<?php echo $project_template_id; ?>" data-contract-template-id="<?php echo $project_template_default_contract_template_id; ?>"><?php echo $project_template_name; ?></option>
                     <?php } ?>
                 </select>
             </div>
@@ -144,6 +145,17 @@ ob_start();
         <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
     </div>
 </form>
+
+<script>
+$('#project_template_id').on('change', function () {
+    const contractTemplateId = $(this).find(':selected').data('contract-template-id');
+    const contractSelect = $('select[name="contract_template_id"]');
+
+    if (contractSelect.length && contractTemplateId) {
+        contractSelect.val(contractTemplateId).trigger('change');
+    }
+});
+</script>
 
 <?php
 require_once '../../../includes/modal_footer.php';
