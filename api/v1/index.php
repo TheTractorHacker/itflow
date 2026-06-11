@@ -94,8 +94,17 @@ if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {
 
 // Legacy ?api_key= fallback for backward compatibility with old API clients
 $legacy_api_key_auth = false;
-if (!$api_user_id && isset($_GET['api_key'])) {
+$legacy_key_raw = null;
+if (isset($_GET['api_key'])) {
     $legacy_key_raw = $_GET['api_key'];
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Some clients send the api_key in the JSON body instead of the query string
+    $json_body = json_decode(file_get_contents('php://input'), true);
+    if (is_array($json_body) && isset($json_body['api_key'])) {
+        $legacy_key_raw = $json_body['api_key'];
+    }
+}
+if (!$api_user_id && $legacy_key_raw !== null) {
     $legacy_key = mysqli_real_escape_string($mysqli, hash('sha256', $legacy_key_raw));
     $legacy_sql = mysqli_query($mysqli,
         "SELECT * FROM api_keys WHERE api_key_secret = '$legacy_key' AND api_key_expire > NOW() LIMIT 1"

@@ -173,17 +173,17 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
     api_response(201, ['ok' => true]);
 }
 
-api_error(404, 'Not found');
-
 // CREATE TICKET
 if ($method === 'POST' && $id === null) {
     $body     = json_decode(file_get_contents('php://input'), true) ?? [];
     $subject  = mysqli_real_escape_string($mysqli, trim($body['subject'] ?? ''));
     $details  = mysqli_real_escape_string($mysqli, trim($body['details'] ?? ''));
-    $client   = isset($body['client_id']) ? intval($body['client_id']) : 'NULL';
-    $priority = in_array($body['priority'] ?? '', ['low','medium','high','critical'])
-                ? $body['priority'] : 'low';
-    $assigned = isset($body['assigned_to']) ? intval($body['assigned_to']) : 'NULL';
+    $client   = isset($body['client_id']) ? intval($body['client_id']) : 0;
+    $priority_in = strtolower(trim($body['priority'] ?? ''));
+    $priority = in_array($priority_in, ['low','medium','high','critical'])
+                ? ucfirst($priority_in) : 'Low';
+    $assigned = isset($body['assigned_to']) ? intval($body['assigned_to']) : 0;
+    $contact  = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
 
     if (!$subject) api_error(400, 'subject required');
 
@@ -193,9 +193,9 @@ if ($method === 'POST' && $id === null) {
         "SELECT ticket_status_id FROM ticket_statuses ORDER BY ticket_status_order ASC LIMIT 1"))['ticket_status_id']);
 
     mysqli_query($mysqli,
-        "INSERT INTO tickets (ticket_subject, ticket_details, ticket_client_id, ticket_priority,
-         ticket_status, ticket_assigned_to, ticket_number, ticket_created_at, ticket_updated_at)
-         VALUES ('$subject', '$details', $client, '$priority', $status, $assigned, $next_num, NOW(), NOW())"
+        "INSERT INTO tickets (ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
+         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_created_at, ticket_updated_at)
+         VALUES ('$subject', '$details', $client, $contact, '$priority', $status, $assigned, $uid, 'API', $next_num, NOW(), NOW())"
     );
     $new_id = mysqli_insert_id($mysqli);
     api_response(201, ['id' => $new_id, 'number' => $next_num]);
