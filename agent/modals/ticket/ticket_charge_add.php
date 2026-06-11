@@ -35,8 +35,8 @@ ob_start();
         if ($lt_rows) { ?>
         <div class="form-group">
             <label>Labor Type <small class="text-muted">(optional)</small></label>
-            <div class="d-flex flex-wrap gap-2" id="labor_type_btns">
-                <button type="button" class="btn btn-sm btn-outline-secondary lt-btn active" data-id="0" data-rate="0" data-name="">
+            <div class="d-flex flex-wrap" id="labor_type_btns">
+                <button type="button" class="btn btn-sm btn-outline-secondary lt-btn active mr-2 mb-2" data-id="0" data-rate="0" data-name="">
                     Custom
                 </button>
                 <?php foreach ($lt_rows as $lt) {
@@ -45,7 +45,7 @@ ob_start();
                     $lt_rate  = floatval($lt['labor_type_rate']);
                     $lt_color = nullable_htmlentities($lt['labor_type_color']);
                 ?>
-                <button type="button" class="btn btn-sm lt-btn"
+                <button type="button" class="btn btn-sm lt-btn mr-2 mb-2"
                         data-id="<?= $lt_id ?>"
                         data-rate="<?= $lt_rate ?>"
                         data-name="<?= $lt_name ?>"
