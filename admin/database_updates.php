@@ -4749,3 +4749,11 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.6'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.6') {
+
+        mysqli_query($mysqli, "ALTER TABLE `project_templates`
+            ADD COLUMN `project_template_is_onboarding` TINYINT(1) NOT NULL DEFAULT 0");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.7'");
+    }

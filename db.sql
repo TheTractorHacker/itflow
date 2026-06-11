@@ -1659,6 +1659,7 @@ CREATE TABLE `project_templates` (
   `project_template_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
   `project_template_archived_at` datetime DEFAULT NULL,
   `project_template_default_contract_template_id` int(11) DEFAULT NULL,
+  `project_template_is_onboarding` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`project_template_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

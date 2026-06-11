@@ -150,7 +150,7 @@
 
                 <?php if ($config_module_enable_itdoc) { ?>
                 <!-- TEMPLATES Section -->
-                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['contract_template.php', 'contract_template_details.php', 'project_template.php', 'project_template_details.php', 'ticket_template.php', 'ticket_template_details.php', 'canned_responses.php', 'worksheet_template.php', 'worksheet_template_details.php', 'vendor_template.php', 'software_template.php', 'document_template.php', 'document_template_details.php']) ? 'menu-open' : ''); ?>">
+                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['contract_template.php', 'contract_template_details.php', 'project_template.php', 'project_template_details.php', 'onboarding_templates.php', 'onboarding_template_details.php', 'ticket_template.php', 'ticket_template_details.php', 'canned_responses.php', 'worksheet_template.php', 'worksheet_template_details.php', 'vendor_template.php', 'software_template.php', 'document_template.php', 'document_template_details.php']) ? 'menu-open' : ''); ?>">
                     <a href="#" class="nav-link">
                         <i class="nav-icon fas fa-copy"></i>
                         <p>
@@ -174,6 +174,15 @@
                                 <p>
                                     <span href="#" class="fas fa-plus-circle right ajax-modal" data-modal-url="/admin/modals/project_template/project_template_add.php"></span>
                                     Project Templates
+                                </p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/onboarding_templates.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['onboarding_templates.php', 'onboarding_template_details.php']) ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-user-plus"></i>
+                                <p>
+                                    <span href="#" class="fas fa-plus-circle right ajax-modal" data-modal-url="/admin/modals/onboarding_template/onboarding_template_add.php"></span>
+                                    Onboarding Templates
                                 </p>
                             </a>
                         </li>
