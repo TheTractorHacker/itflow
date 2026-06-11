@@ -9,6 +9,7 @@ $when  = $_GET['when'] ?? 'future'; // past, today, future
 
 $where = ['t.ticket_schedule IS NOT NULL', 't.ticket_archived_at IS NULL'];
 if ($mine) $where[] = "t.ticket_assigned_to = $uid";
+if (isset($_GET['client_id'])) $where[] = "t.ticket_client_id = " . intval($_GET['client_id']);
 
 switch ($when) {
     case 'past':
