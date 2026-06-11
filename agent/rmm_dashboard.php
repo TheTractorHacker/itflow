@@ -222,8 +222,8 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                     <i class="fas fa-check-circle text-success mr-1"></i>All assets online
                 </p>
             <?php else: ?>
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="text-muted border-bottom" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">
+                <table class="table table-hover mb-0">
+                    <thead class="text-muted border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
                         <tr>
                             <th class="pl-3">Asset</th>
                             <th>Client</th>
@@ -233,7 +233,7 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                     <tbody>
                     <?php while ($row = mysqli_fetch_assoc($sql_offline)): ?>
                     <tr>
-                        <td class="pl-3 small">
+                        <td class="pl-3">
                             <i class="fas fa-circle text-danger mr-1" style="font-size:8px"></i>
                             <a href="/agent/asset_details.php?client_id=<?= intval($row['asset_client_id']) ?>&asset_id=<?= intval($row['asset_id']) ?>" class="font-weight-bold">
                                 <?= nullable_htmlentities($row['hostname'] ?: $row['asset_name']) ?>
@@ -242,8 +242,8 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                             <br><small class="text-muted ml-2"><?= nullable_htmlentities(substr($row['os_name'], 0, 30)) ?></small>
                             <?php endif; ?>
                         </td>
-                        <td class="small text-muted"><?= nullable_htmlentities($row['client_name']) ?></td>
-                        <td class="small text-muted" style="white-space:nowrap">
+                        <td class="text-muted"><?= nullable_htmlentities($row['client_name']) ?></td>
+                        <td class="text-muted" style="white-space:nowrap">
                             <?= $row['last_seen'] ? nullable_htmlentities(date('M j g:ia', strtotime($row['last_seen']))) : '—' ?>
                         </td>
                     </tr>
@@ -328,8 +328,8 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
             <?php if (mysqli_num_rows($sql_clients) === 0): ?>
                 <p class="text-muted text-center py-3 mb-0 small">No clients with RMM assets.</p>
             <?php else: ?>
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="text-muted border-bottom" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">
+                <table class="table table-hover mb-0">
+                    <thead class="text-muted border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
                         <tr>
                             <th class="pl-3">Client</th>
                             <th class="text-center" title="Online / Total">Assets</th>
@@ -345,26 +345,26 @@ $default_intg = $config_rmm_default_integration_id ?: ($integrations[0]['id'] ??
                         elseif ($cl['offline'] > 0 || $cl['alerts'] > 0) $row_class = 'table-warning';
                     ?>
                     <tr class="<?= $row_class ?>">
-                        <td class="pl-3 small">
+                        <td class="pl-3">
                             <a href="/agent/rmm_assets.php?client_id=<?= intval($cl['client_id']) ?>">
                                 <i class="fas fa-desktop mr-1 text-muted"></i><?= nullable_htmlentities($cl['client_name']) ?>
                             </a>
                         </td>
-                        <td class="text-center small">
+                        <td class="text-center">
                             <span class="text-success font-weight-bold"><?= intval($cl['online']) ?></span>
                             <span class="text-muted">/<?= intval($cl['total']) ?></span>
                         </td>
-                        <td class="text-center small <?= $cl['offline'] > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
+                        <td class="text-center <?= $cl['offline'] > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
                             <?= intval($cl['offline']) ?>
                         </td>
-                        <td class="text-center small">
+                        <td class="text-center">
                             <?php if ($cl['alerts'] > 0): ?>
                             <a href="/agent/rmm_alerts.php?client_id=<?= intval($cl['client_id']) ?>" class="badge badge-warning"><?= intval($cl['alerts']) ?></a>
                             <?php else: ?>
                             <span class="text-muted">0</span>
                             <?php endif; ?>
                         </td>
-                        <td class="text-center small">
+                        <td class="text-center">
                             <?php if ($cl['open_tickets'] > 0): ?>
                             <a href="/agent/tickets.php?client_id=<?= intval($cl['client_id']) ?>" class="badge badge-primary"><?= intval($cl['open_tickets']) ?></a>
                             <?php else: ?>
