@@ -33,6 +33,14 @@ require_once "includes/inc_all_admin.php";
 
             <div class="form-group">
                 <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" name="config_module_enable_ticket_charges" <?php if ($config_module_enable_ticket_charges == 1) { echo "checked"; } ?> value="1" id="customSwitch3b">
+                    <label class="custom-control-label" for="customSwitch3b">Show Ticket Charges (Billing)</label>
+                </div>
+                <small class="form-text text-muted">Lets techs add billable charges/labor to tickets, independent of Invoicing / Accounting. Useful if you handle invoicing elsewhere (e.g. QuickBooks) but still want to track billable time per ticket.</small>
+            </div>
+
+            <div class="form-group">
+                <div class="custom-control custom-switch">
                     <input type="checkbox" class="custom-control-input" name="config_client_portal_enable" <?php if ($config_client_portal_enable == 1) { echo "checked"; } ?> value="1" id="customSwitch4">
                     <label class="custom-control-label" for="customSwitch4">Enable Client Portal</label>
                 </div>

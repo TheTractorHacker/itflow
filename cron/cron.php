@@ -66,6 +66,7 @@ $config_ticket_email_parse = intval($row['config_ticket_email_parse']);
 $config_module_enable_itdoc = intval($row['config_module_enable_itdoc']);
 $config_module_enable_ticketing = intval($row['config_module_enable_ticketing']);
 $config_module_enable_accounting = intval($row['config_module_enable_accounting']);
+$config_module_enable_ticket_charges = intval($row['config_module_enable_ticket_charges'] ?? 1);
 $config_telemetry = intval($row['config_telemetry']);
 
 // Alerts

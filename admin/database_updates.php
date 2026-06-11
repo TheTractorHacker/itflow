@@ -4757,3 +4757,11 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.7'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.7') {
+
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN `config_module_enable_ticket_charges` TINYINT(1) NOT NULL DEFAULT 1");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.8'");
+    }

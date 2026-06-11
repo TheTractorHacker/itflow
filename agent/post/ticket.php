@@ -2026,7 +2026,9 @@ if (isset($_POST['add_ticket_reply'])) {
             if ($lt_row) {
                 $lt_name  = mysqli_real_escape_string($mysqli, $lt_row['labor_type_name']);
                 $lt_rate  = floatval($lt_row['labor_type_rate']);
-                $charge_qty   = round($hours + ($minutes / 60) + ($seconds / 3600), 2);
+                // Round logged time up to the nearest half hour for billing (minimum 0.5)
+                $charge_qty   = ceil(($hours + ($minutes / 60) + ($seconds / 3600)) * 2) / 2;
+                if ($charge_qty <= 0) $charge_qty = 0.5;
                 $charge_total = round($charge_qty * $lt_rate, 2);
                 mysqli_query($mysqli, "INSERT INTO ticket_charges SET
                     charge_ticket_id    = $ticket_id,

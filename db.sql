@@ -2252,6 +2252,7 @@ CREATE TABLE `settings` (
   `config_azure_client_secret` varchar(200) DEFAULT NULL,
   `config_module_enable_itdoc` tinyint(1) NOT NULL DEFAULT 1,
   `config_module_enable_accounting` tinyint(1) NOT NULL DEFAULT 1,
+  `config_module_enable_ticket_charges` tinyint(1) NOT NULL DEFAULT 1,
   `config_client_portal_enable` tinyint(1) NOT NULL DEFAULT 1,
   `config_login_message` text DEFAULT NULL,
   `config_login_key_required` tinyint(1) NOT NULL DEFAULT 0,

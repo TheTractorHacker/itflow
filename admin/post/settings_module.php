@@ -9,10 +9,11 @@ if (isset($_POST['edit_module_settings'])) {
     $config_module_enable_itdoc = intval($_POST['config_module_enable_itdoc'] ?? 0);
     $config_module_enable_ticketing = intval($_POST['config_module_enable_ticketing'] ?? 0);
     $config_module_enable_accounting = intval($_POST['config_module_enable_accounting'] ?? 0);
+    $config_module_enable_ticket_charges = intval($_POST['config_module_enable_ticket_charges'] ?? 0);
     $config_client_portal_enable = intval($_POST['config_client_portal_enable'] ?? 0);
     $config_whitelabel_key = sanitizeInput($_POST['config_whitelabel_key']);
 
-    mysqli_query($mysqli,"UPDATE settings SET config_module_enable_itdoc = $config_module_enable_itdoc, config_module_enable_ticketing = $config_module_enable_ticketing, config_module_enable_accounting = $config_module_enable_accounting, config_client_portal_enable = $config_client_portal_enable WHERE company_id = 1");
+    mysqli_query($mysqli,"UPDATE settings SET config_module_enable_itdoc = $config_module_enable_itdoc, config_module_enable_ticketing = $config_module_enable_ticketing, config_module_enable_accounting = $config_module_enable_accounting, config_module_enable_ticket_charges = $config_module_enable_ticket_charges, config_client_portal_enable = $config_client_portal_enable WHERE company_id = 1");
 
     // Validate white label key
     if (!empty($config_whitelabel_key && validateWhitelabelKey($config_whitelabel_key))) {

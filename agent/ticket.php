@@ -745,7 +745,7 @@ if (isset($_GET['ticket_id'])) {
                                 </div>
 
                                 <!-- Charge now -->
-                                <?php if ($config_module_enable_accounting && $lt_reply_rows) { ?>
+                                <?php if ($config_module_enable_ticket_charges && $lt_reply_rows) { ?>
                                 <div class="col-auto">
                                     <div class="form-group mb-2">
                                         <div class="custom-control custom-checkbox">
@@ -1502,7 +1502,7 @@ if (isset($_GET['ticket_id'])) {
                 <!-- End Outtake Forms Card -->
 
                 <!-- Charges Card -->
-                <?php if ($config_module_enable_accounting && (empty($ticket_resolved_at) || !empty($charge_rows))) { ?>
+                <?php if ($config_module_enable_ticket_charges && (empty($ticket_resolved_at) || !empty($charge_rows))) { ?>
                 <div class="card">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1">
