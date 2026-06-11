@@ -198,17 +198,17 @@ $sql_runs = mysqli_query($mysqli,
                 </td>
                 <td class="text-right pr-2" style="white-space:nowrap">
                     <?php if (lookupUserPermission('module_rmm_scripts') >= 1): ?>
-                    <button class="btn btn-xs btn-success mr-1" onclick='openRunModal(<?= json_encode(['id'=>$scr['id'],'name'=>$scr['name'],'tactical_script_id'=>$scr['tactical_script_id']]) ?>)'
+                    <button class="btn btn-xs btn-success mr-1" onclick='openRunModal(<?= json_encode(['id'=>$scr['id'],'name'=>$scr['name'],'tactical_script_id'=>$scr['tactical_script_id']], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'
                             title="Run on Asset" <?= !$scr['tactical_script_id'] ? 'disabled title="No Tactical ID — sync scripts first"' : '' ?>>
                         <i class="fas fa-play"></i>
                     </button>
                     <?php if ($scr['script_body']): ?>
-                    <button class="btn btn-xs btn-dark mr-1" onclick='previewScript(<?= json_encode(['name'=>$scr['name'],'body'=>$scr['script_body'],'type'=>$scr['script_type']]) ?>)'
+                    <button class="btn btn-xs btn-dark mr-1" onclick='previewScript(<?= json_encode(['name'=>$scr['name'],'body'=>$scr['script_body'],'type'=>$scr['script_type']], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'
                             title="View Script">
                         <i class="fas fa-eye"></i>
                     </button>
                     <?php endif; ?>
-                    <button class="btn btn-xs btn-secondary mr-1" onclick='editScript(<?= json_encode($scr) ?>)' title="Edit">
+                    <button class="btn btn-xs btn-secondary mr-1" onclick='editScript(<?= json_encode($scr, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)' title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
                     <form method="post" class="d-inline" onsubmit="return confirm('Delete this script?')">

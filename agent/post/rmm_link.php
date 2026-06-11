@@ -24,8 +24,9 @@ $action = sanitizeInput($_POST['action'] ?? '');
 // Unlink an asset from its RMM agent
 if ($action === 'unlink') {
     $link_id = intval($_POST['link_id'] ?? 0);
-    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT arl.*, a.asset_name FROM asset_rmm_links arl JOIN assets a ON a.asset_id = arl.asset_id WHERE arl.id=$link_id"));
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT arl.*, a.asset_name, a.asset_client_id FROM asset_rmm_links arl JOIN assets a ON a.asset_id = arl.asset_id WHERE arl.id=$link_id"));
     if ($row) {
+        enforceClientAccess(intval($row['asset_client_id']));
         mysqli_query($mysqli, "DELETE FROM asset_rmm_links WHERE id=$link_id");
         logAction('RMM', 'Asset Unlinked', "$session_name unlinked RMM agent {$row['hostname']} from asset {$row['asset_name']}");
         echo json_encode(['success' => true]);
@@ -46,6 +47,13 @@ if ($action === 'link') {
         exit;
     }
 
+    $asset_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT asset_name, asset_client_id FROM assets WHERE asset_id=$asset_id"));
+    if (!$asset_row) {
+        echo json_encode(['success' => false, 'error' => 'Asset not found']);
+        exit;
+    }
+    enforceClientAccess(intval($asset_row['asset_client_id']));
+
     // Remove any existing link for this asset+integration
     mysqli_query($mysqli, "DELETE FROM asset_rmm_links WHERE asset_id=$asset_id AND integration_id=$integration_id");
 
@@ -58,7 +66,6 @@ if ($action === 'link') {
         last_sync=NOW()
     ");
 
-    $asset_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT asset_name FROM assets WHERE asset_id=$asset_id"));
     logAction('RMM', 'Asset Linked',
         "$session_name manually linked asset {$asset_row['asset_name']} to Tactical agent $tactical_agent_id",
         0, $asset_id);

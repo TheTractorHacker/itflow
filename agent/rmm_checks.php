@@ -151,7 +151,7 @@ foreach ($platform_order as $plat):
                     <i class="fas fa-cloud-upload-alt"></i>
                 </button>
                 <button class="btn btn-xs btn-secondary mr-1" title="Edit"
-                        onclick='editPolicy(<?= json_encode($pol) ?>)'>
+                        onclick='editPolicy(<?= json_encode($pol, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                     <i class="fas fa-edit"></i>
                 </button>
                 <button class="btn btn-xs btn-danger" title="Delete"
