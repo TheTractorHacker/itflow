@@ -118,6 +118,12 @@
                             <p>Revenues</p>
                         </a>
                     </li>
+                <?php } ?>
+
+                <?php if (($config_module_enable_accounting == 1 || $config_module_enable_ticket_charges == 1) && lookupUserPermission("module_sales") >= 1) { ?>
+                    <?php if ($config_module_enable_accounting != 1) { ?>
+                    <li class="nav-header mt-3">BILLING</li>
+                    <?php } ?>
                     <li class="nav-item">
                         <a href="/agent/products.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "products.php") { echo "active"; } ?>">
                             <i class="nav-icon fas fa-box-open"></i>

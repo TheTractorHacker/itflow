@@ -89,6 +89,14 @@
                             <p>Tickets</p>
                         </a>
                     </li>
+                    <?php if ($config_module_enable_ticket_charges) { ?>
+                    <li class="nav-item">
+                        <a href="/agent/reports/ticket_charges.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "ticket_charges.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-dollar-sign"></i>
+                            <p>Ticket Charges</p>
+                        </a>
+                    </li>
+                    <?php } ?>
 
                     <li class="nav-item">
                         <a href="/agent/reports/ticket_by_client.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "ticket_by_client.php") { echo "active"; } ?>">
