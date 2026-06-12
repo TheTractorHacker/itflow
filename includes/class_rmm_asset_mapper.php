@@ -68,6 +68,10 @@ class RmmAssetMapper {
         $client_id = 0;
         $raw_json  = mysqli_real_escape_string($m, json_encode($agent));
 
+        // Map the RMM-side client/group name (Tactical: client_name, Level/Action1: group_name)
+        // to an ITFlow client by exact (case-insensitive) name match.
+        $resolved_client_id = $this->resolveClientId($agent);
+
         if (empty($agent_id) || empty($hostname)) {
             return 'skipped';
         }
@@ -81,14 +85,16 @@ class RmmAssetMapper {
 
         // ----- Step 1: Check existing link -----
         $existing = mysqli_fetch_assoc(mysqli_query($m,
-            "SELECT id, asset_id, rmm_status FROM asset_rmm_links
-             WHERE integration_id=$intg_id AND tactical_agent_id='$agent_id'"
+            "SELECT arl.id, arl.asset_id, arl.rmm_status, a.asset_client_id FROM asset_rmm_links arl
+             JOIN assets a ON a.asset_id = arl.asset_id
+             WHERE arl.integration_id=$intg_id AND arl.tactical_agent_id='$agent_id'"
         ));
 
         if ($existing) {
             $this->updateLink($existing['id'], $existing['rmm_status'], $status, $last_seen_val, $os_name, $os_version,
                 $manufacturer, $model, $cpu, $ram_gb, $logged_user, $mesh_node_id, $raw_json);
             $this->syncInterfaces(intval($existing['asset_id']), $this->resolveWmiDetail($agent, $agent_id));
+            $this->backfillClientId(intval($existing['asset_id']), intval($existing['asset_client_id']), $resolved_client_id);
             return 'updated';
         }
 
@@ -146,12 +152,15 @@ class RmmAssetMapper {
                  asset_os='$o',
                  asset_make='$mk',
                  asset_status='Active',
+                 asset_client_id=$resolved_client_id,
                  asset_created_at=NOW()"
             );
             $asset_id = intval(mysqli_insert_id($m));
             $outcome  = 'created';
         } else {
             $outcome = 'matched';
+            $matched_row = mysqli_fetch_assoc(mysqli_query($m, "SELECT asset_client_id FROM assets WHERE asset_id=$asset_id"));
+            $this->backfillClientId($asset_id, intval($matched_row['asset_client_id']), $resolved_client_id);
         }
 
         // ----- Step 4: Insert the link row -----
@@ -300,6 +309,26 @@ class RmmAssetMapper {
                 );
             }
         }
+    }
+
+    // Maps the RMM-side client/group name to an existing ITFlow client by
+    // exact (case-insensitive) name match. Returns 0 if no match is found.
+    private function resolveClientId(array $agent): int {
+        $m    = $this->mysqli;
+        $name = trim((string) ($agent['client_name'] ?? $agent['group_name'] ?? ''));
+        if ($name === '') return 0;
+
+        $esc = mysqli_real_escape_string($m, $name);
+        $row = mysqli_fetch_assoc(mysqli_query($m,
+            "SELECT client_id FROM clients WHERE LOWER(client_name)=LOWER('$esc') AND client_archived_at IS NULL LIMIT 1"
+        ));
+        return $row ? intval($row['client_id']) : 0;
+    }
+
+    // Assigns an asset to its resolved client if it doesn't already have one.
+    private function backfillClientId(int $asset_id, int $current_client_id, int $resolved_client_id): void {
+        if ($current_client_id !== 0 || $resolved_client_id === 0) return;
+        mysqli_query($this->mysqli, "UPDATE assets SET asset_client_id=$resolved_client_id WHERE asset_id=$asset_id");
     }
 
     private function extractMacs(array $agent): array {

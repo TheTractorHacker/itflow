@@ -34,6 +34,9 @@ $cnt = mysqli_fetch_assoc(mysqli_query($mysqli,
 ));
 
 $sql_integrations = mysqli_query($mysqli, "SELECT id, name FROM rmm_integrations WHERE enabled=1 ORDER BY name");
+$sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name ASC");
+$clients_list = [];
+while ($c = mysqli_fetch_assoc($sql_clients)) $clients_list[] = $c;
 ?>
 
 <div class="d-flex align-items-center mb-3">
@@ -152,6 +155,13 @@ $sql_integrations = mysqli_query($mysqli, "SELECT id, name FROM rmm_integrations
                         <a href="/agent/client_overview.php?client_id=<?= intval($row['asset_client_id']) ?>">
                             <?= nullable_htmlentities($row['client_name']) ?>
                         </a>
+                    <?php elseif (lookupUserPermission('module_rmm_sync') >= 1): ?>
+                        <select class="form-control form-control-sm assign-client-select" style="width:auto;display:inline-block" data-asset-id="<?= intval($row['asset_id']) ?>">
+                            <option value="">Assign client...</option>
+                            <?php foreach ($clients_list as $cl): ?>
+                            <option value="<?= intval($cl['client_id']) ?>"><?= nullable_htmlentities($cl['client_name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     <?php else: ?>
                         <span class="text-muted">—</span>
                     <?php endif; ?>
@@ -209,6 +219,33 @@ function triggerSync() {
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync from Tactical RMM'; }
     });
 }
+
+document.querySelectorAll('.assign-client-select').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+        const assetId = this.dataset.assetId;
+        const clientId = this.value;
+        if (!clientId) return;
+        this.disabled = true;
+        fetch('/agent/post/rmm_sync.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'csrf_token=<?= $_SESSION['csrf_token'] ?>&action=assign_client&asset_id=' + encodeURIComponent(assetId) + '&client_id=' + encodeURIComponent(clientId)
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.reload();
+            } else {
+                alert('Failed to assign client: ' + (d.error || 'Unknown error'));
+                this.disabled = false;
+            }
+        })
+        .catch(() => {
+            alert('Network error assigning client.');
+            this.disabled = false;
+        });
+    });
+});
 </script>
 
 <?php require_once "../includes/footer.php"; ?>

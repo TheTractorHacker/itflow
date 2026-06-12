@@ -95,6 +95,45 @@ if ($action === 'sync') {
     exit;
 }
 
+// ---- Assign an RMM-synced asset to an ITFlow client ----
+if ($action === 'assign_client') {
+    if (!lookupUserPermission('module_rmm_sync')) {
+        echo json_encode(['success' => false, 'error' => 'No sync permission']);
+        exit;
+    }
+
+    $asset_id          = intval($_POST['asset_id'] ?? 0);
+    $target_client_id  = intval($_POST['client_id'] ?? 0);
+
+    if (!$asset_id || !$target_client_id) {
+        echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+        exit;
+    }
+
+    enforceClientAccess($target_client_id);
+
+    $asset_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT asset_name FROM assets WHERE asset_id=$asset_id"));
+    if (!$asset_row) {
+        echo json_encode(['success' => false, 'error' => 'Asset not found']);
+        exit;
+    }
+
+    $client_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT client_name FROM clients WHERE client_id=$target_client_id AND client_archived_at IS NULL"));
+    if (!$client_row) {
+        echo json_encode(['success' => false, 'error' => 'Client not found']);
+        exit;
+    }
+
+    mysqli_query($mysqli, "UPDATE assets SET asset_client_id=$target_client_id WHERE asset_id=$asset_id");
+
+    logAction('RMM', 'Asset Assigned',
+        "$session_name assigned RMM asset {$asset_row['asset_name']} to client {$client_row['client_name']}",
+        $target_client_id, $asset_id);
+
+    echo json_encode(['success' => true]);
+    exit;
+}
+
 // ---- Sync scripts from Tactical ----
 if ($action === 'sync_scripts') {
     if (!lookupUserPermission('module_rmm_scripts')) {
