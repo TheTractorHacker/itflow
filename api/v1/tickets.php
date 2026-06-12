@@ -7,6 +7,53 @@ defined('FROM_API') || die();
 
 $uid = $api_user_id;
 
+// Saves uploaded files (multipart field "files[]" for multiple, or "file" for a single
+// upload) into uploads/tickets/{ticket_id}/ and records them in ticket_attachments --
+// the same table/storage the agent UI and client portal use.
+function api_save_ticket_attachments($mysqli, int $ticket_id, ?int $reply_id, string $document_root): array {
+    $allowed = ['jpg','jpeg','gif','png','webp','pdf','txt','md','doc','docx','odt','csv','xls','xlsx','ods','pptx','odp','zip','tar','gz','xml','msg','json','wav','mp3','ogg','mov','mp4','av1','ovpn'];
+
+    $files = [];
+    if (!empty($_FILES['files']) && is_array($_FILES['files']['name'] ?? null)) {
+        for ($i = 0; $i < count($_FILES['files']['name']); $i++) {
+            $files[] = [
+                'name'     => $_FILES['files']['name'][$i],
+                'tmp_name' => $_FILES['files']['tmp_name'][$i],
+                'error'    => $_FILES['files']['error'][$i],
+                'size'     => $_FILES['files']['size'][$i],
+            ];
+        }
+    } elseif (!empty($_FILES['file'])) {
+        $files[] = $_FILES['file'];
+    }
+
+    $saved = [];
+    if (empty($files)) return $saved;
+
+    $upload_dir = "$document_root/uploads/tickets/$ticket_id/";
+    mkdirMissing("$document_root/uploads/tickets/");
+    mkdirMissing($upload_dir);
+
+    $reply_sql = $reply_id !== null ? intval($reply_id) : 'NULL';
+
+    foreach ($files as $file) {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) continue;
+
+        $ref_name = checkFileUpload($file, $allowed);
+        if (!is_string($ref_name) || !preg_match('/^[a-zA-Z0-9]+\.[a-zA-Z0-9]+$/', $ref_name)) continue;
+
+        move_uploaded_file($file['tmp_name'], $upload_dir . $ref_name);
+
+        $name = sanitizeInput($file['name']);
+        $ref  = mysqli_real_escape_string($mysqli, $ref_name);
+        mysqli_query($mysqli,
+            "INSERT INTO ticket_attachments SET ticket_attachment_name='$name', ticket_attachment_reference_name='$ref', ticket_attachment_reply_id=$reply_sql, ticket_attachment_ticket_id=$ticket_id"
+        );
+        $saved[] = ['name' => $file['name'], 'filename' => $ref_name, 'url' => "/uploads/tickets/$ticket_id/$ref_name"];
+    }
+    return $saved;
+}
+
 // LIST
 if ($method === 'GET' && $id === null) {
     $page    = max(1, intval($_GET['page'] ?? 1));
@@ -78,6 +125,19 @@ if ($method === 'GET' && $id !== null && $sub === null) {
     $ticket = mysqli_fetch_assoc($sql);
     if (!$ticket) api_error(404, 'Ticket not found');
 
+    // Attachments on the ticket itself (not tied to a reply)
+    $ticket_attachments = [];
+    $asql = mysqli_query($mysqli,
+        "SELECT ticket_attachment_name, ticket_attachment_reference_name FROM ticket_attachments
+         WHERE ticket_attachment_ticket_id = $id AND ticket_attachment_reply_id IS NULL"
+    );
+    while ($row = mysqli_fetch_assoc($asql)) {
+        $ticket_attachments[] = [
+            'name' => $row['ticket_attachment_name'],
+            'url'  => "/uploads/tickets/$id/{$row['ticket_attachment_reference_name']}",
+        ];
+    }
+
     // Replies
     $replies = [];
     $rsql = mysqli_query($mysqli,
@@ -87,6 +147,18 @@ if ($method === 'GET' && $id !== null && $sub === null) {
          ORDER BY r.ticket_reply_created_at ASC"
     );
     while ($row = mysqli_fetch_assoc($rsql)) {
+        $reply_attachments = [];
+        $rasql = mysqli_query($mysqli,
+            "SELECT ticket_attachment_name, ticket_attachment_reference_name FROM ticket_attachments
+             WHERE ticket_attachment_reply_id = " . intval($row['ticket_reply_id'])
+        );
+        while ($arow = mysqli_fetch_assoc($rasql)) {
+            $reply_attachments[] = [
+                'name' => $arow['ticket_attachment_name'],
+                'url'  => "/uploads/tickets/$id/{$arow['ticket_attachment_reference_name']}",
+            ];
+        }
+
         $replies[] = [
             'id'           => intval($row['ticket_reply_id']),
             'body'         => $row['ticket_reply'],
@@ -95,6 +167,7 @@ if ($method === 'GET' && $id !== null && $sub === null) {
             'onsite'       => (bool)($row['ticket_reply_onsite'] ?? false),
             'by'           => $row['user_name'],
             'created_at'   => $row['ticket_reply_created_at'],
+            'attachments'  => $reply_attachments,
         ];
     }
 
@@ -115,13 +188,19 @@ if ($method === 'GET' && $id !== null && $sub === null) {
         'created_at'   => $ticket['ticket_created_at'],
         'due_at'       => $ticket['ticket_due_at'],
         'resolved_at'  => $ticket['ticket_resolved_at'],
+        'attachments'  => $ticket_attachments,
         'replies'      => $replies,
     ]);
 }
 
 // ADD REPLY
 if ($method === 'POST' && $id !== null && $sub === 'reply') {
-    $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+    $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
+    if (stripos($content_type, 'multipart/form-data') === 0) {
+        $body = $_POST;
+    } else {
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+    }
     $reply   = mysqli_real_escape_string($mysqli, trim($body['reply'] ?? ''));
     $type    = in_array($body['type'] ?? 'reply', ['reply', 'note']) ? ($body['type'] ?? 'reply') : 'reply';
     $time_w  = mysqli_real_escape_string($mysqli, trim($body['time_worked'] ?? ''));
@@ -137,7 +216,11 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     $reply_id = mysqli_insert_id($mysqli);
     mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
 
-    api_response(201, ['id' => $reply_id]);
+    $response = ['id' => $reply_id];
+    $attachments = api_save_ticket_attachments($mysqli, $id, $reply_id, $DOCUMENT_ROOT);
+    if ($attachments) $response['attachments'] = $attachments;
+
+    api_response(201, $response);
 }
 
 // DELETE REPLY
@@ -175,7 +258,12 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
 
 // CREATE TICKET
 if ($method === 'POST' && $id === null) {
-    $body     = json_decode(file_get_contents('php://input'), true) ?? [];
+    $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
+    if (stripos($content_type, 'multipart/form-data') === 0) {
+        $body = $_POST;
+    } else {
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+    }
     $subject  = mysqli_real_escape_string($mysqli, trim($body['subject'] ?? ''));
     $details  = mysqli_real_escape_string($mysqli, trim($body['details'] ?? ''));
     $client   = isset($body['client_id']) ? intval($body['client_id']) : 0;
@@ -198,45 +286,22 @@ if ($method === 'POST' && $id === null) {
          VALUES ('$subject', '$details', $client, $contact, '$priority', $status, $assigned, $uid, 'API', $next_num, NOW(), NOW())"
     );
     $new_id = mysqli_insert_id($mysqli);
-    api_response(201, ['id' => $new_id, 'number' => $next_num]);
+
+    $response = ['id' => $new_id, 'number' => $next_num];
+    $attachments = api_save_ticket_attachments($mysqli, $new_id, null, $DOCUMENT_ROOT);
+    if ($attachments) $response['attachments'] = $attachments;
+
+    api_response(201, $response);
 }
 
 // UPLOAD ATTACHMENT
 if ($method === 'POST' && $id !== null && $sub === 'attachments') {
-    $file = $_FILES['file'] ?? null;
-    if (!$file || $file['error'] !== UPLOAD_ERR_OK) api_error(400, 'File upload failed');
-    if ($file['size'] > 10 * 1024 * 1024) api_error(400, 'File too large (max 10 MB)');
+    $saved = api_save_ticket_attachments($mysqli, $id, null, $DOCUMENT_ROOT);
+    if (empty($saved)) api_error(400, 'File upload failed or file type not allowed');
 
-    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
-    $mime    = mime_content_type($file['tmp_name']);
-    if (!in_array($mime, $allowed)) api_error(400, 'File type not allowed');
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
 
-    $dir = $DOCUMENT_ROOT . "/uploads/mobile_attachments/$id";
-    if (!is_dir($dir)) mkdir($dir, 0750, true);
-
-    $ext      = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = bin2hex(random_bytes(8)) . '.' . preg_replace('/[^a-z0-9]/i', '', $ext);
-    $dest     = "$dir/$filename";
-    move_uploaded_file($file['tmp_name'], $dest);
-
-    // Store in DB — create table lazily
-    mysqli_query($mysqli,
-        "CREATE TABLE IF NOT EXISTS mobile_ticket_attachments (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            ticket_id INT NOT NULL,
-            filename VARCHAR(255) NOT NULL,
-            mime_type VARCHAR(100),
-            created_by INT,
-            created_at DATETIME DEFAULT NOW()
-        )"
-    );
-    mysqli_query($mysqli,
-        "INSERT INTO mobile_ticket_attachments (ticket_id, filename, mime_type, created_by)
-         VALUES ($id, '$filename', '$mime', $uid)"
-    );
-
-    $url_path = "/uploads/mobile_attachments/$id/$filename";
-    api_response(201, ['url' => $url_path, 'filename' => $filename]);
+    api_response(201, count($saved) === 1 ? $saved[0] : ['attachments' => $saved]);
 }
 
 // ── Additional POST routes ───────────────────────────────────────────────────
