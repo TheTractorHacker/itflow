@@ -1972,7 +1972,7 @@ $(document).on('click', '.insert-canned-response', function(e) {
     e.preventDefault();
     var ed = tinymce.get('ticket-reply-editor');
     if (!ed) return;
-    var message = $(this).data('message');
+    var message = JSON.parse($(this).attr('data-message'));
     ed.execCommand('mceInsertContent', false, message);
 });
 
