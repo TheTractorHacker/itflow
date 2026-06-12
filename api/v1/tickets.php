@@ -277,8 +277,13 @@ if ($method === 'POST' && $id === null) {
 
     $next_num = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
         "SELECT COALESCE(MAX(ticket_number), 0) + 1 AS n FROM tickets"))['n']);
-    $status   = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT ticket_status_id FROM ticket_statuses ORDER BY ticket_status_order ASC LIMIT 1"))['ticket_status_id']);
+    $status_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT ticket_status_id FROM ticket_statuses WHERE ticket_status_name = 'New' AND ticket_status_active = 1 LIMIT 1"));
+    if (!$status_row) {
+        $status_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT ticket_status_id FROM ticket_statuses WHERE ticket_status_active = 1 ORDER BY ticket_status_order ASC, ticket_status_id ASC LIMIT 1"));
+    }
+    $status = intval($status_row['ticket_status_id']);
 
     mysqli_query($mysqli,
         "INSERT INTO tickets (ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
