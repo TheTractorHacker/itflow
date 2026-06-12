@@ -64,6 +64,8 @@ if ($method === 'GET' && $id === null) {
     $mine     = isset($_GET['mine']) ? intval($_GET['mine']) : 0;
     $priority = mysqli_real_escape_string($mysqli, strtolower($_GET['priority'] ?? ''));
     $onsite   = isset($_GET['onsite']) && $_GET['onsite'] !== '' ? intval($_GET['onsite']) : -1;
+    $contact_id = isset($_GET['contact_id']) ? intval($_GET['contact_id']) : 0;
+    $client_id  = isset($_GET['client_id']) ? intval($_GET['client_id']) : 0;
 
     $where = ['t.ticket_archived_at IS NULL'];
     if ($status === 'open')   $where[] = 't.ticket_resolved_at IS NULL';
@@ -72,6 +74,8 @@ if ($method === 'GET' && $id === null) {
     if ($search)              $where[] = "(t.ticket_subject LIKE '%$search%' OR t.ticket_number LIKE '%$search%')";
     if ($priority)            $where[] = "LOWER(t.ticket_priority) = '$priority'";
     if ($onsite !== -1)       $where[] = "t.ticket_onsite = $onsite";
+    if ($contact_id)          $where[] = "t.ticket_contact_id = $contact_id";
+    if ($client_id)           $where[] = "t.ticket_client_id = $client_id";
 
     $where_sql = implode(' AND ', $where);
 
@@ -81,7 +85,7 @@ if ($method === 'GET' && $id === null) {
     $tickets = [];
     $sql = mysqli_query($mysqli,
         "SELECT t.ticket_id, t.ticket_number, t.ticket_subject, t.ticket_priority,
-                t.ticket_created_at, t.ticket_due_at, t.ticket_resolved_at,
+                t.ticket_created_at, t.ticket_due_at, t.ticket_resolved_at, t.ticket_updated_at,
                 c.client_name, ts.ticket_status_name, ts.ticket_status_color,
                 u.user_name AS assigned_to_name
          FROM tickets t
@@ -105,6 +109,7 @@ if ($method === 'GET' && $id === null) {
             'created_at'   => $row['ticket_created_at'],
             'due_at'       => $row['ticket_due_at'],
             'resolved_at'  => $row['ticket_resolved_at'],
+            'updated_at'   => $row['ticket_updated_at'],
         ];
     }
     api_response(200, ['data' => $tickets, 'total' => $total, 'page' => $page, 'limit' => $limit]);
@@ -272,8 +277,26 @@ if ($method === 'POST' && $id === null) {
                 ? ucfirst($priority_in) : 'Low';
     $assigned = isset($body['assigned_to']) ? intval($body['assigned_to']) : 0;
     $contact  = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
+    $category = isset($body['category_id']) ? intval($body['category_id']) : 0;
+    $hostname = mysqli_real_escape_string($mysqli, trim($body['hostname'] ?? ''));
 
     if (!$subject) api_error(400, 'subject required');
+
+    // Validate category against ticket categories
+    if ($category) {
+        $cat_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT category_id FROM categories WHERE category_id = $category AND category_type = 'Ticket' AND category_archived_at IS NULL LIMIT 1"));
+        if (!$cat_row) $category = 0;
+    }
+
+    // Auto-link to a matching asset for this client by hostname/asset name
+    $asset_id = 0;
+    if ($hostname && $client) {
+        $asset_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT asset_id FROM assets WHERE asset_client_id = $client AND asset_archived_at IS NULL
+             AND (asset_name = '$hostname' OR asset_tag = '$hostname') LIMIT 1"));
+        if ($asset_row) $asset_id = intval($asset_row['asset_id']);
+    }
 
     $next_num = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
         "SELECT COALESCE(MAX(ticket_number), 0) + 1 AS n FROM tickets"))['n']);
@@ -287,8 +310,8 @@ if ($method === 'POST' && $id === null) {
 
     mysqli_query($mysqli,
         "INSERT INTO tickets (ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
-         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_created_at, ticket_updated_at)
-         VALUES ('$subject', '$details', $client, $contact, '$priority', $status, $assigned, $uid, 'API', $next_num, NOW(), NOW())"
+         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_created_at, ticket_updated_at)
+         VALUES ('$subject', '$details', $client, $contact, '$priority', $status, $assigned, $uid, 'API', $next_num, $category, $asset_id, NOW(), NOW())"
     );
     $new_id = mysqli_insert_id($mysqli);
 
