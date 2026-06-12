@@ -139,6 +139,12 @@ class RmmAssetMapper {
 
         // ----- Step 3: Create new ITFlow asset if no match -----
         if (!$asset_id) {
+            // No matching ITFlow client for this RMM client/group name —
+            // don't import an unowned asset.
+            if (!$resolved_client_id) {
+                return 'skipped';
+            }
+
             $asset_type = $this->guessAssetType($os_name);
             $h  = mysqli_real_escape_string($m, $hostname);
             $s  = mysqli_real_escape_string($m, $serial);
