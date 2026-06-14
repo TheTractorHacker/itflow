@@ -30,7 +30,7 @@ header("X-Frame-Options: DENY"); // Legacy
     <link rel="stylesheet" href="/plugins/adminlte/css/adminlte.min.css">
 
     <!-- Custom -->
-    <link rel="stylesheet" href="/css/itflow_custom.css">
+    <link rel="stylesheet" href="/css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
 
 </head>
 

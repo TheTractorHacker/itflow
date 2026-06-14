@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="/plugins/select2/css/select2.min.css">
     <link rel="stylesheet" href="/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css">
     <link rel="stylesheet" href='/plugins/daterangepicker/daterangepicker.css'>
-    <link rel="stylesheet" href="/css/itflow_custom.css">
+    <link rel="stylesheet" href="/css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
 
     <!-- Scripts -->
     <script src="/plugins/jquery/jquery.min.js"></script>
