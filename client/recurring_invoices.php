@@ -30,13 +30,20 @@ $payment_provider_threshold = floatval($row['payment_provider_threshold']);
 
 ?>
 
-<h3>Recurring Invoices</h3>
+<div class="row">
+    <div class="col">
+        <h3><i class="fas fa-fw fa-sync-alt mr-2"></i>Recurring Invoices</h3>
+    </div>
+</div>
 <div class="row">
 
-    <div class="col-md-10">
+    <div class="col-md-12">
 
-        <table class="table tabled-bordered border border-dark">
-            <thead class="thead-dark">
+        <div class="card card-outline card-primary">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="thead-light">
             <tr>
                 <th>Scope</th>
                 <th>Amount</th>
@@ -50,6 +57,11 @@ $payment_provider_threshold = floatval($row['payment_provider_threshold']);
             <tbody>
 
             <?php
+            if (mysqli_num_rows($recurring_invoices_sql) == 0) { ?>
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No recurring invoices found.</td>
+                </tr>
+            <?php }
             while ($row = mysqli_fetch_assoc($recurring_invoices_sql)) {
                 $recurring_invoice_id = intval($row['recurring_invoice_id']);
                 $recurring_invoice_prefix = nullable_htmlentities($row['recurring_invoice_prefix']);
@@ -105,6 +117,9 @@ $payment_provider_threshold = floatval($row['payment_provider_threshold']);
 
             </tbody>
         </table>
+                </div>
+            </div>
+        </div>
 
     </div>
 

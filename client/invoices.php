@@ -17,13 +17,20 @@ if ($session_contact_primary == 0 && !$session_contact_is_billing_contact) {
 $invoices_sql = mysqli_query($mysqli, "SELECT * FROM invoices WHERE invoice_client_id = $session_client_id AND invoice_status != 'Draft' ORDER BY invoice_date DESC");
 ?>
 
-<h3>Invoices</h3>
+<div class="row">
+    <div class="col">
+        <h3><i class="fas fa-fw fa-file-invoice-dollar mr-2"></i>Invoices</h3>
+    </div>
+</div>
 <div class="row">
 
-    <div class="col-md-10">
+    <div class="col-md-12">
 
-        <table class="table tabled-bordered border border-dark">
-            <thead class="thead-dark">
+        <div class="card card-outline card-primary">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                <table class="table table-hover mb-0">
+            <thead class="thead-light">
             <tr>
                 <th>#</th>
                 <th>Scope</th>
@@ -36,6 +43,11 @@ $invoices_sql = mysqli_query($mysqli, "SELECT * FROM invoices WHERE invoice_clie
             <tbody>
 
             <?php
+            if (mysqli_num_rows($invoices_sql) == 0) { ?>
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">No invoices found.</td>
+                </tr>
+            <?php }
             while ($row = mysqli_fetch_assoc($invoices_sql)) {
                 $invoice_id = intval($row['invoice_id']);
                 $invoice_prefix = nullable_htmlentities($row['invoice_prefix']);
@@ -91,6 +103,9 @@ $invoices_sql = mysqli_query($mysqli, "SELECT * FROM invoices WHERE invoice_clie
 
             </tbody>
         </table>
+                </div>
+            </div>
+        </div>
 
     </div>
 

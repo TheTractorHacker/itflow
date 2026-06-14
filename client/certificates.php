@@ -16,13 +16,20 @@ if ($session_contact_primary == 0 && !$session_contact_is_technical_contact) {
 $certificates_sql = mysqli_query($mysqli, "SELECT certificate_id, certificate_name, certificate_domain, certificate_issued_by, certificate_expire FROM certificates WHERE certificate_client_id = $session_client_id AND certificate_archived_at IS NULL ORDER BY certificate_expire ASC");
 ?>
 
-    <h3>Web Certificates</h3>
+    <div class="row">
+        <div class="col">
+            <h3><i class="fas fa-fw fa-certificate mr-2"></i>Web Certificates</h3>
+        </div>
+    </div>
     <div class="row">
 
-        <div class="col-md-10">
+        <div class="col-md-12">
 
-            <table class="table tabled-bordered border border-dark">
-                <thead class="thead-dark">
+            <div class="card card-outline card-primary">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="thead-light">
                 <tr>
                     <th>Certificate Name</th>
                     <th>FQDN</th>
@@ -33,25 +40,37 @@ $certificates_sql = mysqli_query($mysqli, "SELECT certificate_id, certificate_na
                 <tbody>
 
                 <?php
+                if (mysqli_num_rows($certificates_sql) == 0) { ?>
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">No certificates found.</td>
+                    </tr>
+                <?php }
                 while ($row = mysqli_fetch_assoc($certificates_sql)) {
                     $certificate_name = nullable_htmlentities($row['certificate_name']);
                     $certificate_domain = nullable_htmlentities($row['certificate_domain']);
                     $certificate_issued_by = nullable_htmlentities($row['certificate_issued_by']);
                     $certificate_expire = nullable_htmlentities($row['certificate_expire']);
 
+                    $expire_class = "";
+                    if ($certificate_expire && strtotime($certificate_expire) < strtotime('+30 days')) {
+                        $expire_class = "text-danger font-weight-bold";
+                    }
                     ?>
 
                     <tr>
                         <td><?php echo $certificate_name; ?></td>
                         <td><?php echo $certificate_domain; ?></td>
                         <td><?php echo $certificate_issued_by; ?></td>
-                        <td><?php echo $certificate_expire; ?></td>
+                        <td class="<?php echo $expire_class; ?>"><?php echo $certificate_expire; ?></td>
                     </tr>
 
                 <?php } ?>
 
                 </tbody>
             </table>
+                    </div>
+                </div>
+            </div>
 
         </div>
 

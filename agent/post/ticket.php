@@ -3383,3 +3383,80 @@ if (isset($_GET['delete_ticket_charge'])) {
     flash_alert("Charge deleted", 'error');
     redirect();
 }
+
+if (isset($_POST['upload_ticket_attachment'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id = intval($_POST['ticket_id']);
+
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+    $client_id = intval($r['ticket_client_id'] ?? 0);
+    if ($client_id) { enforceClientAccess(); }
+
+    $allowed = ['jpg','jpeg','gif','png','webp','pdf','txt','md','doc','docx','odt','csv','xls','xlsx','ods','pptx','odp','zip','tar','gz','xml','msg','json','wav','mp3','ogg','mov','mp4','av1','ovpn'];
+
+    if (!empty($_FILES['attachment_file']) && $_FILES['attachment_file']['error'] === UPLOAD_ERR_OK) {
+
+        $ref_name = checkFileUpload($_FILES['attachment_file'], $allowed);
+
+        if (is_string($ref_name) && preg_match('/^[a-zA-Z0-9]+\.[a-zA-Z0-9]+$/', $ref_name)) {
+
+            $upload_dir = $_SERVER['DOCUMENT_ROOT'] . "/uploads/tickets/$ticket_id/";
+            mkdirMissing($_SERVER['DOCUMENT_ROOT'] . "/uploads/tickets/");
+            mkdirMissing($upload_dir);
+
+            move_uploaded_file($_FILES['attachment_file']['tmp_name'], $upload_dir . $ref_name);
+
+            $name = sanitizeInput($_FILES['attachment_file']['name']);
+            $ref  = mysqli_real_escape_string($mysqli, $ref_name);
+
+            mysqli_query($mysqli,
+                "INSERT INTO ticket_attachments SET ticket_attachment_name='$name', ticket_attachment_reference_name='$ref', ticket_attachment_reply_id=NULL, ticket_attachment_ticket_id=$ticket_id"
+            );
+
+            logAction("Ticket", "Edit", "Uploaded attachment $name to ticket", $client_id, $ticket_id);
+            flash_alert("Attachment uploaded", 'success');
+
+        } else {
+            flash_alert("Invalid or unsupported file type", 'error');
+        }
+
+    } else {
+        flash_alert("No file uploaded", 'error');
+    }
+
+    redirect();
+}
+
+if (isset($_GET['delete_ticket_attachment'])) {
+
+    validateCSRFToken($_GET['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $attachment_id = intval($_GET['delete_ticket_attachment']);
+    $ticket_id     = intval($_GET['ticket_id']);
+
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+    $client_id = intval($r['ticket_client_id'] ?? 0);
+    if ($client_id) { enforceClientAccess(); }
+
+    $att = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM ticket_attachments WHERE ticket_attachment_id = $attachment_id AND ticket_attachment_ticket_id = $ticket_id LIMIT 1"));
+
+    if ($att) {
+        $ref_name = $att['ticket_attachment_reference_name'];
+        $file_path = $_SERVER['DOCUMENT_ROOT'] . "/uploads/tickets/$ticket_id/$ref_name";
+        if (is_file($file_path)) {
+            unlink($file_path);
+        }
+
+        mysqli_query($mysqli, "DELETE FROM ticket_attachments WHERE ticket_attachment_id = $attachment_id");
+
+        $name = sanitizeInput($att['ticket_attachment_name']);
+        logAction("Ticket", "Edit", "Deleted attachment $name from ticket", $client_id, $ticket_id);
+        flash_alert("Attachment deleted", 'error');
+    }
+
+    redirect();
+}

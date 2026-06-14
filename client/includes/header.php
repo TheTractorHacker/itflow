@@ -29,13 +29,21 @@ header("X-Frame-Options: DENY"); // Legacy
     <!-- Theme style -->
     <link rel="stylesheet" href="/plugins/adminlte/css/adminlte.min.css">
 
+    <!-- Custom -->
+    <link rel="stylesheet" href="/css/itflow_custom.css">
+
 </head>
 
 <!-- Navbar -->
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark client-portal-nav">
     <div class="container">
-        <a class="navbar-brand" href="index.php"><?php echo nullable_htmlentities($session_company_name); ?></a>
+        <a class="navbar-brand d-flex align-items-center" href="index.php">
+            <?php if ($session_company_logo) { ?>
+                <img height="28" class="mr-2" src="<?php echo "/uploads/settings/$session_company_logo"; ?>" alt="">
+            <?php } ?>
+            <?php echo nullable_htmlentities($session_company_name); ?>
+        </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -126,27 +134,22 @@ header("X-Frame-Options: DENY"); // Legacy
 <!-- Page content container -->
 <div class="container">
 
-    <div class="row mb-3">
-        <div class="col-md-1 text-center">
+    <div class="card welcome-banner border-0 shadow-sm mb-4">
+        <div class="card-body d-flex align-items-center">
             <?php if (!empty($session_contact_photo)) { ?>
-                <img src="/uploads/clients/<?= $session_client_id ?>/<?= $session_contact_photo ?>" alt="..." height="50" width="50" class="img-circle img-responsive">
-
+                <img src="/uploads/clients/<?= $session_client_id ?>/<?= $session_contact_photo ?>" alt="" height="56" width="56" class="rounded-circle mr-3">
             <?php } else { ?>
-                <span class="fa-stack fa-2x rounded-left">
-                    <i class="fa fa-circle fa-stack-2x text-secondary"></i>
-                    <span class="fa fa-stack-1x text-white"><?php echo $session_contact_initials; ?></span>
+                <span class="fa-stack fa-3x mr-3">
+                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
+                    <span class="fa-stack-1x text-white font-weight-bold"><?php echo $session_contact_initials; ?></span>
                 </span>
             <?php } ?>
-        </div>
-
-        <div class="col-md-11 p-0">
-                <?php if ($session_company_logo) { ?>
-                    <img height="48" width="142" class="img-fluid float-right" src="<?php echo "/uploads/settings/$session_company_logo"; ?>">
-                <?php } ?>
-            <h4>Welcome, <strong><?php echo stripslashes(nullable_htmlentities($session_contact_name)); ?></strong>!</h4>
+            <div>
+                <h4 class="mb-0">Welcome back, <strong><?php echo stripslashes(nullable_htmlentities($session_contact_name)); ?></strong></h4>
+                <small class="text-muted"><?php echo nullable_htmlentities($session_company_name); ?> Client Portal</small>
+            </div>
         </div>
     </div>
-    <hr>
 
     <?php
     //Alert Feedback

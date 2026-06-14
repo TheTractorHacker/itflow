@@ -34,8 +34,11 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
 
 <div class="row mt-3">
     <div class="col-md-12">
-        <table class="table table-bordered border border-dark">
-            <thead class="thead-dark">
+        <div class="card card-outline card-primary">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="thead-light">
             <tr>
                 <th>Name</th>
                 <th>Created</th>
@@ -45,6 +48,11 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
             <tbody>
 
             <?php
+            if (mysqli_num_rows($documents_sql) == 0) { ?>
+                <tr>
+                    <td colspan="3" class="text-center text-muted py-4">No documents found.</td>
+                </tr>
+            <?php }
             while ($row = mysqli_fetch_assoc($documents_sql)) {
                 $document_id = intval($row['document_id']);
                 $folder_name = nullable_htmlentities($row['folder_name']);
@@ -76,6 +84,9 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
 
             </tbody>
         </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

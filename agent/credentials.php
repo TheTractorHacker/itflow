@@ -106,7 +106,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
         <div class="card-tools">
             <?php if (lookupUserPermission("module_credential") >= 2) { ?>
                 <div class="btn-group">
-                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/credential/credential_add.php?<?= $client_url ?>" <?php if (!isset($_COOKIE['user_encryption_session_key'])) { echo "disabled"; } ?>>
+                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/credential/credential_add.php?<?= $client_url ?>" <?php if (!isset($_COOKIE['user_encryption_session_key'])) { echo 'disabled title="Credential encryption is not set up for your account. Ask an administrator to reset your password under Admin > Users to enable this."'; } ?>>
                     <i class="fas fa-plus mr-2"></i>New Credential
                 </button>
                 <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>

@@ -16,13 +16,20 @@ if ($session_contact_primary == 0 && !$session_contact_is_technical_contact) {
 $domains_sql = mysqli_query($mysqli, "SELECT domain_id, domain_name, domain_expire FROM domains WHERE domain_client_id = $session_client_id AND domain_archived_at IS NULL ORDER BY domain_expire ASC");
 ?>
 
-    <h3>Domains</h3>
+    <div class="row">
+        <div class="col">
+            <h3><i class="fas fa-fw fa-globe mr-2"></i>Domains</h3>
+        </div>
+    </div>
     <div class="row">
 
-        <div class="col-md-10">
+        <div class="col-md-12">
 
-            <table class="table tabled-bordered border border-dark">
-                <thead class="thead-dark">
+            <div class="card card-outline card-primary">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="thead-light">
                 <tr>
                     <th>Domain Name</th>
                     <th>Expiry</th>
@@ -31,21 +38,33 @@ $domains_sql = mysqli_query($mysqli, "SELECT domain_id, domain_name, domain_expi
                 <tbody>
 
                 <?php
+                if (mysqli_num_rows($domains_sql) == 0) { ?>
+                    <tr>
+                        <td colspan="2" class="text-center text-muted py-4">No domains found.</td>
+                    </tr>
+                <?php }
                 while ($row = mysqli_fetch_assoc($domains_sql)) {
                     $domain_name = nullable_htmlentities($row['domain_name']);
                     $domain_expire = nullable_htmlentities($row['domain_expire']);
 
+                    $expire_class = "";
+                    if ($domain_expire && strtotime($domain_expire) < strtotime('+30 days')) {
+                        $expire_class = "text-danger font-weight-bold";
+                    }
                     ?>
 
                     <tr>
-                        <td><?php echo $domain_name; ?></td>
-                        <td><?php echo $domain_expire; ?></td>
+                        <td><i class="fas fa-fw fa-globe text-secondary mr-2"></i><?php echo $domain_name; ?></td>
+                        <td class="<?php echo $expire_class; ?>"><?php echo $domain_expire; ?></td>
                     </tr>
 
                 <?php } ?>
 
                 </tbody>
             </table>
+                    </div>
+                </div>
+            </div>
 
         </div>
 

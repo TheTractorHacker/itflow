@@ -18,7 +18,7 @@ $assets_sql = mysqli_query($mysqli, "SELECT * FROM assets LEFT JOIN contacts ON 
 
     <div class="row">
         <div class="col">
-            <h3>Assets</h3>
+            <h3><i class="fas fa-fw fa-desktop mr-2"></i>Assets</h3>
         </div>
     </div>
 
@@ -26,8 +26,11 @@ $assets_sql = mysqli_query($mysqli, "SELECT * FROM assets LEFT JOIN contacts ON 
 
         <div class="col-md-12">
 
-            <table class="table tabled-bordered border border-dark">
-                <thead class="thead-dark">
+            <div class="card card-outline card-primary">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="thead-light">
                 <tr>
                     <th>Name</th>
                     <th>Type</th>
@@ -43,6 +46,11 @@ $assets_sql = mysqli_query($mysqli, "SELECT * FROM assets LEFT JOIN contacts ON 
                 <tbody>
 
                 <?php
+                if (mysqli_num_rows($assets_sql) == 0) { ?>
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">No assets found.</td>
+                    </tr>
+                <?php }
                 while ($row = mysqli_fetch_assoc($assets_sql)) {
                     $asset_id = intval($row['asset_id']);
                     $asset_name = nullable_htmlentities($row['asset_name']);
@@ -71,7 +79,7 @@ $assets_sql = mysqli_query($mysqli, "SELECT * FROM assets LEFT JOIN contacts ON 
                         <td><?php echo $assigned_to; ?></td>
                         <td><?php echo $asset_purchase_date; ?></td>
                         <td><?php echo $asset_warranty_expire; ?></td>
-                        <td><?php echo $asset_status; ?></td>
+                        <td><span class="badge badge-<?php echo $asset_status == 'Active' ? 'success' : 'secondary'; ?>"><?php echo $asset_status; ?></span></td>
                         <td>
                             <?php if ($asset_uri_client) { ?>
                             <i class="fa fa-fw fa-link text-secondary mr-1"></i><a href="<?php echo $asset_uri_client; ?>" target="_blank" title="<?php echo $asset_uri_client; ?>"><?php echo truncate($asset_uri_client, 40); ?></a>
@@ -85,6 +93,9 @@ $assets_sql = mysqli_query($mysqli, "SELECT * FROM assets LEFT JOIN contacts ON 
 
                 </tbody>
             </table>
+                    </div>
+                </div>
+            </div>
 
         </div>
 

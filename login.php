@@ -452,6 +452,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
                             if (!empty($user_encryption_ciphertext)) {
                                 $site_encryption_master_key = decryptUserSpecificKey($user_encryption_ciphertext, $password);
                             }
+
+                            // Self-heal: ciphertext missing, or no longer decryptable with the
+                            // current password (e.g. password was changed without an active
+                            // encryption session). Generate a fresh master key/ciphertext so
+                            // credential encryption works going forward.
+                            if (empty($site_encryption_master_key)) {
+                                $site_encryption_master_key = repairUserSpecificKey($mysqli, $user_id, $password);
+                            }
                         }
 
                         if (!empty($site_encryption_master_key)) {

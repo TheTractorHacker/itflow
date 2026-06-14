@@ -202,7 +202,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 </div>
                             </td>
                             <td>
-                                <a class="ajax-modal" href="#" data-modal-url="modals/vendor/vendor_edit.php?id=<?= $vendor_id ?>">
+                                <a class="ajax-modal" href="#" data-modal-url="modals/vendor/vendor_details.php?id=<?= $vendor_id ?>">
                                     <div class="media">
                                         <i class="fas fa-fw fa-2x fa-building text-dark mr-2"></i>
                                         <div class="media-body">

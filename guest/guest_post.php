@@ -1017,6 +1017,17 @@ if (isset($_POST['sign_outtake'], $_POST['outtake_sign_token'])) {
     $reply_msg = mysqli_real_escape_string($mysqli, "Outtake form signed by $signed_name on $signed_at_str. PDF saved to client files: $pdf_name");
     mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$reply_msg', ticket_reply_type = 'Internal', ticket_reply_by = 0, ticket_reply_ticket_id = $ticket_id");
 
+    // Also copy the signed PDF into the ticket's attachments
+    $att_upload_dir = dirname(__DIR__) . "/uploads/tickets/$ticket_id/";
+    mkdirMissing(dirname(__DIR__) . "/uploads/tickets/");
+    mkdirMissing($att_upload_dir);
+
+    $att_ref = bin2hex(random_bytes(8)) . '.pdf';
+    copy($upload_dir . $pdf_ref, $att_upload_dir . $att_ref);
+
+    $att_name_esc = mysqli_real_escape_string($mysqli, $pdf_name);
+    mysqli_query($mysqli, "INSERT INTO ticket_attachments SET ticket_attachment_name='$att_name_esc', ticket_attachment_reference_name='$att_ref', ticket_attachment_reply_id=NULL, ticket_attachment_ticket_id=$ticket_id");
+
     logAction("Outtake", "Sign", "Outtake form signed by $signed_name — PDF attached ($pdf_name)", $client_id, $ticket_id);
 
     // If an agent is signed in (in-person signing), send them back to the ticket

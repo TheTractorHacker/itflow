@@ -19,6 +19,7 @@ if (isset($_GET['client_id'])) {
 enforceUserPermission('module_support');
 
 // Ticket status from GET
+$status_filter_id = '';
 if (isset($_GET['status']) && is_array($_GET['status']) && !empty($_GET['status'])) {
     // Sanitize each element of the status array
     $sanitizedStatuses = array();
@@ -30,7 +31,14 @@ if (isset($_GET['status']) && is_array($_GET['status']) && !empty($_GET['status'
     // Convert the sanitized statuses into a comma-separated string
     $sanitizedStatusesString = implode(",", $sanitizedStatuses);
     $ticket_status_snippet = "ticket_status IN ($sanitizedStatusesString)";
+    $status = '';
+    $status_filter_id = intval($_GET['status'][0]);
 
+} elseif (isset($_GET['status']) && ctype_digit((string) $_GET['status'])) {
+    // Single status selected from the Status filter pill
+    $status_filter_id = intval($_GET['status']);
+    $status = '';
+    $ticket_status_snippet = "ticket_status = $status_filter_id";
 } else {
 
     // TODO: Convert this to use the status IDs
@@ -63,6 +71,24 @@ if (isset($_GET['category']) & !empty($_GET['category'])) {
     // Default - any
     $category_query = '';
     $category_filter = '';
+}
+
+// Board Filter (top-level ticket category group)
+if (isset($_GET['board']) && !empty($_GET['board'])) {
+    $board_filter = intval($_GET['board']);
+    $board_query = "AND ticket_category IN (SELECT category_id FROM categories WHERE category_id = $board_filter OR category_parent = $board_filter)";
+} else {
+    $board_filter = '';
+    $board_query = '';
+}
+
+// Priority Filter
+if (isset($_GET['priority']) && in_array($_GET['priority'], ['Low', 'Medium', 'High'], true)) {
+    $priority_filter = $_GET['priority'];
+    $priority_query = "AND ticket_priority = '$priority_filter'";
+} else {
+    $priority_filter = '';
+    $priority_query = '';
 }
 
 // Ticket assignment status filter
@@ -117,6 +143,8 @@ $query =
     LEFT JOIN categories ON ticket_category = category_id
     WHERE $ticket_status_snippet " . $ticket_assigned_query . "
     $category_query
+    $board_query
+    $priority_query
     AND DATE(ticket_created_at) BETWEEN '$dtf' AND '$dtt'
     AND (CONCAT(ticket_prefix,ticket_number) LIKE '%$q%' OR client_name LIKE '%$q%' OR ticket_subject LIKE '%$q%' OR ticket_status_name LIKE '%$q%' OR ticket_priority LIKE '%$q%' OR user_name LIKE '%$q%' OR contact_name LIKE '%$q%' OR asset_name LIKE '%$q%' OR vendor_name LIKE '%$q%' OR ticket_vendor_ticket_number LIKE '%q%')
     $ticket_billable_snippet
@@ -171,6 +199,19 @@ $sql_categories_filter = mysqli_query(
     ORDER BY category_name"
 );
 
+$sql_boards_filter = mysqli_query(
+    $mysqli,
+    "SELECT * FROM categories
+    WHERE category_type = 'Ticket'
+    AND category_parent = 0
+    AND category_archived_at IS NULL
+    ORDER BY category_name"
+);
+
+$sql_ticket_status_pill = mysqli_query($mysqli, "SELECT * FROM ticket_statuses WHERE ticket_status_active = 1 ORDER BY ticket_status_order");
+
+$sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_type = 6 ORDER BY tag_name ASC");
+
 ?>
     <style>
         .popover {
@@ -205,43 +246,88 @@ $sql_categories_filter = mysqli_query(
             <?php } ?>
         </div>
         <div class="card-body">
-            <form autocomplete="off">
+            <form autocomplete="off" class="ticket-filter-bar">
                 <?php if ($client_url) { ?>
                     <input type="hidden" name="client_id" value="<?= $client_id ?>">
                 <?php } ?>
-                <input type="hidden" name="status" value="<?= $status ?>">
                 <input type="hidden" name="view" value="<?= nullable_htmlentities($_GET['view'] ?? 'list') ?>">
-                <div class="row">
-                    <div class="col-sm-4">
-                        <div class="input-group mb-3 mb-sm-0">
-                            <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search Tickets">
+
+                <div class="row align-items-center">
+                    <div class="col-auto mb-2">
+                        <select class="form-control select2" name="board" onchange="this.form.submit()" data-placeholder="Board" style="width:150px;">
+                            <option value="">- All Boards -</option>
+                            <?php
+                            while ($row = mysqli_fetch_assoc($sql_boards_filter)) {
+                                $board_id = intval($row['category_id']);
+                                $board_name = nullable_htmlentities($row['category_name']);
+                            ?>
+                                <option value="<?= $board_id ?>" <?= $board_filter == $board_id ? 'selected' : '' ?>><?= $board_name ?></option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="col-auto mb-2">
+                        <select class="form-control select2" name="category" onchange="this.form.submit()" data-placeholder="Category" style="width:170px;">
+                            <option value="">- All Categories -</option>
+                            <?php
+                            while ($row = mysqli_fetch_assoc($sql_categories_filter)) {
+                                $category_id = intval($row['category_id']);
+                                $category_name = nullable_htmlentities($row['category_name']);
+                            ?>
+                                <option <?php if ($category_filter == $category_id) { echo "selected"; } ?> value="<?php echo $category_id; ?>"><?php echo $category_name; ?></option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="col-auto mb-2">
+                        <select class="form-control select2" name="status" onchange="this.form.submit()" data-placeholder="Status" style="width:140px;">
+                            <option value="Open" <?= $status === 'Open' ? 'selected' : '' ?>>All Open</option>
+                            <option value="Closed" <?= $status === 'Closed' ? 'selected' : '' ?>>All Closed</option>
+                            <?php
+                            while ($row = mysqli_fetch_assoc($sql_ticket_status_pill)) {
+                                $ticket_status_id = intval($row['ticket_status_id']);
+                                $ticket_status_name = nullable_htmlentities($row['ticket_status_name']);
+                            ?>
+                                <option value="<?= $ticket_status_id ?>" <?= $status_filter_id == $ticket_status_id ? 'selected' : '' ?>><?= $ticket_status_name ?></option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="col-auto mb-2">
+                        <select class="form-control select2" name="priority" onchange="this.form.submit()" id="priorityFilterSelect" data-placeholder="Priority" style="width:150px;">
+                            <option value="">All Priorities</option>
+                            <option value="High" data-dot="high" <?= $priority_filter === 'High' ? 'selected' : '' ?>>High</option>
+                            <option value="Medium" data-dot="medium" <?= $priority_filter === 'Medium' ? 'selected' : '' ?>>Medium</option>
+                            <option value="Low" data-dot="low" <?= $priority_filter === 'Low' ? 'selected' : '' ?>>Low</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-3 mb-2">
+                        <div class="input-group">
+                            <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search tickets...">
                             <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
                                 <button class="btn btn-primary"><i class="fa fa-search"></i></button>
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-sm-3">
-                        <div class="form-group">
-                            <select class="form-control select2" name="category" onchange="this.form.submit()">
-                                <option value="">- All Categories -</option>
-
-                                <?php
-                                while ($row = mysqli_fetch_assoc($sql_categories_filter)) {
-                                    $category_id = intval($row['category_id']);
-                                    $category_name = nullable_htmlentities($row['category_name']);
-                                ?>
-                                    <option <?php if ($category_filter == $category_id) { echo "selected"; } ?> value="<?php echo $category_id; ?>"><?php echo $category_name; ?></option>
-                                <?php
-                                }
-                                ?>
-
-                            </select>
-                        </div>
+                    <div class="col-auto mb-2">
+                        <select class="form-control select2" name="tags[]" data-placeholder="Tags Filter" multiple onchange="this.form.submit()" style="width:160px;">
+                            <?php
+                            while ($row = mysqli_fetch_assoc($sql_ticket_tags_filter)) {
+                                $tag_id = intval($row['tag_id']);
+                                $tag_name = nullable_htmlentities($row['tag_name']);
+                            ?>
+                                <option value="<?php echo $tag_id; ?>" <?php if (in_array($tag_id, $ticket_tag_filter)) { echo "selected"; } ?>><?php echo $tag_name; ?></option>
+                            <?php } ?>
+                        </select>
                     </div>
-                    <div class="col-sm-5">
-                        <div class="btn-group float-right">
+                    <div class="col-auto mb-2">
+                        <a href="?<?= $client_url ?>" class="btn btn-outline-secondary"><i class="fas fa-undo mr-1"></i>Reset Filters</a>
+                    </div>
+                    <div class="col-auto mb-2">
+                        <button class="btn btn-outline-dark" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-sliders-h mr-1"></i>More Filters</button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="btn-group">
                             <div class="btn-group">
                                 <button class="btn btn-outline-dark dropdown-toggle" id="dropdownMenuButton" data-toggle="dropdown">
                                     <i class="fa fa-fw fa-eye"></i>
@@ -329,9 +415,7 @@ $sql_categories_filter = mysqli_query(
                                     </div>
                                 </div>
                             <?php } ?>
-
                         </div>
-
                     </div>
                 </div>
 
@@ -339,15 +423,14 @@ $sql_categories_filter = mysqli_query(
                     class="collapse mt-3
                         <?php
                         if (isset($_GET['dtf']) && $_GET['dtf'] !== '1970-01-01'
-                            || (isset($_GET['status']) && is_array($_GET['status'])
                             || (isset($_GET['assigned']) && $_GET['assigned']
-                        )))
+                        ))
                             { echo "show"; }
                         ?>"
                     id="advancedFilter"
                 >
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Date range</label>
                                 <input type="text" id="dateFilter" class="form-control" autocomplete="off">
@@ -356,23 +439,7 @@ $sql_categories_filter = mysqli_query(
                                 <input type="hidden" name="dtt" id="dtt" value="<?php echo nullable_htmlentities($dtt ?? ''); ?>">
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Ticket Status</label>
-                                <select onchange="this.form.submit()" class="form-control select2" name="status[]" data-placeholder="Select Status" multiple>
-
-                                        <?php $sql_ticket_status = mysqli_query($mysqli, "SELECT * FROM ticket_statuses WHERE ticket_status_active = 1 ORDER BY ticket_status_order");
-                                        while ($row = mysqli_fetch_assoc($sql_ticket_status)) {
-                                            $ticket_status_id = intval($row['ticket_status_id']);
-                                            $ticket_status_name = nullable_htmlentities($row['ticket_status_name']); ?>
-
-                                            <option value="<?php echo $ticket_status_id ?>" <?php if (isset($_GET['status']) && is_array($_GET['status']) && in_array($ticket_status_id, $_GET['status'])) { echo 'selected'; } ?>> <?php echo $ticket_status_name ?> </option>
-
-                                        <?php } ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Assigned to</label>
                                 <select onchange="this.form.submit()" class="form-control select2" name="assigned">
@@ -393,7 +460,7 @@ $sql_categories_filter = mysqli_query(
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Project</label>
                                 <select onchange="this.form.submit()" class="form-control select2" name="project">
@@ -408,25 +475,6 @@ $sql_categories_filter = mysqli_query(
                                         $project_name = nullable_htmlentities($row['project_name']);
                                         ?>
                                         <option <?php if ($ticket_project_filter_id == $project_id) { echo "selected"; } ?> value="<?php echo $project_id; ?>"><?php echo $project_prefix . $project_number . " - " . $project_name; ?></option>
-                                        <?php
-                                    }
-                                    ?>
-
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Tags</label>
-                                <select onchange="this.form.submit()" class="form-control select2" name="tags[]" data-placeholder="Any" multiple>
-
-                                    <?php
-                                    $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_type = 6 ORDER BY tag_name ASC");
-                                    while ($row = mysqli_fetch_assoc($sql_ticket_tags_filter)) {
-                                        $tag_id = intval($row['tag_id']);
-                                        $tag_name = nullable_htmlentities($row['tag_name']);
-                                        ?>
-                                        <option value="<?php echo $tag_id; ?>" <?php if (in_array($tag_id, $ticket_tag_filter)) { echo "selected"; } ?>><?php echo $tag_name; ?></option>
                                         <?php
                                     }
                                     ?>
@@ -462,6 +510,25 @@ if (isset($_GET["view"])) {
 ?>
 
 <script src="../js/bulk_actions.js"></script>
+
+<script>
+$(function () {
+    if ($.fn.select2) {
+        $('#priorityFilterSelect').select2({
+            templateResult: formatPriorityOption,
+            templateSelection: formatPriorityOption
+        });
+    }
+
+    function formatPriorityOption(option) {
+        var dot = $(option.element).data('dot');
+        if (!dot) {
+            return option.text;
+        }
+        return $('<span><span class="priority-dot priority-dot-' + dot + '"></span>' + option.text + '</span>');
+    }
+});
+</script>
 
 <?php
 require_once "../includes/footer.php";

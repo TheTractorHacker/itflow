@@ -18,19 +18,22 @@ $contacts_sql = mysqli_query($mysqli, "SELECT contact_id, contact_name, contact_
 
     <div class="row">
         <div class="col">
-            <h3>Contacts</h3>
+            <h3><i class="fas fa-fw fa-address-book mr-2"></i>Contacts</h3>
         </div>
-        <div class="col offset-6">
+        <div class="col offset-6 text-right">
             <a href="contact_add.php" class="btn btn-primary" role="button"><i class="fas fa-plus mr-2"></i>New Contact</a>
         </div>
     </div>
 
     <div class="row">
 
-        <div class="col-md-10">
+        <div class="col-md-12">
 
-            <table class="table tabled-bordered border border-dark">
-                <thead class="thead-dark">
+            <div class="card card-outline card-primary">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="thead-light">
                 <tr>
                     <th>Name</th>
                     <th>Email</th>
@@ -40,6 +43,11 @@ $contacts_sql = mysqli_query($mysqli, "SELECT contact_id, contact_name, contact_
                 <tbody>
 
                 <?php
+                if (mysqli_num_rows($contacts_sql) == 0) { ?>
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">No contacts found.</td>
+                    </tr>
+                <?php }
                 while ($row = mysqli_fetch_assoc($contacts_sql)) {
                     $contact_id = intval($row['contact_id']);
                     $contact_name = nullable_htmlentities($row['contact_name']);
@@ -64,13 +72,16 @@ $contacts_sql = mysqli_query($mysqli, "SELECT contact_id, contact_name, contact_
                     <tr>
                         <td><a href="contact_edit.php?id=<?php echo $contact_id?>"><?php echo $contact_name ?></a></td>
                         <td><?php echo $contact_email; ?></td>
-                        <td><?php echo $contact_roles_display ?></td>
+                        <td><span class="badge badge-secondary"><?php echo $contact_roles_display ?></span></td>
                     </tr>
 
                 <?php } ?>
 
                 </tbody>
             </table>
+                    </div>
+                </div>
+            </div>
 
         </div>
 

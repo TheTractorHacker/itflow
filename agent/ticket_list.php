@@ -17,6 +17,17 @@ while ($_g = mysqli_fetch_assoc($_sql_cats_g)) $_cat_groups[] = $_g;
 $_sql_cats_s = mysqli_query($mysqli, "SELECT category_id, category_name, category_parent FROM categories WHERE category_type = 'Ticket' AND category_parent > 0 AND category_archived_at IS NULL ORDER BY category_name");
 $_cat_subs = [];
 while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_parent'])][] = $_s;
+
+// Map every category id (top-level or sub) to its top-level "Board" name
+$_cat_board_name = [];
+foreach ($_cat_groups as $_g) {
+    $_cat_board_name[intval($_g['category_id'])] = $_g['category_name'];
+}
+foreach ($_cat_subs as $_pid => $_subs) {
+    foreach ($_subs as $_s) {
+        $_cat_board_name[intval($_s['category_id'])] = $_cat_board_name[$_pid] ?? '';
+    }
+}
 ?>
 <div class="card card-dark">
     <div class="card-body">
@@ -46,6 +57,12 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                 </a>
                             </th>
 
+                            <th>Board</th>
+                            <th>
+                                <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=category_name&order=<?php echo $disp; ?>">
+                                    Category <?php if ($sort == 'category_name') { echo $order_icon; } ?>
+                                </a>
+                            </th>
                             <th>
                                 <?php if (!$client_url) { ?>
                                 <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=client_name&order=<?php echo $disp; ?>">
@@ -63,12 +80,6 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                 </a>
                             </th>
                             <?php } ?>
-
-                            <th>
-                                <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=category_name&order=<?php echo $disp; ?>">
-                                    Category <?php if ($sort == 'category_name') { echo $order_icon; } ?>
-                                </a>
-                            </th>
                             <th>
                                 <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=ticket_priority&order=<?php echo $disp; ?>">
                                     Priority <?php if ($sort == 'ticket_priority') { echo $order_icon; } ?>
@@ -84,6 +95,7 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                     Assigned <?php if ($sort == 'user_name') { echo $order_icon; } ?>
                                 </a>
                             </th>
+                            <th>Tags</th>
                             <th>
                                 <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=ticket_updated_at&order=<?php echo $disp; ?>">
                                     Last Response <?php if ($sort == 'ticket_updated_at') { echo $order_icon; } ?>
@@ -174,6 +186,7 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                             $ticket_quote_id = intval($row['ticket_quote_id']);
                             $ticket_category_id = intval($row['ticket_category'] ?? 0);
                             $ticket_category_name = nullable_htmlentities($row['category_name'] ?? '');
+                            $ticket_board_name = $_cat_board_name[$ticket_category_id] ?? '';
                             $group_label = $ticket_category_name ?: 'Uncategorized';
 
                             // Emit group header when category changes
@@ -288,41 +301,16 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                     <?php if($task_count && $completed_task_count == 0) { ?>
                                     <div class="mt-1 text-center" style="height: 15px; line-height: 15px; font-size: 10px; background-color:#e9ecef;"><?php echo $completed_task_count.' / '.$task_count; ?></div>
                                     <?php } ?>
-                                    <?php if ($ticket_tags_display) { ?>
-                                    <div class="mt-1"><?php echo $ticket_tags_display; ?></div>
-                                    <?php } ?>
                                 </td>
 
-                                <!-- Ticket Contact -->
+                                <!-- Board -->
                                 <td>
-                                    <?php if (!$client_url) { ?>
-                                    <a href="tickets.php?client_id=<?php echo $client_id; ?>"><strong><?php echo $client_name; ?></strong></a>
+                                    <?php if ($ticket_board_name) { ?>
+                                    <span class="badge badge-pill tkt-pill-badge badge-light border"><?= htmlspecialchars($ticket_board_name) ?></span>
+                                    <?php } else { ?>
+                                    <span class="text-muted">-</span>
                                     <?php } ?>
-                                    <div><?php echo $contact_display; ?></div>
                                 </td>
-
-                                <!-- Ticket Billable (if accounting enabled -->
-                                <?php if ($config_module_enable_accounting && lookupUserPermission("module_sales") >= 2) { ?>
-                                    <td class="text-center">
-                                        <?php if ($ticket_invoice_id) { ?>
-                                        <a href="invoice.php?client_id=<?php echo $client_id; ?>&invoice_id=<?php echo $ticket_invoice_id; ?>"><span class='badge badge-pill badge-success p-2'>Invoiced</span></a>
-                                        <?php } else if ($ticket_quote_id) { ?>
-                                            <a href="quote.php?client_id=<?php echo $client_id; ?>&quote_id=<?php echo $ticket_quote_id; ?>"><span class='badge badge-pill badge-primary p-2'>Quoted</span></a>
-                                        <?php } else { ?>
-                                        <a href="#"
-                                            class="ajax-modal"
-                                            data-modal-url="modals/ticket/ticket_billable.php?id=<?= $ticket_id ?>">
-                                            <?php
-                                            if ($ticket_billable == 1) {
-                                                echo "<span class='badge badge-pill badge-success p-2'><i class='fas fa-fw fa-check'></i></span>";
-                                            } else {
-                                                echo "<span class='badge badge-pill badge-secondary p-2'><i class='fas fa-fw fa-minus'></i></span>";
-                                            }
-                                            ?>
-                                        </a>
-                                        <?php } ?>
-                                    </td>
-                                <?php } ?>
 
                                 <!-- Category pill -->
                                 <td>
@@ -369,6 +357,38 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                     </span>
                                     <?php } ?>
                                 </td>
+
+                                <!-- Ticket Contact -->
+                                <td>
+                                    <?php if (!$client_url) { ?>
+                                    <a href="tickets.php?client_id=<?php echo $client_id; ?>"><strong><?php echo $client_name; ?></strong></a>
+                                    <?php } ?>
+                                    <div><?php echo $contact_display; ?></div>
+                                </td>
+
+                                <!-- Ticket Billable (if accounting enabled -->
+                                <?php if ($config_module_enable_accounting && lookupUserPermission("module_sales") >= 2) { ?>
+                                    <td class="text-center">
+                                        <?php if ($ticket_invoice_id) { ?>
+                                        <a href="invoice.php?client_id=<?php echo $client_id; ?>&invoice_id=<?php echo $ticket_invoice_id; ?>"><span class='badge badge-pill badge-success p-2'>Invoiced</span></a>
+                                        <?php } else if ($ticket_quote_id) { ?>
+                                            <a href="quote.php?client_id=<?php echo $client_id; ?>&quote_id=<?php echo $ticket_quote_id; ?>"><span class='badge badge-pill badge-primary p-2'>Quoted</span></a>
+                                        <?php } else { ?>
+                                        <a href="#"
+                                            class="ajax-modal"
+                                            data-modal-url="modals/ticket/ticket_billable.php?id=<?= $ticket_id ?>">
+                                            <?php
+                                            if ($ticket_billable == 1) {
+                                                echo "<span class='badge badge-pill badge-success p-2'><i class='fas fa-fw fa-check'></i></span>";
+                                            } else {
+                                                echo "<span class='badge badge-pill badge-secondary p-2'><i class='fas fa-fw fa-minus'></i></span>";
+                                            }
+                                            ?>
+                                        </a>
+                                        <?php } ?>
+                                    </td>
+                                <?php } ?>
+
 
                                 <!-- Priority -->
                                 <td>
@@ -476,6 +496,11 @@ while ($_s = mysqli_fetch_assoc($_sql_cats_s)) $_cat_subs[intval($_s['category_p
                                         <?= htmlspecialchars($agent_label) ?>
                                     </span>
                                     <?php } ?>
+                                </td>
+
+                                <!-- Tags -->
+                                <td>
+                                    <?php echo $ticket_tags_display ?: "<span class='text-muted'>-</span>"; ?>
                                 </td>
 
                                 <!-- Ticket Last Response -->

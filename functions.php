@@ -417,6 +417,17 @@ function setupFirstUserSpecificKey($user_password, $site_encryption_master_key) 
     return $salt . $iv . $ciphertext;
 }
 
+// Self-heals a missing/unusable user_specific_encryption_ciphertext (e.g. NULL on
+// legacy accounts, or stale after a password change that didn't update it) by
+// generating a fresh master key + ciphertext pair for this user and persisting it.
+// Returns the new site_encryption_master_key.
+function repairUserSpecificKey($mysqli, int $user_id, string $user_password): string {
+    $site_encryption_master_key = randomString();
+    $ciphertext = setupFirstUserSpecificKey($user_password, $site_encryption_master_key);
+    mysqli_query($mysqli, "UPDATE users SET user_specific_encryption_ciphertext = '$ciphertext' WHERE user_id = $user_id");
+    return $site_encryption_master_key;
+}
+
 /*
  * For additional users / password changes (and now the API)
  * New Users: Requires the admin setting up their account have a Specific/Session key configured

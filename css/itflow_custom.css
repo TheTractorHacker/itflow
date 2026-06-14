@@ -65,3 +65,218 @@
     color: #495057;
     background-color: #fff;
 }
+
+/* Client portal */
+.client-portal-nav {
+    border-bottom: 3px solid #007bff;
+}
+
+.welcome-banner {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 0.5rem;
+}
+
+.welcome-banner .fa-stack .text-primary {
+    color: #007bff;
+}
+
+.welcome-banner .fa-stack-1x {
+    font-size: 1.1rem;
+}
+
+/* ===== Ticketing UI redesign (alga-psa inspired) ===== */
+
+/* Rounded-pill filter controls */
+.ticket-filter-bar .form-control,
+.ticket-filter-bar .select2-container .select2-selection,
+.ticket-filter-bar .btn {
+    border-radius: 50rem !important;
+}
+
+.ticket-filter-bar .select2-container {
+    min-width: 120px;
+}
+
+.ticket-filter-bar .select2-selection__rendered {
+    padding-left: 1rem !important;
+    line-height: 2.25rem !important;
+}
+
+.ticket-filter-bar .select2-selection--single {
+    height: calc(1.5em + .75rem + 2px) !important;
+}
+
+.ticket-filter-bar .select2-selection__arrow {
+    height: calc(1.5em + .75rem + 2px) !important;
+}
+
+/* Generic pill badge polish (status/priority/category badges) */
+.tkt-pill-badge {
+    font-weight: 500;
+    padding: .35em .9em;
+    font-size: .8rem;
+    border-radius: 50rem;
+}
+
+/* Colored priority dot (used in filter pill + ticket detail field grid) */
+.priority-dot {
+    display: inline-block;
+    width: .6rem;
+    height: .6rem;
+    border-radius: 50%;
+    margin-right: .4rem;
+}
+
+.priority-dot-low { background-color: #17a2b8; }
+.priority-dot-medium { background-color: #ffc107; }
+.priority-dot-high { background-color: #dc3545; }
+
+/* Tag pill badges (ticket list Tags column + ticket detail Tags row) */
+.ticket-tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: .25em .7em;
+    border-radius: 50rem;
+    font-size: .8rem;
+    margin: 0 .25rem .25rem 0;
+}
+
+.ticket-tag-pill .remove-tag {
+    margin-left: .4rem;
+    opacity: .7;
+    cursor: pointer;
+}
+
+.ticket-tag-pill .remove-tag:hover {
+    opacity: 1;
+}
+
+/* Modern card shadow/spacing for ticket detail main + sidebar cards */
+.card-sidebar,
+.card.shadow-sm {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    margin-bottom: 1rem;
+}
+
+.card-sidebar .card-header {
+    background: transparent;
+    border-bottom: 1px solid #f0f0f0;
+    font-weight: 600;
+}
+
+/* Avatar / initials badge for Assigned To */
+.avatar-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background-color: #6c757d;
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 700;
+    margin-right: .4rem;
+    flex-shrink: 0;
+}
+
+/* ===== alga-psa inspired visual theme, scoped to agent/ticket.php only ===== */
+
+.ticket-alga-theme {
+    background: #F8F9FC;
+    padding: 1rem 0 .5rem;
+    margin: -1rem -.01px 0;
+}
+
+.ticket-alga-theme .card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 4px 8px -2px rgba(16,24,40,.10), 0 2px 4px -2px rgba(16,24,40,.06);
+    margin-bottom: 1rem;
+}
+
+.ticket-alga-theme .card-header,
+.ticket-alga-theme .card-dark .card-header,
+.ticket-alga-theme .card.card-dark {
+    background: #fff !important;
+    color: #0F172A !important;
+    border-bottom: 1px solid #F1F2F6;
+    border-radius: 14px 14px 0 0 !important;
+}
+
+.ticket-alga-theme .card-dark .card-title,
+.ticket-alga-theme .card-dark .btn-tool {
+    color: #0F172A !important;
+}
+
+.ticket-alga-theme .form-control,
+.ticket-alga-theme select.form-control,
+.ticket-alga-theme .select2-container .select2-selection {
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.ticket-alga-theme .btn-primary,
+.ticket-alga-theme .btn-purple {
+    background-color: #8A4DEA;
+    border-color: #8A4DEA;
+    color: #fff;
+}
+
+.ticket-alga-theme .btn-primary:hover,
+.ticket-alga-theme .btn-purple:hover {
+    background-color: #7C45D3;
+    border-color: #7C45D3;
+    color: #fff;
+}
+
+.ticket-alga-theme .btn-outline-purple {
+    color: #8A4DEA;
+    border: 1px solid #8A4DEA;
+    background-color: #fff;
+}
+
+.ticket-alga-theme .btn-outline-purple:hover {
+    background-color: #F3ECFE;
+    color: #7C45D3;
+    border-color: #8A4DEA;
+}
+
+/* Comment tabs (Client / Internal / System / All Comments) */
+.ticket-alga-theme .comment-tabs {
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.ticket-alga-theme .comment-tabs .nav-link {
+    border: 0;
+    color: #64748B;
+    font-weight: 500;
+    padding: .5rem .25rem;
+    margin-right: 1.25rem;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+}
+
+.ticket-alga-theme .comment-tabs .nav-link.active {
+    color: #8A4DEA;
+    border-bottom: 2px solid #8A4DEA;
+    background: transparent;
+}
+
+/* Time Entry sidebar card */
+.ticket-alga-theme .time-entry-card {
+    background: rgba(138,77,234,.05);
+}
+
+.ticket-alga-theme .time-entry-digital {
+    font-family: monospace;
+    background: rgba(138,77,234,.12);
+    border-radius: 8px;
+    padding: .75rem;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #0F172A;
+}

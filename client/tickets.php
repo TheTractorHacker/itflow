@@ -42,69 +42,100 @@ $total_tickets = intval($row['total_tickets']);
 
 ?>
 
-<h3>Tickets</h3>
+<div class="row">
+    <div class="col">
+        <h3><i class="fas fa-fw fa-ticket-alt mr-2"></i>Tickets</h3>
+    </div>
+</div>
 <div class="row">
 
-    <div class="col-md-10">
+    <div class="col-md-9">
 
-        <table class="table tabled-bordered border border-dark">
-            <thead class="thead-dark">
-                <tr>
-                    <th>#</th>
-                    <th>Subject</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="card card-outline card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <?php
+                    if ($status == 'Open') {
+                        echo 'Open Tickets';
+                    } elseif ($status == 'Closed') {
+                        echo 'Closed Tickets';
+                    } else {
+                        echo 'All Tickets';
+                    }
+                    ?>
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
 
-            <?php
-            while ($row = mysqli_fetch_assoc($contact_tickets)) {
-                $ticket_id = intval($row['ticket_id']);
-                $ticket_prefix = nullable_htmlentities($row['ticket_prefix']);
-                $ticket_number = intval($row['ticket_number']);
-                $ticket_subject = nullable_htmlentities($row['ticket_subject']);
-                $ticket_status = nullable_htmlentities($row['ticket_status_name']);
-            ?>
+                        <?php
+                        if (mysqli_num_rows($contact_tickets) == 0) { ?>
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">No tickets found.</td>
+                            </tr>
+                        <?php
+                        }
+                        while ($row = mysqli_fetch_assoc($contact_tickets)) {
+                            $ticket_id = intval($row['ticket_id']);
+                            $ticket_prefix = nullable_htmlentities($row['ticket_prefix']);
+                            $ticket_number = intval($row['ticket_number']);
+                            $ticket_subject = nullable_htmlentities($row['ticket_subject']);
+                            $ticket_status = nullable_htmlentities($row['ticket_status_name']);
+                        ?>
 
-                <tr>
-                    <td>
-                        <a href="ticket.php?id=<?php echo $ticket_id; ?>"><?php echo "$ticket_prefix$ticket_number"; ?></a>
-                    </td>
-                    <td>
-                        <a href="ticket.php?id=<?php echo $ticket_id; ?>"><?php echo $ticket_subject; ?></a>
-                    </td>
-                    <td><?php echo $ticket_status; ?></td>
-                </tr>
-            <?php
-            }
-            ?>
-            </tbody>
-        </table>
+                            <tr>
+                                <td class="text-nowrap">
+                                    <a href="ticket.php?id=<?php echo $ticket_id; ?>">#<?php echo "$ticket_prefix$ticket_number"; ?></a>
+                                </td>
+                                <td>
+                                    <a href="ticket.php?id=<?php echo $ticket_id; ?>"><?php echo $ticket_subject; ?></a>
+                                </td>
+                                <td><span class="badge badge-secondary"><?php echo $ticket_status; ?></span></td>
+                            </tr>
+                        <?php
+                        }
+                        ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
     </div>
 
-    <div class="col-md-2">
+    <div class="col-md-3">
 
-        <a href="ticket_add.php" class="btn btn-primary btn-block">New ticket</a>
+        <a href="ticket_add.php" class="btn btn-primary btn-block mb-3"><i class="fas fa-fw fa-plus mr-1"></i>New Ticket</a>
 
-        <hr>
+        <div class="card card-outline card-secondary">
+            <div class="card-header">
+                <h3 class="card-title">My Tickets</h3>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="?status=Open" class="list-group-item d-flex justify-content-between align-items-center <?php echo $status == 'Open' ? 'active' : ''; ?>">
+                    Open <span class="badge badge-danger"><?php echo $total_tickets_open ?></span>
+                </a>
+                <a href="?status=Closed" class="list-group-item d-flex justify-content-between align-items-center <?php echo $status == 'Closed' ? 'active' : ''; ?>">
+                    Closed <span class="badge badge-success"><?php echo $total_tickets_closed ?></span>
+                </a>
+                <a href="?status=%" class="list-group-item d-flex justify-content-between align-items-center <?php echo $status == '%' ? 'active' : ''; ?>">
+                    All <span class="badge badge-secondary"><?php echo $total_tickets ?></span>
+                </a>
+            </div>
+        </div>
 
-        <a href="?status=Open" class="btn btn-danger btn-block p-3 mb-3 text-left">My Open tickets | <strong><?php echo $total_tickets_open ?></strong></a>
-
-        <a href="?status=Closed" class="btn btn-success btn-block p-3 mb-3 text-left">Closed tickets | <strong><?php echo $total_tickets_closed ?></strong></a>
-
-        <a href="?status=%" class="btn btn-secondary btn-block p-3 mb-3 text-left">All my tickets | <strong><?php echo $total_tickets ?></strong></a>
-        <?php
-        if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
-        ?>
-
-        <hr>
-
-        <a href="ticket_view_all.php" class="btn btn-dark btn-block p-2 mb-3">All Tickets</a>
-
-        <?php
-        }
-        ?>
+        <?php if ($session_contact_primary == 1 || $session_contact_is_technical_contact) { ?>
+            <a href="ticket_view_all.php" class="btn btn-dark btn-block"><i class="fas fa-fw fa-users mr-1"></i>All Company Tickets</a>
+        <?php } ?>
 
     </div>
 </div>

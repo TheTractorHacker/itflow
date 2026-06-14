@@ -54,7 +54,7 @@ $balance = $invoice_amounts - $amount_paid;
 
 <div class="row">
     <div class="col-5">
-        <h3>Unpaid Invoices</h3>
+        <h3><i class="fas fa-fw fa-file-invoice-dollar mr-2"></i>Unpaid Invoices</h3>
     </div>
     <div class="col-5">
         <?php if ($payment_provider_active && $bulk_payment_enabled) { // Currently not implmented fully ?>
@@ -80,10 +80,13 @@ $balance = $invoice_amounts - $amount_paid;
 </div>
 <div class="row">
 
-    <div class="col-md-10">
+    <div class="col-md-12">
 
-        <table class="table tabled-bordered border border-dark">
-            <thead class="thead-dark">
+        <div class="card card-outline card-primary">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="thead-light">
             <tr>
                 <th>#</th>
                 <th>Scope</th>
@@ -96,6 +99,11 @@ $balance = $invoice_amounts - $amount_paid;
             <tbody>
 
             <?php
+            if (mysqli_num_rows($invoices_sql) == 0) { ?>
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">No unpaid invoices. You're all caught up!</td>
+                </tr>
+            <?php }
             while ($row = mysqli_fetch_assoc($invoices_sql)) {
                 $invoice_id = intval($row['invoice_id']);
                 $invoice_prefix = nullable_htmlentities($row['invoice_prefix']);
@@ -199,6 +207,9 @@ $balance = $invoice_amounts - $amount_paid;
 
             </tbody>
         </table>
+                </div>
+            </div>
+        </div>
 
     </div>
 
