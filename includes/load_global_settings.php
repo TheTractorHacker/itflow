@@ -111,6 +111,8 @@ $config_module_enable_itdoc = intval($row['config_module_enable_itdoc']);
 $config_module_enable_ticketing = intval($row['config_module_enable_ticketing']);
 $config_module_enable_accounting = intval($row['config_module_enable_accounting']);
 $config_module_enable_ticket_charges = intval($row['config_module_enable_ticket_charges'] ?? 1);
+$config_module_enable_kb = intval($row['config_module_enable_kb'] ?? 0);
+$config_module_enable_live_chat = intval($row['config_module_enable_live_chat'] ?? 0);
 $config_client_portal_enable = intval($row['config_client_portal_enable']);
 
 // RMM Integration (Syncro-Beta)

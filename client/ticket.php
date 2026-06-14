@@ -41,6 +41,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
         $ticket_prefix = nullable_htmlentities($ticket_row['ticket_prefix']);
         $ticket_number = intval($ticket_row['ticket_number']);
         $ticket_status = nullable_htmlentities($ticket_row['ticket_status_name']);
+        $ticket_status_color = nullable_htmlentities($ticket_row['ticket_status_color']);
         $ticket_priority = nullable_htmlentities($ticket_row['ticket_priority']);
         $ticket_subject = nullable_htmlentities($ticket_row['ticket_subject']);
         $ticket_details = $purifier->purify($ticket_row['ticket_details']);
@@ -89,7 +90,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
             <li class="breadcrumb-item active">Ticket <?php echo $ticket_prefix . $ticket_number; ?></li>
         </ol>
 
-        <div class="card">
+        <div class="card" data-ticket-id="<?= $ticket_id ?>" data-live-chat="<?= $config_module_enable_live_chat ? '1' : '0' ?>" data-csrf="<?= $_SESSION['csrf_token'] ?>" data-user-name="<?= nullable_htmlentities($session_contact_name) ?>" data-user-id="<?= intval($session_contact_id) ?>" data-user-type="contact">
             <div class="card-header bg-dark my-2">
                 <h4 class="card-title mt-1">
                     Ticket <?php echo $ticket_prefix, $ticket_number ?>
@@ -105,7 +106,9 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
             <div class="card-body prettyContent">
                 <h5><strong>Subject:</strong> <?php echo $ticket_subject ?></h5>
                 <p>
-                    <strong>State:</strong> <?php echo $ticket_status ?><br>
+                    <strong>State:</strong>
+                    <span id="quickStatusColorDot" class="d-inline-block mr-1" style="width:.6rem;height:.6rem;border-radius:50%;background-color: <?= $ticket_status_color ?>;"></span>
+                    <span id="ticket-status-text"><?php echo $ticket_status ?></span><br>
                     <strong>Priority:</strong> <?php echo $ticket_priority ?><br>
                     <?php if (!empty($ticket_category)) { ?>
                         <strong>Category:</strong> <?php echo $ticket_category ?><br>
@@ -190,6 +193,22 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
             </div>
         <?php } ?>
 
+        <?php if ($config_module_enable_live_chat) { ?>
+        <!-- Live Chat card -->
+        <div class="card">
+            <div class="card-header py-2">
+                <h5 class="card-title mt-1"><i class="fas fa-fw fa-comments mr-2"></i>Live Chat</h5>
+            </div>
+            <div class="card-body p-3">
+                <div id="ticket-chat-messages" class="mb-2" style="max-height:260px;overflow-y:auto;"></div>
+                <form id="ticket-chat-form" class="d-flex" autocomplete="off">
+                    <input type="text" id="ticket-chat-input" class="form-control form-control-sm mr-2" placeholder="Type a message...">
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+        <?php } ?>
+
         <hr>
 
         <!-- Either show the reply comments box, option to re-open ticket, show ticket smiley feedback or thanks for feedback -->
@@ -254,6 +273,9 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
 
         <hr>
         <br>
+
+        <!-- Live update notice (populated by js/live_ticket.js) -->
+        <div id="ticket-replies-notice"></div>
 
         <?php
         $sql = mysqli_query($mysqli, "SELECT * FROM ticket_replies LEFT JOIN users ON ticket_reply_by = user_id LEFT JOIN contacts ON ticket_reply_by = contact_id WHERE ticket_reply_ticket_id = $ticket_id AND ticket_reply_archived_at IS NULL AND ticket_reply_type != 'Internal' ORDER BY ticket_reply_id DESC");
@@ -336,6 +358,9 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
         ?>
 
         <script src="../js/pretty_content.js"></script>
+
+        <!-- Live ticket updates (replies/status/chat via SSE) -->
+        <script src="../js/live_ticket.js"></script>
 
         <?php
     } else {

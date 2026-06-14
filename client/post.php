@@ -9,6 +9,7 @@ require_once '../includes/load_global_settings.php';
 require_once '../functions.php';
 require_once 'includes/check_login.php';
 require_once 'functions.php';
+require_once '../includes/redis_functions.php';
 
 if (isset($_POST['add_ticket'])) {
 
@@ -103,8 +104,13 @@ if (isset($_POST['add_ticket_comment'])) {
 
         $ticket_reply_id = mysqli_insert_id($mysqli);
 
+        publishTicketEvent($ticket_id, 'reply', ['reply_id' => $ticket_reply_id, 'reply_type' => 'Client', 'by' => $session_contact_name, 'by_type' => 'contact']);
+
         // Update Ticket Last Response Field & set ticket to open as client has replied
         mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 2 WHERE ticket_id = $ticket_id AND ticket_client_id = $session_client_id LIMIT 1");
+
+        $reply_status_info = getTicketStatusInfo($mysqli, 2);
+        publishTicketEvent($ticket_id, 'status', ['status_id' => $reply_status_info['id'], 'status_name' => $reply_status_info['name'], 'status_color' => $reply_status_info['color'], 'by' => $session_contact_name]);
 
 
         // Get ticket details &  Notify the assigned tech (if any)
@@ -187,6 +193,37 @@ if (isset($_POST['add_ticket_comment'])) {
         // The client does not have access to this ticket
         redirect("post.php?logout");
     }
+}
+
+if (isset($_POST['add_ticket_chat_message'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    $ticket_id = intval($_POST['ticket_id']);
+    $message = trim($_POST['message'] ?? '');
+
+    if (!$config_module_enable_live_chat || $message === '' || !verifyContactTicketAccess($ticket_id, "Open")) {
+        echo json_encode(['ok' => false]);
+        exit;
+    }
+
+    $message_escaped = mysqli_real_escape_string($mysqli, $message);
+
+    mysqli_query($mysqli, "INSERT INTO ticket_chat_messages SET ticket_id = $ticket_id, sender_type = 'contact', sender_id = $session_contact_id, message = '$message_escaped'");
+
+    $chat_id = mysqli_insert_id($mysqli);
+
+    publishTicketEvent($ticket_id, 'chat', [
+        'chat_id' => $chat_id,
+        'message' => $message,
+        'sender_type' => 'contact',
+        'sender_id' => $session_contact_id,
+        'sender_name' => $session_contact_name,
+        'created_at' => date('Y-m-d H:i:s'),
+    ]);
+
+    echo json_encode(['ok' => true, 'id' => $chat_id]);
+    exit;
 }
 
 if (isset($_GET['approve_ticket_task'])) {
@@ -278,8 +315,13 @@ if (isset($_GET['resolve_ticket'])) {
         // Resolve the ticket
         mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 4, ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id AND ticket_client_id = $session_client_id");
 
+        $resolve_status_info = getTicketStatusInfo($mysqli, 4);
+        publishTicketEvent($ticket_id, 'status', ['status_id' => $resolve_status_info['id'], 'status_name' => $resolve_status_info['name'], 'status_color' => $resolve_status_info['color'], 'by' => $session_contact_name]);
+
         // Add reply
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket resolved by $session_contact_name.', ticket_reply_type = 'Client', ticket_reply_by = $session_contact_id, ticket_reply_ticket_id = $ticket_id");
+
+        publishTicketEvent($ticket_id, 'reply', ['reply_id' => mysqli_insert_id($mysqli), 'reply_type' => 'Client', 'by' => $session_contact_name, 'by_type' => 'contact']);
 
         logAction("Ticket", "Edit", "$session_contact_name marked ticket $ticket_prefix$ticket_number as resolved in the client portal", $session_client_id, $ticket_id);
 
@@ -313,8 +355,13 @@ if (isset($_GET['reopen_ticket'])) {
         // Re-open ticket
         mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 2, ticket_resolved_at = NULL WHERE ticket_id = $ticket_id AND ticket_client_id = $session_client_id");
 
+        $reopen_status_info = getTicketStatusInfo($mysqli, 2);
+        publishTicketEvent($ticket_id, 'status', ['status_id' => $reopen_status_info['id'], 'status_name' => $reopen_status_info['name'], 'status_color' => $reopen_status_info['color'], 'by' => $session_contact_name]);
+
         // Add reply
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket reopened by $session_contact_name.', ticket_reply_type = 'Client', ticket_reply_by = $session_contact_id, ticket_reply_ticket_id = $ticket_id");
+
+        publishTicketEvent($ticket_id, 'reply', ['reply_id' => mysqli_insert_id($mysqli), 'reply_type' => 'Client', 'by' => $session_contact_name, 'by_type' => 'contact']);
 
         logAction("Ticket", "Edit", "$session_contact_name reopend ticket $ticket_prefix$ticket_number in the client portal", $session_client_id, $ticket_id);
 
@@ -348,8 +395,13 @@ if (isset($_GET['close_ticket'])) {
         // Fully close ticket
         mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 5, ticket_closed_at = NOW() WHERE ticket_id = $ticket_id AND ticket_client_id = $session_client_id");
 
+        $close_status_info = getTicketStatusInfo($mysqli, 5);
+        publishTicketEvent($ticket_id, 'status', ['status_id' => $close_status_info['id'], 'status_name' => $close_status_info['name'], 'status_color' => $close_status_info['color'], 'by' => $session_contact_name]);
+
         // Add reply
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket closed by $session_contact_name.', ticket_reply_type = 'Client', ticket_reply_by = $session_contact_id, ticket_reply_ticket_id = $ticket_id");
+
+        publishTicketEvent($ticket_id, 'reply', ['reply_id' => mysqli_insert_id($mysqli), 'reply_type' => 'Client', 'by' => $session_contact_name, 'by_type' => 'contact']);
 
         logAction("Ticket", "Edit", "$session_contact_name closed ticket $ticket_prefix$ticket_number in the client portal", $session_client_id, $ticket_id);
 

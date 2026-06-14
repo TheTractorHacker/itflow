@@ -148,6 +148,15 @@
                 </li>
                 <?php } ?>
 
+                <?php if ($config_module_enable_kb == 1 && lookupUserPermission("module_kb") >= 1) { ?>
+                    <li class="nav-item">
+                        <a href="/agent/kb_articles.php" class="nav-link <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['kb_articles.php', 'kb_article.php']) ? 'active' : ''); ?>">
+                            <i class="nav-icon fas fa-book"></i>
+                            <p>Knowledge Base</p>
+                        </a>
+                    </li>
+                <?php } ?>
+
                 <?php if ($config_module_enable_itdoc) { ?>
                 <!-- TEMPLATES Section -->
                 <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['contract_template.php', 'contract_template_details.php', 'project_template.php', 'project_template_details.php', 'onboarding_templates.php', 'onboarding_template_details.php', 'ticket_template.php', 'ticket_template_details.php', 'canned_responses.php', 'worksheet_template.php', 'worksheet_template_details.php', 'vendor_template.php', 'software_template.php', 'document_template.php', 'document_template_details.php']) ? 'menu-open' : ''); ?>">

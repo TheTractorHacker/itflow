@@ -1,3 +1,34 @@
+/* ===== Alga theme: design tokens ===== */
+:root {
+    --color-accent: #0D9488;
+    --color-accent-hover: #0F766E;
+    --color-accent-soft: #CCFBF1;
+    --color-accent-rgb: 13, 148, 136;
+    --color-surface: #fff;
+    --color-surface-alt: #F8F9FC;
+    --color-border: #E2E8F0;
+    --color-border-soft: #F1F2F6;
+    --color-text: #0F172A;
+    --color-text-muted: #64748B;
+    --card-radius: 14px;
+    --input-radius: 8px;
+    --card-shadow: 0 4px 8px -2px rgba(16,24,40,.10), 0 2px 4px -2px rgba(16,24,40,.06);
+}
+
+body.dark-mode {
+    --color-accent: #2DD4BF;
+    --color-accent-hover: #5EEAD4;
+    --color-accent-soft: rgba(45,212,191,.15);
+    --color-accent-rgb: 45, 212, 191;
+    --color-surface: #343a40;
+    --color-surface-alt: #2c3034;
+    --color-border: #4b5158;
+    --color-border-soft: #3f454b;
+    --color-text: #e9ecef;
+    --color-text-muted: #adb5bd;
+    --card-shadow: 0 4px 8px -2px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.3);
+}
+
 /*
    For screens below 576px (xs):
    - Make the button full-width, display:block
@@ -86,27 +117,34 @@
 
 /* ===== Ticketing UI redesign (alga-psa inspired) ===== */
 
-/* Rounded-pill filter controls */
+/* Rounded-pill filter controls (also available as .filter-bar on non-ticket list pages) */
 .ticket-filter-bar .form-control,
 .ticket-filter-bar .select2-container .select2-selection,
-.ticket-filter-bar .btn {
+.ticket-filter-bar .btn,
+.filter-bar .form-control,
+.filter-bar .select2-container .select2-selection,
+.filter-bar .btn {
     border-radius: 50rem !important;
 }
 
-.ticket-filter-bar .select2-container {
+.ticket-filter-bar .select2-container,
+.filter-bar .select2-container {
     min-width: 120px;
 }
 
-.ticket-filter-bar .select2-selection__rendered {
+.ticket-filter-bar .select2-selection__rendered,
+.filter-bar .select2-selection__rendered {
     padding-left: 1rem !important;
     line-height: 2.25rem !important;
 }
 
-.ticket-filter-bar .select2-selection--single {
+.ticket-filter-bar .select2-selection--single,
+.filter-bar .select2-selection--single {
     height: calc(1.5em + .75rem + 2px) !important;
 }
 
-.ticket-filter-bar .select2-selection__arrow {
+.ticket-filter-bar .select2-selection__arrow,
+.filter-bar .select2-selection__arrow {
     height: calc(1.5em + .75rem + 2px) !important;
 }
 
@@ -181,77 +219,143 @@
     flex-shrink: 0;
 }
 
-/* ===== alga-psa inspired visual theme, scoped to agent/ticket.php only ===== */
+/* ===== Alga theme: generic app-wide rules ===== */
 
-.ticket-alga-theme {
-    background: #F8F9FC;
+.content-wrapper {
+    background-color: var(--color-surface-alt) !important;
+}
+
+.main-header.navbar {
+    background-color: var(--color-accent) !important;
+}
+
+.card:not(.card-outline) {
+    border: none;
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+}
+
+.card-outline {
+    border-radius: var(--card-radius);
+}
+
+.card-header {
+    border-bottom: 1px solid var(--color-border-soft);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--color-accent);
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--color-accent);
+}
+
+.btn-primary {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:not(:disabled):not(.disabled):active {
+    background-color: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+}
+
+.alert {
+    border: none;
+    border-radius: var(--input-radius);
+}
+
+/* ===== alga-psa inspired visual theme (.ticket-alga-theme is an alias kept for the ticket page) ===== */
+
+.ticket-alga-theme,
+.alga-theme {
+    background: var(--color-surface-alt);
     padding: 1rem 0 .5rem;
     margin: -1rem -.01px 0;
 }
 
-.ticket-alga-theme .card {
+.ticket-alga-theme .card,
+.alga-theme .card {
     border: none;
-    border-radius: 14px;
-    box-shadow: 0 4px 8px -2px rgba(16,24,40,.10), 0 2px 4px -2px rgba(16,24,40,.06);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
     margin-bottom: 1rem;
 }
 
 .ticket-alga-theme .card-header,
 .ticket-alga-theme .card-dark .card-header,
-.ticket-alga-theme .card.card-dark {
-    background: #fff !important;
-    color: #0F172A !important;
-    border-bottom: 1px solid #F1F2F6;
-    border-radius: 14px 14px 0 0 !important;
+.ticket-alga-theme .card.card-dark,
+.alga-theme .card-header,
+.alga-theme .card-dark .card-header,
+.alga-theme .card.card-dark {
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
+    border-bottom: 1px solid var(--color-border-soft);
+    border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
 }
 
 .ticket-alga-theme .card-dark .card-title,
-.ticket-alga-theme .card-dark .btn-tool {
-    color: #0F172A !important;
+.ticket-alga-theme .card-dark .btn-tool,
+.alga-theme .card-dark .card-title,
+.alga-theme .card-dark .btn-tool {
+    color: var(--color-text) !important;
 }
 
 .ticket-alga-theme .form-control,
 .ticket-alga-theme select.form-control,
-.ticket-alga-theme .select2-container .select2-selection {
-    border: 1px solid #E2E8F0;
-    border-radius: 8px;
-    background-color: #fff;
+.ticket-alga-theme .select2-container .select2-selection,
+.alga-theme .form-control,
+.alga-theme select.form-control,
+.alga-theme .select2-container .select2-selection {
+    border: 1px solid var(--color-border);
+    border-radius: var(--input-radius);
+    background-color: var(--color-surface);
 }
 
 .ticket-alga-theme .btn-primary,
-.ticket-alga-theme .btn-purple {
-    background-color: #8A4DEA;
-    border-color: #8A4DEA;
+.ticket-alga-theme .btn-purple,
+.alga-theme .btn-primary,
+.alga-theme .btn-purple {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
     color: #fff;
 }
 
 .ticket-alga-theme .btn-primary:hover,
-.ticket-alga-theme .btn-purple:hover {
-    background-color: #7C45D3;
-    border-color: #7C45D3;
+.ticket-alga-theme .btn-purple:hover,
+.alga-theme .btn-primary:hover,
+.alga-theme .btn-purple:hover {
+    background-color: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
     color: #fff;
 }
 
-.ticket-alga-theme .btn-outline-purple {
-    color: #8A4DEA;
-    border: 1px solid #8A4DEA;
-    background-color: #fff;
+.ticket-alga-theme .btn-outline-purple,
+.alga-theme .btn-outline-purple {
+    color: var(--color-accent);
+    border: 1px solid var(--color-accent);
+    background-color: var(--color-surface);
 }
 
-.ticket-alga-theme .btn-outline-purple:hover {
-    background-color: #F3ECFE;
-    color: #7C45D3;
-    border-color: #8A4DEA;
+.ticket-alga-theme .btn-outline-purple:hover,
+.alga-theme .btn-outline-purple:hover {
+    background-color: var(--color-accent-soft);
+    color: var(--color-accent-hover);
+    border-color: var(--color-accent);
 }
 
 /* Comment tabs (Client / Internal / System / All Comments) */
-.ticket-alga-theme .comment-tabs {
-    border-bottom: 1px solid #E2E8F0;
+.ticket-alga-theme .comment-tabs,
+.alga-theme .comment-tabs {
+    border-bottom: 1px solid var(--color-border);
 }
 
-.ticket-alga-theme .comment-tabs .nav-link {
+.ticket-alga-theme .comment-tabs .nav-link,
+.alga-theme .comment-tabs .nav-link {
     border: 0;
-    color: #64748B;
+    color: var(--color-text-muted);
     font-weight: 500;
     padding: .5rem .25rem;
     margin-right: 1.25rem;
@@ -259,24 +363,27 @@
     border-radius: 0;
 }
 
-.ticket-alga-theme .comment-tabs .nav-link.active {
-    color: #8A4DEA;
-    border-bottom: 2px solid #8A4DEA;
+.ticket-alga-theme .comment-tabs .nav-link.active,
+.alga-theme .comment-tabs .nav-link.active {
+    color: var(--color-accent);
+    border-bottom: 2px solid var(--color-accent);
     background: transparent;
 }
 
 /* Time Entry sidebar card */
-.ticket-alga-theme .time-entry-card {
-    background: rgba(138,77,234,.05);
+.ticket-alga-theme .time-entry-card,
+.alga-theme .time-entry-card {
+    background: rgba(var(--color-accent-rgb), .05);
 }
 
-.ticket-alga-theme .time-entry-digital {
+.ticket-alga-theme .time-entry-digital,
+.alga-theme .time-entry-digital {
     font-family: monospace;
-    background: rgba(138,77,234,.12);
-    border-radius: 8px;
+    background: rgba(var(--color-accent-rgb), .12);
+    border-radius: var(--input-radius);
     padding: .75rem;
     text-align: center;
     font-size: 1.5rem;
     font-weight: 600;
-    color: #0F172A;
+    color: var(--color-text);
 }

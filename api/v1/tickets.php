@@ -221,6 +221,8 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     $reply_id = mysqli_insert_id($mysqli);
     mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
 
+    publishTicketEvent($id, 'reply', ['reply_id' => $reply_id, 'reply_type' => $type, 'by' => $session_name ?? 'API', 'by_type' => 'agent']);
+
     $response = ['id' => $reply_id];
     $attachments = api_save_ticket_attachments($mysqli, $id, $reply_id, $DOCUMENT_ROOT);
     if ($attachments) $response['attachments'] = $attachments;
@@ -345,6 +347,10 @@ if ($method === 'POST' && $id !== null && $sub === 'status') {
     if ($resolved_status && $status == intval($resolved_status['ticket_status_id'])) {
         mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW() WHERE ticket_id = $id AND ticket_resolved_at IS NULL");
     }
+
+    $api_status_info = getTicketStatusInfo($mysqli, $status);
+    publishTicketEvent($id, 'status', ['status_id' => $api_status_info['id'], 'status_name' => $api_status_info['name'], 'status_color' => $api_status_info['color'], 'by' => $session_name ?? 'API']);
+
     api_response(200, ['ok' => true]);
 }
 

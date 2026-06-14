@@ -4765,3 +4765,50 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.8'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.8') {
+
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN `config_module_enable_kb` TINYINT(1) NOT NULL DEFAULT 0");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `kb_articles` (
+            `kb_article_id` INT(11) NOT NULL AUTO_INCREMENT,
+            `kb_article_title` VARCHAR(255) NOT NULL,
+            `kb_article_content` MEDIUMTEXT,
+            `kb_article_content_raw` MEDIUMTEXT,
+            `kb_article_client_id` INT(11) NOT NULL DEFAULT 0,
+            `kb_article_client_visible` TINYINT(1) NOT NULL DEFAULT 1,
+            `kb_article_favorite` TINYINT(1) NOT NULL DEFAULT 0,
+            `kb_article_created_by` INT(11) NOT NULL DEFAULT 0,
+            `kb_article_updated_by` INT(11) NOT NULL DEFAULT 0,
+            `kb_article_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `kb_article_updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+            `kb_article_archived_at` DATETIME DEFAULT NULL,
+            PRIMARY KEY (`kb_article_id`),
+            KEY `kb_article_client_id` (`kb_article_client_id`),
+            FULLTEXT KEY `kb_article_content_raw` (`kb_article_content_raw`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "INSERT INTO `modules` SET module_name = 'module_kb', module_description = 'Access to the knowledge base'");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.5.9'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.5.9') {
+
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN `config_module_enable_live_chat` TINYINT(1) NOT NULL DEFAULT 0");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `ticket_chat_messages` (
+            `id` INT(11) NOT NULL AUTO_INCREMENT,
+            `ticket_id` INT(11) NOT NULL,
+            `sender_type` ENUM('agent','contact') NOT NULL,
+            `sender_id` INT(11) NOT NULL DEFAULT 0,
+            `message` TEXT NOT NULL,
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `ticket_id` (`ticket_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.0'");
+    }

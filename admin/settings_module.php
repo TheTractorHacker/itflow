@@ -41,6 +41,22 @@ require_once "includes/inc_all_admin.php";
 
             <div class="form-group">
                 <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" name="config_module_enable_kb" <?php if ($config_module_enable_kb == 1) { echo "checked"; } ?> value="1" id="customSwitch3c">
+                    <label class="custom-control-label" for="customSwitch3c">Show Knowledge Base</label>
+                </div>
+                <small class="form-text text-muted">Adds a Knowledge Base section for agents and clients - per-client articles plus a Central (company-wide) library.</small>
+            </div>
+
+            <div class="form-group">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" name="config_module_enable_live_chat" <?php if ($config_module_enable_live_chat == 1) { echo "checked"; } ?> value="1" id="customSwitch3d">
+                    <label class="custom-control-label" for="customSwitch3d">Show Live Chat on Tickets</label>
+                </div>
+                <small class="form-text text-muted">Adds a real-time chat panel to ticket views for agents and clients, alongside the normal email-style replies.</small>
+            </div>
+
+            <div class="form-group">
+                <div class="custom-control custom-switch">
                     <input type="checkbox" class="custom-control-input" name="config_client_portal_enable" <?php if ($config_client_portal_enable == 1) { echo "checked"; } ?> value="1" id="customSwitch4">
                     <label class="custom-control-label" for="customSwitch4">Enable Client Portal</label>
                 </div>

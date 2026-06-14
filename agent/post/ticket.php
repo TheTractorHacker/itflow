@@ -7,6 +7,7 @@
 defined('FROM_POST_HANDLER') || die("Direct file access is not allowed");
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/sla_functions.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/redis_functions.php';
 
 if (isset($_POST['add_ticket'])) {
 
@@ -402,13 +403,16 @@ if (isset($_POST['edit_ticket_status'])) {
         enforceClientAccess();
     }
 
-    $sql_new_status = mysqli_query($mysqli, "SELECT ticket_status_name FROM ticket_statuses WHERE ticket_status_id = $new_status_id LIMIT 1");
+    $sql_new_status = mysqli_query($mysqli, "SELECT ticket_status_name, ticket_status_color FROM ticket_statuses WHERE ticket_status_id = $new_status_id LIMIT 1");
     $new_status_row = mysqli_fetch_assoc($sql_new_status);
     $new_status_name = sanitizeInput($new_status_row['ticket_status_name']);
+    $new_status_color = sanitizeInput($new_status_row['ticket_status_color']);
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $ticket_id");
 
     mysqli_query($mysqli, "INSERT INTO ticket_history SET ticket_history_status = '$new_status_name', ticket_history_description = '$session_name changed status from $original_status to $new_status_name', ticket_history_ticket_id = $ticket_id");
+
+    publishTicketEvent($ticket_id, 'status', ['status_id' => $new_status_id, 'status_name' => $new_status_name, 'status_color' => $new_status_color, 'by' => $session_name]);
 
     logAction("Ticket", "Edit", "$session_name changed status from $original_status to $new_status_name for ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
     queueWebhookEvent('ticket.status_changed', getWebhookTicketPayload($ticket_id));
@@ -960,6 +964,8 @@ if (isset($_POST['quick_status_ticket'])) {
     logAction("Ticket", "Edit", "$session_name changed status from $original_status to $new_status_name for ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
     customAction('ticket_update', $ticket_id);
 
+    publishTicketEvent($ticket_id, 'status', ['status_id' => $new_status_id, 'status_name' => $new_status_name, 'status_color' => $new_status_color, 'by' => $session_name]);
+
     echo json_encode(['ok' => true, 'name' => $new_status_name, 'color' => $new_status_color]);
     exit;
 }
@@ -1108,6 +1114,9 @@ if (isset($_GET['delete_ticket'])) {
         // Delete ticket watchers
         mysqli_query($mysqli, "DELETE FROM ticket_watchers WHERE watcher_ticket_id = $ticket_id");
 
+        // Delete ticket chat messages
+        mysqli_query($mysqli, "DELETE FROM ticket_chat_messages WHERE ticket_id = $ticket_id");
+
         // Delete Ticket Attachements
         mysqli_query($mysqli, "DELETE FROM ticket_attachments WHERE ticket_attachment_ticket_id = $ticket_id");
         removeDirectory("../uploads/tickets/$ticket_id");
@@ -1157,6 +1166,9 @@ if (isset($_POST['bulk_delete_tickets'])) {
 
             // Delete ticket watchers
             mysqli_query($mysqli, "DELETE FROM ticket_watchers WHERE watcher_ticket_id = $ticket_id");
+
+            // Delete ticket chat messages
+            mysqli_query($mysqli, "DELETE FROM ticket_chat_messages WHERE ticket_id = $ticket_id");
 
             // Delete Ticket Attachements
             mysqli_query($mysqli, "DELETE FROM ticket_attachments WHERE ticket_attachment_ticket_id = $ticket_id");
@@ -1996,6 +2008,9 @@ if (isset($_POST['add_ticket_reply'])) {
     // Update Ticket Status & updated at (in case status didn't change)
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $ticket_status, ticket_updated_at = NOW() WHERE ticket_id = $ticket_id");
 
+    $reply_status_info = getTicketStatusInfo($mysqli, $ticket_status);
+    publishTicketEvent($ticket_id, 'status', ['status_id' => $reply_status_info['id'], 'status_name' => $reply_status_info['name'], 'status_color' => $reply_status_info['color'], 'by' => $session_name]);
+
     // Resolve the ticket, if set
     if ($ticket_status == 4) {
         mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id");
@@ -2019,6 +2034,8 @@ if (isset($_POST['add_ticket_reply'])) {
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$ticket_reply', ticket_reply_time_worked = '$ticket_reply_time_worked', ticket_reply_type = '$ticket_reply_type', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 
         $ticket_reply_id = mysqli_insert_id($mysqli);
+
+        publishTicketEvent($ticket_id, 'reply', ['reply_id' => $ticket_reply_id, 'reply_type' => $ticket_reply_type, 'by' => $session_name, 'by_type' => 'agent']);
 
         // Auto-create charge if a labor type was selected, time logged, and Charge now checked
         if ($reply_labor_type_id > 0 && $reply_charge_now && ($hours > 0 || $minutes > 0 || $seconds > 0)) {

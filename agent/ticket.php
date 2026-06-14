@@ -374,7 +374,7 @@ if (isset($_GET['ticket_id'])) {
 
         ?>
 
-        <div class="ticket-alga-theme">
+        <div class="ticket-alga-theme" data-ticket-id="<?= $ticket_id ?>" data-live-chat="<?= $config_module_enable_live_chat ? '1' : '0' ?>" data-csrf="<?= $_SESSION['csrf_token'] ?>" data-user-name="<?= nullable_htmlentities($session_name) ?>" data-user-id="<?= intval($session_user_id) ?>" data-user-type="agent">
 
         <!-- Breadcrumbs-->
         <ol class="breadcrumb d-print-none">
@@ -410,7 +410,7 @@ if (isset($_GET['ticket_id'])) {
                                 </select>
                                 <span id="quickStatusStatus" class="ml-2" style="font-size:13px;"></span>
                                 <?php } else { ?>
-                                <span class='badge badge-pill text-light ml-1 p-2' style="background-color: <?= $ticket_status_color ?>">
+                                <span id="ticketStatusBadge" class='badge badge-pill text-light ml-1 p-2' style="background-color: <?= $ticket_status_color ?>">
                                     <?= $ticket_status_name ?>
                                 </span>
                                 <?php } ?>
@@ -823,6 +823,9 @@ if (isset($_GET['ticket_id'])) {
                     <!-- End IF for reply modal -->
                 <?php } ?>
 
+                <!-- Live update notice (populated by js/live_ticket.js) -->
+                <div id="ticket-replies-notice"></div>
+
                 <!-- Comment tabs -->
                 <ul class="nav nav-tabs comment-tabs mb-3 d-print-none" id="commentTabs">
                     <li class="nav-item"><a class="nav-link active" href="#" data-comment-filter="all">All Comments</a></li>
@@ -1002,6 +1005,25 @@ if (isset($_GET['ticket_id'])) {
                         <?php } ?>
                     </div>
                 </div>
+
+                <?php if ($config_module_enable_live_chat) { ?>
+                <!-- Live Chat card -->
+                <div class="card">
+                    <div class="card-header px-3 py-2">
+                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-comments mr-2"></i>Live Chat</h5>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        <div id="ticket-chat-messages" class="mb-2" style="max-height:260px;overflow-y:auto;"></div>
+                        <form id="ticket-chat-form" class="d-flex" autocomplete="off">
+                            <input type="text" id="ticket-chat-input" class="form-control form-control-sm mr-2" placeholder="Type a message...">
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i></button>
+                        </form>
+                    </div>
+                </div>
+                <?php } ?>
 
                 <!-- Ticket activity right card -->
                 <div class="card">
@@ -1977,6 +1999,9 @@ require_once "../includes/footer.php";
     <!-- Ticket collision detect JS (jQuery is called in footer, so collision detection script MUST be below it) -->
     <script src="js/ticket_collision_detection.js"></script>
 <?php } ?>
+
+<!-- Live ticket updates (replies/status/chat via SSE) -->
+<script src="/js/live_ticket.js"></script>
 
 <script src="/js/pretty_content.js"></script>
 

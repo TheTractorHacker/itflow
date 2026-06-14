@@ -18,6 +18,7 @@ require_once $DOCUMENT_ROOT . '/config.php';
 require_once $DOCUMENT_ROOT . '/includes/db.php';
 require_once $DOCUMENT_ROOT . '/functions.php';
 require_once $DOCUMENT_ROOT . '/includes/load_company_settings.php';
+require_once $DOCUMENT_ROOT . '/includes/redis_functions.php';
 
 function api_response(int $code, array $data): void {
     http_response_code($code);

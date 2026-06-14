@@ -57,6 +57,12 @@ header("X-Frame-Options: DENY"); // Legacy
                     <a class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == "tickets.php" || basename($_SERVER['PHP_SELF']) == "ticket_add.php" || basename($_SERVER['PHP_SELF']) == "ticket.php") {echo "active";} ?>" href="/client/tickets.php">Tickets</a>
                 </li>
 
+                <?php if ($config_module_enable_kb == 1) { ?>
+                    <li class="nav-item">
+                        <a class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == "kb_articles.php" || basename($_SERVER['PHP_SELF']) == "kb_article.php") {echo "active";} ?>" href="/client/kb_articles.php">Knowledge Base</a>
+                    </li>
+                <?php } ?>
+
                 <?php if (($session_contact_primary == 1 || $session_contact_is_billing_contact) && $config_module_enable_accounting == 1) { ?>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle <?php echo in_array(basename($_SERVER['PHP_SELF']), ['invoices.php', 'quotes.php', 'autopay.php']) ? 'active' : ''; ?>" href="#" id="navbarDropdown1" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
