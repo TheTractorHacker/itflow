@@ -99,16 +99,12 @@ body.dark-mode {
 
 /* Client portal */
 .client-portal-nav {
-    border-bottom: 3px solid #007bff;
+    border-bottom: 3px solid var(--color-accent);
 }
 
 .welcome-banner {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-radius: 0.5rem;
-}
-
-.welcome-banner .fa-stack .text-primary {
-    color: #007bff;
 }
 
 .welcome-banner .fa-stack-1x {
@@ -265,6 +261,81 @@ body.dark-mode {
 .alert {
     border: none;
     border-radius: var(--input-radius);
+}
+
+/* Remap Bootstrap's default "primary" blue (links, badges, toggles, pagination, etc.) to the accent color */
+a {
+    color: var(--color-accent);
+}
+
+a:hover {
+    color: var(--color-accent-hover);
+}
+
+.text-primary {
+    color: var(--color-accent) !important;
+}
+
+.bg-primary {
+    background-color: var(--color-accent) !important;
+}
+
+.border-primary {
+    border-color: var(--color-accent) !important;
+}
+
+.badge-primary {
+    background-color: var(--color-accent);
+}
+
+.btn-link {
+    color: var(--color-accent);
+}
+
+.btn-outline-primary {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:not(:disabled):not(.disabled):active,
+.btn-outline-primary:not(:disabled):not(.disabled).active {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent);
+}
+
+.page-link {
+    color: var(--color-accent);
+}
+
+.page-item.active .page-link {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background-color: var(--color-accent);
+}
+
+.progress-bar {
+    background-color: var(--color-accent);
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: var(--color-accent);
+}
+
+.list-group-item.active {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
 }
 
 /* ===== alga-psa inspired visual theme (.ticket-alga-theme is an alias kept for the ticket page) ===== */
