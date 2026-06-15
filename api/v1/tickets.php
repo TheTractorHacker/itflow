@@ -206,22 +206,43 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     } else {
         $body = json_decode(file_get_contents('php://input'), true) ?? [];
     }
-    $reply   = mysqli_real_escape_string($mysqli, trim($body['reply'] ?? ''));
-    $type    = in_array($body['type'] ?? 'reply', ['reply', 'note']) ? ($body['type'] ?? 'reply') : 'reply';
-    $time_w  = mysqli_real_escape_string($mysqli, trim($body['time_worked'] ?? ''));
-    $onsite  = isset($body['onsite']) ? intval($body['onsite']) : 0;
+    $reply      = mysqli_real_escape_string($mysqli, trim($body['reply'] ?? ''));
+    $type       = in_array($body['type'] ?? 'reply', ['reply', 'note']) ? ($body['type'] ?? 'reply') : 'reply';
+    $time_w     = mysqli_real_escape_string($mysqli, trim($body['time_worked'] ?? ''));
+    $onsite     = isset($body['onsite']) ? intval($body['onsite']) : 0;
+    $contact_id = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
 
     if (!$reply) api_error(400, 'reply is required');
+
+    // contact_id posts a "Client" reply on behalf of one of the ticket's
+    // client's contacts, mirroring client/post.php's add_ticket_comment.
+    $reply_by = $uid;
+    if ($contact_id) {
+        $contact_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT c.contact_id FROM contacts c
+             INNER JOIN tickets t ON t.ticket_client_id = c.contact_client_id
+             WHERE c.contact_id = $contact_id AND t.ticket_id = $id LIMIT 1"));
+        if (!$contact_row) api_error(400, "contact_id does not belong to this ticket's client");
+        $type     = 'Client';
+        $reply_by = $contact_id;
+    }
 
     $time_sql = $time_w ? "'$time_w'" : 'NULL';
     mysqli_query($mysqli,
         "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_time_worked, ticket_reply_onsite, ticket_reply_by, ticket_reply_ticket_id, ticket_reply_created_at)
-         VALUES ('$reply', '$type', $time_sql, $onsite, $uid, $id, NOW())"
+         VALUES ('$reply', '$type', $time_sql, $onsite, $reply_by, $id, NOW())"
     );
     $reply_id = mysqli_insert_id($mysqli);
     mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
 
-    publishTicketEvent($id, 'reply', ['reply_id' => $reply_id, 'reply_type' => $type, 'by' => $session_name ?? 'API', 'by_type' => 'agent']);
+    publishTicketEvent($id, 'reply', ['reply_id' => $reply_id, 'reply_type' => $type, 'by' => $session_name ?? 'API', 'by_type' => $type === 'Client' ? 'contact' : 'agent']);
+
+    if ($type === 'Client') {
+        // A client reply reopens the ticket, same as the client portal.
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 2 WHERE ticket_id = $id");
+        $reply_status_info = getTicketStatusInfo($mysqli, 2);
+        publishTicketEvent($id, 'status', ['status_id' => $reply_status_info['id'], 'status_name' => $reply_status_info['name'], 'status_color' => $reply_status_info['color'], 'by' => $session_name ?? 'API']);
+    }
 
     $response = ['id' => $reply_id];
     $attachments = api_save_ticket_attachments($mysqli, $id, $reply_id, $DOCUMENT_ROOT);
@@ -261,6 +282,85 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
     );
 
     api_response(201, ['ok' => true]);
+}
+
+// GET CHAT MESSAGES
+if ($method === 'GET' && $id !== null && $sub === 'chat') {
+    if (!$config_module_enable_live_chat) api_error(403, 'Live chat is not enabled');
+
+    $ticket_check = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $id LIMIT 1"));
+    if (!$ticket_check) api_error(404, 'Ticket not found');
+
+    $since_id = isset($_GET['since_id']) ? intval($_GET['since_id']) : 0;
+
+    $sql = mysqli_query($mysqli,
+        "SELECT cm.*, u.user_name FROM ticket_chat_messages cm
+         LEFT JOIN users u ON cm.sender_type = 'agent' AND cm.sender_id = u.user_id
+         WHERE cm.ticket_id = $id AND cm.id > $since_id
+         ORDER BY cm.id ASC"
+    );
+
+    $messages = [];
+    while ($row = mysqli_fetch_assoc($sql)) {
+        $messages[] = [
+            'id'          => intval($row['id']),
+            'sender_type' => $row['sender_type'],
+            'sender_id'   => intval($row['sender_id']),
+            'sender_name' => $row['sender_type'] === 'agent' ? $row['user_name'] : null,
+            'message'     => $row['message'],
+            'created_at'  => $row['created_at'],
+        ];
+    }
+
+    api_response(200, ['data' => $messages]);
+}
+
+// POST CHAT MESSAGE
+if ($method === 'POST' && $id !== null && $sub === 'chat') {
+    if (!$config_module_enable_live_chat) api_error(403, 'Live chat is not enabled');
+
+    $ticket_check = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $id LIMIT 1"));
+    if (!$ticket_check) api_error(404, 'Ticket not found');
+
+    $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+    $message = trim($body['message'] ?? '');
+    if ($message === '') api_error(400, 'message is required');
+
+    $message_escaped = mysqli_real_escape_string($mysqli, $message);
+
+    // contact_id posts on behalf of one of the ticket's client's contacts,
+    // mirroring client/post.php's add_ticket_chat_message; otherwise the
+    // message is attributed to the authenticated agent.
+    $contact_id = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
+    if ($contact_id) {
+        $contact_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT c.contact_id, c.contact_name FROM contacts c
+             INNER JOIN tickets t ON t.ticket_client_id = c.contact_client_id
+             WHERE c.contact_id = $contact_id AND t.ticket_id = $id LIMIT 1"));
+        if (!$contact_row) api_error(400, "contact_id does not belong to this ticket's client");
+
+        $sender_type = 'contact';
+        $sender_id   = $contact_id;
+        $sender_name = $contact_row['contact_name'];
+    } else {
+        $sender_type = 'agent';
+        $sender_id   = $uid;
+        $sender_name = $session_name ?? 'API';
+    }
+
+    mysqli_query($mysqli, "INSERT INTO ticket_chat_messages SET ticket_id = $id, sender_type = '$sender_type', sender_id = $sender_id, message = '$message_escaped'");
+    $chat_id = mysqli_insert_id($mysqli);
+
+    publishTicketEvent($id, 'chat', [
+        'chat_id'     => $chat_id,
+        'message'     => $message,
+        'sender_type' => $sender_type,
+        'sender_id'   => $sender_id,
+        'sender_name' => $sender_name,
+        'created_at'  => date('Y-m-d H:i:s'),
+    ]);
+
+    api_response(201, ['id' => $chat_id]);
 }
 
 // CREATE TICKET
