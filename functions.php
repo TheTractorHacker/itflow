@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/includes/unifiedpush_functions.php';
+require_once __DIR__ . '/includes/redis_functions.php';
 
 // Role check failed wording
 DEFINE("WORDING_ROLECHECK_FAILED", "You are not permitted to do that!");
@@ -1813,12 +1813,20 @@ function appNotify($type, $details, $action = null, $client_id = 0, $entity_id =
 
         mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = '$type', notification = '$details', notification_action = '$action', notification_client_id = $client_id, notification_entity_id = $entity_id, notification_user_id = $user_id");
 
-        unifiedpush_send_to_user($user_id, $type, $details, ['action' => (string) $push_action]);
+        publishUserNotification($user_id, [
+            'id'        => mysqli_insert_id($mysqli),
+            'type'      => $type,
+            'title'     => $type,
+            'body'      => $details,
+            'action'    => $push_action,
+            'client_id' => $client_id,
+            'entity_id' => $entity_id,
+        ]);
     }
 }
 
-// Insert a targeted in-app notification for a specific user and push it to
-// their registered UnifiedPush endpoints.
+// Insert a targeted in-app notification for a specific user and publish it to
+// their open real-time notification stream (api/v1/notifications_stream.php).
 function notifyUser($user_id, $type, $details, $action = null, $client_id = 0, $entity_id = 0) {
     global $mysqli;
 
@@ -1836,7 +1844,15 @@ function notifyUser($user_id, $type, $details, $action = null, $client_id = 0, $
 
     mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = '$type_esc', notification = '$details_esc', notification_action = $action_sql, notification_client_id = $client_id, notification_entity_id = $entity_id, notification_user_id = $user_id");
 
-    unifiedpush_send_to_user($user_id, $type, $details, ['action' => (string) $action, 'client_id' => (string) $client_id, 'entity_id' => (string) $entity_id]);
+    publishUserNotification($user_id, [
+        'id'        => mysqli_insert_id($mysqli),
+        'type'      => $type,
+        'title'     => $type,
+        'body'      => $details,
+        'action'    => $action,
+        'client_id' => $client_id,
+        'entity_id' => $entity_id,
+    ]);
 }
 
 function logAction($type, $action, $description, $client_id = 0, $entity_id = 0) {

@@ -1,35 +1,7 @@
 <?php
 // GET    /api/v1/me                  - current user profile
 // PUT    /api/v1/me                  - update profile
-// POST   /api/v1/me/push-endpoint    - register/update this token's UnifiedPush endpoint
-// DELETE /api/v1/me/push-endpoint    - unregister this token's UnifiedPush endpoint
 defined('FROM_API') || die();
-
-if ($sub === 'push-endpoint') {
-    $token_id = intval($api_token_row['token_id']);
-
-    if ($method === 'POST' || $method === 'PUT') {
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $url  = trim($body['endpoint_url'] ?? '');
-
-        if (!$url || !filter_var($url, FILTER_VALIDATE_URL) || stripos($url, 'https://') !== 0) {
-            api_error(400, 'endpoint_url must be a valid https:// URL');
-        }
-
-        $esc = mysqli_real_escape_string($mysqli, $url);
-        mysqli_query($mysqli, "DELETE FROM push_endpoints WHERE push_endpoint_token_id = $token_id");
-        mysqli_query($mysqli, "INSERT INTO push_endpoints SET push_endpoint_token_id = $token_id, push_endpoint_url = '$esc'");
-
-        api_response(200, ['ok' => true]);
-    }
-
-    if ($method === 'DELETE') {
-        mysqli_query($mysqli, "DELETE FROM push_endpoints WHERE push_endpoint_token_id = $token_id");
-        api_response(200, ['ok' => true]);
-    }
-
-    api_error(405, 'Method not allowed');
-}
 
 if ($method === 'GET') {
     $row = mysqli_fetch_assoc(mysqli_query($mysqli,

@@ -4987,3 +4987,12 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.9'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.9') {
+
+        // Replaced by the real-time notifications SSE stream
+        // (api/v1/notifications/stream) - no per-device endpoint registration needed
+        mysqli_query($mysqli, "DROP TABLE IF EXISTS `push_endpoints`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.10'");
+    }

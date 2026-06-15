@@ -77,6 +77,32 @@ function publishTicketEvent(int $ticket_id, string $type, array $payload = []): 
 }
 
 /**
+ * Publish a notification event to a user's personal channel so that an open
+ * SSE connection (api/v1/notifications_stream.php) can deliver it instantly.
+ *
+ * @param int   $user_id
+ * @param array $payload  e.g. ['id' => ..., 'type' => ..., 'title' => ..., 'body' => ..., 'action' => ..., 'client_id' => ..., 'entity_id' => ...]
+ * @return bool true if published, false if Redis is unavailable
+ */
+function publishUserNotification(int $user_id, array $payload): bool {
+    $redis = getRedisClient();
+    if (!$redis || !$user_id) {
+        return false;
+    }
+
+    $message = json_encode(array_merge($payload, [
+        'time' => time(),
+    ]));
+
+    try {
+        $redis->publish("user.$user_id.notifications", $message);
+        return true;
+    } catch (\Throwable $e) {
+        return false;
+    }
+}
+
+/**
  * Get the raw PHP stream socket behind a connected Predis client, for use with
  * stream_select() so an SSE loop can wait on a pub/sub subscription with a
  * timeout (for heartbeats) instead of blocking forever.

@@ -178,7 +178,13 @@ switch ($resource) {
         break;
     case 'me':          require __DIR__ . '/me.php';       break;
     case 'appointments': require __DIR__ . '/appointments.php'; break;
-    case 'notifications': require __DIR__ . '/notifications.php'; break;
+    case 'notifications':
+        if ($sub === 'stream') {
+            require __DIR__ . '/notifications_stream.php';
+        } else {
+            require __DIR__ . '/notifications.php';
+        }
+        break;
     case 'validate_api_key': api_response(200, ['success' => 'True', 'message' => 'API key is valid']); break;
     default:              api_error(404, 'Not found');
 }
