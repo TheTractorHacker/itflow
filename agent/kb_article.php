@@ -48,6 +48,11 @@ if (isset($client_id)) {
     $kb_articles_url .= "?client_id=$client_id";
 }
 
+$sql_attachments = mysqli_query(
+    $mysqli,
+    "SELECT * FROM kb_article_attachments WHERE kb_article_attachment_kb_article_id = $kb_article_id ORDER BY kb_article_attachment_created_at ASC"
+);
+
 ?>
 
 <div class="alga-theme">
@@ -111,6 +116,47 @@ if (isset($client_id)) {
                     <a class="btn btn-danger btn-block confirm-link" href="post.php?delete_kb_article=<?php echo $kb_article_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>">
                         <i class="fas fa-fw fa-trash-alt mr-2"></i>Delete
                     </a>
+                </div>
+            </div>
+
+            <div class="card card-sidebar mt-3 d-print-none">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-fw fa-paperclip mr-2"></i>Attachments</h5>
+                </div>
+                <?php if (mysqli_num_rows($sql_attachments) > 0) { ?>
+                <ul class="list-group list-group-flush">
+                    <?php while ($att = mysqli_fetch_assoc($sql_attachments)) {
+                        $att_id = intval($att['kb_article_attachment_id']);
+                        $att_name = nullable_htmlentities($att['kb_article_attachment_name']);
+                        $att_ref = $att['kb_article_attachment_reference_name'];
+                    ?>
+                    <li class="list-group-item d-flex align-items-center justify-content-between">
+                        <span class="text-truncate mr-2"><i class="fas fa-fw fa-file mr-1"></i><?php echo $att_name; ?></span>
+                        <div class="dropdown dropleft text-center">
+                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                <i class="fas fa-fw fa-ellipsis-v"></i>
+                            </button>
+                            <div class="dropdown-menu">
+                                <a target="_blank" class="dropdown-item" href="../uploads/kb/<?php echo $kb_article_id; ?>/<?php echo $att_ref; ?>">
+                                    <i class="fas fa-fw fa-eye mr-2"></i>View
+                                </a>
+                                <a class="dropdown-item" download="<?php echo $att_name; ?>" href="../uploads/kb/<?php echo $kb_article_id; ?>/<?php echo $att_ref; ?>">
+                                    <i class="fas fa-fw fa-download mr-2"></i>Download
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger confirm-link" href="post.php?delete_kb_article_attachment=<?php echo $att_id; ?>&kb_article_id=<?php echo $kb_article_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>">
+                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                </a>
+                            </div>
+                        </div>
+                    </li>
+                    <?php } ?>
+                </ul>
+                <?php } ?>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-secondary btn-block ajax-modal" data-modal-url="modals/kb_article/kb_article_attachment_add.php?kb_article_id=<?php echo $kb_article_id; ?>">
+                        <i class="fas fa-fw fa-upload mr-2"></i>Upload Attachment
+                    </button>
                 </div>
             </div>
         </div>

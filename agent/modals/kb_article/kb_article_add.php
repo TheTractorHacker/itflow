@@ -5,6 +5,7 @@ require_once '../../../includes/modal_header.php';
 $client_id = intval($_GET['client_id'] ?? 0);
 
 $sql_client_select = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL $access_permission_query ORDER BY client_name ASC");
+$sql_category_select = mysqli_query($mysqli, "SELECT kb_category_id, kb_category_name FROM kb_categories WHERE kb_category_archived_at IS NULL ORDER BY kb_category_name ASC");
 
 ob_start();
 
@@ -31,7 +32,7 @@ ob_start();
         </div>
 
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="form-group">
                     <label>Client</label>
                     <select class="form-control select2" name="client_id">
@@ -47,7 +48,18 @@ ob_start();
                     <small class="form-text text-muted">Central articles appear in every client's knowledge base. Client-specific articles are only visible to that client.</small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>Category</label>
+                    <select class="form-control select2" name="category_id">
+                        <option value="0" selected>Uncategorized</option>
+                        <?php while ($row = mysqli_fetch_assoc($sql_category_select)) { ?>
+                            <option value="<?= intval($row['kb_category_id']) ?>"><?= nullable_htmlentities($row['kb_category_name']) ?></option>
+                        <?php } ?>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4">
                 <div class="form-group">
                     <label>Visible to Client Portal</label>
                     <select class="form-control select2" name="client_visible">

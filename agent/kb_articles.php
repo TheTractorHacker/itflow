@@ -22,15 +22,33 @@ if (isset($_GET['client_id'])) {
 
 enforceUserPermission('module_kb');
 
+if (isset($_GET['filter_category_id']) && $_GET['filter_category_id'] !== '') {
+    $filter_category_id = intval($_GET['filter_category_id']);
+    $kb_category_filter_query = "AND kb_article_category_id = $filter_category_id";
+} else {
+    $filter_category_id = '';
+    $kb_category_filter_query = '';
+}
+
+if ($q) {
+    $q_escaped = mysqli_real_escape_string($mysqli, $q);
+    $kb_search_query = "AND (kb_article_title LIKE '%$q%' OR MATCH(kb_article_content_raw) AGAINST ('$q_escaped'))";
+} else {
+    $kb_search_query = "AND kb_article_title LIKE '%$q%'";
+}
+
 $sql = mysqli_query(
     $mysqli,
-    "SELECT SQL_CALC_FOUND_ROWS kb_articles.*, clients.client_name
+    "SELECT SQL_CALC_FOUND_ROWS kb_articles.*, clients.client_name, kb_categories.kb_category_name
      FROM kb_articles
      LEFT JOIN clients ON clients.client_id = kb_articles.kb_article_client_id
-     WHERE kb_article_title LIKE '%$q%'
+     LEFT JOIN kb_categories ON kb_categories.kb_category_id = kb_articles.kb_article_category_id
+     WHERE 1=1
+     $kb_search_query
      AND kb_article_archived_at IS NULL
      $kb_scope_query
-     ORDER BY $sort $order
+     $kb_category_filter_query
+     ORDER BY kb_category_name IS NULL, kb_category_name ASC, kb_article_title ASC
      LIMIT $record_from, $record_to"
 );
 
@@ -38,6 +56,21 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 if (!isset($client_id)) {
     $sql_client_select = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL $access_permission_query ORDER BY client_name ASC");
+}
+
+$sql_category_filter_select = mysqli_query($mysqli, "SELECT kb_category_id, kb_category_name FROM kb_categories WHERE kb_category_archived_at IS NULL ORDER BY kb_category_name ASC");
+
+// Group articles by category for the card grid
+$kb_groups = [];
+while ($row = mysqli_fetch_assoc($sql)) {
+    $group_name = $row['kb_category_name'] ?? 'Uncategorized';
+    $kb_groups[$group_name][] = $row;
+}
+// "Uncategorized" group always last
+if (isset($kb_groups['Uncategorized'])) {
+    $uncategorized = $kb_groups['Uncategorized'];
+    unset($kb_groups['Uncategorized']);
+    $kb_groups['Uncategorized'] = $uncategorized;
 }
 
 ?>
@@ -48,6 +81,9 @@ if (!isset($client_id)) {
     <div class="card-header py-2">
         <h3 class="card-title mt-2"><i class="fas fa-fw fa-book mr-2"></i>Knowledge Base</h3>
         <div class="card-tools">
+            <button type="button" class="btn btn-secondary ajax-modal" data-modal-url="modals/kb_category/kb_category_manage.php">
+                <i class="fas fa-folder mr-2"></i>Categories
+            </button>
             <button type="button" class="btn btn-primary ajax-modal" data-modal-size="lg" data-modal-url="modals/kb_article/kb_article_add.php<?php if (isset($client_id)) { echo "?client_id=$client_id"; } ?>">
                 <i class="fas fa-plus mr-2"></i>New Article
             </button>
@@ -67,6 +103,19 @@ if (!isset($client_id)) {
                             <button class="btn btn-dark"><i class="fa fa-search"></i></button>
                         </div>
                     </div>
+                </div>
+                <div class="col-auto mb-2">
+                    <select class="form-control select2" name="filter_category_id" onchange="this.form.submit()" data-placeholder="All Categories" style="width: 200px">
+                        <option value="">- All Categories -</option>
+                        <option value="0" <?php if ($filter_category_id === 0) { echo "selected"; } ?>>Uncategorized</option>
+                        <?php
+                        while ($row = mysqli_fetch_assoc($sql_category_filter_select)) {
+                            $select_category_id = intval($row['kb_category_id']);
+                            $select_category_name = nullable_htmlentities($row['kb_category_name']);
+                        ?>
+                            <option value="<?php echo $select_category_id; ?>" <?php if ($filter_category_id === $select_category_id) { echo "selected"; } ?>><?php echo $select_category_name; ?></option>
+                        <?php } ?>
+                    </select>
                 </div>
                 <?php if (!isset($client_id)) { ?>
                     <div class="col-auto mb-2">
@@ -88,85 +137,77 @@ if (!isset($client_id)) {
 
         <hr>
 
-        <div class="table-responsive-sm">
-            <table class="table table-striped table-borderless table-hover">
-                <thead class="text-dark <?php if ($num_rows[0] == 0) { echo "d-none"; } ?>">
-                    <tr>
-                        <th>
-                            <a class="text-secondary" href="?<?php echo $url_query_strings_sort; ?>&sort=kb_article_title&order=<?php echo $disp; ?>">
-                                Title <?php if ($sort == 'kb_article_title') { echo $order_icon; } ?>
-                            </a>
-                        </th>
-                        <th>Client</th>
-                        <th class="text-center">Client Visible</th>
-                        <th>
-                            <a class="text-secondary" href="?<?php echo $url_query_strings_sort; ?>&sort=kb_article_updated_at&order=<?php echo $disp; ?>">
-                                Updated <?php if ($sort == 'kb_article_updated_at') { echo $order_icon; } ?>
-                            </a>
-                        </th>
-                        <th class="text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    while ($row = mysqli_fetch_assoc($sql)) {
-                        $kb_article_id = intval($row['kb_article_id']);
-                        $kb_article_title = nullable_htmlentities($row['kb_article_title']);
-                        $kb_article_client_id = intval($row['kb_article_client_id']);
-                        $kb_article_client_name = nullable_htmlentities($row['client_name']);
-                        $kb_article_client_visible = intval($row['kb_article_client_visible']);
-                        $kb_article_updated_at = $row['kb_article_updated_at'] ?? $row['kb_article_created_at'];
+        <?php if ($num_rows[0] == 0) { ?>
+            <p class="text-secondary text-center py-4">No articles found.</p>
+        <?php } ?>
 
-                        $kb_article_url = "kb_article.php?id=$kb_article_id";
-                        if (isset($client_id)) {
-                            $kb_article_url .= "&client_id=$client_id";
-                        }
-                    ?>
-                        <tr>
-                            <td>
-                                <a class="text-dark" href="<?php echo $kb_article_url; ?>">
-                                    <strong><?php echo $kb_article_title; ?></strong>
-                                </a>
-                            </td>
-                            <td>
-                                <?php if ($kb_article_client_id == 0) { ?>
-                                    <span class="badge badge-info">Central</span>
-                                <?php } else { ?>
-                                    <span class="text-secondary"><?php echo $kb_article_client_name; ?></span>
-                                <?php } ?>
-                            </td>
-                            <td class="text-center">
-                                <?php if ($kb_article_client_visible == 1) { ?>
-                                    <i class="fas fa-fw fa-check text-success" data-toggle="tooltip" title="Visible in client portal"></i>
-                                <?php } else { ?>
-                                    <i class="fas fa-fw fa-times text-muted" data-toggle="tooltip" title="Hidden from client portal"></i>
-                                <?php } ?>
-                            </td>
-                            <td><small class="text-secondary"><?php echo nullable_htmlentities(date('Y-m-d', strtotime($kb_article_updated_at))); ?></small></td>
-                            <td class="text-center">
+        <?php foreach ($kb_groups as $group_name => $articles) { ?>
+            <h5 class="mt-3 mb-3"><i class="fas fa-fw fa-folder text-secondary mr-2"></i><?= nullable_htmlentities($group_name) ?></h5>
+            <div class="row">
+                <?php foreach ($articles as $row) {
+                    $kb_article_id = intval($row['kb_article_id']);
+                    $kb_article_title = nullable_htmlentities($row['kb_article_title']);
+                    $kb_article_client_id = intval($row['kb_article_client_id']);
+                    $kb_article_client_name = nullable_htmlentities($row['client_name']);
+                    $kb_article_client_visible = intval($row['kb_article_client_visible']);
+                    $kb_article_updated_at = $row['kb_article_updated_at'] ?? $row['kb_article_created_at'];
+
+                    $kb_article_preview = strip_tags($row['kb_article_content_raw'] ?? '');
+                    $kb_article_preview = trim(preg_replace('/\s+/', ' ', $kb_article_preview));
+                    if (mb_strlen($kb_article_preview) > 150) {
+                        $kb_article_preview = mb_substr($kb_article_preview, 0, 150) . '...';
+                    }
+
+                    $kb_article_url = "kb_article.php?id=$kb_article_id";
+                    if (isset($client_id)) {
+                        $kb_article_url .= "&client_id=$client_id";
+                    }
+                ?>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <a class="text-dark" href="<?= $kb_article_url ?>"><?= $kb_article_title ?></a>
+                                </h5>
+                                <p class="card-text text-secondary small"><?= nullable_htmlentities($kb_article_preview) ?></p>
+                            </div>
+                            <div class="card-footer d-flex align-items-center justify-content-between bg-white">
+                                <div>
+                                    <?php if ($kb_article_client_id == 0) { ?>
+                                        <span class="badge badge-info">Central</span>
+                                    <?php } else { ?>
+                                        <span class="badge badge-secondary"><?= $kb_article_client_name ?></span>
+                                    <?php } ?>
+                                    <?php if ($kb_article_client_visible == 1) { ?>
+                                        <i class="fas fa-fw fa-check text-success" data-toggle="tooltip" title="Visible in client portal"></i>
+                                    <?php } else { ?>
+                                        <i class="fas fa-fw fa-eye-slash text-muted" data-toggle="tooltip" title="Hidden from client portal"></i>
+                                    <?php } ?>
+                                    <small class="text-secondary ml-1"><?= nullable_htmlentities(date('M j, Y', strtotime($kb_article_updated_at))) ?></small>
+                                </div>
                                 <div class="dropdown dropleft text-center">
                                     <button class="btn btn-secondary btn-sm" data-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
-                                        <a class="dropdown-item" href="<?php echo $kb_article_url; ?>">
+                                        <a class="dropdown-item" href="<?= $kb_article_url ?>">
                                             <i class="fas fa-fw fa-eye mr-2"></i>View
                                         </a>
-                                        <a class="dropdown-item ajax-modal" href="#" data-modal-size="lg" data-modal-url="modals/kb_article/kb_article_edit.php?id=<?php echo $kb_article_id; ?>">
+                                        <a class="dropdown-item ajax-modal" href="#" data-modal-size="lg" data-modal-url="modals/kb_article/kb_article_edit.php?id=<?= $kb_article_id ?>">
                                             <i class="fas fa-fw fa-edit mr-2"></i>Edit
                                         </a>
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_kb_article=<?php echo $kb_article_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>">
+                                        <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_kb_article=<?= $kb_article_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                                             <i class="fas fa-fw fa-trash mr-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>
-                            </td>
-                        </tr>
-                    <?php } ?>
-                </tbody>
-            </table>
-        </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php } ?>
+            </div>
+        <?php } ?>
 
         <?php require_once "../includes/filter_footer.php"; ?>
 

@@ -86,6 +86,7 @@ $(document).ready(function() {
             { name: 'alignment', items: ['alignleft', 'aligncenter', 'alignright', 'alignjustify'] },
             { name: 'indentation', items: ['outdent', 'indent'] },
             { name: 'table', items: ['table'] },
+            { name: 'media', items: ['image'] },
             { name: 'extra', items: ['code', 'fullscreen'] },
             { name: 'ai', items: ['reword', 'undo', 'redo'] }
         ],
@@ -96,6 +97,8 @@ $(document).ready(function() {
         },
         convert_urls: false,
         plugins: 'link image lists table code codesample fullscreen autoresize',
+        images_upload_url: '/agent/kb_article_upload.php',
+        images_upload_credentials: true,
         license_key: 'gpl',
         setup: function(editor) {
             editor.on('init', function() {
