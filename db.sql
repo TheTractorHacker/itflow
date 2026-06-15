@@ -2670,7 +2670,6 @@ INSERT INTO `ticket_saved_views`
   ('On-Site', 'fa-truck', 'onsite=1&status=Open', 1),
   ('Assigned to me', 'fa-user', 'assigned=me&status=Open', 2),
   ('All Unresolved', 'fa-folder-open', 'status=Open', 3),
-  ('My Queue', 'fa-inbox', 'assigned=me&status=Open', 4),
   ('Remote', 'fa-headset', 'onsite=0&status=Open', 5);
 
 --

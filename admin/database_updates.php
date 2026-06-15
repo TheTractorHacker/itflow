@@ -4895,3 +4895,59 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.5'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.5') {
+
+        // UniFi Integration tables
+
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_module_enable_unifi` tinyint(1) NOT NULL DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS `config_unifi_default_integration_id` int(11) DEFAULT NULL
+        ");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `unifi_integrations` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `name` varchar(200) NOT NULL,
+          `host` varchar(255) NOT NULL,
+          `port` int(11) NOT NULL DEFAULT 443,
+          `api_key_enc` text NOT NULL,
+          `verify_ssl` tinyint(1) NOT NULL DEFAULT 1,
+          `enabled` tinyint(1) NOT NULL DEFAULT 1,
+          `created_at` datetime DEFAULT current_timestamp(),
+          `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+          `created_by` int(11) DEFAULT 0,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `unifi_sync_log` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `integration_id` int(11) NOT NULL,
+          `started_at` datetime DEFAULT current_timestamp(),
+          `finished_at` datetime DEFAULT NULL,
+          `status` varchar(20) DEFAULT 'running',
+          `devices_created` int(11) DEFAULT 0,
+          `devices_updated` int(11) DEFAULT 0,
+          `devices_matched` int(11) DEFAULT 0,
+          `devices_skipped` int(11) DEFAULT 0,
+          `wifi_created` int(11) DEFAULT 0,
+          `wifi_updated` int(11) DEFAULT 0,
+          `wifi_skipped` int(11) DEFAULT 0,
+          `networks_created` int(11) DEFAULT 0,
+          `networks_updated` int(11) DEFAULT 0,
+          `networks_skipped` int(11) DEFAULT 0,
+          `errors` text DEFAULT NULL,
+          `triggered_by` int(11) DEFAULT 0,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.6'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.6') {
+
+        // "My Queue" was seeded as an exact duplicate of "Assigned to me"
+        // (same query), which always highlighted both views together
+        mysqli_query($mysqli, "DELETE FROM `ticket_saved_views` WHERE `ticket_saved_view_name` = 'My Queue' AND `ticket_saved_view_query` = 'assigned=me&status=Open' AND `ticket_saved_view_user_id` = 0");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.7'");
+    }

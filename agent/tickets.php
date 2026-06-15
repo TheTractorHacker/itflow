@@ -253,17 +253,14 @@ function ticketSavedViewIsActive($query, $session_user_id) {
     $resolved = ticketSavedViewQueryForUser($query, $session_user_id);
     parse_str($resolved, $view_params);
 
-    // "Default" view has an empty query - only active when no relevant filters are set
-    if (empty($view_params)) {
-        foreach (['status', 'assigned', 'onsite', 'board', 'category', 'priority'] as $key) {
-            if (isset($_GET[$key]) && $_GET[$key] !== '') return false;
-        }
-        return true;
-    }
-
-    foreach ($view_params as $key => $value) {
-        $current = $_GET[$key] ?? null;
-        if ((string)$current !== (string)$value) return false;
+    // Compare every relevant filter key, not just the ones present in the
+    // view's query - otherwise a view like "All Unresolved" (status=Open)
+    // would also light up whenever any other view that also sets
+    // status=Open (e.g. "Assigned to me") is active.
+    foreach (['status', 'assigned', 'onsite', 'board', 'category', 'priority'] as $key) {
+        $current = isset($_GET[$key]) && $_GET[$key] !== '' ? (string)$_GET[$key] : null;
+        $expected = isset($view_params[$key]) && $view_params[$key] !== '' ? (string)$view_params[$key] : null;
+        if ($current !== $expected) return false;
     }
     return true;
 }
