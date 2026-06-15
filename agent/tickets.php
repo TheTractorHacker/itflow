@@ -295,31 +295,60 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
             max-width: 600px;
         }
         .ticket-stat-box {
-            display: block;
-            text-align: center;
-            border-radius: .25rem;
-            padding: .5rem .25rem;
-            background: rgba(0,0,0,.15);
-            color: inherit;
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            text-align: left;
+            border-radius: var(--input-radius);
+            padding: .6rem .85rem;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-left: 4px solid var(--stat-color, var(--color-accent));
+            color: var(--color-text);
+            box-shadow: var(--card-shadow);
+            transition: transform .1s ease-out, box-shadow .1s ease-out;
         }
         .ticket-stat-box:hover {
-            background: rgba(0,0,0,.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px -4px rgba(16,24,40,.18);
             text-decoration: none;
-            color: inherit;
+            color: var(--color-text);
         }
         .ticket-stat-box.active {
-            background: var(--accent, #2563eb);
+            background: var(--stat-color, var(--color-accent));
+            border-color: var(--stat-color, var(--color-accent));
+            color: #fff;
+        }
+        .ticket-stat-box .ticket-stat-icon {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.1rem;
+            height: 2.1rem;
+            border-radius: 50%;
+            font-size: 1rem;
+            background: rgba(var(--stat-color-rgb, var(--color-accent-rgb)), .12);
+            color: var(--stat-color, var(--color-accent));
+        }
+        .ticket-stat-box.active .ticket-stat-icon {
+            background: rgba(255,255,255,.2);
             color: #fff;
         }
         .ticket-stat-box .ticket-stat-value {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 700;
             display: block;
+            line-height: 1.15;
         }
         .ticket-stat-box .ticket-stat-label {
-            font-size: .75rem;
+            font-size: .7rem;
             text-transform: uppercase;
-            opacity: .8;
+            letter-spacing: .03em;
+            color: var(--color-text-muted);
+        }
+        .ticket-stat-box.active .ticket-stat-label {
+            color: rgba(255,255,255,.85);
         }
         .ticket-saved-views .nav-link {
             color: inherit;
@@ -414,20 +443,23 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
     <div class="row mb-3">
         <?php
         $_stats = [
-            ['label' => 'All Tickets',  'value' => $total_tickets_all,           'href' => '?' . $client_url],
-            ['label' => 'Unassigned',   'value' => $total_tickets_unassigned,    'href' => '?' . $client_url . 'assigned=unassigned'],
-            ['label' => 'Unresolved',   'value' => $total_tickets_open,          'href' => '?' . $client_url . 'status=Open'],
-            ['label' => 'Due Today',    'value' => $total_tickets_due_today,     'href' => '?' . $client_url . 'status=Open&due_today=1', 'active' => isset($_GET['due_today'])],
-            ['label' => 'Overdue',      'value' => $total_tickets_overdue,       'href' => '?' . $client_url . 'status=Open&overdue=1', 'active' => isset($_GET['overdue'])],
-            ['label' => 'On-Site Open', 'value' => $total_tickets_onsite_open,   'href' => '?' . $client_url . 'status=Open&onsite=1', 'active' => $onsite_filter === 1],
-            ['label' => 'My Active',    'value' => $user_active_assigned_tickets,'href' => '?' . $client_url . 'status=Open&assigned=' . $session_user_id],
+            ['label' => 'All Tickets',  'value' => $total_tickets_all,           'href' => '?' . $client_url,                                            'icon' => 'fa-list', 'color' => '#64748B', 'rgb' => '100,116,139'],
+            ['label' => 'Unassigned',   'value' => $total_tickets_unassigned,    'href' => '?' . $client_url . 'assigned=unassigned',                    'icon' => 'fa-user-slash', 'color' => '#F59E0B', 'rgb' => '245,158,11'],
+            ['label' => 'Unresolved',   'value' => $total_tickets_open,          'href' => '?' . $client_url . 'status=Open',                            'icon' => 'fa-exclamation-circle', 'color' => '#3B82F6', 'rgb' => '59,130,246'],
+            ['label' => 'Due Today',    'value' => $total_tickets_due_today,     'href' => '?' . $client_url . 'status=Open&due_today=1', 'active' => isset($_GET['due_today']), 'icon' => 'fa-clock', 'color' => '#D97706', 'rgb' => '217,119,6'],
+            ['label' => 'Overdue',      'value' => $total_tickets_overdue,       'href' => '?' . $client_url . 'status=Open&overdue=1', 'active' => isset($_GET['overdue']), 'icon' => 'fa-fire', 'color' => '#EF4444', 'rgb' => '239,68,68'],
+            ['label' => 'On-Site Open', 'value' => $total_tickets_onsite_open,   'href' => '?' . $client_url . 'status=Open&onsite=1', 'active' => $onsite_filter === 1, 'icon' => 'fa-map-marker-alt', 'color' => '#8B5CF6', 'rgb' => '139,92,246'],
+            ['label' => 'My Active',    'value' => $user_active_assigned_tickets,'href' => '?' . $client_url . 'status=Open&assigned=' . $session_user_id, 'icon' => 'fa-user-check', 'color' => 'var(--color-accent)', 'rgb' => 'var(--color-accent-rgb)'],
         ];
         foreach ($_stats as $_stat) {
         ?>
         <div class="col">
-            <a class="ticket-stat-box <?= !empty($_stat['active']) ? 'active' : '' ?>" href="<?= $_stat['href'] ?>">
-                <span class="ticket-stat-value"><?= $_stat['value'] ?></span>
-                <span class="ticket-stat-label"><?= $_stat['label'] ?></span>
+            <a class="ticket-stat-box <?= !empty($_stat['active']) ? 'active' : '' ?>" href="<?= $_stat['href'] ?>" style="--stat-color: <?= $_stat['color'] ?>; --stat-color-rgb: <?= $_stat['rgb'] ?>;">
+                <span class="ticket-stat-icon"><i class="fas fa-fw <?= $_stat['icon'] ?>"></i></span>
+                <span>
+                    <span class="ticket-stat-value"><?= $_stat['value'] ?></span>
+                    <span class="ticket-stat-label"><?= $_stat['label'] ?></span>
+                </span>
             </a>
         </div>
         <?php } ?>
@@ -467,6 +499,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                 <?php } ?>
                 <input type="hidden" name="view" value="<?= nullable_htmlentities($_GET['view'] ?? 'list') ?>">
 
+                <div class="filter-toolbar">
                 <div class="row align-items-center filter-row-nowrap">
                     <div class="col-auto mb-2">
                         <select class="form-control select2" name="board" onchange="this.form.submit()" data-placeholder="Board" style="width:150px;">
@@ -538,6 +571,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                     <div class="col-auto mb-2">
                         <button class="btn btn-outline-dark" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-sliders-h mr-1"></i>More Filters</button>
                     </div>
+                </div>
                 </div>
 
                 <div class="row filter-row-nowrap">

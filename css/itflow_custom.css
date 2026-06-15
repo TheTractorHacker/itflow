@@ -142,6 +142,21 @@ body.dark-mode {
 .ticket-filter-bar .select2-selection__arrow,
 .filter-bar .select2-selection__arrow {
     height: calc(1.5em + .75rem + 2px) !important;
+    top: 0 !important;
+}
+
+.ticket-filter-bar .filter-row-nowrap,
+.filter-bar .filter-row-nowrap {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: .5rem;
+}
+
+.ticket-filter-bar .filter-row-nowrap > [class*="col-"],
+.filter-bar .filter-row-nowrap > [class*="col-"] {
+    flex: 0 0 auto;
+    width: auto;
 }
 
 /* Generic pill badge polish (status/priority/category badges) */
@@ -150,6 +165,21 @@ body.dark-mode {
     padding: .35em .9em;
     font-size: .8rem;
     border-radius: 50rem;
+}
+
+/* Status select styled as a colored pill matching the selected status */
+.status-pill-select {
+    border: none;
+    border-radius: 50rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+/* Keep the dropdown's option list normal-colored - only the closed pill should
+   take on the status color */
+.status-pill-select option {
+    background-color: #fff;
+    color: #212529;
 }
 
 /* Colored priority dot (used in filter pill + ticket detail field grid) */
@@ -222,7 +252,8 @@ body.dark-mode {
 }
 
 .main-header.navbar {
-    background-color: var(--color-accent) !important;
+    /* Match the dark sidebar (.sidebar-dark-*, always #343a40 regardless of theme/dark-mode) */
+    background-color: #343a40 !important;
 }
 
 .card:not(.card-outline) {
@@ -235,8 +266,18 @@ body.dark-mode {
     border-radius: var(--card-radius);
 }
 
-.card-header {
+.card-header,
+.card-dark .card-header,
+.card.card-dark {
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
     border-bottom: 1px solid var(--color-border-soft);
+    border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+}
+
+.card-dark .card-title,
+.card-dark .btn-tool {
+    color: var(--color-text) !important;
 }
 
 .nav-tabs .nav-link.active {
@@ -338,6 +379,50 @@ a:hover {
     border-color: var(--color-accent);
 }
 
+/* Bootstrap hardcodes .text-dark to a fixed dark gray, which goes low-contrast
+   on dark backgrounds. Remap to the theme text color (black in light mode,
+   near-white in dark mode) so table headers/links stay readable in both. */
+.text-dark {
+    color: var(--color-text) !important;
+}
+
+.btn-outline-dark {
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+
+.btn-outline-dark:hover,
+.btn-outline-dark:focus,
+.btn-outline-dark:not(:disabled):not(.disabled):active,
+.btn-outline-dark:not(:disabled):not(.disabled).active {
+    color: #fff;
+    background-color: var(--color-text-muted);
+    border-color: var(--color-text-muted);
+}
+
+.btn-outline-secondary {
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+    background-color: var(--color-surface);
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus,
+.btn-outline-secondary:not(:disabled):not(.disabled):active {
+    color: var(--color-accent-hover);
+    background-color: var(--color-accent-soft);
+    border-color: var(--color-accent);
+}
+
+/* Filter toolbar wrapper for ticket/KB list filter bars */
+.filter-toolbar {
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--card-radius);
+    padding: .85rem 1rem .35rem;
+    margin-bottom: 1rem;
+}
+
 /* ===== alga-psa inspired visual theme (.ticket-alga-theme is an alias kept for the ticket page) ===== */
 
 .ticket-alga-theme,
@@ -353,25 +438,6 @@ a:hover {
     border-radius: var(--card-radius);
     box-shadow: var(--card-shadow);
     margin-bottom: 1rem;
-}
-
-.ticket-alga-theme .card-header,
-.ticket-alga-theme .card-dark .card-header,
-.ticket-alga-theme .card.card-dark,
-.alga-theme .card-header,
-.alga-theme .card-dark .card-header,
-.alga-theme .card.card-dark {
-    background: var(--color-surface) !important;
-    color: var(--color-text) !important;
-    border-bottom: 1px solid var(--color-border-soft);
-    border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
-}
-
-.ticket-alga-theme .card-dark .card-title,
-.ticket-alga-theme .card-dark .btn-tool,
-.alga-theme .card-dark .card-title,
-.alga-theme .card-dark .btn-tool {
-    color: var(--color-text) !important;
 }
 
 .ticket-alga-theme .form-control,
@@ -447,14 +513,3 @@ a:hover {
     background: rgba(var(--color-accent-rgb), .05);
 }
 
-.ticket-alga-theme .time-entry-digital,
-.alga-theme .time-entry-digital {
-    font-family: monospace;
-    background: rgba(var(--color-accent-rgb), .12);
-    border-radius: var(--input-radius);
-    padding: .75rem;
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--color-text);
-}
