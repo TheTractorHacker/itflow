@@ -171,6 +171,11 @@ switch ($resource) {
     case 'products':    require __DIR__ . '/products.php'; break;
     case 'search':      require __DIR__ . '/search.php';   break;
     case 'reports':     require __DIR__ . '/reports.php';  break;
+    case 'kb':          require __DIR__ . '/kb.php';        break;
+    case 'ticket-views':
+    case 'ticket_views':
+        require __DIR__ . '/ticket_views.php';
+        break;
     case 'me':          require __DIR__ . '/me.php';       break;
     case 'appointments': require __DIR__ . '/appointments.php'; break;
     case 'notifications': require __DIR__ . '/notifications.php'; break;

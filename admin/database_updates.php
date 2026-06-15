@@ -4951,3 +4951,39 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.7'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.7') {
+
+        // UniFi site -> client mapping (lets an admin override the
+        // automatic site-name-to-client-name match)
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `unifi_site_mappings` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `integration_id` int(11) NOT NULL,
+          `unifi_site_id` varchar(100) NOT NULL,
+          `unifi_site_name` varchar(200) NOT NULL,
+          `client_id` int(11) DEFAULT NULL,
+          `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+          PRIMARY KEY (`id`),
+          UNIQUE KEY `integration_site` (`integration_id`,`unifi_site_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.8'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.8') {
+
+        // UnifiedPush endpoint registrations for mobile app push notifications
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `push_endpoints` (
+          `push_endpoint_id` int(11) NOT NULL AUTO_INCREMENT,
+          `push_endpoint_token_id` int(11) NOT NULL,
+          `push_endpoint_url` varchar(1024) NOT NULL,
+          `push_endpoint_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+          `push_endpoint_last_failed_at` datetime DEFAULT NULL,
+          PRIMARY KEY (`push_endpoint_id`),
+          KEY `push_endpoint_token_id` (`push_endpoint_token_id`),
+          CONSTRAINT `push_endpoints_ibfk_1` FOREIGN KEY (`push_endpoint_token_id`) REFERENCES `api_tokens` (`token_id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.9'");
+    }

@@ -254,7 +254,7 @@
                 <?php } ?>
 
                 <!-- MAINTENANCE Section -->
-                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['cron.php', 'mail_queue.php', 'audit_log.php', 'app_log.php', 'backup.php', 'debug.php', 'update.php']) ? 'menu-open' : ''); ?>">
+                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['cron.php', 'mail_queue.php', 'audit_log.php', 'app_log.php', 'backup.php', 'debug.php', 'update.php', 'credential_restore.php']) ? 'menu-open' : ''); ?>">
                     <a href="#" class="nav-link">
                         <i class="nav-icon fas fa-tools"></i>
                         <p>
@@ -294,6 +294,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="/admin/credential_restore.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'credential_restore.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-key"></i>
+                                <p>Credential Restore</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="/admin/debug.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'debug.php' ? 'active' : ''); ?>">
                                 <i class="nav-icon fas fa-bug"></i>
                                 <p>Debug</p>
@@ -309,7 +315,7 @@
                 </li>
 
                 <!-- SETTINGS Section -->
-                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['settings_company.php', 'settings_localization.php', 'settings_theme.php', 'settings_security.php', 'settings_mail.php', 'settings_notification.php', 'settings_default.php', 'settings_invoice.php', 'settings_quote.php', 'settings_online_payment.php', 'settings_online_payment_clients.php', 'settings_project.php', 'settings_ticket.php', 'settings_ai.php', 'identity_provider.php', 'settings_telemetry.php', 'settings_module.php', 'settings_calendar_sync.php', 'settings_webhooks.php', 'settings_comet.php', 'comet_status.php', 'settings_rmm.php']) ? 'menu-open' : ''); ?>">
+                <li class="nav-item has-treeview mt-2 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['settings_company.php', 'settings_localization.php', 'settings_theme.php', 'settings_security.php', 'settings_mail.php', 'settings_notification.php', 'settings_default.php', 'settings_invoice.php', 'settings_quote.php', 'settings_online_payment.php', 'settings_online_payment_clients.php', 'settings_project.php', 'settings_ticket.php', 'settings_ai.php', 'identity_provider.php', 'settings_telemetry.php', 'settings_module.php', 'settings_calendar_sync.php', 'settings_webhooks.php', 'settings_comet.php', 'comet_status.php', 'settings_rmm.php', 'settings_unifi.php']) ? 'menu-open' : ''); ?>">
                     <a href="#" class="nav-link">
                         <i class="nav-icon fas fa-cog"></i>
                         <p>
@@ -431,6 +437,12 @@
                             <a href="/admin/settings_rmm.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'settings_rmm.php' ? 'active' : ''); ?>">
                                 <i class="nav-icon fas fa-desktop"></i>
                                 <p>RMM Integration</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/settings_unifi.php" class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'settings_unifi.php' ? 'active' : ''); ?>">
+                                <i class="nav-icon fas fa-wifi"></i>
+                                <p>UniFi Integration</p>
                             </a>
                         </li>
                     </ul>

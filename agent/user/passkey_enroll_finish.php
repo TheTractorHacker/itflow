@@ -61,6 +61,21 @@ try {
 
     logAction("Passkey", "Register", "$session_name registered passkey $name", 0, $uid);
 
+    // Seed the passkey-stored encryption key from this (password-authenticated)
+    // session's true master key, so the first passkey login never needs to self-heal.
+    if (!empty($_SESSION['user_encryption_session_ciphertext']) && isset($_COOKIE['user_encryption_session_key'])) {
+        $true_master_key = openssl_decrypt(
+            $_SESSION['user_encryption_session_ciphertext'],
+            'aes-128-cbc',
+            $_COOKIE['user_encryption_session_key'],
+            0,
+            $_SESSION['user_encryption_session_iv']
+        );
+        if (!empty($true_master_key)) {
+            storePasskeyEncKey($mysqli, $session_user_id, $true_master_key, $config_https_only, PASSKEY_ENC_KEY_LIFETIME);
+        }
+    }
+
     echo json_encode(['ok' => true]);
 
 } catch (Throwable $e) {

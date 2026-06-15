@@ -76,6 +76,8 @@ if ($method === 'GET' && $id === null) {
     if ($onsite !== -1)       $where[] = "t.ticket_onsite = $onsite";
     if ($contact_id)          $where[] = "t.ticket_contact_id = $contact_id";
     if ($client_id)           $where[] = "t.ticket_client_id = $client_id";
+    if (isset($_GET['overdue']))   $where[] = "t.ticket_due_at IS NOT NULL AND t.ticket_due_at < NOW() AND t.ticket_resolved_at IS NULL";
+    if (isset($_GET['due_today'])) $where[] = "t.ticket_due_at IS NOT NULL AND DATE(t.ticket_due_at) = CURDATE() AND t.ticket_resolved_at IS NULL";
 
     $where_sql = implode(' AND ', $where);
 
@@ -234,6 +236,35 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     );
     $reply_id = mysqli_insert_id($mysqli);
     mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
+
+    // Notify the relevant party about the new reply
+    $ticket_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT ticket_prefix, ticket_number, ticket_subject, ticket_assigned_to, ticket_created_by, ticket_client_id
+         FROM tickets WHERE ticket_id = $id LIMIT 1"));
+    if ($ticket_row) {
+        $t_prefix    = $ticket_row['ticket_prefix'];
+        $t_number    = $ticket_row['ticket_number'];
+        $t_subject   = $ticket_row['ticket_subject'];
+        $t_assigned  = intval($ticket_row['ticket_assigned_to']);
+        $t_created_by = intval($ticket_row['ticket_created_by']);
+        $t_client_id = intval($ticket_row['ticket_client_id']);
+        $t_client_uri = $t_client_id ? "&client_id=$t_client_id" : '';
+        $t_action = "/agent/ticket.php?ticket_id=$id$t_client_uri";
+
+        if ($type === 'Client') {
+            // Client/contact replied - notify the assigned agent
+            if ($t_assigned != 0) {
+                notifyUser($t_assigned, 'Ticket', "New reply on Ticket $t_prefix$t_number - $t_subject", $t_action, $t_client_id, $id);
+            }
+        } else {
+            // Agent replied - notify the other party (assignee or creator) if different
+            if ($t_assigned != 0 && $t_assigned != $uid) {
+                notifyUser($t_assigned, 'Ticket', "$session_name replied to Ticket $t_prefix$t_number - $t_subject that is assigned to you", $t_action, $t_client_id, $id);
+            } elseif ($t_created_by != 0 && $t_created_by != $uid) {
+                notifyUser($t_created_by, 'Ticket', "$session_name replied to Ticket $t_prefix$t_number - $t_subject that you opened", $t_action, $t_client_id, $id);
+            }
+        }
+    }
 
     publishTicketEvent($id, 'reply', ['reply_id' => $reply_id, 'reply_type' => $type, 'by' => $session_name ?? 'API', 'by_type' => $type === 'Client' ? 'contact' : 'agent']);
 
@@ -416,6 +447,13 @@ if ($method === 'POST' && $id === null) {
          VALUES ('$subject', '$details', $client, $contact, '$priority', $status, $assigned, $uid, 'API', $next_num, $category, $asset_id, NOW(), NOW())"
     );
     $new_id = mysqli_insert_id($mysqli);
+
+    // Notify the assigned agent of the new ticket
+    if ($assigned != 0 && $assigned != $uid) {
+        global $config_ticket_prefix;
+        $client_uri = $client ? "&client_id=$client" : '';
+        notifyUser($assigned, 'Ticket', "New ticket {$config_ticket_prefix}$next_num - $subject has been assigned to you", "/agent/ticket.php?ticket_id=$new_id$client_uri", $client, $new_id);
+    }
 
     $response = ['id' => $new_id, 'number' => $next_num];
     $attachments = api_save_ticket_attachments($mysqli, $new_id, null, $DOCUMENT_ROOT);

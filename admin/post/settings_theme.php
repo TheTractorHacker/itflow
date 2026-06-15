@@ -10,7 +10,7 @@ if (isset($_POST['edit_theme_settings'])) {
 
     mysqli_query($mysqli,"UPDATE settings SET config_theme = '$theme' WHERE company_id = 1");
 
-    logAction("Settings", "Edit", "$session_name edited theme settings $dark_mode");
+    logAction("Settings", "Edit", "$session_name edited theme settings to $theme");
 
     flash_alert("Changed theme to <strong>$theme</strong>");
 

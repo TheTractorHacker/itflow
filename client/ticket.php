@@ -193,7 +193,27 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
             </div>
         <?php } ?>
 
-        <?php if ($config_module_enable_live_chat) { ?>
+        <?php if ($config_module_enable_live_chat) {
+            $ticket_chat_history = [];
+            $sql_ticket_chat_history = mysqli_query($mysqli, "SELECT tcm.id, tcm.sender_type, tcm.sender_id, tcm.message, tcm.created_at,
+                COALESCE(u.user_name, c.contact_name) AS sender_name
+                FROM ticket_chat_messages tcm
+                LEFT JOIN users u ON tcm.sender_type = 'agent' AND u.user_id = tcm.sender_id
+                LEFT JOIN contacts c ON tcm.sender_type = 'contact' AND c.contact_id = tcm.sender_id
+                WHERE tcm.ticket_id = $ticket_id
+                ORDER BY tcm.id ASC
+                LIMIT 100");
+            while ($row = mysqli_fetch_assoc($sql_ticket_chat_history)) {
+                $ticket_chat_history[] = [
+                    'chat_id' => intval($row['id']),
+                    'sender_type' => $row['sender_type'],
+                    'sender_id' => intval($row['sender_id']),
+                    'sender_name' => $row['sender_name'],
+                    'message' => $row['message'],
+                    'created_at' => $row['created_at'],
+                ];
+            }
+        ?>
         <!-- Live Chat card -->
         <div class="card">
             <div class="card-header py-2">
@@ -207,6 +227,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
                 </form>
             </div>
         </div>
+        <script>window.__ticketChatHistory = <?= json_encode($ticket_chat_history, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;</script>
         <?php } ?>
 
         <hr>

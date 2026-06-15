@@ -1586,11 +1586,39 @@ if (!empty($automation_rules)) {
 
 /*
  * ###############################################################################################################
+ *  RMM ALERT SYNC (Syncro-Beta)
+ * ###############################################################################################################
+ */
+
+$config_module_enable_rmm = intval($settings_row['config_module_enable_rmm'] ?? 0);
+
+if ($config_module_enable_rmm) {
+    require_once dirname(__DIR__) . '/includes/rmm_client_factory.php';
+    require_once dirname(__DIR__) . '/includes/class_rmm_asset_mapper.php';
+
+    $sql_rmm_integrations = mysqli_query($mysqli, "SELECT id, name FROM rmm_integrations WHERE enabled=1");
+    while ($rmm_intg = mysqli_fetch_assoc($sql_rmm_integrations)) {
+        $rmm_intg_id = intval($rmm_intg['id']);
+        try {
+            $rmm_client  = getRmmClient($rmm_intg_id);
+            $rmm_mapper  = new RmmAssetMapper($mysqli, $rmm_intg_id, 0, $rmm_client);
+            $alert_stats = $rmm_mapper->syncAlerts();
+
+            if ($alert_stats['created'] > 0 || $alert_stats['resolved'] > 0) {
+                logApp("Cron", "info", "RMM alerts synced for '{$rmm_intg['name']}': {$alert_stats['created']} new, {$alert_stats['resolved']} resolved");
+            }
+        } catch (RuntimeException $e) {
+            logApp("Cron", "error", "RMM alert sync failed for '{$rmm_intg['name']}': " . $e->getMessage());
+        }
+    }
+}
+
+/*
+ * ###############################################################################################################
  *  RMM ALERT AUTO-TICKETING (Syncro-Beta)
  * ###############################################################################################################
  */
 
-$config_module_enable_rmm          = intval($settings_row['config_module_enable_rmm'] ?? 0);
 $config_rmm_auto_ticket_severities = sanitizeInput($settings_row['config_rmm_auto_ticket_severities'] ?? '');
 
 if ($config_module_enable_rmm && !empty($config_rmm_auto_ticket_severities)) {

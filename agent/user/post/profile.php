@@ -149,8 +149,9 @@ if (isset($_POST['edit_your_user_password'])) {
         $mail = addToMailQueue($data);
     }
 
+    $plain_new_password = $new_password;
     $new_password = password_hash($new_password, PASSWORD_DEFAULT);
-    $user_specific_encryption_ciphertext = encryptUserSpecificKey($_POST['new_password']);
+    $user_specific_encryption_ciphertext = encryptUserSpecificKey($plain_new_password);
     mysqli_query($mysqli,"UPDATE users SET user_password = '$new_password', user_specific_encryption_ciphertext = '$user_specific_encryption_ciphertext' WHERE user_id = $session_user_id");
 
     logAction("User Account", "Edit", "$session_name changed their password");

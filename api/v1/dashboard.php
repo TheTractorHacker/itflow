@@ -22,6 +22,15 @@ $overdue = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT COUNT(*) AS c FROM tickets
      WHERE ticket_due_at < NOW() AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL"))['c'];
 
+$due_today = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT COUNT(*) AS c FROM tickets
+     WHERE ticket_due_at IS NOT NULL AND DATE(ticket_due_at) = CURDATE()
+     AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL"))['c'];
+
+$onsite_open = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT COUNT(*) AS c FROM tickets
+     WHERE ticket_onsite = 1 AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL"))['c'];
+
 // My queue - recent open tickets assigned to me
 $queue = [];
 $sql = mysqli_query($mysqli,
@@ -50,9 +59,11 @@ while ($row = mysqli_fetch_assoc($sql)) {
 }
 
 api_response(200, [
-    'my_open'    => intval($my_open),
-    'all_open'   => intval($all_open),
-    'unread'     => intval($unread),
-    'overdue'    => intval($overdue),
-    'queue'      => $queue,
+    'my_open'     => intval($my_open),
+    'all_open'    => intval($all_open),
+    'unread'      => intval($unread),
+    'overdue'     => intval($overdue),
+    'due_today'   => intval($due_today),
+    'onsite_open' => intval($onsite_open),
+    'queue'       => $queue,
 ]);

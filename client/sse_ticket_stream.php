@@ -22,4 +22,9 @@ if (!$ticket_id || !$row || !($session_contact_id == $row['ticket_contact_id'] |
     exit;
 }
 
+// Release the session file lock before entering the long-lived SSE loop below -
+// otherwise every other request from this browser (other tabs, navigation) blocks
+// on session_start() for up to $max_runtime seconds while this connection is open.
+session_write_close();
+
 require '../includes/sse_ticket_stream.php';

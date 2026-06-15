@@ -1,7 +1,55 @@
 <?php
 require_once "includes/inc_all_admin.php";
 
+$vault_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_vault_canonical_key, config_vault_canonical_key_set_at FROM settings WHERE company_id = 1"));
+$vault_canonical_key_set = !empty($vault_row['config_vault_canonical_key']);
+$vault_canonical_key_set_at = $vault_row['config_vault_canonical_key_set_at'] ?? null;
+
+$vault_unsynced_users = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS c FROM users WHERE user_status = 1 AND (user_specific_encryption_ciphertext IS NULL OR user_specific_encryption_ciphertext = '')"))['c']);
+
 ?>
+
+<div class="card card-dark">
+    <div class="card-header py-3">
+        <h3 class="card-title"><i class="fas fa-fw fa-key mr-2"></i>Vault Encryption</h3>
+    </div>
+    <div class="card-body">
+
+        <p class="text-muted">
+            The credential vault is protected by a single shared encryption key. A canonical copy of
+            this key is stored here (encrypted) so that user accounts which lose their personal copy
+            (e.g. an archived/reactivated user) can automatically re-sync to the correct key on their
+            next login, instead of being issued a new, incompatible one.
+        </p>
+
+        <?php if ($vault_canonical_key_set) { ?>
+        <p>
+            <i class="fas fa-fw fa-check-circle text-success mr-1"></i>
+            Canonical vault key established<?php if ($vault_canonical_key_set_at) { ?> on <?php echo nullable_htmlentities($vault_canonical_key_set_at); ?><?php } ?>.
+        </p>
+        <?php } else { ?>
+        <p>
+            <i class="fas fa-fw fa-exclamation-circle text-warning mr-1"></i>
+            No canonical vault key has been established yet.
+        </p>
+        <?php } ?>
+
+        <?php if ($vault_unsynced_users > 0) { ?>
+        <p class="text-muted">
+            <?php echo $vault_unsynced_users; ?> active user(s) currently have no vault key of their own
+            and will automatically re-sync to the canonical key on their next login.
+        </p>
+        <?php } ?>
+
+        <form action="post.php" method="post" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
+            <button type="submit" name="establish_canonical_vault_key" class="btn btn-secondary" onclick="return confirm('This will (re)establish the canonical vault key from your current session. Continue?');">
+                <i class="fas fa-key mr-2"></i><?php echo $vault_canonical_key_set ? "Re-establish from my session" : "Establish from my session"; ?>
+            </button>
+        </form>
+
+    </div>
+</div>
 
 <div class="card card-dark">
     <div class="card-header py-3">

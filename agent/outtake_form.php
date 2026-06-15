@@ -76,18 +76,12 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
                 <div class="mt-1" style="font-size:12px;word-break:break-all;color:#856404;"><?= $sign_url ?></div>
                 <?php } ?>
             </div>
-            <?php if ($ot_token) { ?>
-            <div class="ml-3 mt-2 mt-md-0 d-flex" style="gap:8px;">
-                <button type="button" class="btn btn-success mr-2"
-                    onclick="window.open('<?= $sign_url ?>', '_blank', 'noopener,noreferrer')" title="Open signing page now for customer to sign in-person">
+            <div class="ml-3 mt-2 mt-md-0">
+                <button type="button" class="btn btn-success" title="Sign now in-person"
+                    onclick="openOuttakeSignModal(<?= $outtake_id ?>, <?= $ticket_id ?>, <?= $client_id ?: 0 ?>)">
                     <i class="fas fa-pen-nib mr-1"></i>Sign In-Person
                 </button>
-                <button type="button" class="btn btn-outline-secondary"
-                    onclick="navigator.clipboard.writeText('<?= $sign_url ?>').then(function(){alert('Link copied!');})">
-                    <i class="fas fa-copy mr-1"></i>Copy Link
-                </button>
             </div>
-            <?php } ?>
         </div>
         <?php } ?>
 
@@ -141,3 +135,7 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
 </div>
 
 <?php require_once "../includes/footer.php"; ?>
+
+<!-- Outtake form creation + in-person signing -->
+<script src="/js/signature_pad.js"></script>
+<script src="/js/outtake.js"></script>

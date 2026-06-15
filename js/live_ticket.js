@@ -56,6 +56,7 @@
         }
         if (statusSelect) {
             statusSelect.value = data.status_id;
+            statusSelect.style.backgroundColor = data.status_color;
         }
     }
 
@@ -125,6 +126,11 @@
             }
         };
     }
+
+    (window.__ticketChatHistory || []).forEach(function (data) {
+        var isMine = String(data.sender_id) === String(userId) && data.sender_type === userType;
+        appendChatMessage(data, isMine);
+    });
 
     connect();
 

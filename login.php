@@ -453,18 +453,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
                                 $site_encryption_master_key = decryptUserSpecificKey($user_encryption_ciphertext, $password);
                             }
 
-                            // Self-heal: ciphertext missing, or no longer decryptable with the
-                            // current password (e.g. password was changed without an active
-                            // encryption session). Generate a fresh master key/ciphertext so
-                            // credential encryption works going forward.
-                            if (empty($site_encryption_master_key)) {
+                            // The password-wrapped ciphertext exists but didn't yield a
+                            // usable master key (decrypt failed, or - as with a known
+                            // corruption pattern - succeeded but unwrapped to ''). Try to
+                            // recover the real master key from the passkey-wrapped copy and
+                            // re-wrap it under this (verified-correct) password, repairing
+                            // user_specific_encryption_ciphertext in place. Existing
+                            // credentials stay readable since they're encrypted under this
+                            // same recovered key.
+                            if (empty($site_encryption_master_key) && !empty($user_encryption_ciphertext)) {
+                                $recovered_key = recoverMasterKeyFromPasskeyEnc($selectedRow);
+                                if (!empty($recovered_key)) {
+                                    $site_encryption_master_key = $recovered_key;
+                                    repairUserSpecificKeyWithKnownKey($mysqli, $user_id, $password, $recovered_key);
+                                }
+                            }
+
+                            // Self-heal only when this account has no vault at all yet.
+                            // If a ciphertext exists but doesn't decrypt with the current
+                            // password, leave it alone - regenerating it here would orphan
+                            // every existing credential encrypted under the real master key.
+                            if (empty($site_encryption_master_key) && empty($user_encryption_ciphertext)) {
                                 $site_encryption_master_key = repairUserSpecificKey($mysqli, $user_id, $password);
                             }
                         }
 
                         if (!empty($site_encryption_master_key)) {
                             generateUserSessionKey($site_encryption_master_key);
-                            storePasskeyEncKey($mysqli, $user_id, $site_encryption_master_key, $config_https_only, $_SESSION['session_lifetime_seconds'] ?? 28800);
+                            storePasskeyEncKey($mysqli, $user_id, $site_encryption_master_key, $config_https_only, PASSKEY_ENC_KEY_LIFETIME);
                         }
 
                         // NOW safe to clear pending sessions AFTER we used them
@@ -492,9 +508,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
                             if ($sess && array_key_exists('agent_master_key', $sess)) {
                                 $agent_master_key = $sess['agent_master_key'];
                             }
+                        } elseif ($is_mfa_step) {
+                            // MFA code retry: no password in this request - keep whatever
+                            // Step 1 already computed instead of recomputing (and possibly
+                            // self-healing) with an empty password, which would generate a
+                            // brand-new master key wrapped under an empty-string "password"
+                            // and orphan every existing credential.
+                            $sess = $pending_mfa ?? ($_SESSION['pending_mfa_login'] ?? null);
+                            if ($sess && array_key_exists('agent_master_key', $sess)) {
+                                $agent_master_key = $sess['agent_master_key'];
+                            }
                         } else {
                             if (!empty($user_encryption_ciphertext)) {
                                 $agent_master_key = decryptUserSpecificKey($user_encryption_ciphertext, $password);
+                            }
+
+                            // See matching branch above: recover the real master key from
+                            // the passkey-wrapped copy and repair
+                            // user_specific_encryption_ciphertext in place if the
+                            // password-wrapped copy didn't yield one.
+                            if (empty($agent_master_key) && !empty($user_encryption_ciphertext)) {
+                                $recovered_key = recoverMasterKeyFromPasskeyEnc($selectedRow);
+                                if (!empty($recovered_key)) {
+                                    $agent_master_key = $recovered_key;
+                                    repairUserSpecificKeyWithKnownKey($mysqli, $user_id, $password, $recovered_key);
+                                }
+                            }
+
+                            // Self-heal only when this account has no vault at all yet.
+                            // If a ciphertext exists but doesn't decrypt with the current
+                            // password, leave it alone - regenerating it here would orphan
+                            // every existing credential encrypted under the real master key.
+                            if (empty($agent_master_key) && empty($user_encryption_ciphertext)) {
+                                $agent_master_key = repairUserSpecificKey($mysqli, $user_id, $password);
                             }
                         }
 

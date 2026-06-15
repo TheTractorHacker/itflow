@@ -73,17 +73,22 @@ if ($action === 'sync') {
         $stats  = $mapper->syncAgents($agents);
         $mapper->finishSyncLog($log_id, $stats);
 
+        $alert_stats = $mapper->syncAlerts();
+
         logAction('RMM', 'Import',
-            "$session_name synced RMM assets: {$stats['created']} created, {$stats['updated']} updated, {$stats['matched']} matched"
+            "$session_name synced RMM assets: {$stats['created']} created, {$stats['updated']} updated, {$stats['matched']} matched" .
+            "; alerts: {$alert_stats['created']} new, {$alert_stats['resolved']} resolved"
         );
 
         echo json_encode([
-            'success'  => true,
-            'created'  => $stats['created'],
-            'updated'  => $stats['updated'],
-            'matched'  => $stats['matched'],
-            'skipped'  => $stats['skipped'],
-            'errors'   => $stats['errors'],
+            'success'         => true,
+            'created'         => $stats['created'],
+            'updated'         => $stats['updated'],
+            'matched'         => $stats['matched'],
+            'skipped'         => $stats['skipped'],
+            'errors'          => $stats['errors'],
+            'alerts_created'  => $alert_stats['created'],
+            'alerts_resolved' => $alert_stats['resolved'],
         ]);
     } catch (RuntimeException $e) {
         if (isset($log_id)) {

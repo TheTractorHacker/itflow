@@ -125,7 +125,6 @@ try {
     $passkey_cookie_key = $_COOKIE['user_passkey_enc_key'] ?? null;
     $bootstrap_key      = $userRow['user_passkey_bootstrap_key'] ?? null;
     $active_enc_key     = $passkey_cookie_key ?? $bootstrap_key;
-    $is_bootstrap       = empty($passkey_cookie_key) && !empty($bootstrap_key);
 
     $master_key = null;
     if ($active_enc_key && !empty($userRow['user_passkey_enc_ciphertext'])) {
@@ -133,17 +132,28 @@ try {
         $master_key = openssl_decrypt($userRow['user_passkey_enc_ciphertext'], 'aes-128-cbc', $active_enc_key, 0, $pk_iv);
     }
 
-    // Self-heal: no usable passkey-stored master key (e.g. never set up, or this
-    // account's encryption was never bootstrapped). Generate a fresh one so
-    // credential encryption works for passkey-only logins too. A later password
-    // login will resync user_specific_encryption_ciphertext to match.
-    if (empty($master_key)) {
-        $master_key = randomString();
+    if (empty($master_key) && empty($userRow['user_specific_encryption_ciphertext'])) {
+        // No password-derived master key exists yet for this user (e.g. an
+        // archived/reactivated account). Sync this passkey-only session to the
+        // canonical vault key if one has been established (Admin Settings >
+        // Security). We don't have the user's password here, so we can't repair
+        // user_specific_encryption_ciphertext - a subsequent password login will
+        // do that via repairUserSpecificKey(). If no canonical key exists yet,
+        // leave the vault locked rather than minting a divergent key.
+        $master_key = getCanonicalVaultKey($mysqli);
     }
 
-    generateUserSessionKey($master_key);
-    // Re-store to refresh cookie and clear any bootstrap key
-    storePasskeyEncKey($mysqli, $userId, $master_key, $config_https_only, $_SESSION['session_lifetime_seconds'] ?? 28800);
+    if (!empty($master_key)) {
+        generateUserSessionKey($master_key);
+        // Re-store to refresh the cookie's expiry and clear any stale bootstrap key.
+        storePasskeyEncKey($mysqli, $userId, $master_key, $config_https_only, PASSKEY_ENC_KEY_LIFETIME);
+    }
+    // else: this account has a real password-derived vault, but the true master key
+    // couldn't be recovered via the passkey cookie. Leave the credential encryption
+    // session unset rather than minting an unrelated key that would overwrite
+    // user_passkey_enc_ciphertext - agent/credentials.php shows a "vault locked, sign
+    // in with your password" notice in this case, and a password login resyncs the
+    // passkey cookie with the true key.
 
     $start = mysqli_fetch_assoc(mysqli_query($mysqli,
         "SELECT config_start_page FROM settings WHERE company_id = 1 LIMIT 1"

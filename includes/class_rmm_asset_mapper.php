@@ -38,6 +38,115 @@ class RmmAssetMapper {
         return $stats;
     }
 
+    // Pulls alerts from the RMM (Tactical/Level — Action1 returns none) into
+    // rmm_alerts. New, unresolved alerts are inserted as status='new'; alerts
+    // the RMM now reports resolved have their matching row marked resolved.
+    public function syncAlerts(): array {
+        $stats = ['created' => 0, 'resolved' => 0, 'skipped' => 0, 'errors' => []];
+
+        if (!$this->rmmClient) {
+            return $stats;
+        }
+
+        $alerts = $this->rmmClient->getAlerts(true);
+
+        foreach ($alerts as $alert) {
+            try {
+                $stats[$this->syncAlert($alert)]++;
+            } catch (Exception $e) {
+                $stats['errors'][] = $e->getMessage();
+                $stats['skipped']++;
+            }
+        }
+
+        return $stats;
+    }
+
+    private function syncAlert(array $alert): string {
+        $m       = $this->mysqli;
+        $intg_id = $this->integration_id;
+
+        $tactical_id = trim((string) ($alert['id'] ?? $alert['alert_id'] ?? ''));
+        if ($tactical_id === '') {
+            return 'skipped';
+        }
+        $tactical_id_esc = mysqli_real_escape_string($m, $tactical_id);
+
+        $resolved = !empty($alert['resolved']) || strtolower((string) ($alert['status'] ?? '')) === 'resolved';
+
+        $existing = mysqli_fetch_assoc(mysqli_query($m,
+            "SELECT id, status FROM rmm_alerts WHERE integration_id=$intg_id AND tactical_alert_id='$tactical_id_esc' LIMIT 1"
+        ));
+
+        if ($existing) {
+            if ($resolved && $existing['status'] !== 'resolved') {
+                mysqli_query($m, "UPDATE rmm_alerts SET status='resolved', resolved_at=NOW() WHERE id=" . intval($existing['id']));
+                return 'resolved';
+            }
+            return 'skipped';
+        }
+
+        // Don't import alerts that are already resolved by the time we first see them
+        if ($resolved) {
+            return 'skipped';
+        }
+
+        $agent_id = trim((string) ($alert['agent_id'] ?? $alert['agent'] ?? $alert['device_id'] ?? ''));
+        $hostname = trim((string) ($alert['hostname'] ?? $alert['agent_hostname'] ?? ''));
+
+        $asset_id  = 0;
+        $client_id = 0;
+
+        if ($agent_id !== '') {
+            $agent_id_esc = mysqli_real_escape_string($m, $agent_id);
+            $link = mysqli_fetch_assoc(mysqli_query($m,
+                "SELECT asset_id FROM asset_rmm_links WHERE integration_id=$intg_id AND tactical_agent_id='$agent_id_esc' LIMIT 1"
+            ));
+            if ($link) {
+                $asset_id = intval($link['asset_id']);
+            }
+        }
+
+        if (!$asset_id && $hostname !== '') {
+            $hostname_esc = mysqli_real_escape_string($m, $hostname);
+            $link = mysqli_fetch_assoc(mysqli_query($m,
+                "SELECT asset_id FROM asset_rmm_links WHERE integration_id=$intg_id AND LOWER(hostname)=LOWER('$hostname_esc') LIMIT 1"
+            ));
+            if ($link) {
+                $asset_id = intval($link['asset_id']);
+            }
+        }
+
+        if ($asset_id) {
+            $asset = mysqli_fetch_assoc(mysqli_query($m, "SELECT asset_client_id FROM assets WHERE asset_id=$asset_id"));
+            $client_id = $asset ? intval($asset['asset_client_id']) : 0;
+        }
+
+        $severity = strtolower((string) ($alert['severity'] ?? $alert['priority'] ?? 'info'));
+        if (!in_array($severity, ['info', 'warning', 'error', 'critical'])) {
+            $severity = 'info';
+        }
+
+        $message = (string) ($alert['message'] ?? $alert['description'] ?? $alert['alert_type'] ?? 'RMM Alert');
+        $message_esc  = mysqli_real_escape_string($m, substr($message, 0, 2000));
+        $severity_esc = mysqli_real_escape_string($m, $severity);
+        $raw_json_esc = mysqli_real_escape_string($m, json_encode($alert));
+
+        mysqli_query($m,
+            "INSERT INTO rmm_alerts SET
+             integration_id=$intg_id,
+             asset_id=" . ($asset_id ?: 'NULL') . ",
+             client_id=" . ($client_id ?: 'NULL') . ",
+             tactical_alert_id='$tactical_id_esc',
+             severity='$severity_esc',
+             status='new',
+             message='$message_esc',
+             raw_data_json='$raw_json_esc'"
+        );
+
+        return 'created';
+    }
+
     private function syncAgent(array $agent): string {
         $m       = $this->mysqli;
         $intg_id = $this->integration_id;

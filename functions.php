@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/includes/unifiedpush_functions.php';
+
 // Role check failed wording
 DEFINE("WORDING_ROLECHECK_FAILED", "You are not permitted to do that!");
 
@@ -417,15 +419,35 @@ function setupFirstUserSpecificKey($user_password, $site_encryption_master_key) 
     return $salt . $iv . $ciphertext;
 }
 
+// Returns the canonical site encryption master key (decrypted), or null if one
+// has not yet been established via Admin Settings > Security.
+function getCanonicalVaultKey($mysqli): ?string {
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_vault_canonical_key FROM settings WHERE company_id = 1"));
+    $stored = $row['config_vault_canonical_key'] ?? '';
+    if (empty($stored)) return null;
+    $key = decryptSetting($stored);
+    return $key !== '' ? $key : null;
+}
+
+// Persists the canonical site encryption master key (admin-only action).
+function setCanonicalVaultKey($mysqli, string $master_key): void {
+    $esc = mysqli_real_escape_string($mysqli, encryptSetting($master_key));
+    mysqli_query($mysqli, "UPDATE settings SET config_vault_canonical_key = '$esc', config_vault_canonical_key_set_at = NOW() WHERE company_id = 1");
+}
+
 // Self-heals a missing/unusable user_specific_encryption_ciphertext (e.g. NULL on
-// legacy accounts, or stale after a password change that didn't update it) by
-// generating a fresh master key + ciphertext pair for this user and persisting it.
-// Returns the new site_encryption_master_key.
-function repairUserSpecificKey($mysqli, int $user_id, string $user_password): string {
-    $site_encryption_master_key = randomString();
-    $ciphertext = setupFirstUserSpecificKey($user_password, $site_encryption_master_key);
-    mysqli_query($mysqli, "UPDATE users SET user_specific_encryption_ciphertext = '$ciphertext' WHERE user_id = $user_id");
-    return $site_encryption_master_key;
+// legacy accounts, an archived/reactivated user, or stale after a password change
+// that didn't update it) by re-wrapping the canonical site encryption master key
+// under this user's password. Returns the canonical master key, or null if no
+// canonical key has been established yet - in that case the vault is left locked
+// rather than minting a new, divergent key for this user.
+function repairUserSpecificKey($mysqli, int $user_id, string $user_password): ?string {
+    $canonical_key = getCanonicalVaultKey($mysqli);
+    if ($canonical_key === null) {
+        return null;
+    }
+    repairUserSpecificKeyWithKnownKey($mysqli, $user_id, $user_password, $canonical_key);
+    return $canonical_key;
 }
 
 /*
@@ -501,6 +523,11 @@ function generateUserSessionKey($site_encryption_master_key)
     }
 }
 
+// How long the user_passkey_enc_key cookie should last. Intentionally much longer
+// than the PHP session lifetime so passkey-only logins keep decrypting the
+// credential vault correctly between sessions instead of falling back to self-heal.
+define('PASSKEY_ENC_KEY_LIFETIME', 60 * 60 * 24 * 90); // 90 days
+
 // Stores the master key encrypted in the DB + a persistent cookie so passkey logins can decrypt credentials.
 // Call this after any successful password login, passing the same $master_key used for generateUserSessionKey.
 function storePasskeyEncKey($mysqli, int $user_id, string $master_key, bool $https_only, int $lifetime): void {
@@ -517,6 +544,35 @@ function storePasskeyEncKey($mysqli, int $user_id, string $master_key, bool $htt
     } else {
         setcookie('user_passkey_enc_key', $enc_key, $expires, '/');
     }
+}
+
+// Attempts to recover the real site master key from the passkey-wrapped copy
+// (user_passkey_enc_ciphertext), using the user_passkey_enc_key cookie or,
+// failing that, the server-side bootstrap key. Mirrors the recovery logic in
+// passkey_auth_complete.php. Returns null if no key material is available or
+// decryption fails/yields nothing.
+function recoverMasterKeyFromPasskeyEnc(array $userRow): ?string {
+    $enc_key = $_COOKIE['user_passkey_enc_key'] ?? ($userRow['user_passkey_bootstrap_key'] ?? null);
+
+    if (empty($enc_key) || empty($userRow['user_passkey_enc_ciphertext'])) {
+        return null;
+    }
+
+    $iv  = base64_decode($userRow['user_passkey_enc_iv'] ?? '');
+    $key = openssl_decrypt($userRow['user_passkey_enc_ciphertext'], 'aes-128-cbc', $enc_key, 0, $iv);
+
+    return ($key === false || $key === '') ? null : $key;
+}
+
+// Repairs user_specific_encryption_ciphertext using a master key recovered from
+// elsewhere (e.g. recoverMasterKeyFromPasskeyEnc()), re-wrapping it under the
+// user's current (verified) password. Unlike repairUserSpecificKey(), this does
+// not mint a new key, so existing credentials encrypted under $master_key remain
+// readable after the repair.
+function repairUserSpecificKeyWithKnownKey($mysqli, int $user_id, string $user_password, string $master_key): void {
+    $ciphertext = setupFirstUserSpecificKey($user_password, $master_key);
+    $esc = mysqli_real_escape_string($mysqli, $ciphertext);
+    mysqli_query($mysqli, "UPDATE users SET user_specific_encryption_ciphertext = '$esc' WHERE user_id = $user_id");
 }
 
 // Decrypts an encrypted password (website/asset credentials), returns it as a string
@@ -556,6 +612,24 @@ function encryptCredentialEntry($credential_password_cleartext)
     $ciphertext = openssl_encrypt($credential_password_cleartext, 'aes-128-cbc', $site_encryption_master_key, 0, $iv);
 
     return $iv . $ciphertext;
+}
+
+// Encrypts a credential password using an explicitly provided master key
+// (used by integrations/CLI scripts that don't have a logged-in session,
+// e.g. the canonical vault key from getCanonicalVaultKey()).
+function encryptCredentialEntryWithKey(#[\SensitiveParameter]$credential_password_cleartext, #[\SensitiveParameter]$master_key)
+{
+    $iv = randomString();
+    $ciphertext = openssl_encrypt($credential_password_cleartext, 'aes-128-cbc', $master_key, 0, $iv);
+    return $iv . $ciphertext;
+}
+
+// Decrypts a credential password using an explicitly provided master key
+function decryptCredentialEntryWithKey($credential_ciphertext, #[\SensitiveParameter]$master_key)
+{
+    $iv = substr($credential_ciphertext, 0, 16);
+    $ciphertext = substr($credential_ciphertext, 16);
+    return openssl_decrypt($ciphertext, 'aes-128-cbc', $master_key, 0, $iv);
 }
 
 function apiDecryptCredentialEntry($credential_ciphertext, $api_key_decrypt_hash, #[\SensitiveParameter]$api_key_decrypt_password)
@@ -1720,6 +1794,8 @@ function customAction($trigger, $entity) {
 function appNotify($type, $details, $action = null, $client_id = 0, $entity_id = 0) {
     global $mysqli;
 
+    $push_action = $action;
+
     if (is_null($action)) {
         $action = "NULL"; // Without quotes for SQL NULL
     }
@@ -1736,7 +1812,31 @@ function appNotify($type, $details, $action = null, $client_id = 0, $entity_id =
         $user_id = intval($row['user_id']);
 
         mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = '$type', notification = '$details', notification_action = '$action', notification_client_id = $client_id, notification_entity_id = $entity_id, notification_user_id = $user_id");
+
+        unifiedpush_send_to_user($user_id, $type, $details, ['action' => (string) $push_action]);
     }
+}
+
+// Insert a targeted in-app notification for a specific user and push it to
+// their registered UnifiedPush endpoints.
+function notifyUser($user_id, $type, $details, $action = null, $client_id = 0, $entity_id = 0) {
+    global $mysqli;
+
+    $user_id = intval($user_id);
+    if (!$user_id) {
+        return;
+    }
+
+    $client_id = intval($client_id);
+    $entity_id = intval($entity_id);
+
+    $action_sql = is_null($action) ? "NULL" : "'" . mysqli_real_escape_string($mysqli, substr($action, 0, 250)) . "'";
+    $type_esc = mysqli_real_escape_string($mysqli, substr($type, 0, 200));
+    $details_esc = mysqli_real_escape_string($mysqli, substr($details, 0, 1000));
+
+    mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = '$type_esc', notification = '$details_esc', notification_action = $action_sql, notification_client_id = $client_id, notification_entity_id = $entity_id, notification_user_id = $user_id");
+
+    unifiedpush_send_to_user($user_id, $type, $details, ['action' => (string) $action, 'client_id' => (string) $client_id, 'entity_id' => (string) $entity_id]);
 }
 
 function logAction($type, $action, $description, $client_id = 0, $entity_id = 0) {
@@ -2307,7 +2407,9 @@ function dbRollback(mysqli $mysqli): void
 
 function formatDuration($time) {
     // expects "HH:MM:SS"
-    [$h, $m, $s] = array_map('intval', explode(':', $time));
+    $parts_in = array_map('intval', explode(':', (string) $time));
+    $parts_in = array_pad($parts_in, 3, 0);
+    [$h, $m, $s] = $parts_in;
 
     $parts = [];
 

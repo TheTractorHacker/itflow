@@ -1,19 +1,11 @@
 // Ajax Modal Load Script
-$(document).on('click', '.ajax-modal', function (e) {
-  e.preventDefault();
 
-  const $trigger  = $(this);
-
-  // Prefer data-modal-url, fallback to href
-  let modalUrl = $trigger.data('modal-url') || $trigger.attr('href') || '#';
-  const modalSize = $trigger.data('modal-size') || 'md';
-  const modalId   = 'ajaxModal_' + Date.now();
-
-  // If no usable URL, bail
-  if (!modalUrl || modalUrl === '#') {
-    console.warn('ajax-modal: No modal URL found on trigger:', this);
-    return;
-  }
+// Reusable helper: fetch modal content via AJAX and show it in a Bootstrap modal.
+// options: { modalTab, onShown($modal), onHidden(), onError(error) }
+window.openAjaxModal = function (modalUrl, modalSize, options) {
+  options = options || {};
+  modalSize = modalSize || 'md';
+  const modalId = 'ajaxModal_' + Date.now();
 
   // Show loading spinner while fetching content
   const loadingSpinner = `
@@ -32,6 +24,7 @@ $(document).on('click', '.ajax-modal', function (e) {
 
       if (response.error) {
         alert(response.error);
+        if (options.onError) options.onError(response.error);
         return;
       }
 
@@ -49,19 +42,41 @@ $(document).on('click', '.ajax-modal', function (e) {
       $modal.modal('show');
 
       // Optionally jump straight to a specific pill/tab inside the modal
-      const modalTab = $trigger.data('modal-tab');
-      if (modalTab) {
-        $modal.find('a[href="#' + modalTab + '"]').tab('show');
+      if (options.modalTab) {
+        $modal.find('a[href="#' + options.modalTab + '"]').tab('show');
       }
 
       $modal.on('hidden.bs.modal', function () {
         $(this).remove();
+        if (options.onHidden) options.onHidden();
       });
+
+      if (options.onShown) options.onShown($modal);
     },
     error: function (xhr, status, error) {
       $('#modal-loading-spinner').remove();
       alert('Error loading modal content. Please try again.');
       console.error('Modal AJAX Error:', status, error);
+      if (options.onError) options.onError(error);
     }
   });
+};
+
+$(document).on('click', '.ajax-modal', function (e) {
+  e.preventDefault();
+
+  const $trigger  = $(this);
+
+  // Prefer data-modal-url, fallback to href
+  let modalUrl = $trigger.data('modal-url') || $trigger.attr('href') || '#';
+  const modalSize = $trigger.data('modal-size') || 'md';
+  const modalTab = $trigger.data('modal-tab');
+
+  // If no usable URL, bail
+  if (!modalUrl || modalUrl === '#') {
+    console.warn('ajax-modal: No modal URL found on trigger:', this);
+    return;
+  }
+
+  window.openAjaxModal(modalUrl, modalSize, { modalTab: modalTab });
 });

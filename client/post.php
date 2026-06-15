@@ -123,6 +123,9 @@ if (isset($_POST['add_ticket_comment'])) {
 
         if ($ticket_details && $ticket_assigned_to !== 0) {
 
+            // In-app + push notification for the assigned tech
+            notifyUser($ticket_assigned_to, 'Ticket', "$session_contact_name replied to Ticket $config_ticket_prefix$ticket_number - $ticket_subject", "/agent/ticket.php?ticket_id=$ticket_id&client_id=$session_client_id", $session_client_id, $ticket_id);
+
             // Get tech details
             $tech_details = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT user_email, user_name FROM users WHERE user_id = $ticket_assigned_to LIMIT 1"));
             $tech_email = sanitizeInput($tech_details['user_email']);

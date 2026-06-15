@@ -208,29 +208,17 @@ $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_ty
 </div>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<script src="/js/signature_pad.js"></script>
 <script>
-var canvas, ctx, drawing = false, lx, ly;
-function pos(e) {
-    var r = canvas.getBoundingClientRect(), s = e.touches ? e.touches[0] : e;
-    return { x: (s.clientX - r.left) * (canvas.width / r.width), y: (s.clientY - r.top) * (canvas.height / r.height) };
+function clearSig() {
+    var hidden = document.getElementById('sig_data');
+    if (hidden) hidden.value = '';
+    var canvas = document.getElementById('sig_canvas');
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
-function saveSig() { document.getElementById('sig_data').value = canvas.toDataURL(); }
-function clearSig() { ctx.clearRect(0,0,canvas.width,canvas.height); document.getElementById('sig_data').value = ''; }
 
 document.addEventListener('DOMContentLoaded', function() {
-    canvas = document.getElementById('sig_canvas');
-    if (!canvas) return;
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 140;
-    ctx = canvas.getContext('2d');
-
-    canvas.addEventListener('mousedown', function(e){ drawing=true; var p=pos(e); lx=p.x; ly=p.y; });
-    canvas.addEventListener('mousemove', function(e){ if(!drawing) return; var p=pos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.stroke(); lx=p.x; ly=p.y; saveSig(); });
-    canvas.addEventListener('mouseup', function(){ drawing=false; });
-    canvas.addEventListener('mouseleave', function(){ drawing=false; });
-    canvas.addEventListener('touchstart', function(e){ e.preventDefault(); drawing=true; var p=pos(e); lx=p.x; ly=p.y; }, {passive:false});
-    canvas.addEventListener('touchmove', function(e){ e.preventDefault(); if(!drawing)return; var p=pos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.stroke(); lx=p.x; ly=p.y; saveSig(); }, {passive:false});
-    canvas.addEventListener('touchend', function(){ drawing=false; });
+    initSignaturePad('sig_canvas', 'sig_data');
 
     document.getElementById('outtakeForm') && document.getElementById('outtakeForm').addEventListener('submit', function(e){
         if (!document.getElementById('sig_data').value) {

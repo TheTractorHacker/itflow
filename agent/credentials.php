@@ -130,6 +130,11 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
         </div>
     </div>
     <div class="card-body">
+        <?php if (!isset($_COOKIE['user_encryption_session_key'])) { ?>
+            <div class="alert alert-warning">
+                <i class="fas fa-fw fa-lock mr-2"></i>Credential vault is locked for this session - sign in with your password to view, copy, or add credentials.
+            </div>
+        <?php } ?>
         <form autocomplete="off">
             <?php if ($client_url) { ?>
             <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">

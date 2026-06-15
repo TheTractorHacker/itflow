@@ -15,8 +15,33 @@ if (isset($_GET['create_outtake'])) {
     $t = mysqli_fetch_assoc($sql_t);
     logAction("Outtake", "Create", "Created outtake form for ticket {$t['ticket_prefix']}{$t['ticket_number']}", $client_id, $ticket_id);
 
+    if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
+        echo json_encode(['ok' => true, 'outtake_id' => $outtake_id]);
+        exit;
+    }
+
     flash_alert("Outtake form created. <a href='outtake_form.php?outtake_id=$outtake_id&ticket_id=$ticket_id" . ($client_id ? "&client_id=$client_id" : '') . "'>Open form</a>");
     redirect();
+}
+
+if (isset($_POST['sign_outtake_in_person'])) {
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/outtake_functions.php';
+
+    $outtake_id  = intval($_POST['outtake_id']);
+    $signed_name = $_POST['signed_name'] ?? '';
+    $signature   = $_POST['signature'] ?? '';
+
+    $td = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT t.ticket_client_id FROM ticket_outtake_forms ot JOIN tickets t ON ot.outtake_ticket_id = t.ticket_id WHERE ot.outtake_id = $outtake_id LIMIT 1"));
+    if (!$td) { echo json_encode(['ok' => false, 'error' => 'Outtake form not found.']); exit; }
+    if ($td['ticket_client_id']) { enforceClientAccess(intval($td['ticket_client_id'])); }
+
+    $result = signOuttakeForm($mysqli, $outtake_id, $signed_name, $signature);
+
+    echo json_encode($result);
+    exit;
 }
 
 if (isset($_POST['save_outtake_notes'])) {
