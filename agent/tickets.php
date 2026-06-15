@@ -577,35 +577,6 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                 <div class="row filter-row-nowrap">
                     <div class="col-12">
                         <div class="btn-group">
-                            <div class="btn-group">
-                                <button class="btn btn-outline-dark dropdown-toggle" id="dropdownMenuButton" data-toggle="dropdown">
-                                    <i class="fa fa-fw fa-eye"></i>
-                                    <span class="d-none d-xl-inline ml-2">View</span>
-                                </button>
-                                <div class="dropdown-menu">
-                                    <a class="dropdown-item" href="<?=htmlspecialchars('?' . http_build_query(array_merge($_GET, ['view' => 'list']))); ?>">List</a>
-                                    <?php if ($status !== 'Closed') {?>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item " href="<?=htmlspecialchars('?' . http_build_query(array_merge($_GET, ['view' => 'kanban']))); ?>">Kanban</a>
-                                    <?php } ?>
-                                </div>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-outline-dark dropdown-toggle" id="categoriesDropdownMenuButton" data-toggle="dropdown">
-                                    <i class="fa fa-fw fa-envelope"></i>
-                                    <span class="d-none d-xl-inline ml-2">My Tickets</span>
-                                </button>
-                                <div class="dropdown-menu">
-                                    <a class="dropdown-item" href="?<?php echo $client_url; ?>status=Open&assigned=<?php echo $session_user_id ?>">Active tickets (<?php echo $user_active_assigned_tickets ?>)</a>
-                                    <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item " href="?<?php echo $client_url; ?>status=Closed&assigned=<?php echo $session_user_id ?>">Closed tickets</a>
-                                </div>
-                            </div>
-                            <a href="?<?php echo $client_url; ?>assigned=unassigned" class="btn btn-outline-danger">
-                                <i class="fa fa-fw fa-exclamation-triangle"></i>
-                                <span class="d-none d-xl-inline ml-2">Unassigned</span> | <strong> <?php echo $total_tickets_unassigned; ?></strong>
-                            </a>
-
                             <?php if (lookupUserPermission("module_support") >= 2) { ?>
                                 <div class="dropdown ml-2" id="bulkActionButton" hidden>
                                     <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
