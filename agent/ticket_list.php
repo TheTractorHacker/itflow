@@ -35,7 +35,7 @@ foreach ($_cat_subs as $_pid => $_subs) {
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
 
                 <div class="table-responsive">
-                    <table class="table table-striped table-borderless table-hover">
+                    <table class="table table-striped table-borderless table-hover table-sm table-tight">
                         <thead class="text-dark <?php if (!$num_rows[0]) { echo "d-none"; } ?> text-nowrap">
                         <tr>
                             <td class="checkbox-column">

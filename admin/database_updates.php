@@ -4812,3 +4812,86 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.0'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.0') {
+
+        mysqli_query($mysqli, "ALTER TABLE `tickets`
+            ADD COLUMN `ticket_initial_issue_reply_id` INT(11) DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.1'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.1') {
+
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN `config_vault_canonical_key` VARCHAR(255) DEFAULT NULL,
+            ADD COLUMN `config_vault_canonical_key_set_at` DATETIME DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.2'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.2') {
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `ticket_saved_views` (
+            `ticket_saved_view_id` INT(11) NOT NULL AUTO_INCREMENT,
+            `ticket_saved_view_name` VARCHAR(100) NOT NULL,
+            `ticket_saved_view_icon` VARCHAR(50) NOT NULL DEFAULT 'fa-filter',
+            `ticket_saved_view_query` TEXT NOT NULL,
+            `ticket_saved_view_user_id` INT(11) NOT NULL DEFAULT 0,
+            `ticket_saved_view_order` INT(11) NOT NULL DEFAULT 0,
+            `ticket_saved_view_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `ticket_saved_view_archived_at` DATETIME DEFAULT NULL,
+            PRIMARY KEY (`ticket_saved_view_id`),
+            KEY `ticket_saved_view_user_id` (`ticket_saved_view_user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "INSERT INTO `ticket_saved_views`
+            (`ticket_saved_view_name`, `ticket_saved_view_icon`, `ticket_saved_view_query`, `ticket_saved_view_order`) VALUES
+            ('Default', 'fa-list', '', 0),
+            ('On-Site', 'fa-truck', 'onsite=1&status=Open', 1),
+            ('Assigned to me', 'fa-user', 'assigned=me&status=Open', 2),
+            ('All Unresolved', 'fa-folder-open', 'status=Open', 3),
+            ('My Queue', 'fa-inbox', 'assigned=me&status=Open', 4),
+            ('Remote', 'fa-headset', 'onsite=0&status=Open', 5)");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.3'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.3') {
+
+        mysqli_query($mysqli, "ALTER TABLE `ticket_chat_messages`
+            ADD KEY `ticket_id_id` (`ticket_id`, `id`)");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.4'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.4') {
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `kb_categories` (
+            `kb_category_id` INT(11) NOT NULL AUTO_INCREMENT,
+            `kb_category_name` VARCHAR(100) NOT NULL,
+            `kb_category_parent_id` INT(11) NOT NULL DEFAULT 0,
+            `kb_category_client_id` INT(11) NOT NULL DEFAULT 0,
+            `kb_category_order` INT(11) NOT NULL DEFAULT 0,
+            `kb_category_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `kb_category_archived_at` DATETIME DEFAULT NULL,
+            PRIMARY KEY (`kb_category_id`),
+            KEY `kb_category_client_id` (`kb_category_client_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `kb_article_attachments` (
+            `kb_article_attachment_id` INT(11) NOT NULL AUTO_INCREMENT,
+            `kb_article_attachment_name` VARCHAR(255) NOT NULL,
+            `kb_article_attachment_reference_name` VARCHAR(255) NOT NULL,
+            `kb_article_attachment_kb_article_id` INT(11) NOT NULL,
+            `kb_article_attachment_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`kb_article_attachment_id`),
+            KEY `kb_article_attachment_kb_article_id` (`kb_article_attachment_kb_article_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "ALTER TABLE `kb_articles`
+            ADD COLUMN `kb_article_category_id` INT(11) NOT NULL DEFAULT 0,
+            ADD KEY `kb_article_category_id` (`kb_article_category_id`)");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.5'");
+    }

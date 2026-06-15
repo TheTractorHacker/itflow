@@ -2283,6 +2283,8 @@ CREATE TABLE `settings` (
   `config_ticket_default_view` tinyint(1) NOT NULL DEFAULT 0,
   `config_ticket_ordering` tinyint(1) NOT NULL DEFAULT 0,
   `config_ticket_moving_columns` tinyint(1) NOT NULL DEFAULT 1,
+  `config_vault_canonical_key` varchar(255) DEFAULT NULL,
+  `config_vault_canonical_key_set_at` datetime DEFAULT NULL,
   PRIMARY KEY (`company_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -2642,6 +2644,74 @@ CREATE TABLE `ticket_attachments` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `ticket_saved_views`
+--
+
+DROP TABLE IF EXISTS `ticket_saved_views`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ticket_saved_views` (
+  `ticket_saved_view_id` int(11) NOT NULL AUTO_INCREMENT,
+  `ticket_saved_view_name` varchar(100) NOT NULL,
+  `ticket_saved_view_icon` varchar(50) NOT NULL DEFAULT 'fa-filter',
+  `ticket_saved_view_query` text NOT NULL,
+  `ticket_saved_view_user_id` int(11) NOT NULL DEFAULT 0,
+  `ticket_saved_view_order` int(11) NOT NULL DEFAULT 0,
+  `ticket_saved_view_created_at` datetime DEFAULT current_timestamp(),
+  `ticket_saved_view_archived_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`ticket_saved_view_id`),
+  KEY `ticket_saved_view_user_id` (`ticket_saved_view_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+INSERT INTO `ticket_saved_views`
+  (`ticket_saved_view_name`, `ticket_saved_view_icon`, `ticket_saved_view_query`, `ticket_saved_view_order`) VALUES
+  ('Default', 'fa-list', '', 0),
+  ('On-Site', 'fa-truck', 'onsite=1&status=Open', 1),
+  ('Assigned to me', 'fa-user', 'assigned=me&status=Open', 2),
+  ('All Unresolved', 'fa-folder-open', 'status=Open', 3),
+  ('My Queue', 'fa-inbox', 'assigned=me&status=Open', 4),
+  ('Remote', 'fa-headset', 'onsite=0&status=Open', 5);
+
+--
+-- Table structure for table `kb_categories`
+--
+
+DROP TABLE IF EXISTS `kb_categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `kb_categories` (
+  `kb_category_id` int(11) NOT NULL AUTO_INCREMENT,
+  `kb_category_name` varchar(100) NOT NULL,
+  `kb_category_parent_id` int(11) NOT NULL DEFAULT 0,
+  `kb_category_client_id` int(11) NOT NULL DEFAULT 0,
+  `kb_category_order` int(11) NOT NULL DEFAULT 0,
+  `kb_category_created_at` datetime DEFAULT current_timestamp(),
+  `kb_category_archived_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`kb_category_id`),
+  KEY `kb_category_client_id` (`kb_category_client_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `kb_article_attachments`
+--
+
+DROP TABLE IF EXISTS `kb_article_attachments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `kb_article_attachments` (
+  `kb_article_attachment_id` int(11) NOT NULL AUTO_INCREMENT,
+  `kb_article_attachment_name` varchar(255) NOT NULL,
+  `kb_article_attachment_reference_name` varchar(255) NOT NULL,
+  `kb_article_attachment_kb_article_id` int(11) NOT NULL,
+  `kb_article_attachment_created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`kb_article_attachment_id`),
+  KEY `kb_article_attachment_kb_article_id` (`kb_article_attachment_kb_article_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `ticket_history`
 --
 
@@ -2814,6 +2884,7 @@ CREATE TABLE `tickets` (
   `ticket_sla_response_due` datetime DEFAULT NULL,
   `ticket_sla_resolution_due` datetime DEFAULT NULL,
   `ticket_outlook_event_id` varchar(255) DEFAULT NULL,
+  `ticket_initial_issue_reply_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`ticket_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

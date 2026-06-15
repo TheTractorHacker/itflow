@@ -91,6 +91,23 @@ if (isset($_GET['priority']) && in_array($_GET['priority'], ['Low', 'Medium', 'H
     $priority_query = '';
 }
 
+// On-site / Remote filter (used by the On-Site / Remote saved views)
+if (isset($_GET['onsite']) && in_array($_GET['onsite'], ['0', '1'], true)) {
+    $onsite_filter = intval($_GET['onsite']);
+    $onsite_query = "AND ticket_onsite = $onsite_filter";
+} else {
+    $onsite_filter = '';
+    $onsite_query = '';
+}
+
+// Stat-box filters (Overdue / Due Today / On-Site Open) - clicking a stat box applies one of these
+$stat_query = '';
+if (isset($_GET['overdue'])) {
+    $stat_query = "AND ticket_due_at IS NOT NULL AND ticket_due_at < NOW() AND ticket_resolved_at IS NULL";
+} elseif (isset($_GET['due_today'])) {
+    $stat_query = "AND ticket_due_at IS NOT NULL AND DATE(ticket_due_at) = CURDATE() AND ticket_resolved_at IS NULL";
+}
+
 // Ticket assignment status filter
 // Default - any
 $ticket_assigned_query = '';
@@ -145,6 +162,8 @@ $query =
     $category_query
     $board_query
     $priority_query
+    $onsite_query
+    $stat_query
     AND DATE(ticket_created_at) BETWEEN '$dtf' AND '$dtt'
     AND (CONCAT(ticket_prefix,ticket_number) LIKE '%$q%' OR client_name LIKE '%$q%' OR ticket_subject LIKE '%$q%' OR ticket_status_name LIKE '%$q%' OR ticket_priority LIKE '%$q%' OR user_name LIKE '%$q%' OR contact_name LIKE '%$q%' OR asset_name LIKE '%$q%' OR vendor_name LIKE '%$q%' OR ticket_vendor_ticket_number LIKE '%q%')
     $ticket_billable_snippet
@@ -191,6 +210,64 @@ $sql_total_tickets_assigned = mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS 
 $row = mysqli_fetch_assoc($sql_total_tickets_assigned);
 $user_active_assigned_tickets = intval($row['total_tickets_assigned']);
 
+//Get Overdue tickets (past due, still open)
+$sql_total_tickets_overdue = mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS total_tickets_overdue FROM tickets WHERE ticket_due_at IS NOT NULL AND ticket_due_at < NOW() AND ticket_resolved_at IS NULL $client_query $access_permission_query_overide");
+$row = mysqli_fetch_assoc($sql_total_tickets_overdue);
+$total_tickets_overdue = intval($row['total_tickets_overdue']);
+
+//Get tickets due today (still open)
+$sql_total_tickets_due_today = mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS total_tickets_due_today FROM tickets WHERE ticket_due_at IS NOT NULL AND DATE(ticket_due_at) = CURDATE() AND ticket_resolved_at IS NULL $client_query $access_permission_query_overide");
+$row = mysqli_fetch_assoc($sql_total_tickets_due_today);
+$total_tickets_due_today = intval($row['total_tickets_due_today']);
+
+//Get open on-site tickets
+$sql_total_tickets_onsite_open = mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS total_tickets_onsite_open FROM tickets WHERE ticket_onsite = 1 AND ticket_resolved_at IS NULL $client_query $access_permission_query_overide");
+$row = mysqli_fetch_assoc($sql_total_tickets_onsite_open);
+$total_tickets_onsite_open = intval($row['total_tickets_onsite_open']);
+
+//Get All tickets (open + closed)
+$sql_total_tickets_all = mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS total_tickets_all FROM tickets WHERE 1=1 $client_query $access_permission_query_overide");
+$row = mysqli_fetch_assoc($sql_total_tickets_all);
+$total_tickets_all = intval($row['total_tickets_all']);
+
+// Saved Views sidebar (hidden in client-scoped view)
+$_saved_views = [];
+if (!$client_url) {
+    $sql_saved_views = mysqli_query(
+        $mysqli,
+        "SELECT * FROM ticket_saved_views
+         WHERE (ticket_saved_view_user_id = 0 OR ticket_saved_view_user_id = $session_user_id)
+         AND ticket_saved_view_archived_at IS NULL
+         ORDER BY ticket_saved_view_user_id ASC, ticket_saved_view_order ASC"
+    );
+    while ($row = mysqli_fetch_assoc($sql_saved_views)) $_saved_views[] = $row;
+}
+
+// Resolve "assigned=me" to the current user for active-view comparison/links
+function ticketSavedViewQueryForUser($query, $session_user_id) {
+    return str_replace('assigned=me', 'assigned=' . $session_user_id, $query);
+}
+
+// Is the given saved-view query the one currently active?
+function ticketSavedViewIsActive($query, $session_user_id) {
+    $resolved = ticketSavedViewQueryForUser($query, $session_user_id);
+    parse_str($resolved, $view_params);
+
+    // "Default" view has an empty query - only active when no relevant filters are set
+    if (empty($view_params)) {
+        foreach (['status', 'assigned', 'onsite', 'board', 'category', 'priority'] as $key) {
+            if (isset($_GET[$key]) && $_GET[$key] !== '') return false;
+        }
+        return true;
+    }
+
+    foreach ($view_params as $key => $value) {
+        $current = $_GET[$key] ?? null;
+        if ((string)$current !== (string)$value) return false;
+    }
+    return true;
+}
+
 $sql_categories_filter = mysqli_query(
     $mysqli,
     "SELECT * FROM categories
@@ -217,7 +294,145 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
         .popover {
             max-width: 600px;
         }
+        .ticket-stat-box {
+            display: block;
+            text-align: center;
+            border-radius: .25rem;
+            padding: .5rem .25rem;
+            background: rgba(0,0,0,.15);
+            color: inherit;
+        }
+        .ticket-stat-box:hover {
+            background: rgba(0,0,0,.3);
+            text-decoration: none;
+            color: inherit;
+        }
+        .ticket-stat-box.active {
+            background: var(--accent, #2563eb);
+            color: #fff;
+        }
+        .ticket-stat-box .ticket-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: block;
+        }
+        .ticket-stat-box .ticket-stat-label {
+            font-size: .75rem;
+            text-transform: uppercase;
+            opacity: .8;
+        }
+        .ticket-saved-views .nav-link {
+            color: inherit;
+            border-radius: .25rem;
+            padding: .4rem .6rem;
+        }
+        .ticket-saved-views .nav-link.active {
+            background: var(--accent, #2563eb);
+            color: #fff;
+        }
+        .ticket-saved-views .nav-link:hover {
+            background: rgba(0,0,0,.15);
+        }
+        .ticket-saved-views .saved-view-actions {
+            opacity: 0;
+        }
+        .ticket-saved-views .nav-item:hover .saved-view-actions {
+            opacity: 1;
+        }
+        .table-tight td, .table-tight th {
+            padding: .35rem .5rem;
+        }
     </style>
+    <div class="row">
+        <?php if (!$client_url) { ?>
+        <div class="col-lg-2 mb-3">
+            <div class="card card-dark h-100">
+                <div class="card-header py-2 d-flex align-items-center justify-content-between">
+                    <h3 class="card-title mt-0 mb-0"><i class="fa fa-fw fa-thumbtack mr-2"></i>Ticket Views</h3>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ajax-modal" title="Save current view"
+                        data-modal-url="modals/ticket/ticket_saved_view_add.php?<?= htmlspecialchars(http_build_query($_GET)) ?>">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body ticket-saved-views py-2">
+                    <ul class="nav nav-pills flex-column">
+                        <?php foreach ($_saved_views as $_view) {
+                            $_view_id = intval($_view['ticket_saved_view_id']);
+                            $_view_name = nullable_htmlentities($_view['ticket_saved_view_name']);
+                            $_view_icon = nullable_htmlentities($_view['ticket_saved_view_icon']) ?: 'fa-filter';
+                            $_view_query = ticketSavedViewQueryForUser($_view['ticket_saved_view_query'], $session_user_id);
+                            $_view_active = ticketSavedViewIsActive($_view['ticket_saved_view_query'], $session_user_id);
+                            $_view_owner = intval($_view['ticket_saved_view_user_id']);
+                            $_can_edit = ($_view_owner == $session_user_id) || ($_view_owner == 0 && lookupUserPermission("module_support") === 3);
+                        ?>
+                        <li class="nav-item d-flex align-items-center">
+                            <a class="nav-link flex-grow-1 <?= $_view_active ? 'active' : '' ?>" href="?<?= $_view_query ?>">
+                                <i class="fas fa-fw <?= $_view_icon ?> mr-2"></i><?= $_view_name ?>
+                            </a>
+                            <?php if ($_can_edit) { ?>
+                            <div class="dropdown saved-view-actions">
+                                <button class="btn btn-sm btn-link text-secondary p-0 px-1" type="button" data-toggle="dropdown">
+                                    <i class="fas fa-fw fa-ellipsis-v"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-right">
+                                    <a class="dropdown-item" href="post.php?move_ticket_saved_view_up=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-arrow-up mr-2"></i>Move Up</a>
+                                    <a class="dropdown-item" href="post.php?move_ticket_saved_view_down=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-arrow-down mr-2"></i>Move Down</a>
+                                    <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/ticket/ticket_saved_view_edit.php?id=<?= $_view_id ?>"><i class="fas fa-fw fa-edit mr-2"></i>Rename</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item text-danger confirm-link" href="post.php?delete_ticket_saved_view=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-trash mr-2"></i>Delete</a>
+                                </div>
+                            </div>
+                            <?php } ?>
+                        </li>
+                        <?php } ?>
+                    </ul>
+
+                    <?php if (mysqli_num_rows($sql_boards_filter)) {
+                        mysqli_data_seek($sql_boards_filter, 0);
+                    ?>
+                    <hr>
+                    <h6 class="text-secondary text-uppercase" style="font-size:.7rem;">Boards</h6>
+                    <ul class="nav nav-pills flex-column">
+                        <?php while ($_board = mysqli_fetch_assoc($sql_boards_filter)) {
+                            $_board_id = intval($_board['category_id']);
+                            $_board_name = nullable_htmlentities($_board['category_name']);
+                        ?>
+                        <li class="nav-item">
+                            <a class="nav-link <?= ($board_filter == $_board_id) ? 'active' : '' ?>" href="?<?= $client_url ?>board=<?= $_board_id ?>&status=Open">
+                                <i class="fas fa-fw fa-layer-group mr-2"></i><?= $_board_name ?>
+                            </a>
+                        </li>
+                        <?php } ?>
+                    </ul>
+                    <?php mysqli_data_seek($sql_boards_filter, 0); } ?>
+                </div>
+            </div>
+        </div>
+        <?php } ?>
+        <div class="<?= $client_url ? 'col-12' : 'col-lg-10' ?>">
+
+    <div class="row mb-3">
+        <?php
+        $_stats = [
+            ['label' => 'All Tickets',  'value' => $total_tickets_all,           'href' => '?' . $client_url],
+            ['label' => 'Unassigned',   'value' => $total_tickets_unassigned,    'href' => '?' . $client_url . 'assigned=unassigned'],
+            ['label' => 'Unresolved',   'value' => $total_tickets_open,          'href' => '?' . $client_url . 'status=Open'],
+            ['label' => 'Due Today',    'value' => $total_tickets_due_today,     'href' => '?' . $client_url . 'status=Open&due_today=1', 'active' => isset($_GET['due_today'])],
+            ['label' => 'Overdue',      'value' => $total_tickets_overdue,       'href' => '?' . $client_url . 'status=Open&overdue=1', 'active' => isset($_GET['overdue'])],
+            ['label' => 'On-Site Open', 'value' => $total_tickets_onsite_open,   'href' => '?' . $client_url . 'status=Open&onsite=1', 'active' => $onsite_filter === 1],
+            ['label' => 'My Active',    'value' => $user_active_assigned_tickets,'href' => '?' . $client_url . 'status=Open&assigned=' . $session_user_id],
+        ];
+        foreach ($_stats as $_stat) {
+        ?>
+        <div class="col">
+            <a class="ticket-stat-box <?= !empty($_stat['active']) ? 'active' : '' ?>" href="<?= $_stat['href'] ?>">
+                <span class="ticket-stat-value"><?= $_stat['value'] ?></span>
+                <span class="ticket-stat-label"><?= $_stat['label'] ?></span>
+            </a>
+        </div>
+        <?php } ?>
+    </div>
+
     <div class="card card-dark">
         <div class="card-header py-2">
             <h3 class="card-title mt-2"><i class="fa fa-fw fa-life-ring mr-2"></i>Tickets
@@ -252,7 +467,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                 <?php } ?>
                 <input type="hidden" name="view" value="<?= nullable_htmlentities($_GET['view'] ?? 'list') ?>">
 
-                <div class="row align-items-center">
+                <div class="row align-items-center filter-row-nowrap">
                     <div class="col-auto mb-2">
                         <select class="form-control select2" name="board" onchange="this.form.submit()" data-placeholder="Board" style="width:150px;">
                             <option value="">- All Boards -</option>
@@ -298,7 +513,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                             <option value="Low" data-dot="low" <?= $priority_filter === 'Low' ? 'selected' : '' ?>>Low</option>
                         </select>
                     </div>
-                    <div class="col-sm-3 mb-2">
+                    <div class="col-auto mb-2" style="width:220px;">
                         <div class="input-group">
                             <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search tickets...">
                             <div class="input-group-append">
@@ -325,7 +540,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row filter-row-nowrap">
                     <div class="col-12">
                         <div class="btn-group">
                             <div class="btn-group">
@@ -508,6 +723,8 @@ if (isset($_GET["view"])) {
 }
 
 ?>
+        </div>
+    </div>
 
 <script src="../js/bulk_actions.js"></script>
 
