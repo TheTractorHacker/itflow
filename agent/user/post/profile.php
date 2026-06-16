@@ -363,6 +363,8 @@ if (isset($_GET['delete_passkey'])) {
 }
 
 
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/firebase.php';
+
 if (isset($_POST['test_push_notification'])) {
     validateCSRFToken($_POST['csrf_token']);
 

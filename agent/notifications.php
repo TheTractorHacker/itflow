@@ -50,7 +50,38 @@ function notif_icon(string $type): string {
     return 'fa-bell text-secondary';
 }
 
+// Push notification device status
+$sql_push_devices = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM api_tokens WHERE token_user_id = $session_user_id AND token_fcm_token IS NOT NULL AND token_fcm_token != ''");
+$push_device_count = intval(mysqli_fetch_assoc($sql_push_devices)['cnt']);
 ?>
+
+<!-- Mobile Push Notifications card -->
+<div class="card card-primary card-outline mb-3">
+    <div class="card-header py-2 d-flex align-items-center">
+        <h3 class="card-title mr-auto"><i class="fas fa-mobile-alt mr-2"></i>Mobile App Push Notifications</h3>
+    </div>
+    <div class="card-body">
+        <?php if ($push_device_count > 0) { ?>
+        <div class="d-flex align-items-center flex-wrap" style="gap:1rem;">
+            <span class="text-success"><i class="fas fa-check-circle mr-1"></i>
+                <strong><?= $push_device_count ?></strong> registered device<?= $push_device_count !== 1 ? 's' : '' ?>
+            </span>
+            <form method="POST" action="post.php" class="d-inline">
+                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                <button type="submit" name="test_push_notification" class="btn btn-sm btn-primary">
+                    <i class="fas fa-paper-plane mr-1"></i>Send Test Push
+                </button>
+            </form>
+        </div>
+        <?php } else { ?>
+        <div class="text-muted">
+            <i class="fas fa-exclamation-circle mr-1 text-warning"></i>
+            No mobile devices registered. Log in to the <strong>ITFlow mobile app</strong> to register your device for push notifications.
+        </div>
+        <?php } ?>
+    </div>
+</div>
+
 
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
@@ -147,7 +178,11 @@ function notif_icon(string $type): string {
             </div>
             <!-- Action -->
             <?php if (!$dismissed_filter) { ?>
-            <div class="ml-3 flex-shrink-0">
+            <div class="ml-3 flex-shrink-0 d-flex" style="gap:.35rem;">
+                <a href="post.php?push_notification=<?= $notification_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                   class="btn btn-sm btn-outline-primary" title="Send as Push">
+                    <i class="fas fa-mobile-alt"></i>
+                </a>
                 <a href="post.php?dismiss_notification=<?= $notification_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                    class="btn btn-sm btn-outline-secondary" title="Dismiss">
                     <i class="fas fa-check"></i>
