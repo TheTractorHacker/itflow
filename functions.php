@@ -1791,7 +1791,7 @@ function customAction($trigger, $entity) {
     chdir($original_dir); // Restore original working directory
 }
 
-function appNotify($type, $details, $action = null, $client_id = 0, $entity_id = 0) {
+function appNotify($type, $details, $action = null, $client_id = 0, $entity_id = 0, $push = true) {
     global $mysqli;
 
     $push_action = $action;
@@ -1821,13 +1821,14 @@ function appNotify($type, $details, $action = null, $client_id = 0, $entity_id =
             'action'    => $push_action,
             'client_id' => $client_id,
             'entity_id' => $entity_id,
+            'push'      => $push,
         ]);
     }
 }
 
 // Insert a targeted in-app notification for a specific user and publish it to
 // their open real-time notification stream (api/v1/notifications_stream.php).
-function notifyUser($user_id, $type, $details, $action = null, $client_id = 0, $entity_id = 0) {
+function notifyUser($user_id, $type, $details, $action = null, $client_id = 0, $entity_id = 0, $push = true) {
     global $mysqli;
 
     $user_id = intval($user_id);
@@ -1852,6 +1853,7 @@ function notifyUser($user_id, $type, $details, $action = null, $client_id = 0, $
         'action'    => $action,
         'client_id' => $client_id,
         'entity_id' => $entity_id,
+        'push'      => $push,
     ]);
 }
 

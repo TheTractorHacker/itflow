@@ -1776,13 +1776,13 @@ if (isset($_POST['bulk_ticket_reply'])) {
             // Notification for assigned ticket user
             if ($session_user_id != $ticket_assigned_to && $ticket_assigned_to != 0) {
 
-                notifyUser($ticket_assigned_to, 'Ticket', "$session_name updated Ticket $ticket_prefix$ticket_number - Subject: $ticket_subject that is assigned to you", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id, $ticket_id);
+                notifyUser($ticket_assigned_to, 'Ticket', "$session_name updated Ticket $ticket_prefix$ticket_number - Subject: $ticket_subject that is assigned to you", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id, $ticket_id, false);
             }
 
             // Notification for user that opened the ticket
             if ($session_user_id != $ticket_created_by && $ticket_created_by != 0) {
 
-                notifyUser($ticket_created_by, 'Ticket', "$session_name updated Ticket $ticket_prefix$ticket_number - Subject: $ticket_subject that you opened", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id, $ticket_id);
+                notifyUser($ticket_created_by, 'Ticket', "$session_name updated Ticket $ticket_prefix$ticket_number - Subject: $ticket_subject that you opened", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id, $ticket_id, false);
             }
         } // End Ticket Lopp
 
@@ -2158,12 +2158,12 @@ if (isset($_POST['add_ticket_reply'])) {
 
         // Notification for assigned ticket user
         if ($session_user_id != $ticket_assigned_to && $ticket_assigned_to != 0) {
-            notifyUser($ticket_assigned_to, 'Ticket', "$session_name updated Ticket $ticket_prefix$ticket_number - Subject: $ticket_subject that is assigned to you", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id, $ticket_id);
+            notifyUser($ticket_assigned_to, 'Ticket', "$session_name updated Ticket $ticket_prefix$ticket_number - Subject: $ticket_subject that is assigned to you", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id, $ticket_id, false);
         }
 
         // Notification for user that opened the ticket
         if ($session_user_id != $ticket_created_by && $ticket_created_by != 0) {
-            notifyUser($ticket_created_by, 'Ticket', "$session_name updated Ticket $ticket_prefix$ticket_number - Subject: $ticket_subject that you opened", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id, $ticket_id);
+            notifyUser($ticket_created_by, 'Ticket', "$session_name updated Ticket $ticket_prefix$ticket_number - Subject: $ticket_subject that you opened", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id, $ticket_id, false);
         }
 
         // Handle first response
