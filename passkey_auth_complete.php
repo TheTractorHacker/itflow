@@ -132,14 +132,11 @@ try {
         $master_key = openssl_decrypt($userRow['user_passkey_enc_ciphertext'], 'aes-128-cbc', $active_enc_key, 0, $pk_iv);
     }
 
-    if (empty($master_key) && empty($userRow['user_specific_encryption_ciphertext'])) {
-        // No password-derived master key exists yet for this user (e.g. an
-        // archived/reactivated account). Sync this passkey-only session to the
-        // canonical vault key if one has been established (Admin Settings >
-        // Security). We don't have the user's password here, so we can't repair
-        // user_specific_encryption_ciphertext - a subsequent password login will
-        // do that via repairUserSpecificKey(). If no canonical key exists yet,
-        // leave the vault locked rather than minting a divergent key.
+    if (empty($master_key)) {
+        // Passkey-enc decryption failed (missing/expired cookie, first passkey login,
+        // or cross-device). Fall back to the canonical vault key so the credential
+        // vault stays accessible. storePasskeyEncKey() below refreshes the cookie
+        // so subsequent passkey logins use the faster enc path.
         $master_key = getCanonicalVaultKey($mysqli);
     }
 

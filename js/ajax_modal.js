@@ -67,8 +67,9 @@ $(document).on('click', '.ajax-modal', function (e) {
 
   const $trigger  = $(this);
 
-  // Prefer data-modal-url, fallback to href
-  let modalUrl = $trigger.data('modal-url') || $trigger.attr('href') || '#';
+  // Prefer data-modal-url, fallback to href — use .attr() not .data() so we
+  // always read the live DOM attribute (bulk_actions.js updates it via setAttribute).
+  let modalUrl = $trigger.attr('data-modal-url') || $trigger.attr('href') || '#';
   const modalSize = $trigger.data('modal-size') || 'md';
   const modalTab = $trigger.data('modal-tab');
 

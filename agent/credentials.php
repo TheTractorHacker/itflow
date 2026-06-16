@@ -431,7 +431,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 </td>
                                 <td>
                                     <a class="text-dark ajax-modal" href="#"
-                                        data-modal-url="modals/credential/credential_edit.php?id=<?= $credential_id ?>">
+                                        data-modal-url="modals/credential/credential_view.php?id=<?= $credential_id ?>">
                                         <div class="media">
                                             <i class="fa fa-fw fa-2x fa-key mr-3"></i>
                                             <div class="media-body">
@@ -547,6 +547,11 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 <!-- Include script to get TOTP code via the login ID -->
 <script src="js/credential_show_otp_via_id.js"></script>
 <script src="../js/bulk_actions.js"></script>
+<script>
+$(function () {
+    $('[data-toggle="popover"]').popover();
+});
+</script>
 
 <?php
 if ($client_url) {

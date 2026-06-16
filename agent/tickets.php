@@ -495,6 +495,15 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                     <input type="hidden" name="client_id" value="<?= $client_id ?>">
                 <?php } ?>
                 <input type="hidden" name="view" value="<?= nullable_htmlentities($_GET['view'] ?? 'list') ?>">
+                <?php if ($onsite_filter !== '') { ?>
+                <input type="hidden" name="onsite" value="<?= intval($onsite_filter) ?>">
+                <?php } ?>
+                <?php if (isset($_GET['overdue'])) { ?>
+                <input type="hidden" name="overdue" value="1">
+                <?php } ?>
+                <?php if (isset($_GET['due_today'])) { ?>
+                <input type="hidden" name="due_today" value="1">
+                <?php } ?>
 
                 <div class="filter-toolbar">
                 <div class="row align-items-center filter-row-nowrap">
@@ -571,7 +580,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                 </div>
                 </div>
 
-                <div class="row filter-row-nowrap">
+                <div class="row mt-1">
                     <div class="col-12">
                         <div class="btn-group">
                             <?php if (lookupUserPermission("module_support") >= 2) { ?>
