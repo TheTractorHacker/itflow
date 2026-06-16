@@ -33,3 +33,59 @@ if (isset($_POST['edit_notification_settings'])) {
     redirect();
 
 }
+
+if (isset($_POST['save_firebase_config'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    $json_raw = trim($_POST['firebase_service_account_json'] ?? '');
+
+    if (empty($json_raw)) {
+        flash_alert("Service account JSON cannot be empty.", "error");
+        redirect();
+    }
+
+    $decoded = json_decode($json_raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        flash_alert("Invalid JSON: " . json_last_error_msg(), "error");
+        redirect();
+    }
+
+    foreach (['type', 'project_id', 'private_key', 'client_email'] as $field) {
+        if (empty($decoded[$field])) {
+            flash_alert("Missing required Firebase field: <code>$field</code>", "error");
+            redirect();
+        }
+    }
+
+    if ($decoded['type'] !== 'service_account') {
+        flash_alert("JSON must be a Firebase service account (\"type\" must be \"service_account\").", "error");
+        redirect();
+    }
+
+    $config_path = __DIR__ . '/../../config/firebase_service_account.json';
+    if (file_put_contents($config_path, json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false) {
+        flash_alert("Could not write configuration file — check server file permissions on config/.", "error");
+        redirect();
+    }
+
+    logAction("Settings", "Edit", "$session_name configured Firebase push notifications");
+    flash_alert("Firebase service account saved. Push notifications are now active.");
+    redirect();
+
+}
+
+if (isset($_POST['remove_firebase_config'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    $config_path = __DIR__ . '/../../config/firebase_service_account.json';
+    if (file_exists($config_path)) {
+        unlink($config_path);
+    }
+
+    logAction("Settings", "Edit", "$session_name removed Firebase push notification configuration");
+    flash_alert("Firebase configuration removed.");
+    redirect();
+
+}

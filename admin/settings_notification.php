@@ -259,33 +259,60 @@ require_once "includes/inc_all_admin.php";
         $push_user_count = intval(mysqli_fetch_assoc($sql_push_users)['cnt']);
         ?>
 
-        <!-- Mobile App Push Notifications (status only — no saveable settings) -->
+        <!-- Mobile App Push Notifications -->
         <div class="notif-section mt-3">
             <div class="notif-section-header">
                 <span class="section-icon text-white" style="background:#6f42c1;"><i class="fas fa-mobile-alt"></i></span>
                 Mobile App Push Notifications
             </div>
             <div class="notif-section-body">
+
+                <!-- Firebase service account config -->
                 <div class="notif-row">
                     <div class="notif-row-meta">
-                        <div class="notif-label">Firebase Configuration</div>
+                        <div class="notif-label">Firebase Service Account</div>
                         <div class="notif-desc">
-                            Push notifications require a Firebase (FCM) service account file placed at
-                            <code>config/firebase_service_account.json</code> on the server.
-                            <?php if (!$firebase_configured) { ?>
-                            See the <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>
-                            to download your service account credentials.
-                            <?php } ?>
+                            Required for push notifications to the ITFlow mobile app.
+                            In the <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>,
+                            go to Project Settings &rarr; Service Accounts &rarr; Generate new private key.
+                        </div>
+
+                        <!-- JSON paste form -->
+                        <div class="collapse mt-3 <?= !$firebase_configured ? 'show' : '' ?>" id="firebaseJsonEditor">
+                            <form method="post" action="post.php" autocomplete="off">
+                                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                <textarea name="firebase_service_account_json" rows="9"
+                                    class="form-control form-control-sm mb-2"
+                                    style="font-family:monospace;font-size:.75rem;resize:vertical;"
+                                    placeholder='Paste the full service account JSON here…'></textarea>
+                                <button type="submit" name="save_firebase_config" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-save mr-1"></i><?= $firebase_configured ? 'Update' : 'Save' ?> Configuration
+                                </button>
+                            </form>
                         </div>
                     </div>
-                    <div class="notif-row-control pt-1">
+                    <div class="notif-row-control pt-1" style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;">
                         <?php if ($firebase_configured) { ?>
                         <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i>Configured</span>
+                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                data-toggle="collapse" data-target="#firebaseJsonEditor">
+                            <i class="fas fa-edit mr-1"></i>Update
+                        </button>
+                        <form method="post" action="post.php">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <button type="submit" name="remove_firebase_config"
+                                    class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Remove Firebase configuration? Push notifications will stop working.')">
+                                <i class="fas fa-trash mr-1"></i>Remove
+                            </button>
+                        </form>
                         <?php } else { ?>
                         <span class="badge badge-warning px-2 py-1"><i class="fas fa-exclamation-triangle mr-1"></i>Not configured</span>
                         <?php } ?>
                     </div>
                 </div>
+
+                <!-- Registered device count -->
                 <div class="notif-row">
                     <div class="notif-row-meta">
                         <div class="notif-label">Registered Devices</div>
@@ -303,6 +330,7 @@ require_once "includes/inc_all_admin.php";
                         <?php } ?>
                     </div>
                 </div>
+
             </div>
         </div>
 
