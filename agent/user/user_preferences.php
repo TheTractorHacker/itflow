@@ -74,4 +74,29 @@ $records_per_page    = intval($pref['user_config_records_per_page'] ?: 10);
     </div>
 </div>
 
+<!-- Push Notifications Test -->
+<?php
+$has_fcm = mysqli_num_rows(mysqli_query($mysqli, "SELECT token_id FROM api_tokens WHERE token_user_id = $session_user_id AND token_fcm_token IS NOT NULL LIMIT 1")) > 0;
+?>
+<div class="card card-dark">
+    <div class="card-header py-2">
+        <h3 class="card-title"><i class="fas fa-fw fa-mobile-alt mr-2"></i>Push Notifications</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">Send a test push notification to verify your mobile app is connected.</p>
+        <?php if ($has_fcm) { ?>
+        <form action="post.php" method="post">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+            <button type="submit" name="test_push_notification" class="btn btn-primary btn-sm">
+                <i class="fas fa-bell mr-1"></i>Send Test Notification
+            </button>
+        </form>
+        <?php } else { ?>
+        <div class="alert alert-warning py-2 mb-0">
+            <i class="fas fa-exclamation-triangle mr-2"></i>No registered mobile devices found. Log in to the ITFlow mobile app and enable push notifications.
+        </div>
+        <?php } ?>
+    </div>
+</div>
+
 <?php require_once "../../includes/footer.php"; ?>

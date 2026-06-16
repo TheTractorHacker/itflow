@@ -530,21 +530,14 @@ if (isset($_GET['ticket_id'])) {
                     <div class="d-flex align-items-center flex-wrap text-muted small" style="gap:.6rem;">
                         <span>Ticket# <?= "$ticket_prefix$ticket_number" ?></span>
 
-                        <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) {
-                            $sql_status_select = mysqli_query($mysqli, "SELECT ticket_status_id, ticket_status_name, ticket_status_color FROM ticket_statuses WHERE ticket_status_active = 1 ORDER BY ticket_status_order");
-                        ?>
-                        <span class="d-inline-flex align-items-center">
-                            <select id="quickStatusSelect" class="form-control form-control-sm status-pill-select d-inline-block" style="max-width:150px;font-size:.8rem;background-color: <?= $ticket_status_color ?>;" data-ticket-id="<?= $ticket_id ?>" data-csrf="<?= $_SESSION['csrf_token'] ?>">
-                                <?php while ($_qs = mysqli_fetch_assoc($sql_status_select)) { ?>
-                                <option value="<?= intval($_qs['ticket_status_id']) ?>" data-color="<?= nullable_htmlentities($_qs['ticket_status_color']) ?>" <?= intval($_qs['ticket_status_id']) === $ticket_status ? 'selected' : '' ?>>
-                                    <?= nullable_htmlentities($_qs['ticket_status_name']) ?>
-                                </option>
-                                <?php } ?>
-                            </select>
-                            <span id="quickStatusStatus" class="ml-2" style="font-size:13px;"></span>
-                        </span>
+                        <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) { ?>
+                        <a class="ajax-modal" href="#" data-modal-url="modals/ticket/ticket_status.php?id=<?= $ticket_id ?>" title="Change Status">
+                            <span class="badge badge-pill tkt-pill-badge text-light" style="background-color:<?= $ticket_status_color ?>;">
+                                <?= $ticket_status_name ?> <i class="fas fa-pen ml-1" style="font-size:.6rem;opacity:.75;"></i>
+                            </span>
+                        </a>
                         <?php } else { ?>
-                        <span id="ticketStatusBadge" class='badge badge-pill tkt-pill-badge text-light' style="background-color: <?= $ticket_status_color ?>">
+                        <span class="badge badge-pill tkt-pill-badge text-light" style="background-color:<?= $ticket_status_color ?>;">
                             <?= $ticket_status_name ?>
                         </span>
                         <?php } ?>

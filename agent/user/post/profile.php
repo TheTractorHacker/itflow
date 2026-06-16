@@ -362,3 +362,23 @@ if (isset($_GET['delete_passkey'])) {
 
 }
 
+
+if (isset($_POST['test_push_notification'])) {
+    validateCSRFToken($_POST['csrf_token']);
+
+    $sent = false;
+    $sql_tokens = mysqli_query($mysqli, "SELECT token_fcm_token FROM api_tokens WHERE token_user_id = $session_user_id AND token_fcm_token IS NOT NULL");
+    while ($tok = mysqli_fetch_assoc($sql_tokens)) {
+        if (firebase_send_push($tok['token_fcm_token'], 'ITFlow Test', 'Push notifications are working!', ['type' => 'test'])) {
+            $sent = true;
+        }
+    }
+
+    if ($sent) {
+        flash_alert('<i class="fas fa-bell mr-2"></i>Test push notification sent to your registered devices.');
+    } else {
+        flash_alert('No registered devices found, or push delivery failed. Make sure the app is logged in with push enabled.', 'error');
+    }
+
+    redirect();
+}

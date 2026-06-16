@@ -11,7 +11,6 @@ if (isset($_GET['dismissed'])) {
     $dismissed_query = 'AND notification_dismissed_at IS NOT NULL';
     $dismissed_filter = 1;
 } else {
-    // Default - any
     $dismissed_query = 'AND notification_dismissed_at IS NULL';
     $dismissed_filter = 0;
 }
@@ -30,130 +29,153 @@ $sql = mysqli_query(
 
 $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
+// Icon map for notification types
+function notif_icon(string $type): string {
+    $map = [
+        'Ticket'       => 'fa-ticket-alt text-primary',
+        'Invoice'      => 'fa-file-invoice-dollar text-success',
+        'Domain'       => 'fa-globe text-warning',
+        'Certificate'  => 'fa-lock text-info',
+        'Asset'        => 'fa-desktop text-secondary',
+        'Shared Item'  => 'fa-share-alt text-purple',
+        'Cron'         => 'fa-clock text-muted',
+        'Update'       => 'fa-download text-info',
+        'RMM'          => 'fa-server text-danger',
+        'Payment'      => 'fa-dollar-sign text-success',
+        'Contract'     => 'fa-file-contract text-primary',
+    ];
+    foreach ($map as $key => $icon) {
+        if (stripos($type, $key) !== false) return $icon;
+    }
+    return 'fa-bell text-secondary';
+}
+
 ?>
 
 <div class="card card-dark">
-    <div class="card-header py-2">
-        <h3 class="card-title mt-2">
-            <i class="fas fa-fw fa-bell mr-2"></i><?php if($dismissed_filter) { echo "Dismissed "; } ?>Notifications
+    <div class="card-header py-2 d-flex align-items-center">
+        <h3 class="card-title mt-1 mr-auto">
+            <i class="fas fa-fw fa-bell mr-2"></i><?php if ($dismissed_filter) echo "Dismissed "; ?>Notifications
+            <?php if ($num_rows[0] > 0) { ?><span class="badge badge-secondary ml-2"><?= $num_rows[0] ?></span><?php } ?>
         </h3>
-        <div class="card-tools">
-            <?php if($dismissed_filter) { ?>
-            <a href="notifications.php" class="btn btn-primary"><i class="fas fa-fw fa-history mr-2"></i>Dismissed</a>
+        <div class="d-flex align-items-center" style="gap:.5rem;">
+            <?php if (!$dismissed_filter && $num_rows[0] > 0) { ?>
+            <a href="post.php?dismiss_all_notifications&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+               class="btn btn-sm btn-outline-secondary confirm-link" title="Dismiss All">
+                <i class="fas fa-check-double mr-1"></i>Dismiss All
+            </a>
+            <?php } ?>
+            <?php if ($dismissed_filter) { ?>
+            <a href="notifications.php" class="btn btn-sm btn-primary"><i class="fas fa-bell mr-1"></i>Active</a>
             <?php } else { ?>
-            <a href="notifications.php?dismissed" class="btn btn-outline-secondary"><i class="fas fa-fw fa-history mr-2"></i>Dismissed</a>
+            <a href="notifications.php?dismissed" class="btn btn-sm btn-outline-secondary"><i class="fas fa-history mr-1"></i>Dismissed</a>
             <?php } ?>
         </div>
     </div>
     <div class="card-body">
-        <form class="mb-4" autocomplete="off">
-            <?php if ($dismissed_filter) { ?>
-                <input type="hidden" name="dismissed" value="">
-            <?php } ?>
-            <div class="row">
-                <div class="col-sm-4">
-                    <div class="input-group">
-                        <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search <?php if($dismissed_filter) { echo "Dismissed "; } ?>Notifications">
-                        <div class="input-group-append">
-                            <button class="btn btn-primary text-strong"><i class="fa fa-search"></i></button>
-                            <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-8">
-
-
+        <!-- Search bar -->
+        <form class="mb-3" autocomplete="off">
+            <?php if ($dismissed_filter) { ?><input type="hidden" name="dismissed" value=""><?php } ?>
+            <div class="input-group" style="max-width:440px;">
+                <input type="search" class="form-control" name="q"
+                       value="<?php if (isset($q)) echo stripslashes(nullable_htmlentities($q)); ?>"
+                       placeholder="Search notifications…">
+                <div class="input-group-append">
+                    <button class="btn btn-primary"><i class="fa fa-search"></i></button>
+                    <button class="btn btn-outline-secondary" type="button"
+                            data-toggle="collapse" data-target="#advancedFilter">
+                        <i class="fas fa-filter"></i>
+                    </button>
                 </div>
             </div>
-            <div class="collapse mt-3 <?php if (!empty($_GET['dtf'])) { echo "show"; } ?>" id="advancedFilter">
-                <div class="row">
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label>Date From</label>
-                            <input type="date" class="form-control" name="dtf" max="2999-12-31" value="<?php echo nullable_htmlentities($dtf); ?>">
-                        </div>
+            <div class="collapse mt-2 <?php if (!empty($_GET['dtf'])) echo 'show'; ?>" id="advancedFilter">
+                <div class="d-flex" style="gap:.75rem;">
+                    <div>
+                        <label class="small text-muted mb-1">From</label>
+                        <input type="date" class="form-control form-control-sm" name="dtf" max="2999-12-31" value="<?= nullable_htmlentities($dtf) ?>">
                     </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label>Date To</label>
-                            <input type="date" class="form-control" name="dtt" max="2999-12-31" value="<?php echo nullable_htmlentities($dtt); ?>">
-                        </div>
+                    <div>
+                        <label class="small text-muted mb-1">To</label>
+                        <input type="date" class="form-control form-control-sm" name="dtt" max="2999-12-31" value="<?= nullable_htmlentities($dtt) ?>">
                     </div>
                 </div>
             </div>
         </form>
-        <div class="table-responsive-sm">
-            <table class="table table-hover">
-                <thead class="<?php if ($num_rows[0] == 0) { echo "d-none"; } ?>">
-                <tr>
-                    <th>
-                        <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=notification_timestamp&order=<?php echo $disp; ?>">
-                            Timestamp <?php if ($sort == 'notification_timestamp') { echo $order_icon; } ?>
-                        </a>
-                    </th>
-                    <th>
-                        <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=notification_type&order=<?php echo $disp; ?>">
-                            Type <?php if ($sort == 'notification_type') { echo $order_icon; } ?>
-                        </a>
-                    </th>
-                    <th>
-                        <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=notification&order=<?php echo $disp; ?>">
-                            Notification <?php if ($sort == 'notification') { echo $order_icon; } ?>
-                        </a>
-                    </th>
-                    <?php if($dismissed_filter) { ?>
-                    <th>
-                        <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=notification_dismissed_at&order=<?php echo $disp; ?>">
-                            Dismissed At <?php if ($sort == 'notification_dismissed_at') { echo $order_icon; } ?>
-                        </a>
-                    </th>
-                    <?php } ?>
-                    <?php if(!$dismissed_filter) { ?>
-                    <th class="text-center p-0">
-                        <?php if (mysqli_num_rows($sql) > 0) { ?>
-                        <a href="post.php?dismiss_all_notifications&csrf_token=<?php echo $_SESSION["csrf_token"]; ?>"
-                            class="btn btn-sm btn-dark mb-2" title="Dismiss All">
-                            <i class="fas fa-fw fa-check-double"></i>
-                        </a>
-                        <?php } ?>
-                    </th>
-                    <?php } ?>
-                </tr>
-                </thead>
-                <tbody>
-                <?php
 
-                while ($row = mysqli_fetch_assoc($sql)) {
-                $notification_id = intval($row['notification_id']);
-                $notification_timestamp = nullable_htmlentities($row['notification_timestamp']);
-                $notification_type = nullable_htmlentities($row['notification_type']);
-                $notification = nullable_htmlentities($row['notification']);
-                $notification_dismissed_at = nullable_htmlentities($row['notification_dismissed_at']);
-                $client_name = nullable_htmlentities($row['client_name']);
-                $client_id = intval($row['client_id']);
-
-                ?>
-                <tr>
-                    <td><?php echo $notification_timestamp; ?></td>
-                    <td><?php echo $notification_type; ?></td>
-                    <td><?php echo $notification; ?></td>
-                    <?php if($dismissed_filter) { ?>
-                    <td><?php echo $notification_dismissed_at; ?></td>
-                    <?php } ?>
-                    <?php if(!$dismissed_filter) { ?>
-                    <td class="text-center"><a class="btn btn-secondary btn-sm" href="post.php?dismiss_notification=<?= $notification_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" title="Dismiss"><i class="fas fa-check"></i></a></td>
-                    <?php } ?>
-                </tr>
-
-                <?php } ?>
-
-                </tbody>
-            </table>
+        <?php if ($num_rows[0] == 0) { ?>
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-bell-slash fa-3x mb-3 d-block"></i>
+            <?= $dismissed_filter ? 'No dismissed notifications.' : 'All caught up — no notifications.' ?>
         </div>
+        <?php } else { ?>
+        <div class="notif-feed">
+        <?php while ($row = mysqli_fetch_assoc($sql)) {
+            $notification_id      = intval($row['notification_id']);
+            $notification_ts      = nullable_htmlentities($row['notification_timestamp']);
+            $notification_type    = nullable_htmlentities($row['notification_type']);
+            $notification         = nullable_htmlentities($row['notification']);
+            $notification_dismissed_at = nullable_htmlentities($row['notification_dismissed_at']);
+            $client_name          = nullable_htmlentities($row['client_name']);
+            $client_id            = intval($row['client_id']);
+            $icon_class           = notif_icon($notification_type);
+            $ago                  = timeAgo($row['notification_timestamp']);
+        ?>
+        <div class="d-flex align-items-start py-3 border-bottom notif-item">
+            <!-- Icon -->
+            <div class="mr-3 mt-1">
+                <span class="notif-icon-circle">
+                    <i class="fas fa-fw <?= $icon_class ?>"></i>
+                </span>
+            </div>
+            <!-- Content -->
+            <div class="flex-grow-1 min-width-0">
+                <div class="d-flex align-items-center flex-wrap mb-1" style="gap:.4rem;">
+                    <span class="badge badge-secondary badge-pill" style="font-size:.7rem;"><?= $notification_type ?></span>
+                    <?php if ($client_name) { ?>
+                    <a href="client_overview.php?client_id=<?= $client_id ?>" class="text-muted small">
+                        <i class="fas fa-building mr-1"></i><?= $client_name ?>
+                    </a>
+                    <?php } ?>
+                </div>
+                <div class="mb-1"><?= $notification ?></div>
+                <div class="small text-muted" title="<?= $notification_ts ?>">
+                    <i class="far fa-clock mr-1"></i><?= $ago ?>
+                    <?php if ($dismissed_filter && $notification_dismissed_at) { ?>
+                    &nbsp;&middot;&nbsp;<i class="fas fa-check mr-1"></i>Dismissed <?= timeAgo($notification_dismissed_at) ?>
+                    <?php } ?>
+                </div>
+            </div>
+            <!-- Action -->
+            <?php if (!$dismissed_filter) { ?>
+            <div class="ml-3 flex-shrink-0">
+                <a href="post.php?dismiss_notification=<?= $notification_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                   class="btn btn-sm btn-outline-secondary" title="Dismiss">
+                    <i class="fas fa-check"></i>
+                </a>
+            </div>
+            <?php } ?>
+        </div>
+        <?php } ?>
+        </div>
+        <?php } ?>
+
         <?php require_once "../includes/filter_footer.php"; ?>
     </div>
 </div>
 
-<?php
+<style>
+.notif-icon-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+}
+.notif-item:last-child { border-bottom: 0 !important; }
+.notif-feed { margin: -.75rem; padding: .75rem; }
+</style>
 
-require_once "../includes/footer.php";
+<?php require_once "../includes/footer.php"; ?>

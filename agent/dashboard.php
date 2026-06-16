@@ -45,6 +45,69 @@ $sql_years_select = mysqli_query($mysqli, "
   } */
 </style>
 
+
+<?php
+// Dashboard stat cards
+$dash_open_tickets = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE ticket_closed_at IS NULL AND ticket_resolved_at IS NULL"))[0]);
+$dash_active_clients = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM clients WHERE client_active = 1"))[0]);
+$dash_my_tickets = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE ticket_assigned_to = $session_user_id AND ticket_closed_at IS NULL"))[0]);
+$dash_pending_invoices = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM invoices WHERE invoice_status = 'Unpaid'"))[0]);
+$dash_hour = intval(date('G'));
+$dash_greeting = $dash_hour < 12 ? 'Good morning' : ($dash_hour < 17 ? 'Good afternoon' : 'Good evening');
+?>
+<div class="mb-3 d-flex align-items-center justify-content-between flex-wrap" style="gap:.5rem;">
+    <div>
+        <h4 class="mb-0 font-weight-bold"><?= $dash_greeting ?>, <?= nullable_htmlentities($session_name) ?>!</h4>
+        <small class="text-muted"><?= date('l, F j, Y') ?></small>
+    </div>
+</div>
+<div class="row mb-4">
+    <div class="col-6 col-md-3 mb-3">
+        <a href="tickets.php" class="text-decoration-none">
+        <div class="small-box bg-gradient-primary mb-0">
+            <div class="inner">
+                <h3><?= $dash_open_tickets ?></h3>
+                <p>Open Tickets</p>
+            </div>
+            <div class="icon"><i class="fas fa-ticket-alt"></i></div>
+        </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <a href="tickets.php?assigned_to=<?= $session_user_id ?>" class="text-decoration-none">
+        <div class="small-box bg-gradient-info mb-0">
+            <div class="inner">
+                <h3><?= $dash_my_tickets ?></h3>
+                <p>My Tickets</p>
+            </div>
+            <div class="icon"><i class="fas fa-user-check"></i></div>
+        </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <a href="clients.php" class="text-decoration-none">
+        <div class="small-box bg-gradient-success mb-0">
+            <div class="inner">
+                <h3><?= $dash_active_clients ?></h3>
+                <p>Active Clients</p>
+            </div>
+            <div class="icon"><i class="fas fa-building"></i></div>
+        </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <a href="invoices.php" class="text-decoration-none">
+        <div class="small-box bg-gradient-warning mb-0">
+            <div class="inner">
+                <h3><?= $dash_pending_invoices ?></h3>
+                <p>Unpaid Invoices</p>
+            </div>
+            <div class="icon"><i class="fas fa-file-invoice-dollar"></i></div>
+        </div>
+        </a>
+    </div>
+</div>
+
 <div class="card card-body">
     <form class="form-inline">
         <input type="hidden" name="enable_financial" value="0">
