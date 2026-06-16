@@ -312,6 +312,67 @@ require_once "includes/inc_all_admin.php";
                     </div>
                 </div>
 
+                <!-- Setup guide -->
+                <div class="notif-row">
+                    <div class="notif-row-meta">
+                        <div class="notif-label">Setup Guide</div>
+                        <div class="notif-desc">Step-by-step instructions for enabling push notifications.</div>
+                        <div class="collapse mt-3" id="firebaseSetupGuide">
+                            <ol class="pl-3 mb-0" style="line-height:1.9;">
+                                <li>
+                                    Go to the <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>
+                                    and sign in with a Google account.
+                                </li>
+                                <li>
+                                    Click <strong>Add project</strong>, give it a name (e.g. <em>ITFlow MSP</em>), and follow the prompts.
+                                    You can disable Google Analytics — it isn't needed.
+                                </li>
+                                <li>
+                                    Once inside your project, click the <strong>Android</strong> icon (<i class="fab fa-android"></i>) to register an app.
+                                    <ul class="mt-1 mb-1" style="line-height:1.8;">
+                                        <li>Android package name: <code>com.foleyit.itflow</code></li>
+                                        <li>App nickname: <em>ITFlow</em> (optional)</li>
+                                        <li>Skip the <code>google-services.json</code> download and SHA steps — click through to the console.</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    In the left sidebar go to <strong>Project Settings</strong>
+                                    (gear icon &rarr; Project settings).
+                                </li>
+                                <li>
+                                    Click the <strong>Service accounts</strong> tab.
+                                </li>
+                                <li>
+                                    Click <strong>Generate new private key</strong>, then confirm.
+                                    A <code>.json</code> file will download to your computer.
+                                </li>
+                                <li>
+                                    Open that file, copy all the text, and paste it into the
+                                    <strong>Firebase Service Account</strong> field above, then click
+                                    <strong>Save Configuration</strong>.
+                                </li>
+                                <li>
+                                    Have your staff log in to the <strong>ITFlow mobile app</strong>.
+                                    Their devices will register automatically and appear in the
+                                    <em>Registered Devices</em> count below.
+                                </li>
+                            </ol>
+                            <p class="mt-2 mb-0 small text-muted">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Firebase Cloud Messaging (FCM) is free with no per-message cost.
+                                The service account key gives your server permission to send push
+                                notifications on behalf of your Firebase project.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="notif-row-control pt-1">
+                        <button class="btn btn-sm btn-outline-info" type="button"
+                                data-toggle="collapse" data-target="#firebaseSetupGuide">
+                            <i class="fas fa-book-open mr-1"></i>View Guide
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Registered device count -->
                 <div class="notif-row">
                     <div class="notif-row-meta">
