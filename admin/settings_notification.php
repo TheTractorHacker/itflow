@@ -250,6 +250,62 @@ require_once "includes/inc_all_admin.php";
             </button>
 
         </form>
+
+        <?php
+        $firebase_configured = file_exists(__DIR__ . '/../config/firebase_service_account.json');
+        $sql_push_total = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM api_tokens WHERE token_fcm_token IS NOT NULL AND token_fcm_token != ''");
+        $push_total_devices = intval(mysqli_fetch_assoc($sql_push_total)['cnt']);
+        $sql_push_users = mysqli_query($mysqli, "SELECT COUNT(DISTINCT token_user_id) AS cnt FROM api_tokens WHERE token_fcm_token IS NOT NULL AND token_fcm_token != ''");
+        $push_user_count = intval(mysqli_fetch_assoc($sql_push_users)['cnt']);
+        ?>
+
+        <!-- Mobile App Push Notifications (status only — no saveable settings) -->
+        <div class="notif-section mt-3">
+            <div class="notif-section-header">
+                <span class="section-icon text-white" style="background:#6f42c1;"><i class="fas fa-mobile-alt"></i></span>
+                Mobile App Push Notifications
+            </div>
+            <div class="notif-section-body">
+                <div class="notif-row">
+                    <div class="notif-row-meta">
+                        <div class="notif-label">Firebase Configuration</div>
+                        <div class="notif-desc">
+                            Push notifications require a Firebase (FCM) service account file placed at
+                            <code>config/firebase_service_account.json</code> on the server.
+                            <?php if (!$firebase_configured) { ?>
+                            See the <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>
+                            to download your service account credentials.
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <div class="notif-row-control pt-1">
+                        <?php if ($firebase_configured) { ?>
+                        <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i>Configured</span>
+                        <?php } else { ?>
+                        <span class="badge badge-warning px-2 py-1"><i class="fas fa-exclamation-triangle mr-1"></i>Not configured</span>
+                        <?php } ?>
+                    </div>
+                </div>
+                <div class="notif-row">
+                    <div class="notif-row-meta">
+                        <div class="notif-label">Registered Devices</div>
+                        <div class="notif-desc">Staff members with the ITFlow mobile app logged in and push notifications enabled.</div>
+                    </div>
+                    <div class="notif-row-control pt-1">
+                        <?php if ($push_total_devices > 0) { ?>
+                        <span class="text-success font-weight-bold"><?= $push_total_devices ?></span>
+                        <span class="text-muted small">
+                            &nbsp;device<?= $push_total_devices !== 1 ? 's' : '' ?>
+                            across <?= $push_user_count ?> user<?= $push_user_count !== 1 ? 's' : '' ?>
+                        </span>
+                        <?php } else { ?>
+                        <span class="text-muted"><i class="fas fa-minus mr-1"></i>None registered</span>
+                        <?php } ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
