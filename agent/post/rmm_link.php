@@ -66,6 +66,27 @@ if ($action === 'link') {
         last_sync=NOW()
     ");
 
+    // The INSERT above leaves rmm_status at its column default ('unknown')
+    // until the next scheduled sync runs. Pull the agent's live status right
+    // now so the UI doesn't show "Unknown" for a freshly-linked device.
+    try {
+        require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/rmm_client_factory.php';
+        require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/class_rmm_asset_mapper.php';
+        $client = getRmmClient($integration_id);
+        if (method_exists($client, 'getAgent')) {
+            $agent = $client->getAgent($tactical_agent_id);
+        } else {
+            $match = array_filter($client->getAgents(), fn($a) => ($a['agent_id'] ?? '') === $tactical_agent_id);
+            $agent = $match ? reset($match) : [];
+        }
+        if ($agent) {
+            (new RmmAssetMapper($mysqli, $integration_id, $session_user_id, $client))->syncAgent($agent);
+        }
+    } catch (Throwable $e) {
+        // Non-fatal — link is created either way; the next scheduled sync
+        // will populate status if this live fetch fails.
+    }
+
     logAction('RMM', 'Asset Linked',
         "$session_name manually linked asset {$asset_row['asset_name']} to Tactical agent $tactical_agent_id",
         0, $asset_id);
