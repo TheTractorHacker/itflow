@@ -259,6 +259,17 @@ function comet_fmt_bytes(int $bytes): string {
     return $bytes . ' B';
 }
 
+// Sort priority for device status tables: failed first, then warning, then
+// no-job-history ("unknown"), then everything else (success/running) last.
+// Uses the real Comet SDK status codes via comet_is_failed()/etc — keep this
+// as the single source of truth so dashboards can't drift back to fake codes.
+function comet_status_sort_rank(int $status, bool $has_job): int {
+    if (!$has_job) return 2;
+    if ($status === COMET_JOB_FAILED_WARNING) return 1;
+    if (comet_is_failed($status)) return 0;
+    return 3;
+}
+
 // ── Shared failure/recovery handling (used by webhook + cron polling fallback) ─
 // Creates a high-priority ticket + appNotify the first time a device's backup
 // job is seen in a failed state, and auto-resolves/replies on the next
@@ -376,13 +387,19 @@ function comet_process_job(array $job): array {
     return ['action' => 'status_ignored', 'status' => $status];
 }
 
+// Returns the most recent job per device, keyed by Comet's DeviceID (the
+// same key used in a user profile's Devices dictionary) — NOT by device
+// name. BackupJobDetail has no "DeviceName" field at all (only DeviceID);
+// keying by a field that never existed meant every lookup by friendly name
+// always missed, and every device showed as "Unknown" regardless of its
+// real backup status.
 function comet_last_jobs_per_device(string $username): array {
     $jobs = comet_get_jobs_for_user($username) ?: [];
     usort($jobs, fn($a, $b) => ($b['StartTime'] ?? 0) - ($a['StartTime'] ?? 0));
     $seen = [];
     foreach ($jobs as $j) {
-        $dev = $j['DeviceName'] ?? 'Unknown';
-        if (!isset($seen[$dev])) $seen[$dev] = $j;
+        $dev = $j['DeviceID'] ?? '';
+        if ($dev !== '' && !isset($seen[$dev])) $seen[$dev] = $j;
     }
     return $seen;
 }

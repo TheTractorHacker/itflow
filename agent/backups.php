@@ -1,16 +1,25 @@
 <?php
-require_once "includes/inc_all_admin.php";
+require_once "includes/inc_all.php";
+enforceUserPermission('module_rmm');
 require_once "../includes/comet.php";
 
 if (!$config_comet_enabled) {
-    flash_alert('Comet integration is not enabled. Configure it under Settings → Comet Backup.', 'warning');
-    redirect('settings_comet.php');
+    ?>
+    <div class="card card-dark">
+        <div class="card-body text-center text-muted py-5">
+            <i class="fas fa-cloud-upload-alt fa-3x mb-3 d-block"></i>
+            Comet Backup integration is not enabled.<br>Ask an admin to configure it under Settings &rarr; Comet Backup.
+        </div>
+    </div>
+    <?php
+    require_once "../includes/footer.php";
+    exit;
 }
 
 // Load all Comet users and build a client-name lookup from mappings
 $comet_users = comet_get_users();
 $maps_sql    = mysqli_query($mysqli, "SELECT m.map_comet_username, c.client_id, c.client_name FROM comet_client_map m JOIN clients c ON m.map_client_id = c.client_id");
-$client_for  = []; // comet_username => ['client_id'=>, 'client_name'=>]
+$client_for  = []; // comet_username => ['id'=>, 'name'=>]
 while ($m = mysqli_fetch_assoc($maps_sql)) {
     $client_for[$m['map_comet_username']] = ['id' => intval($m['client_id']), 'name' => nullable_htmlentities($m['client_name'])];
 }
@@ -30,16 +39,11 @@ if ($comet_users) {
             $job      = $last_jobs[$devid] ?? null;
             $status   = $job ? intval($job['Status']) : 0;
             $total_devices++;
-            // Use the real Comet SDK status codes (see includes/comet.php),
-            // not made-up ones — 5001/5003/5004/5007 never match an actual
-            // job status, so every real success/failure fell through to the
-            // "Unknown" bucket below despite the per-row badge (which does
-            // use the correct helpers) showing the right status.
-            if (!$job)                              $unknown++;
-            elseif (comet_is_success($status))      $ok++;
-            elseif ($status === COMET_JOB_FAILED_WARNING) $warn++;
-            elseif (comet_is_failed($status))       $fail++;
-            else                                    $unknown++;
+            if (!$job)                                    $unknown++;
+            elseif (comet_is_success($status))            $ok++;
+            elseif ($status === COMET_JOB_FAILED_WARNING)  $warn++;
+            elseif (comet_is_failed($status))              $fail++;
+            else                                           $unknown++;
             $device_rows[] = [
                 'username'    => $username,
                 'dev_name'    => $dev_name,
@@ -61,6 +65,10 @@ if ($comet_users) {
     });
 }
 ?>
+
+<div class="d-flex align-items-center mb-3">
+    <h4 class="mb-0 mr-auto"><i class="fas fa-cloud-upload-alt mr-2"></i>Backup Dashboard</h4>
+</div>
 
 <!-- Summary row -->
 <div class="row mb-3">
@@ -89,15 +97,12 @@ if ($comet_users) {
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
         <h3 class="card-title mr-auto"><i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Device Backup Status</h3>
-        <a href="settings_comet.php" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-cog mr-1"></i>Settings
-        </a>
     </div>
     <div class="card-body p-0">
         <?php if (!$comet_users): ?>
             <div class="text-center text-muted py-4">
                 <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
-                Could not reach Comet server. Check connection settings.
+                Could not reach Comet server. Contact an admin to check connection settings.
             </div>
         <?php elseif (empty($device_rows)): ?>
             <div class="text-center text-muted py-4">No devices found in Comet.</div>
