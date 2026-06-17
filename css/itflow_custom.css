@@ -280,8 +280,25 @@ body.dark-mode {
     color: var(--color-text) !important;
 }
 
-.nav-tabs .nav-link.active {
-    color: var(--color-accent);
+/*
+ * AdminLTE hardcodes .card-dark .card-header a { color: #fff } for its
+ * original dark-card design. Our theme forces that header background to
+ * var(--color-surface), which is white in light mode — so every inactive
+ * tab became literal white-on-white (invisible at rest, still invisible on
+ * hover since AdminLTE never restyles color on :hover; clicking a tab also
+ * dropped the previously-active tab back into the same invisible state).
+ * Override color explicitly for all three states so tabs stay visible in
+ * both themes.
+ */
+.card-dark .card-header a.nav-link {
+    color: var(--color-text-muted) !important;
+}
+.card-dark .card-header a.nav-link:hover {
+    color: var(--color-text) !important;
+}
+.nav-tabs .nav-link.active,
+.card-dark .card-header a.nav-link.active {
+    color: var(--color-accent) !important;
     background: transparent;
     border: 0;
     border-bottom: 2px solid var(--color-accent);
