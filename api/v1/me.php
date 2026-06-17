@@ -17,6 +17,23 @@ if ($method === 'GET') {
     ]);
 }
 
+if ($method === 'PUT' && isset(json_decode(file_get_contents('php://input'), true)['fcm_token'])) {
+    $body      = json_decode(file_get_contents('php://input'), true) ?? [];
+    $fcm_token = mysqli_real_escape_string($mysqli, trim($body['fcm_token'] ?? ''));
+
+    // Get the api_token row for this user's current Bearer token
+    $auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    $bearer = trim(str_replace('Bearer', '', $auth_header));
+    $bearer_esc = mysqli_real_escape_string($mysqli, $bearer);
+
+    if ($fcm_token) {
+        mysqli_query($mysqli, "UPDATE api_tokens SET token_fcm_token = '$fcm_token' WHERE token_key = '$bearer_esc' AND token_user_id = $api_user_id");
+    } else {
+        mysqli_query($mysqli, "UPDATE api_tokens SET token_fcm_token = NULL WHERE token_key = '$bearer_esc' AND token_user_id = $api_user_id");
+    }
+    api_response(200, ['ok' => true]);
+}
+
 if ($method === 'PUT' || $method === 'POST') {
     $body     = json_decode(file_get_contents('php://input'), true) ?? [];
     $name     = mysqli_real_escape_string($mysqli, trim($body['name'] ?? ''));
