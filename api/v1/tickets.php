@@ -315,12 +315,17 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
     api_response(201, ['ok' => true]);
 }
 
-// GET CHAT MESSAGES
+// GET CHAT MESSAGES (and, with ?stream=1, a live SSE feed of new ones)
 if ($method === 'GET' && $id !== null && $sub === 'chat') {
     if (!$config_module_enable_live_chat) api_error(403, 'Live chat is not enabled');
 
     $ticket_check = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $id LIMIT 1"));
     if (!$ticket_check) api_error(404, 'Ticket not found');
+
+    if (isset($_GET['stream'])) {
+        require $DOCUMENT_ROOT . '/includes/sse_ticket_chat_stream.php';
+        exit;
+    }
 
     $since_id = isset($_GET['since_id']) ? intval($_GET['since_id']) : 0;
 
