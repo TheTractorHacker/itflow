@@ -44,7 +44,7 @@ function firebase_send_push(string $fcm_token, string $title, string $body, arra
     $token = firebase_get_access_token();
     if (!$token) return false;
 
-    $project_id = 'itflow-msp';
+    $project_id = $sa['project_id'];
     $payload = json_encode([
         'message' => [
             'token'        => $fcm_token,
