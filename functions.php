@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/includes/redis_functions.php';
 require_once __DIR__ . '/includes/firebase.php';
+require_once __DIR__ . '/includes/notification_categories.php';
 
 // Role check failed wording
 DEFINE("WORDING_ROLECHECK_FAILED", "You are not permitted to do that!");
@@ -1824,6 +1825,10 @@ function appNotify($type, $details, $action = null, $client_id = 0, $entity_id =
             'entity_id' => $entity_id,
             'push'      => $push,
         ]);
+
+        if ($push && push_allowed_for_user($user_id, $type)) {
+            firebase_send_push_to_user($user_id, $type, $details, ['type' => strtolower($type), 'action' => $push_action ?? '']);
+        }
     }
 }
 
@@ -1857,7 +1862,7 @@ function notifyUser($user_id, $type, $details, $action = null, $client_id = 0, $
         'push'      => $push,
     ]);
 
-    if ($push) {
+    if ($push && push_allowed_for_user($user_id, $type)) {
         firebase_send_push_to_user($user_id, $type, $details, ['type' => strtolower($type), 'action' => $action ?? '']);
     }
 }

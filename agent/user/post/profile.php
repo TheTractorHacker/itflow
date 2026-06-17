@@ -384,3 +384,16 @@ if (isset($_POST['test_push_notification'])) {
 
     redirect();
 }
+
+if (isset($_POST['save_my_push_categories'])) {
+    validateCSRFToken($_POST['csrf_token']);
+
+    $valid_keys = array_keys(push_notification_categories());
+    $selected   = array_values(array_intersect($_POST['push_categories'] ?? [], $valid_keys));
+    $json_esc   = mysqli_real_escape_string($mysqli, json_encode($selected));
+
+    mysqli_query($mysqli, "UPDATE user_settings SET user_config_push_types = '$json_esc' WHERE user_id = $session_user_id");
+
+    flash_alert('Push notification preferences updated.');
+    redirect();
+}

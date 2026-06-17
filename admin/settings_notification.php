@@ -267,13 +267,13 @@ require_once "includes/inc_all_admin.php";
         $push_total_devices = intval(mysqli_fetch_assoc($sql_push_total)['cnt']);
         $sql_push_users = mysqli_query($mysqli, "SELECT COUNT(DISTINCT token_user_id) AS cnt FROM api_tokens WHERE token_fcm_token IS NOT NULL AND token_fcm_token != ''");
         $push_user_count = intval(mysqli_fetch_assoc($sql_push_users)['cnt']);
-        $sql_push_breakdown = mysqli_query($mysqli, "
-            SELECT u.user_name, COUNT(t.token_id) AS device_count
+        $sql_push_mine = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM api_tokens WHERE token_user_id = $session_user_id AND token_fcm_token IS NOT NULL AND token_fcm_token != ''");
+        $push_my_devices = intval(mysqli_fetch_assoc($sql_push_mine)['cnt']);
+        $sql_push_devices = mysqli_query($mysqli, "
+            SELECT t.token_id, t.token_name, t.token_fcm_token, t.token_last_used_at, t.token_created_at, u.user_name
             FROM api_tokens t
             JOIN users u ON u.user_id = t.token_user_id
-            WHERE t.token_fcm_token IS NOT NULL AND t.token_fcm_token != ''
-            GROUP BY t.token_user_id
-            ORDER BY u.user_name ASC
+            ORDER BY t.token_last_used_at IS NULL, t.token_last_used_at DESC, t.token_created_at DESC
         ");
         ?>
 
@@ -308,13 +308,17 @@ require_once "includes/inc_all_admin.php";
                         <?php } ?>
                     </div>
                     <div class="d-flex" style="gap:.4rem;flex-shrink:0;">
-                        <?php if ($push_total_devices > 0) { ?>
+                        <?php if ($push_my_devices > 0) { ?>
                         <form method="post" action="post.php">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                            <button type="submit" name="test_push_notification" class="btn btn-sm btn-primary">
-                                <i class="fas fa-paper-plane mr-1"></i>Send Test Push
+                            <button type="submit" name="test_push_notification" class="btn btn-sm btn-primary" title="Sends to your own registered device(s) only">
+                                <i class="fas fa-paper-plane mr-1"></i>Send Test Push (mine)
                             </button>
                         </form>
+                        <?php } else if ($push_total_devices > 0) { ?>
+                        <span class="small text-muted" title="Other staff have registered devices, but your account doesn't">
+                            <i class="fas fa-info-circle mr-1"></i>No device registered to your account
+                        </span>
                         <?php } ?>
                         <button class="btn btn-sm btn-outline-secondary" type="button"
                                 data-toggle="collapse" data-target="#firebaseJsonEditor">
@@ -348,45 +352,140 @@ require_once "includes/inc_all_admin.php";
                 </div>
 
                 <!-- Device stats -->
-                <div class="notif-row">
-                    <div class="notif-row-meta">
-                        <div class="notif-label">Registered Devices</div>
-                        <div class="notif-desc">Staff members with the ITFlow mobile app logged in.</div>
+                <div class="d-flex align-items-center mb-3" style="gap:2rem;">
+                    <div class="text-center">
+                        <div style="font-size:1.6rem;font-weight:700;line-height:1;color:#6f42c1;"><?= $push_total_devices ?></div>
+                        <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Device<?= $push_total_devices !== 1 ? 's' : '' ?> with push</div>
                     </div>
-                    <div class="notif-row-control">
-                        <?php if ($push_total_devices > 0) { ?>
-                        <div class="d-flex" style="gap:1.25rem;">
-                            <div class="text-center">
-                                <div style="font-size:1.5rem;font-weight:700;line-height:1;color:#6f42c1;"><?= $push_total_devices ?></div>
-                                <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Device<?= $push_total_devices !== 1 ? 's' : '' ?></div>
-                            </div>
-                            <div class="text-center">
-                                <div style="font-size:1.5rem;font-weight:700;line-height:1;color:#6f42c1;"><?= $push_user_count ?></div>
-                                <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">User<?= $push_user_count !== 1 ? 's' : '' ?></div>
-                            </div>
-                        </div>
-                        <?php } else { ?>
-                        <span class="text-muted small"><i class="fas fa-minus mr-1"></i>None yet</span>
-                        <?php } ?>
+                    <div class="text-center">
+                        <div style="font-size:1.6rem;font-weight:700;line-height:1;color:#6f42c1;"><?= $push_user_count ?></div>
+                        <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Staff covered</div>
                     </div>
                 </div>
 
-                <?php if ($push_total_devices > 0) { ?>
-                <!-- Per-user breakdown -->
-                <div class="mt-2 pt-2" style="border-top:1px solid var(--color-border,#eee);">
+                <!-- Device management table -->
+                <div class="mb-1">
                     <div class="small text-muted font-weight-bold mb-2 text-uppercase" style="letter-spacing:.05em;font-size:.7rem;">
-                        <i class="fas fa-users mr-1"></i>Staff with registered devices
+                        <i class="fas fa-tablet-alt mr-1"></i>Manage devices
                     </div>
-                    <div class="d-flex flex-wrap" style="gap:.4rem;">
-                        <?php while ($br = mysqli_fetch_assoc($sql_push_breakdown)) { ?>
-                        <span class="badge badge-light border" style="font-size:.78rem;padding:.35em .65em;">
-                            <i class="fas fa-user mr-1 text-muted" style="font-size:.7rem;"></i><?= nullable_htmlentities($br['user_name']) ?>
-                            <span class="badge badge-secondary ml-1" style="font-size:.65rem;"><?= intval($br['device_count']) ?></span>
-                        </span>
-                        <?php } ?>
+                    <?php if (mysqli_num_rows($sql_push_devices) > 0) { ?>
+                    <div class="table-responsive" style="border:1px solid var(--color-border,#eee);border-radius:.4rem;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Device</th>
+                                    <th>Owner</th>
+                                    <th>Push</th>
+                                    <th>Last Active</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while ($dev = mysqli_fetch_assoc($sql_push_devices)) {
+                                    $last_used   = $dev['token_last_used_at'];
+                                    $is_active   = $last_used && (time() - strtotime($last_used)) < 7 * 86400;
+                                    $has_push    = !empty($dev['token_fcm_token']);
+                                ?>
+                                <tr id="push-dev-<?= $dev['token_id'] ?>">
+                                    <td>
+                                        <i class="fas fa-fw fa-mobile-alt text-secondary mr-1"></i>
+                                        <?= nullable_htmlentities($dev['token_name']) ?>
+                                    </td>
+                                    <td><i class="fas fa-fw fa-user text-muted mr-1"></i><?= nullable_htmlentities($dev['user_name']) ?></td>
+                                    <td>
+                                        <?php if ($has_push) { ?>
+                                        <i class="fas fa-bell text-success" title="Push notifications active"></i>
+                                        <?php } else { ?>
+                                        <i class="fas fa-bell-slash text-muted" title="No push token registered"></i>
+                                        <?php } ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($last_used) { ?>
+                                        <span class="badge <?= $is_active ? 'badge-success' : 'badge-secondary' ?>" style="font-size:.7rem;">
+                                            <?= $is_active ? 'Active' : 'Idle' ?>
+                                        </span>
+                                        <span class="text-muted small ml-1"><?= $last_used ?></span>
+                                        <?php } else { ?>
+                                        <span class="badge badge-light border" style="font-size:.7rem;">Never used</span>
+                                        <?php } ?>
+                                    </td>
+                                    <td class="text-right">
+                                        <button class="btn btn-xs btn-outline-danger"
+                                                onclick="revokePushDevice(<?= $dev['token_id'] ?>, this)"
+                                                data-csrf="<?= $_SESSION['csrf_token'] ?>">
+                                            <i class="fas fa-times mr-1"></i>Revoke
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
                     </div>
+                    <?php } else { ?>
+                    <div class="p-3 text-muted text-center small" style="border:1px solid var(--color-border,#eee);border-radius:.4rem;">
+                        <i class="fas fa-mobile-alt fa-2x mb-2 d-block text-secondary"></i>
+                        No devices have logged into the ITFlow mobile app yet.
+                    </div>
+                    <?php } ?>
                 </div>
-                <?php } ?>
+
+                <script>
+                async function revokePushDevice(id, btn) {
+                    if (!confirm('Revoke this device? It will be logged out of the mobile app.')) return;
+                    btn.disabled = true;
+                    try {
+                        const r = await fetch('post.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: 'revoke_push_device=1&token_id=' + encodeURIComponent(id) + '&csrf_token=' + encodeURIComponent(btn.dataset.csrf)
+                        });
+                        const j = await r.json();
+                        if (j.ok) {
+                            document.getElementById('push-dev-' + id).remove();
+                        } else {
+                            alert('Could not revoke device.');
+                            btn.disabled = false;
+                        }
+                    } catch (e) {
+                        alert('Network error revoking device.');
+                        btn.disabled = false;
+                    }
+                }
+                </script>
+
+                <!-- Globally allowed push categories -->
+                <div class="mt-3 pt-3" style="border-top:1px solid var(--color-border,#eee);">
+                    <div class="small text-muted font-weight-bold mb-1 text-uppercase" style="letter-spacing:.05em;font-size:.7rem;">
+                        <i class="fas fa-list-check mr-1"></i>Notification categories allowed to push
+                    </div>
+                    <div class="small text-muted mb-2">Staff can only enable push for categories switched on here. Turning one off disables it for everyone.</div>
+                    <form method="post" action="post.php">
+                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                        <div class="rounded" style="border:1px solid var(--color-border,#eee);overflow:hidden;">
+                            <?php
+                            $push_global_categories = push_globally_enabled_categories();
+                            $cat_total = count(push_notification_categories());
+                            $cat_i = 0;
+                            foreach (push_notification_categories() as $cat_key => $cat) {
+                                $cat_i++;
+                            ?>
+                            <div class="d-flex align-items-center justify-content-between p-2 px-3"
+                                 style="<?= $cat_i < $cat_total ? 'border-bottom:1px solid var(--color-border,#eee);' : '' ?>">
+                                <span><i class="<?= $cat['icon'] ?> mr-2 text-muted" style="width:1.1rem;text-align:center;"></i><?= nullable_htmlentities($cat['label']) ?></span>
+                                <div class="custom-control custom-switch mb-0">
+                                    <input type="checkbox" class="custom-control-input" id="push_cat_<?= $cat_key ?>"
+                                           name="push_categories[]" value="<?= $cat_key ?>"
+                                           <?= in_array($cat_key, $push_global_categories, true) ? 'checked' : '' ?>>
+                                    <label class="custom-control-label" for="push_cat_<?= $cat_key ?>"></label>
+                                </div>
+                            </div>
+                            <?php } ?>
+                        </div>
+                        <button type="submit" name="save_push_categories" class="btn btn-sm btn-primary mt-3">
+                            <i class="fas fa-save mr-1"></i>Save Categories
+                        </button>
+                    </form>
+                </div>
 
             <?php } else { ?>
 

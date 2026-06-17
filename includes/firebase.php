@@ -40,8 +40,13 @@ function firebase_get_access_token(): ?string {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT        => 10,
     ]);
-    $resp = json_decode(curl_exec($ch), true);
+    $raw = curl_exec($ch);
+    $resp = json_decode($raw, true);
     curl_close($ch);
+
+    if (empty($resp['access_token'])) {
+        error_log("ITFlow - Firebase OAuth token fetch failed: " . $raw);
+    }
 
     return $resp['access_token'] ?? null;
 }
@@ -68,10 +73,14 @@ function firebase_send_push(string $fcm_token, string $title, string $body, arra
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT        => 10,
     ]);
-    $code = null;
-    curl_exec($ch);
+    $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_err = curl_error($ch);
     curl_close($ch);
+
+    if ($code !== 200) {
+        error_log("ITFlow - FCM push failed (HTTP $code) for token " . substr($fcm_token, 0, 12) . "...: " . ($curl_err ?: $resp));
+    }
 
     return $code === 200;
 }

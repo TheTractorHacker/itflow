@@ -4996,3 +4996,12 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.10'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.10') {
+
+        // Per-category mobile push notification preferences (admin-level allow list + per-user override)
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD COLUMN `config_push_enabled_types` TEXT DEFAULT NULL");
+        mysqli_query($mysqli, "ALTER TABLE `user_settings` ADD COLUMN `user_config_push_types` TEXT DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.11'");
+    }

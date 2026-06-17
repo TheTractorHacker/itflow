@@ -89,3 +89,37 @@ if (isset($_POST['remove_firebase_config'])) {
     redirect();
 
 }
+
+if (isset($_POST['revoke_push_device'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    header('Content-Type: application/json');
+
+    $token_id = intval($_POST['token_id'] ?? 0);
+    mysqli_query($mysqli, "DELETE FROM api_tokens WHERE token_id = $token_id");
+
+    if (mysqli_affected_rows($mysqli) > 0) {
+        logAction("Settings", "Delete", "$session_name revoked mobile device (token #$token_id)");
+        echo json_encode(['ok' => true]);
+    } else {
+        echo json_encode(['ok' => false]);
+    }
+    exit;
+
+}
+
+if (isset($_POST['save_push_categories'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    $valid_keys  = array_keys(push_notification_categories());
+    $selected    = array_values(array_intersect($_POST['push_categories'] ?? [], $valid_keys));
+    $json_esc    = mysqli_real_escape_string($mysqli, json_encode($selected));
+
+    mysqli_query($mysqli, "UPDATE settings SET config_push_enabled_types = '$json_esc' WHERE company_id = 1");
+
+    logAction("Settings", "Edit", "$session_name updated globally allowed mobile push categories");
+    flash_alert("Mobile push categories updated.");
+    redirect();
+
+}
