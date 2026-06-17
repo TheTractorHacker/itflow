@@ -253,10 +253,28 @@ require_once "includes/inc_all_admin.php";
 
         <?php
         $firebase_configured = file_exists(__DIR__ . '/../config/firebase_service_account.json');
+        $firebase_project_id   = null;
+        $firebase_client_email = null;
+        if ($firebase_configured) {
+            $sa_raw = @file_get_contents(__DIR__ . '/../config/firebase_service_account.json');
+            if ($sa_raw) {
+                $sa = json_decode($sa_raw, true) ?: [];
+                $firebase_project_id   = $sa['project_id']   ?? null;
+                $firebase_client_email = $sa['client_email']  ?? null;
+            }
+        }
         $sql_push_total = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM api_tokens WHERE token_fcm_token IS NOT NULL AND token_fcm_token != ''");
         $push_total_devices = intval(mysqli_fetch_assoc($sql_push_total)['cnt']);
         $sql_push_users = mysqli_query($mysqli, "SELECT COUNT(DISTINCT token_user_id) AS cnt FROM api_tokens WHERE token_fcm_token IS NOT NULL AND token_fcm_token != ''");
         $push_user_count = intval(mysqli_fetch_assoc($sql_push_users)['cnt']);
+        $sql_push_breakdown = mysqli_query($mysqli, "
+            SELECT u.user_name, COUNT(t.token_id) AS device_count
+            FROM api_tokens t
+            JOIN users u ON u.user_id = t.token_user_id
+            WHERE t.token_fcm_token IS NOT NULL AND t.token_fcm_token != ''
+            GROUP BY t.token_user_id
+            ORDER BY u.user_name ASC
+        ");
         ?>
 
         <!-- Mobile App Push Notifications -->
@@ -267,143 +285,208 @@ require_once "includes/inc_all_admin.php";
             </div>
             <div class="notif-section-body">
 
-                <!-- Firebase service account config -->
-                <div class="notif-row">
-                    <div class="notif-row-meta">
-                        <div class="notif-label">Firebase Service Account</div>
-                        <div class="notif-desc">
-                            Required for push notifications to the ITFlow mobile app.
-                            In the <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>,
-                            go to Project Settings &rarr; Service Accounts &rarr; Generate new private key.
-                        </div>
+            <?php if ($firebase_configured) { ?>
 
-                        <!-- JSON paste form -->
-                        <div class="collapse mt-3 <?= !$firebase_configured ? 'show' : '' ?>" id="firebaseJsonEditor">
-                            <form method="post" action="post.php" autocomplete="off">
-                                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                                <textarea name="firebase_service_account_json" rows="9"
-                                    class="form-control form-control-sm mb-2"
-                                    style="font-family:monospace;font-size:.75rem;resize:vertical;"
-                                    placeholder='Paste the full service account JSON here…'></textarea>
-                                <button type="submit" name="save_firebase_config" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-save mr-1"></i><?= $firebase_configured ? 'Update' : 'Save' ?> Configuration
-                                </button>
-                            </form>
+                <!-- ── CONFIGURED STATE ── -->
+
+                <!-- Status bar -->
+                <div class="d-flex align-items-center justify-content-between flex-wrap mb-3 p-3 rounded"
+                     style="background:rgba(40,167,69,.08);border:1px solid rgba(40,167,69,.25);gap:.75rem;">
+                    <div>
+                        <div class="font-weight-semibold text-success mb-1">
+                            <i class="fas fa-check-circle mr-1"></i>Firebase Connected
                         </div>
-                    </div>
-                    <div class="notif-row-control pt-1" style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;">
-                        <?php if ($firebase_configured) { ?>
-                        <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i>Configured</span>
-                        <button class="btn btn-sm btn-outline-secondary" type="button"
-                                data-toggle="collapse" data-target="#firebaseJsonEditor">
-                            <i class="fas fa-edit mr-1"></i>Update
-                        </button>
-                        <form method="post" action="post.php">
-                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                            <button type="submit" name="remove_firebase_config"
-                                    class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Remove Firebase configuration? Push notifications will stop working.')">
-                                <i class="fas fa-trash mr-1"></i>Remove
-                            </button>
-                        </form>
-                        <?php } else { ?>
-                        <span class="badge badge-warning px-2 py-1"><i class="fas fa-exclamation-triangle mr-1"></i>Not configured</span>
+                        <?php if ($firebase_project_id) { ?>
+                        <div class="small text-muted">
+                            <i class="fas fa-cube mr-1"></i>Project: <code><?= nullable_htmlentities($firebase_project_id) ?></code>
+                        </div>
+                        <?php } ?>
+                        <?php if ($firebase_client_email) { ?>
+                        <div class="small text-muted mt-1" style="word-break:break-all;">
+                            <i class="fas fa-key mr-1"></i><?= nullable_htmlentities($firebase_client_email) ?>
+                        </div>
                         <?php } ?>
                     </div>
-                </div>
-
-                <!-- Setup guide -->
-                <div class="notif-row">
-                    <div class="notif-row-meta">
-                        <div class="notif-label">Setup Guide</div>
-                        <div class="notif-desc">Step-by-step instructions for enabling push notifications.</div>
-                        <div class="collapse mt-3" id="firebaseSetupGuide">
-                            <ol class="pl-3 mb-0" style="line-height:1.9;">
-                                <li>
-                                    Go to the <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>
-                                    and sign in with a Google account.
-                                </li>
-                                <li>
-                                    Click <strong>Add project</strong>, give it a name (e.g. <em>ITFlow MSP</em>), and follow the prompts.
-                                    You can disable Google Analytics — it isn't needed.
-                                </li>
-                                <li>
-                                    Once inside your project, click the <strong>Android</strong> icon (<i class="fab fa-android"></i>) to register an app.
-                                    <ul class="mt-1 mb-1" style="line-height:1.8;">
-                                        <li>Android package name: <code>com.foleyit.itflow</code></li>
-                                        <li>App nickname: <em>ITFlow</em> (optional)</li>
-                                        <li>Skip the <code>google-services.json</code> download and SHA steps — click through to the console.</li>
-                                    </ul>
-                                </li>
-                                <li>
-                                    In the left sidebar go to <strong>Project Settings</strong>
-                                    (gear icon &rarr; Project settings).
-                                </li>
-                                <li>
-                                    Click the <strong>Service accounts</strong> tab.
-                                </li>
-                                <li>
-                                    Click <strong>Generate new private key</strong>, then confirm.
-                                    A <code>.json</code> file will download to your computer.
-                                </li>
-                                <li>
-                                    Open that file, copy all the text, and paste it into the
-                                    <strong>Firebase Service Account</strong> field above, then click
-                                    <strong>Save Configuration</strong>.
-                                </li>
-                                <li>
-                                    Have your staff log in to the <strong>ITFlow mobile app</strong>.
-                                    Their devices will register automatically and appear in the
-                                    <em>Registered Devices</em> count below.
-                                </li>
-                            </ol>
-                            <p class="mt-2 mb-0 small text-muted">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Firebase Cloud Messaging (FCM) is free with no per-message cost.
-                                The service account key gives your server permission to send push
-                                notifications on behalf of your Firebase project.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="notif-row-control pt-1">
-                        <button class="btn btn-sm btn-outline-info" type="button"
-                                data-toggle="collapse" data-target="#firebaseSetupGuide">
-                            <i class="fas fa-book-open mr-1"></i>View Guide
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Registered device count + test push -->
-                <div class="notif-row">
-                    <div class="notif-row-meta">
-                        <div class="notif-label">Registered Devices</div>
-                        <div class="notif-desc">Staff members with the ITFlow mobile app logged in and push notifications enabled.</div>
+                    <div class="d-flex" style="gap:.4rem;flex-shrink:0;">
                         <?php if ($push_total_devices > 0) { ?>
-                        <div class="mt-2">
-                            <span class="text-success font-weight-bold"><?= $push_total_devices ?></span>
-                            <span class="text-muted small">
-                                device<?= $push_total_devices !== 1 ? 's' : '' ?>
-                                across <?= $push_user_count ?> user<?= $push_user_count !== 1 ? 's' : '' ?>
-                            </span>
-                        </div>
-                        <?php } else { ?>
-                        <div class="mt-2 text-muted small"><i class="fas fa-minus mr-1"></i>None registered</div>
-                        <?php } ?>
-                    </div>
-                    <div class="notif-row-control pt-1">
-                        <?php if ($firebase_configured && $push_total_devices > 0) { ?>
                         <form method="post" action="post.php">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                            <button type="submit" name="test_push_notification" class="btn btn-sm btn-outline-primary">
+                            <button type="submit" name="test_push_notification" class="btn btn-sm btn-primary">
                                 <i class="fas fa-paper-plane mr-1"></i>Send Test Push
                             </button>
                         </form>
                         <?php } ?>
+                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                data-toggle="collapse" data-target="#firebaseJsonEditor">
+                            <i class="fas fa-edit mr-1"></i>Update Key
+                        </button>
+                        <form method="post" action="post.php">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <button type="submit" name="remove_firebase_config" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Remove Firebase configuration? Push notifications will stop working.')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
                     </div>
                 </div>
 
+                <!-- Update key collapse -->
+                <div class="collapse mb-3" id="firebaseJsonEditor">
+                    <div class="p-3 rounded" style="background:rgba(0,0,0,.03);border:1px solid var(--color-border,#dee2e6);">
+                        <div class="small font-weight-bold mb-2"><i class="fas fa-file-code mr-1"></i>Paste new service account JSON</div>
+                        <form method="post" action="post.php" autocomplete="off">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <textarea name="firebase_service_account_json" rows="8"
+                                class="form-control form-control-sm mb-2"
+                                style="font-family:monospace;font-size:.75rem;resize:vertical;"
+                                placeholder='{ "type": "service_account", "project_id": "…", … }'></textarea>
+                            <button type="submit" name="save_firebase_config" class="btn btn-sm btn-primary">
+                                <i class="fas fa-save mr-1"></i>Update Configuration
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Device stats -->
+                <div class="notif-row">
+                    <div class="notif-row-meta">
+                        <div class="notif-label">Registered Devices</div>
+                        <div class="notif-desc">Staff members with the ITFlow mobile app logged in.</div>
+                    </div>
+                    <div class="notif-row-control">
+                        <?php if ($push_total_devices > 0) { ?>
+                        <div class="d-flex" style="gap:1.25rem;">
+                            <div class="text-center">
+                                <div style="font-size:1.5rem;font-weight:700;line-height:1;color:#6f42c1;"><?= $push_total_devices ?></div>
+                                <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Device<?= $push_total_devices !== 1 ? 's' : '' ?></div>
+                            </div>
+                            <div class="text-center">
+                                <div style="font-size:1.5rem;font-weight:700;line-height:1;color:#6f42c1;"><?= $push_user_count ?></div>
+                                <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">User<?= $push_user_count !== 1 ? 's' : '' ?></div>
+                            </div>
+                        </div>
+                        <?php } else { ?>
+                        <span class="text-muted small"><i class="fas fa-minus mr-1"></i>None yet</span>
+                        <?php } ?>
+                    </div>
+                </div>
+
+                <?php if ($push_total_devices > 0) { ?>
+                <!-- Per-user breakdown -->
+                <div class="mt-2 pt-2" style="border-top:1px solid var(--color-border,#eee);">
+                    <div class="small text-muted font-weight-bold mb-2 text-uppercase" style="letter-spacing:.05em;font-size:.7rem;">
+                        <i class="fas fa-users mr-1"></i>Staff with registered devices
+                    </div>
+                    <div class="d-flex flex-wrap" style="gap:.4rem;">
+                        <?php while ($br = mysqli_fetch_assoc($sql_push_breakdown)) { ?>
+                        <span class="badge badge-light border" style="font-size:.78rem;padding:.35em .65em;">
+                            <i class="fas fa-user mr-1 text-muted" style="font-size:.7rem;"></i><?= nullable_htmlentities($br['user_name']) ?>
+                            <span class="badge badge-secondary ml-1" style="font-size:.65rem;"><?= intval($br['device_count']) ?></span>
+                        </span>
+                        <?php } ?>
+                    </div>
+                </div>
+                <?php } ?>
+
+            <?php } else { ?>
+
+                <!-- ── NOT CONFIGURED STATE ── -->
+
+                <!-- Warning callout -->
+                <div class="d-flex align-items-start p-3 rounded mb-3"
+                     style="background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.35);gap:.75rem;">
+                    <i class="fas fa-exclamation-triangle text-warning mt-1" style="font-size:1.1rem;flex-shrink:0;"></i>
+                    <div>
+                        <div class="font-weight-semibold mb-1">Push notifications are not configured</div>
+                        <div class="small text-muted">
+                            Connect a Firebase project to send real-time push notifications to staff
+                            on the ITFlow mobile app. Firebase Cloud Messaging (FCM) is free with no per-message cost.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inline setup guide -->
+                <div class="mb-3">
+                    <div class="small font-weight-bold text-uppercase text-muted mb-2" style="letter-spacing:.05em;font-size:.7rem;">
+                        <i class="fas fa-list-ol mr-1"></i>Setup Steps
+                    </div>
+                    <div class="push-steps">
+                        <div class="push-step">
+                            <div class="push-step-num">1</div>
+                            <div class="push-step-body">
+                                Go to the <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>
+                                and sign in with a Google account.
+                            </div>
+                        </div>
+                        <div class="push-step">
+                            <div class="push-step-num">2</div>
+                            <div class="push-step-body">
+                                Click <strong>Add project</strong>, give it a name (e.g. <em>ITFlow</em>), and complete the wizard.
+                                Google Analytics is not required — you can disable it.
+                            </div>
+                        </div>
+                        <div class="push-step">
+                            <div class="push-step-num">3</div>
+                            <div class="push-step-body">
+                                Inside your project, click the <strong><i class="fab fa-android"></i> Android</strong> icon to register an app.
+                                Set the Android package name to <code>com.foleyit.itflow</code> and skip the
+                                <code>google-services.json</code> and SHA steps.
+                            </div>
+                        </div>
+                        <div class="push-step">
+                            <div class="push-step-num">4</div>
+                            <div class="push-step-body">
+                                Open <strong>Project Settings</strong> (gear icon in the left sidebar) and click the
+                                <strong>Service accounts</strong> tab.
+                            </div>
+                        </div>
+                        <div class="push-step">
+                            <div class="push-step-num">5</div>
+                            <div class="push-step-body">
+                                Click <strong>Generate new private key</strong> and confirm. A <code>.json</code> file
+                                will download — open it, copy all the text, and paste it below.
+                            </div>
+                        </div>
+                        <div class="push-step" style="border-bottom:none;">
+                            <div class="push-step-num">6</div>
+                            <div class="push-step-body">
+                                Staff log into the <strong>ITFlow mobile app</strong> and their devices register automatically.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- JSON paste form -->
+                <div class="p-3 rounded" style="background:rgba(0,0,0,.03);border:1px solid var(--color-border,#dee2e6);">
+                    <div class="small font-weight-bold mb-2"><i class="fas fa-file-code mr-1"></i>Paste service account JSON</div>
+                    <form method="post" action="post.php" autocomplete="off">
+                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                        <textarea name="firebase_service_account_json" rows="9"
+                            class="form-control form-control-sm mb-2"
+                            style="font-family:monospace;font-size:.75rem;resize:vertical;"
+                            placeholder='{ "type": "service_account", "project_id": "…", … }'></textarea>
+                        <button type="submit" name="save_firebase_config" class="btn btn-sm btn-primary">
+                            <i class="fas fa-save mr-1"></i>Save Configuration
+                        </button>
+                    </form>
+                </div>
+
+            <?php } ?>
+
             </div>
         </div>
+
+        <style>
+        .push-steps { border:1px solid var(--color-border,#dee2e6); border-radius:.375rem; overflow:hidden; }
+        .push-step { display:flex; align-items:flex-start; gap:.75rem; padding:.65rem .9rem; border-bottom:1px solid var(--color-border,#eee); }
+        .push-step-num {
+            flex-shrink:0; width:1.5rem; height:1.5rem; border-radius:50%;
+            background:#6f42c1; color:#fff; font-size:.7rem; font-weight:700;
+            display:flex; align-items:center; justify-content:center; margin-top:.05rem;
+        }
+        .push-step-body { font-size:.85rem; line-height:1.55; }
+        .font-weight-semibold { font-weight:600; }
+        </style>
 
     </div>
 </div>
