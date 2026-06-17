@@ -373,21 +373,31 @@ require_once "includes/inc_all_admin.php";
                     </div>
                 </div>
 
-                <!-- Registered device count -->
+                <!-- Registered device count + test push -->
                 <div class="notif-row">
                     <div class="notif-row-meta">
                         <div class="notif-label">Registered Devices</div>
                         <div class="notif-desc">Staff members with the ITFlow mobile app logged in and push notifications enabled.</div>
+                        <?php if ($push_total_devices > 0) { ?>
+                        <div class="mt-2">
+                            <span class="text-success font-weight-bold"><?= $push_total_devices ?></span>
+                            <span class="text-muted small">
+                                device<?= $push_total_devices !== 1 ? 's' : '' ?>
+                                across <?= $push_user_count ?> user<?= $push_user_count !== 1 ? 's' : '' ?>
+                            </span>
+                        </div>
+                        <?php } else { ?>
+                        <div class="mt-2 text-muted small"><i class="fas fa-minus mr-1"></i>None registered</div>
+                        <?php } ?>
                     </div>
                     <div class="notif-row-control pt-1">
-                        <?php if ($push_total_devices > 0) { ?>
-                        <span class="text-success font-weight-bold"><?= $push_total_devices ?></span>
-                        <span class="text-muted small">
-                            &nbsp;device<?= $push_total_devices !== 1 ? 's' : '' ?>
-                            across <?= $push_user_count ?> user<?= $push_user_count !== 1 ? 's' : '' ?>
-                        </span>
-                        <?php } else { ?>
-                        <span class="text-muted"><i class="fas fa-minus mr-1"></i>None registered</span>
+                        <?php if ($firebase_configured && $push_total_devices > 0) { ?>
+                        <form method="post" action="post.php">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <button type="submit" name="test_push_notification" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-paper-plane mr-1"></i>Send Test Push
+                            </button>
+                        </form>
                         <?php } ?>
                     </div>
                 </div>
