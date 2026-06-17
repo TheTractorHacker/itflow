@@ -278,26 +278,58 @@ class RmmAssetMapper {
             $this->backfillClientId($asset_id, intval($matched_row['asset_client_id']), $resolved_client_id);
         }
 
-        // ----- Step 4: Insert the link row -----
-        mysqli_query($m,
-            "INSERT INTO asset_rmm_links SET
-             asset_id=$asset_id,
-             integration_id=$intg_id,
-             tactical_agent_id='$agent_id',
-             hostname='$hostname',
-             mesh_node_id='$mesh_node_id',
-             rmm_status='$status',
-             last_seen=$last_seen_val,
-             os_name='$os_name',
-             os_version='$os_version',
-             manufacturer='$manufacturer',
-             model='$model',
-             cpu='$cpu',
-             ram_gb='$ram_gb',
-             logged_in_user='$logged_user',
-             last_sync=NOW(),
-             raw_data_json='$raw_json'"
-        );
+        // ----- Step 4: Insert or update the link row -----
+        // The asset we matched (by serial/MAC/hostname) may already have a
+        // link row for this integration under a *different* tactical_agent_id
+        // — e.g. the RMM agent was reinstalled/re-enrolled on the same
+        // machine and got a new agent ID. asset_rmm_links has a UNIQUE KEY on
+        // (asset_id, integration_id), so a blind INSERT here would throw a
+        // duplicate-key error and abort the sync for that device. Update the
+        // existing row in place instead.
+        $existing_link_for_asset = mysqli_fetch_assoc(mysqli_query($m,
+            "SELECT id FROM asset_rmm_links WHERE asset_id=$asset_id AND integration_id=$intg_id LIMIT 1"
+        ));
+
+        if ($existing_link_for_asset) {
+            mysqli_query($m,
+                "UPDATE asset_rmm_links SET
+                 tactical_agent_id='$agent_id',
+                 hostname='$hostname',
+                 mesh_node_id='$mesh_node_id',
+                 rmm_status='$status',
+                 last_seen=$last_seen_val,
+                 os_name='$os_name',
+                 os_version='$os_version',
+                 manufacturer='$manufacturer',
+                 model='$model',
+                 cpu='$cpu',
+                 ram_gb='$ram_gb',
+                 logged_in_user='$logged_user',
+                 last_sync=NOW(),
+                 raw_data_json='$raw_json'
+                 WHERE id=" . intval($existing_link_for_asset['id'])
+            );
+        } else {
+            mysqli_query($m,
+                "INSERT INTO asset_rmm_links SET
+                 asset_id=$asset_id,
+                 integration_id=$intg_id,
+                 tactical_agent_id='$agent_id',
+                 hostname='$hostname',
+                 mesh_node_id='$mesh_node_id',
+                 rmm_status='$status',
+                 last_seen=$last_seen_val,
+                 os_name='$os_name',
+                 os_version='$os_version',
+                 manufacturer='$manufacturer',
+                 model='$model',
+                 cpu='$cpu',
+                 ram_gb='$ram_gb',
+                 logged_in_user='$logged_user',
+                 last_sync=NOW(),
+                 raw_data_json='$raw_json'"
+            );
+        }
 
         $this->syncInterfaces($asset_id, $this->resolveWmiDetail($agent, $agent_id));
 
