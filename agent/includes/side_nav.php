@@ -18,6 +18,23 @@
                         <p>Dashboard</p>
                     </a>
                 </li>
+                <?php if (lookupUserPermission("module_rmm_alerts") >= 1) { ?>
+                <li class="nav-item">
+                    <a href="/agent/alerts.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "alerts.php") { echo "active"; } ?>">
+                        <i class="nav-icon fas fa-bell"></i>
+                        <p>
+                            Alerts
+                            <?php
+                            $num_central_alerts = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT
+                                (SELECT COUNT(*) FROM rmm_alerts WHERE status='new') +
+                                (SELECT COUNT(*) FROM comet_backup_alerts WHERE alert_status='new') AS c"))['c'] ?? 0);
+                            if ($num_central_alerts) { ?>
+                                <span class="right badge badge-danger" data-toggle="tooltip" title="Open Alerts"><?php echo $num_central_alerts; ?></span>
+                            <?php } ?>
+                        </p>
+                    </a>
+                </li>
+                <?php } ?>
                 <?php if (lookupUserPermission("module_client") >= 1) { ?>
                     <li class="nav-item">
                         <a href="/agent/clients.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "clients.php") { echo "active"; } ?>">
@@ -219,7 +236,7 @@
                 <li class="nav-item">
                     <a href="/agent/rmm_alerts.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_alerts.php') { echo 'active'; } ?>">
                         <i class="nav-icon fas fa-bell"></i>
-                        <p>Alerts</p>
+                        <p>RMM Alerts</p>
                     </a>
                 </li>
                 <li class="nav-item">

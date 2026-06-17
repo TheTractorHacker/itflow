@@ -24,6 +24,21 @@ while ($m = mysqli_fetch_assoc($maps_sql)) {
     $client_for[$m['map_comet_username']] = ['id' => intval($m['client_id']), 'name' => nullable_htmlentities($m['client_name'])];
 }
 
+// Open backup alerts per device, so the table can flag a device that's
+// already been escalated (and the dashboard can link straight into the
+// unified Alerts page instead of just guessing from current status).
+$open_alerts_sql = mysqli_query($mysqli,
+    "SELECT alert_device_name, alert_type, alert_ticket_id FROM comet_backup_alerts WHERE alert_resolved_at IS NULL"
+);
+$open_alert_for = [];
+while ($oa = mysqli_fetch_assoc($open_alerts_sql)) {
+    $open_alert_for[$oa['alert_device_name']] = $oa;
+}
+$open_alert_count = count($open_alert_for);
+
+$filter_client_id = intval($_GET['client_id'] ?? 0);
+$filter_search     = trim((string) ($_GET['q'] ?? ''));
+
 // Counts for summary bar
 $total_devices = 0; $ok = 0; $warn = 0; $fail = 0; $unknown = 0;
 $device_rows   = []; // flat list for the table
@@ -32,10 +47,22 @@ if ($comet_users) {
     foreach ($comet_users as $username => $userdata) {
         $last_jobs = comet_last_jobs_per_device($username);
         $devices   = $userdata['Devices'] ?? [];
+        $client    = $client_for[$username] ?? null;
+
+        // Client filter applies before counting, so the summary boxes match what's shown
+        if ($filter_client_id && (!$client || $client['id'] !== $filter_client_id)) {
+            continue;
+        }
+
         foreach ($devices as $devid => $devdata) {
             // Jobs are keyed by Comet's DeviceID (the same $devid here), not
             // by friendly name — BackupJobDetail has no name field at all.
             $dev_name = $devdata['FriendlyName'] ?? $devid;
+
+            if ($filter_search !== '' && stripos($dev_name . ' ' . $username . ' ' . ($client['name'] ?? ''), $filter_search) === false) {
+                continue;
+            }
+
             $job      = $last_jobs[$devid] ?? null;
             $status   = $job ? intval($job['Status']) : 0;
             $total_devices++;
@@ -53,21 +80,32 @@ if ($comet_users) {
                 'size'        => $job ? intval($job['UploadSize'] ?? $job['TotalSize'] ?? 0) : 0,
                 'error'       => $job['ErrorString'] ?? '',
                 'job_type'    => $job ? intval($job['Classification'] ?? 4001) : 0,
-                'client'      => $client_for[$username] ?? null,
+                'client'      => $client,
+                'open_alert'  => $open_alert_for[$dev_name] ?? null,
             ];
         }
     }
-    // Sort: failures first, then warnings, then unknown, then success; within each group newest-last-job first
+    // Sort: open alerts first (missed/failed), then failures, warnings, unknown, success
     usort($device_rows, function($a, $b) {
+        $alert_rank = fn($r) => $r['open_alert'] ? 0 : 1;
+        $aa = $alert_rank($a); $bb = $alert_rank($b);
+        if ($aa !== $bb) return $aa - $bb;
         $ao = comet_status_sort_rank($a['status'], $a['status'] > 0);
         $bo = comet_status_sort_rank($b['status'], $b['status'] > 0);
         return $ao !== $bo ? $ao - $bo : $b['start'] - $a['start'];
     });
 }
+
+$sql_clients = mysqli_query($mysqli, "SELECT DISTINCT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name");
 ?>
 
 <div class="d-flex align-items-center mb-3">
     <h4 class="mb-0 mr-auto"><i class="fas fa-cloud-upload-alt mr-2"></i>Backup Dashboard</h4>
+    <?php if ($open_alert_count > 0) { ?>
+    <a href="/agent/alerts.php?source=backup&status=new" class="btn btn-sm btn-outline-danger">
+        <i class="fas fa-bell mr-1"></i><?= $open_alert_count ?> Open Alert<?= $open_alert_count !== 1 ? 's' : '' ?>
+    </a>
+    <?php } ?>
 </div>
 
 <!-- Summary row -->
@@ -93,6 +131,29 @@ if ($comet_users) {
     <?php endforeach; ?>
 </div>
 
+<!-- Filter bar -->
+<div class="card card-dark mb-2">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex flex-wrap align-items-center" style="gap:6px">
+            <?php if (mysqli_num_rows($sql_clients) > 0) { ?>
+            <select name="client_id" class="form-control form-control-sm mr-2" style="max-width:200px" onchange="this.form.submit()">
+                <option value="">All Clients</option>
+                <?php while ($cl = mysqli_fetch_assoc($sql_clients)) { ?>
+                <option value="<?= $cl['client_id'] ?>" <?= $filter_client_id == $cl['client_id'] ? 'selected' : '' ?>>
+                    <?= nullable_htmlentities($cl['client_name']) ?>
+                </option>
+                <?php } ?>
+            </select>
+            <?php } ?>
+            <input type="text" name="q" value="<?= htmlspecialchars($filter_search) ?>" class="form-control form-control-sm mr-2" placeholder="Search device, user, client…" style="max-width:220px">
+            <button type="submit" class="btn btn-sm btn-secondary mr-2"><i class="fas fa-search"></i></button>
+            <?php if ($filter_client_id || $filter_search !== '') { ?>
+            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times mr-1"></i>Clear</a>
+            <?php } ?>
+        </form>
+    </div>
+</div>
+
 <!-- Device table -->
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
@@ -105,7 +166,7 @@ if ($comet_users) {
                 Could not reach Comet server. Contact an admin to check connection settings.
             </div>
         <?php elseif (empty($device_rows)): ?>
-            <div class="text-center text-muted py-4">No devices found in Comet.</div>
+            <div class="text-center text-muted py-4">No devices match your filters.</div>
         <?php else: ?>
         <table class="table table-sm table-borderless table-hover mb-0">
             <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;" class="text-muted border-bottom">
@@ -134,7 +195,15 @@ if ($comet_users) {
                     <td class="pl-3 text-center">
                         <i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i>
                     </td>
-                    <td class="font-weight-bold small"><?= htmlspecialchars($dr['dev_name']) ?></td>
+                    <td class="font-weight-bold small">
+                        <?= htmlspecialchars($dr['dev_name']) ?>
+                        <?php if ($dr['open_alert']) { ?>
+                        <a href="/agent/ticket.php?ticket_id=<?= intval($dr['open_alert']['alert_ticket_id']) ?>"
+                           class="badge badge-danger ml-1" title="Open <?= $dr['open_alert']['alert_type'] === 'missed' ? 'missed-backup' : 'failed-backup' ?> alert — click to view ticket">
+                            <i class="fas fa-bell"></i>
+                        </a>
+                        <?php } ?>
+                    </td>
                     <td class="text-muted small"><?= htmlspecialchars($dr['username']) ?></td>
                     <td class="small">
                         <?php if ($dr['client']): ?>

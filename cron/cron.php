@@ -1351,10 +1351,17 @@ if ($config_comet_enabled && !empty($config_comet_server_url)) {
     foreach ($recent_jobs as $job) {
         $result = comet_process_job($job);
         if ($result['action'] === 'ticket_created') {
-            logApp('Comet', 'info', "Cron poll: backup failure ticket #{$result['ticket_id']} created for " . ($job['DeviceName'] ?? 'unknown'));
+            logApp('Comet', 'info', "Cron poll: backup failure ticket #{$result['ticket_id']} created for " . ($result['device_name'] ?? 'unknown'));
         } elseif ($result['action'] === 'ticket_resolved') {
             logApp('Comet', 'info', "Cron poll: backup recovered — ticket #{$result['ticket_id']} resolved");
         }
+    }
+
+    // Devices that have gone quiet entirely (no job at all within the
+    // window) never show up in get-jobs-recent, so they need a separate pass.
+    $missed = comet_check_missed_backups(48);
+    if (!empty($missed['flagged'])) {
+        logApp('Comet', 'info', "Cron poll: flagged {$missed['flagged']} device(s) with no backup activity in 48+ hours");
     }
 }
 

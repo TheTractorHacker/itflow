@@ -5005,3 +5005,24 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.11'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.11') {
+
+        // Bring comet_backup_alerts to parity with rmm_alerts (type/severity/
+        // message/client/status/acknowledge) so both can feed one unified
+        // alerts view, and so "missed backup" (device gone quiet) can be
+        // tracked distinctly from "failed backup" (explicit job failure).
+        mysqli_query($mysqli, "ALTER TABLE `comet_backup_alerts`
+            ADD COLUMN `alert_type` ENUM('failed','missed') NOT NULL DEFAULT 'failed' AFTER `alert_device_name`,
+            ADD COLUMN `alert_severity` VARCHAR(20) NOT NULL DEFAULT 'critical' AFTER `alert_type`,
+            ADD COLUMN `alert_message` TEXT DEFAULT NULL AFTER `alert_severity`,
+            ADD COLUMN `alert_client_id` INT(11) DEFAULT NULL AFTER `alert_message`,
+            ADD COLUMN `alert_status` VARCHAR(20) NOT NULL DEFAULT 'new' AFTER `alert_ticket_id`,
+            ADD COLUMN `alert_acknowledged_by` INT(11) DEFAULT NULL AFTER `alert_status`,
+            ADD COLUMN `alert_acknowledged_at` DATETIME DEFAULT NULL AFTER `alert_acknowledged_by`");
+
+        // Backfill status for any alerts created before this column existed
+        mysqli_query($mysqli, "UPDATE `comet_backup_alerts` SET `alert_status` = 'resolved' WHERE `alert_resolved_at` IS NOT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.12'");
+    }

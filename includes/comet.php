@@ -192,6 +192,24 @@ function comet_get_users(): ?array {
     return comet_api('/api/v1/admin/list-users-full');
 }
 
+// Single-user profile fetch (cheaper than comet_get_users() when only one
+// user's Devices dictionary is needed). Cached per-request since
+// comet_process_job() may be called many times in a row for the same user
+// during a cron poll of recent jobs.
+function comet_get_user_profile(string $username): ?array {
+    static $cache = [];
+    if (array_key_exists($username, $cache)) return $cache[$username];
+    return $cache[$username] = comet_api('/api/v1/admin/get-user-profile', ['TargetUser' => $username]);
+}
+
+// Comet's job objects only carry DeviceID, not a display name — resolve the
+// FriendlyName from the user's profile so tickets/alerts/logs are readable.
+function comet_resolve_device_name(string $username, string $device_id): string {
+    if ($device_id === '') return 'Unknown Device';
+    $profile = comet_get_user_profile($username);
+    return $profile['Devices'][$device_id]['FriendlyName'] ?? $device_id;
+}
+
 function comet_get_jobs_for_user(string $username): ?array {
     return comet_api('/api/v1/admin/get-jobs-for-user', ['TargetUser' => $username]);
 }
@@ -278,11 +296,11 @@ function comet_status_sort_rank(int $status, bool $has_job): int {
 function comet_process_job(array $job): array {
     global $mysqli;
 
-    $status   = intval($job['Status'] ?? 0);
-    $username = (string) ($job['Username'] ?? '');
-    $dev_name = (string) ($job['DeviceName'] ?? 'Unknown Device');
-    $err_msg  = (string) ($job['ErrorString'] ?? '');
-    $job_type = intval($job['Classification'] ?? 4001);
+    $status    = intval($job['Status'] ?? 0);
+    $username  = (string) ($job['Username'] ?? '');
+    $device_id = (string) ($job['DeviceID'] ?? '');
+    $err_msg   = (string) ($job['ErrorString'] ?? '');
+    $job_type  = intval($job['Classification'] ?? 4001);
 
     if ($username === '') {
         return ['action' => 'ignored', 'reason' => 'no_username'];
@@ -292,6 +310,11 @@ function comet_process_job(array $job): array {
     if ($job_type !== 4001) {
         return ['action' => 'ignored', 'reason' => 'non_backup_job'];
     }
+
+    // Jobs only carry DeviceID — resolve a display name for the ticket/alert.
+    // alert_device_name stores this resolved name (not the ID) since that's
+    // also the key comet_check_missed_backups() and the dashboards use.
+    $dev_name = comet_resolve_device_name($username, $device_id);
 
     $u_safe = mysqli_real_escape_string($mysqli, $username);
     $d_safe = mysqli_real_escape_string($mysqli, $dev_name);
@@ -312,7 +335,7 @@ function comet_process_job(array $job): array {
         ));
 
         if ($existing) {
-            return ['action' => 'existing_alert', 'ticket_id' => intval($existing['alert_ticket_id'])];
+            return ['action' => 'existing_alert', 'ticket_id' => intval($existing['alert_ticket_id']), 'device_name' => $dev_name];
         }
 
         // Get next ticket number
@@ -323,7 +346,9 @@ function comet_process_job(array $job): array {
         $ticket_number = intval($settings['config_ticket_next_number']);
 
         $status_label = comet_status_label($status);
+        $severity     = ($status === COMET_JOB_FAILED_WARNING) ? 'warning' : 'critical';
         $subject_safe = sanitizeInput("Backup $status_label — $dev_name");
+        $message      = "Comet Backup reported a failure for device $dev_name (user: $username). Status: $status_label (code: $status)." . ($err_msg ? " Error: $err_msg" : '');
         $detail_safe  = sanitizeInput(
             "Comet Backup reported a failure for device **$dev_name** (user: $username).\n\n" .
             "Status: $status_label (code: $status)\n" .
@@ -347,16 +372,22 @@ function comet_process_job(array $job): array {
         $ticket_id = mysqli_insert_id($mysqli);
         mysqli_query($mysqli, "UPDATE settings SET config_ticket_next_number = " . ($ticket_number + 1) . " WHERE company_id = 1");
 
+        $msg_esc = mysqli_real_escape_string($mysqli, $message);
         mysqli_query($mysqli, "INSERT INTO comet_backup_alerts SET
             alert_comet_username = '$u_safe',
             alert_device_name    = '$d_safe',
-            alert_ticket_id      = $ticket_id
+            alert_type           = 'failed',
+            alert_severity       = '$severity',
+            alert_message        = '$msg_esc',
+            alert_client_id      = " . ($client_id ?: 'NULL') . ",
+            alert_ticket_id      = $ticket_id,
+            alert_status         = 'new'
         ");
 
         $client_suffix = $client_id ? "&client_id=$client_id" : '';
         appNotify('Comet Backup', "Backup failed — $dev_name. Ticket #$ticket_id created.", "/agent/ticket.php?ticket_id=$ticket_id$client_suffix");
 
-        return ['action' => 'ticket_created', 'ticket_id' => $ticket_id];
+        return ['action' => 'ticket_created', 'ticket_id' => $ticket_id, 'device_name' => $dev_name];
 
     } elseif (comet_is_success($status)) {
         $open = mysqli_fetch_assoc(mysqli_query($mysqli,
@@ -368,11 +399,11 @@ function comet_process_job(array $job): array {
         ));
 
         if (!$open) {
-            return ['action' => 'no_open_alert'];
+            return ['action' => 'no_open_alert', 'device_name' => $dev_name];
         }
 
         $tid = intval($open['alert_ticket_id']);
-        mysqli_query($mysqli, "UPDATE comet_backup_alerts SET alert_resolved_at = NOW() WHERE alert_id = {$open['alert_id']}");
+        mysqli_query($mysqli, "UPDATE comet_backup_alerts SET alert_status = 'resolved', alert_resolved_at = NOW() WHERE alert_id = {$open['alert_id']}");
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET
             ticket_reply = 'Backup succeeded — device is healthy again. Ticket auto-resolved by Comet integration.',
             ticket_reply_type = 'Internal',
@@ -381,10 +412,108 @@ function comet_process_job(array $job): array {
         ");
         mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 4, ticket_resolved_at = NOW() WHERE ticket_id = $tid");
 
-        return ['action' => 'ticket_resolved', 'ticket_id' => $tid];
+        return ['action' => 'ticket_resolved', 'ticket_id' => $tid, 'device_name' => $dev_name];
     }
 
-    return ['action' => 'status_ignored', 'status' => $status];
+    return ['action' => 'status_ignored', 'status' => $status, 'device_name' => $dev_name];
+}
+
+// Flags devices that haven't reported ANY job (success or failure) within
+// $threshold_hours as a distinct "missed" alert — explicit failures are
+// already caught immediately by comet_process_job(); this catches the
+// device going quiet entirely (offline, agent removed, schedule disabled),
+// which never generates a job/webhook event for comet_process_job() to see.
+function comet_check_missed_backups(int $threshold_hours = 48): array {
+    global $mysqli;
+    $stats = ['flagged' => 0];
+
+    $comet_users = comet_get_users();
+    if (!$comet_users) return $stats;
+
+    $maps_sql   = mysqli_query($mysqli, "SELECT map_comet_username, map_client_id FROM comet_client_map");
+    $client_for = [];
+    while ($m = mysqli_fetch_assoc($maps_sql)) {
+        $client_for[$m['map_comet_username']] = intval($m['map_client_id']);
+    }
+
+    $cutoff = time() - ($threshold_hours * 3600);
+
+    foreach ($comet_users as $username => $userdata) {
+        $last_jobs = comet_last_jobs_per_device($username);
+        $devices   = $userdata['Devices'] ?? [];
+        $u_safe    = mysqli_real_escape_string($mysqli, $username);
+
+        foreach ($devices as $devid => $devdata) {
+            $dev_name   = $devdata['FriendlyName'] ?? $devid;
+            $registered = intval($devdata['RegistrationTime'] ?? 0);
+            $job        = $last_jobs[$devid] ?? null;
+            $last_start = $job ? intval($job['StartTime']) : 0;
+
+            // Judge against whichever is more recent: last job, or
+            // registration time — gives a brand-new device a full grace
+            // period before being flagged for never having backed up yet.
+            $reference = max($last_start, $registered);
+            if ($reference === 0 || $reference > $cutoff) {
+                continue;
+            }
+
+            $d_safe = mysqli_real_escape_string($mysqli, $dev_name);
+            $existing = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT alert_id FROM comet_backup_alerts
+                 WHERE alert_comet_username='$u_safe' AND alert_device_name='$d_safe' AND alert_resolved_at IS NULL LIMIT 1"
+            ));
+            if ($existing) continue;
+
+            $client_id = $client_for[$username] ?? 0;
+            $hours_ago = intval(round((time() - $reference) / 3600));
+
+            $settings = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT config_ticket_prefix, config_ticket_next_number FROM settings WHERE company_id = 1"
+            ));
+            $prefix        = sanitizeInput($settings['config_ticket_prefix']);
+            $ticket_number = intval($settings['config_ticket_next_number']);
+
+            $subject_safe = sanitizeInput("Backup Missed — $dev_name");
+            $message      = "No backup job reported for device $dev_name (user: $username) in over $hours_ago hours.";
+            $detail_safe  = sanitizeInput(
+                "$message\n\nThe device may be offline, the Comet agent may not be running, or its backup schedule may be disabled. Please check the device."
+            );
+
+            $url_key = bin2hex(random_bytes(16));
+            mysqli_query($mysqli, "INSERT INTO tickets SET
+                ticket_prefix = '$prefix',
+                ticket_number = $ticket_number,
+                ticket_source = 'Comet Backup',
+                ticket_subject = '$subject_safe',
+                ticket_details = '$detail_safe',
+                ticket_priority = 'High',
+                ticket_status = 1,
+                ticket_client_id = $client_id,
+                ticket_created_by = 0,
+                ticket_url_key = '$url_key'
+            ");
+            $ticket_id = mysqli_insert_id($mysqli);
+            mysqli_query($mysqli, "UPDATE settings SET config_ticket_next_number = " . ($ticket_number + 1) . " WHERE company_id = 1");
+
+            $msg_esc = mysqli_real_escape_string($mysqli, $message);
+            mysqli_query($mysqli, "INSERT INTO comet_backup_alerts SET
+                alert_comet_username = '$u_safe',
+                alert_device_name    = '$d_safe',
+                alert_type           = 'missed',
+                alert_severity       = 'warning',
+                alert_message        = '$msg_esc',
+                alert_client_id      = " . ($client_id ?: 'NULL') . ",
+                alert_ticket_id      = $ticket_id,
+                alert_status         = 'new'
+            ");
+
+            $client_suffix = $client_id ? "&client_id=$client_id" : '';
+            appNotify('Comet Backup', "Backup missed — $dev_name. Ticket #$ticket_id created.", "/agent/ticket.php?ticket_id=$ticket_id$client_suffix");
+            $stats['flagged']++;
+        }
+    }
+
+    return $stats;
 }
 
 // Returns the most recent job per device, keyed by Comet's DeviceID (the

@@ -52,10 +52,10 @@ if (!$job || !is_array($job)) {
     exit;
 }
 
-$dev_name = $job['DeviceName'] ?? 'Unknown Device';
 $username = $job['Username'] ?? '';
 
-$result = comet_process_job($job);
+$result   = comet_process_job($job);
+$dev_name = $result['device_name'] ?? 'Unknown Device';
 
 if ($result['action'] === 'ticket_created') {
     logApp('Comet', 'info', "Webhook: backup failure ticket #{$result['ticket_id']} created for $dev_name ($username)");
