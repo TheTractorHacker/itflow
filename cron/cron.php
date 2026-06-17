@@ -1328,8 +1328,11 @@ if ($config_backup_auto_enabled) {
  *  COMET BACKUP — SESSION KEY REFRESH
  * ###############################################################################################################
  */
-// Failure detection is handled in real-time via webhooks (comet_webhook.php).
-// Cron just refreshes the session key so the status dashboard always has a valid API token.
+// Real-time failure detection happens via webhooks (comet_webhook.php), but
+// that depends on the MSP having configured the webhook in Comet Server and
+// it actually reaching us. Cron also refreshes the session key and polls
+// recent jobs as a fallback, so a failed backup always raises an alert even
+// if the webhook was never set up or didn't fire.
 $config_comet_enabled    = intval($row['config_comet_enabled'] ?? 0);
 $config_comet_totp_secret = $row['config_comet_totp_secret'] ?? '';
 $config_comet_server_url  = $row['config_comet_server_url'] ?? '';
@@ -1341,6 +1344,17 @@ if ($config_comet_enabled && !empty($config_comet_server_url)) {
     // Refresh the session key if it's missing or about to expire
     if (!comet_get_session_key()) {
         comet_start_session();
+    }
+
+    // Fallback failure/recovery detection via polling
+    $recent_jobs = comet_get_jobs_recent() ?: [];
+    foreach ($recent_jobs as $job) {
+        $result = comet_process_job($job);
+        if ($result['action'] === 'ticket_created') {
+            logApp('Comet', 'info', "Cron poll: backup failure ticket #{$result['ticket_id']} created for " . ($job['DeviceName'] ?? 'unknown'));
+        } elseif ($result['action'] === 'ticket_resolved') {
+            logApp('Comet', 'info', "Cron poll: backup recovered — ticket #{$result['ticket_id']} resolved");
+        }
     }
 }
 
