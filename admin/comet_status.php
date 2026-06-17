@@ -28,10 +28,16 @@ if ($comet_users) {
             $job      = $last_jobs[$dev_name] ?? null;
             $status   = $job ? intval($job['Status']) : 0;
             $total_devices++;
-            if ($status === 5001)        $ok++;
-            elseif (in_array($status, [5003,5007])) $warn++;
-            elseif ($status === 5004)    $fail++;
-            else                         $unknown++;
+            // Use the real Comet SDK status codes (see includes/comet.php),
+            // not made-up ones — 5001/5003/5004/5007 never match an actual
+            // job status, so every real success/failure fell through to the
+            // "Unknown" bucket below despite the per-row badge (which does
+            // use the correct helpers) showing the right status.
+            if (!$job)                              $unknown++;
+            elseif (comet_is_success($status))      $ok++;
+            elseif ($status === COMET_JOB_FAILED_WARNING) $warn++;
+            elseif (comet_is_failed($status))       $fail++;
+            else                                    $unknown++;
             $device_rows[] = [
                 'username'    => $username,
                 'dev_name'    => $dev_name,
