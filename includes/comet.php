@@ -46,11 +46,38 @@ function comet_store_session_key(string $key, int $expires_in = 3600): void {
     mysqli_query($mysqli, "INSERT INTO comet_session_cache (id, config_value, config_expires) VALUES (1, '$key_safe', '$expires') ON DUPLICATE KEY UPDATE config_value='$key_safe', config_expires='$expires'");
 }
 
+// ── Connection diagnostics ──────────────────────────────────────────────────
+// comet_api() has no return channel for *why* a request failed (wrong port,
+// connection refused, TLS error, timeout, malformed URL, ...). It just
+// returns null, so the settings page can only ever show a generic "Cannot
+// reach server". Stash the last failure here so callers/UI can surface it.
+function comet_set_last_error(string $msg): void {
+    $GLOBALS['__comet_last_error'] = $msg;
+}
+function comet_get_last_error(): ?string {
+    return $GLOBALS['__comet_last_error'] ?? null;
+}
+
+// Server URLs are often typed without a scheme (e.g. "127.0.0.1:8060" or
+// "comet.local:8060") since the box is "local" — curl treats that as a
+// relative/malformed URL and fails before ever opening a connection. Assume
+// http:// when no scheme is given (Comet Server's own UI defaults to http).
+function comet_normalize_url(string $url): string {
+    $url = trim($url);
+    if ($url !== '' && !preg_match('#^https?://#i', $url)) {
+        $url = 'http://' . $url;
+    }
+    return $url;
+}
+
 // ── Core HTTP request ─────────────────────────────────────────────────────────
 function comet_api(string $endpoint, array $extra = []): ?array {
     global $config_comet_server_url, $config_comet_admin_user,
            $config_comet_admin_pass, $config_comet_totp_secret;
-    if (empty($config_comet_server_url) || empty($config_comet_admin_user)) return null;
+    if (empty($config_comet_server_url) || empty($config_comet_admin_user)) {
+        comet_set_last_error('Server URL or admin username not configured.');
+        return null;
+    }
 
     // Try cached session key first (avoids TOTP re-entry)
     $session_key = comet_get_session_key();
@@ -68,7 +95,7 @@ function comet_api(string $endpoint, array $extra = []): ?array {
     }
 
     $body = http_build_query(array_merge($auth, $extra));
-    $url  = rtrim($config_comet_server_url, '/') . $endpoint;
+    $url  = rtrim(comet_normalize_url($config_comet_server_url), '/') . $endpoint;
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -81,18 +108,35 @@ function comet_api(string $endpoint, array $extra = []): ?array {
         CURLOPT_TIMEOUT        => 15,
         CURLOPT_CONNECTTIMEOUT => 5,
     ]);
-    $resp = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $resp     = curl_exec($ch);
+    $code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_err = curl_error($ch);
     curl_close($ch);
 
-    if ($code !== 200 || !$resp) return null;
-    return json_decode($resp, true);
+    if ($curl_err) {
+        comet_set_last_error("Could not connect to $url — $curl_err");
+        return null;
+    }
+    if ($code !== 200 || !$resp) {
+        comet_set_last_error("Comet Server responded with HTTP $code at $url" . ($resp ? ' — ' . substr($resp, 0, 200) : ''));
+        return null;
+    }
+
+    $data = json_decode($resp, true);
+    if (!empty($data['Error']) || !empty($data['Status']) && intval($data['Status']) >= 400) {
+        comet_set_last_error('Comet Server error: ' . ($data['Message'] ?? $data['Error'] ?? 'Unknown error'));
+    }
+
+    return $data;
 }
 
 // ── Session key login (call once to populate cache) ───────────────────────────
 function comet_start_session(): bool {
     global $config_comet_admin_user, $config_comet_admin_pass, $config_comet_totp_secret, $config_comet_server_url;
-    if (empty($config_comet_server_url)) return false;
+    if (empty($config_comet_server_url)) {
+        comet_set_last_error('Server URL not configured.');
+        return false;
+    }
 
     if (!empty($config_comet_totp_secret)) {
         require_once $_SERVER['DOCUMENT_ROOT'] . '/plugins/totp/totp.php';
@@ -104,22 +148,36 @@ function comet_start_session(): bool {
                  'Password' => $config_comet_admin_pass];
     }
     $body = http_build_query($auth);
-    $url  = rtrim($config_comet_server_url, '/') . '/api/v1/admin/account/session-start';
+    $url  = rtrim(comet_normalize_url($config_comet_server_url), '/') . '/api/v1/admin/account/session-start';
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body,
         CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
         CURLOPT_RETURNTRANSFER => true, CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => 0, CURLOPT_TIMEOUT => 10,
+        CURLOPT_SSL_VERIFYHOST => 0, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT => 5,
     ]);
-    $resp = json_decode(curl_exec($ch), true);
+    $raw      = curl_exec($ch);
+    $code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_err = curl_error($ch);
     curl_close($ch);
 
+    if ($curl_err) {
+        comet_set_last_error("Could not connect to $url — $curl_err");
+        return false;
+    }
+    if ($code !== 200 || !$raw) {
+        comet_set_last_error("Comet Server responded with HTTP $code at $url");
+        return false;
+    }
+
+    $resp = json_decode($raw, true);
     if (!empty($resp['SessionKey'])) {
         comet_store_session_key($resp['SessionKey'], 3600);
         return true;
     }
+
+    comet_set_last_error('Login rejected: ' . ($resp['Message'] ?? 'invalid credentials or TOTP code.'));
     return false;
 }
 

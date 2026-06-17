@@ -2,7 +2,8 @@
 require_once "includes/inc_all_admin.php";
 require_once "../includes/comet.php";
 
-$connected = $config_comet_enabled ? comet_test() : null;
+$connected   = $config_comet_enabled ? comet_test() : null;
+$comet_error = ($config_comet_enabled && !$connected) ? comet_get_last_error() : null;
 ?>
 
 <div class="card card-dark mb-3" style="border-top:3px solid #f39c12;">
@@ -18,6 +19,11 @@ $connected = $config_comet_enabled ? comet_test() : null;
             <?php endif; ?>
         <?php endif; ?>
     </div>
+    <?php if ($comet_error) { ?>
+    <div class="px-3 pt-2">
+        <div class="small text-danger"><i class="fas fa-exclamation-triangle mr-1"></i><?= nullable_htmlentities($comet_error) ?></div>
+    </div>
+    <?php } ?>
     <div class="card-body">
         <form action="post.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
