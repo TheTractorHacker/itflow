@@ -4,10 +4,16 @@ function _firebase_b64u(string $data): string {
     return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 }
 
-function firebase_get_access_token(): ?string {
+function firebase_load_sa(): ?array {
     $sa_file = $_SERVER['DOCUMENT_ROOT'] . '/config/firebase_service_account.json';
     if (!file_exists($sa_file)) return null;
     $sa = json_decode(file_get_contents($sa_file), true);
+    return (is_array($sa) && !empty($sa['project_id']) && !empty($sa['private_key'])) ? $sa : null;
+}
+
+function firebase_get_access_token(): ?string {
+    $sa = firebase_load_sa();
+    if (!$sa) return null;
 
     $now = time();
     $header  = _firebase_b64u(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
@@ -41,8 +47,9 @@ function firebase_get_access_token(): ?string {
 }
 
 function firebase_send_push(string $fcm_token, string $title, string $body, array $data = []): bool {
+    $sa    = firebase_load_sa();
     $token = firebase_get_access_token();
-    if (!$token) return false;
+    if (!$sa || !$token) return false;
 
     $project_id = $sa['project_id'];
     $payload = json_encode([
