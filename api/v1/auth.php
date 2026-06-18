@@ -5,6 +5,42 @@ defined('FROM_API') || die();
 
 require_once $DOCUMENT_ROOT . '/plugins/totp/totp.php';
 
+// ── Passkey begin (GET) ──────────────────────────────────────────────────────
+// Returns a WebAuthn assertion challenge stored in api_passkey_challenges.
+// No authentication required — anyone can request a challenge; identity is
+// proven during the completion step.
+if ($method === 'GET') {
+    require_once $DOCUMENT_ROOT . '/includes/webauthn.php';
+    require_once $DOCUMENT_ROOT . '/includes/load_global_settings.php';
+
+    mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS api_passkey_challenges (
+        challenge_token VARCHAR(64)  NOT NULL PRIMARY KEY,
+        challenge_b64u  VARCHAR(100) NOT NULL,
+        created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    mysqli_query($mysqli, "DELETE FROM api_passkey_challenges
+                           WHERE created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE)");
+
+    $challenge       = random_bytes(32);
+    $challenge_b64u  = wa_b64u_encode($challenge);
+    $challenge_token = bin2hex(random_bytes(32));
+    $esc_token       = mysqli_real_escape_string($mysqli, $challenge_token);
+    $esc_challenge   = mysqli_real_escape_string($mysqli, $challenge_b64u);
+
+    mysqli_query($mysqli, "INSERT INTO api_passkey_challenges
+                           (challenge_token, challenge_b64u) VALUES ('$esc_token', '$esc_challenge')");
+
+    api_response(200, [
+        'challenge'        => $challenge_b64u,
+        'timeout'          => 60000,
+        'rpId'             => wa_rp_id(),
+        'allowCredentials' => [],
+        'userVerification' => 'required',
+        'challengeToken'   => $challenge_token,
+    ]);
+}
+
 // ── Logout ───────────────────────────────────────────────────────────────────
 if ($method === 'DELETE') {
     $authH = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';

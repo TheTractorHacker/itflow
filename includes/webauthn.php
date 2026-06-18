@@ -212,7 +212,8 @@ function wa_verify_assertion(
     string $signature_b64u,
     string $storedPubKeyPem,
     int    $storedSignCount,
-    string $expectedChallenge_b64u
+    string $expectedChallenge_b64u,
+    array  $allowedOrigins = []
 ): int {
     $clientDataJSON    = wa_b64u_decode($clientDataJSON_b64u);
     $authenticatorData = wa_b64u_decode($authenticatorData_b64u);
@@ -228,8 +229,10 @@ function wa_verify_assertion(
         throw new RuntimeException('Challenge mismatch');
     }
     $origin = wa_origin();
-    if (($clientData['origin'] ?? '') !== $origin) {
-        throw new RuntimeException("Origin mismatch: got '{$clientData['origin']}', expected '$origin'");
+    $requestOrigin = $clientData['origin'] ?? '';
+    $allOrigins = array_merge([$origin], $allowedOrigins);
+    if (!in_array($requestOrigin, $allOrigins, true)) {
+        throw new RuntimeException("Origin mismatch: got '$requestOrigin'");
     }
 
     // 2. Parse authenticatorData
