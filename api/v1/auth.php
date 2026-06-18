@@ -57,8 +57,121 @@ if ($method === 'DELETE') {
 
 if ($method !== 'POST') api_error(405, 'Method not allowed');
 
-// ── Login ────────────────────────────────────────────────────────────────────
-$body     = json_decode(file_get_contents('php://input'), true) ?? [];
+$body = json_decode(file_get_contents('php://input'), true) ?? [];
+
+// ── Passkey complete (POST with passkey_response) ─────────────────────────────
+if (isset($body['passkey_response'], $body['challenge_token'])) {
+    require_once $DOCUMENT_ROOT . '/includes/webauthn.php';
+    require_once $DOCUMENT_ROOT . '/includes/load_global_settings.php';
+
+    $challenge_token = $body['challenge_token'];
+    $esc_token = mysqli_real_escape_string($mysqli, $challenge_token);
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT challenge_b64u FROM api_passkey_challenges
+         WHERE challenge_token = '$esc_token'
+           AND created_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE) LIMIT 1"
+    ));
+    if (!$row) api_error(400, 'Challenge not found or expired — please try again');
+    mysqli_query($mysqli, "DELETE FROM api_passkey_challenges WHERE challenge_token = '$esc_token'");
+
+    $pr = $body['passkey_response'];
+    $credId = $pr['id'] ?? '';
+    if (empty($credId)) api_error(400, 'Missing credential ID');
+
+    $userHandleB64 = $pr['response']['userHandle'] ?? '';
+    if (empty($userHandleB64)) api_error(400, 'No user handle — passkey may need re-registration');
+    $userHandleBytes = wa_b64u_decode($userHandleB64);
+    if (strlen($userHandleBytes) < 4) api_error(400, 'Invalid user handle');
+    $userId = intval(unpack('N', substr($userHandleBytes, 0, 4))[1]);
+    if ($userId <= 0) api_error(400, 'Could not identify user from passkey');
+
+    $credSafe = mysqli_real_escape_string($mysqli, $credId);
+    $pkRow = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT * FROM user_passkeys
+         WHERE passkey_credential_id = '$credSafe' AND passkey_user_id = $userId LIMIT 1"
+    ));
+    if (!$pkRow) api_error(401, 'Passkey not found');
+
+    $userRow = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT * FROM users
+         WHERE user_id = $userId AND user_type = 1 AND user_status = 1
+           AND user_archived_at IS NULL LIMIT 1"
+    ));
+    if (!$userRow) api_error(401, 'Account not found or inactive');
+
+    // Android clients send origin as android:apk-key-hash:<base64url>
+    // Build the allowed list from global config (set in config.php or admin settings)
+    global $config_passkey_android_origins;
+    $androidOrigins = is_array($config_passkey_android_origins ?? null)
+        ? $config_passkey_android_origins : [];
+
+    try {
+        $newSignCount = wa_verify_assertion(
+            $credId,
+            $pr['response']['clientDataJSON']    ?? '',
+            $pr['response']['authenticatorData'] ?? '',
+            $pr['response']['signature']         ?? '',
+            $pkRow['passkey_public_key'],
+            intval($pkRow['passkey_sign_count']),
+            $row['challenge_b64u'],
+            $androidOrigins
+        );
+
+        $passkey_id = intval($pkRow['passkey_id']);
+        mysqli_query($mysqli,
+            "UPDATE user_passkeys SET passkey_sign_count = $newSignCount,
+             passkey_last_used_at = NOW() WHERE passkey_id = $passkey_id"
+        );
+
+        // Issue API token
+        $uid        = $userId;
+        $raw_token  = bin2hex(random_bytes(32));
+        $token_hash = hash('sha256', $raw_token);
+        $esc_hash   = mysqli_real_escape_string($mysqli, $token_hash);
+        $esc_device = mysqli_real_escape_string($mysqli, 'ITFlow MSP Android (passkey)');
+
+        // Recover master key via passkey bootstrap key if available
+        $master_key = null;
+        $bootstrap_key = $userRow['user_passkey_bootstrap_key'] ?? null;
+        if ($bootstrap_key && !empty($userRow['user_passkey_enc_ciphertext'])) {
+            $pk_iv      = base64_decode($userRow['user_passkey_enc_iv']);
+            $master_key = openssl_decrypt($userRow['user_passkey_enc_ciphertext'], 'aes-128-cbc', $bootstrap_key, 0, $pk_iv);
+        }
+        if (empty($master_key)) {
+            $master_key = getCanonicalVaultKey($mysqli) ?? '';
+        }
+
+        $enc_key     = substr(hash('sha256', $raw_token . 'itflow_enc', true), 0, 16);
+        $enc_iv      = random_bytes(16);
+        $enc_key_str = openssl_encrypt($master_key, 'aes-128-cbc', $enc_key, 0, $enc_iv);
+        $esc_enc_key = mysqli_real_escape_string($mysqli, $enc_key_str);
+        $esc_enc_iv  = mysqli_real_escape_string($mysqli, bin2hex($enc_iv));
+
+        mysqli_query($mysqli,
+            "INSERT INTO api_tokens
+             (token_user_id, token_hash, token_name, token_enc_master_key, token_enc_master_iv, token_created_at)
+             VALUES ($uid, '$esc_hash', '$esc_device', '$esc_enc_key', '$esc_enc_iv', NOW())"
+        );
+
+        logAction('Login', 'Success', "{$userRow['user_name']} logged in via passkey (mobile API)");
+
+        api_response(200, [
+            'token' => $raw_token,
+            'user'  => [
+                'id'    => $uid,
+                'name'  => $userRow['user_name'],
+                'email' => $userRow['user_email'],
+                'type'  => intval($userRow['user_type']),
+            ],
+        ]);
+    } catch (Throwable $e) {
+        $err = preg_replace("/['\\']/", '', $e->getMessage());
+        logAction('Login', 'Failed', "Mobile passkey auth failed for user $userId: $err");
+        api_error(401, 'Passkey authentication failed');
+    }
+}
+
+// ── Password login ────────────────────────────────────────────────────────────
 $username = trim($body['username'] ?? '');
 $password = trim($body['password'] ?? '');
 $totp     = trim($body['totp_code'] ?? '');
