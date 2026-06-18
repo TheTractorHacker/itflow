@@ -252,9 +252,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/agent/firewalls.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'firewalls.php') { echo 'active'; } ?>">
-                        <i class="nav-icon fas fa-fire-alt"></i>
-                        <p>Firewalls</p>
+                    <a href="/agent/network.php" class="nav-link <?php if (in_array(basename($_SERVER['PHP_SELF']), ['network.php','firewalls.php'])) { echo 'active'; } ?>">
+                        <i class="nav-icon fas fa-network-wired"></i>
+                        <p>Network</p>
                     </a>
                 </li>
                 <?php } ?>

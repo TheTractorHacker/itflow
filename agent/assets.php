@@ -669,9 +669,7 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
                                                 <?php if ($asset_favorite) { echo "<i class='fas fa-fw fa-star text-warning' title='Favorite'></i>"; } ?>
                                                 <?php if (isset($rmm_status_map[$asset_id])): $rs = $rmm_status_map[$asset_id]; ?>
                                                 <span class="badge badge-<?= $rs === 'online' ? 'success' : 'secondary' ?> ml-1" title="RMM: <?= htmlspecialchars($rs) ?>"><?= $rs === 'online' ? 'Online' : 'Offline' ?></span>
-                                                <?php if (!empty($rmm_alert_map[$asset_id])): ?>
-                                                <span class="badge badge-danger ml-1" title="<?= $rmm_alert_map[$asset_id] ?> open RMM alert(s)"><i class="fas fa-bell mr-1"></i><?= $rmm_alert_map[$asset_id] ?></span>
-                                                <?php endif; endif; ?>
+                                                <?php endif; ?>
                                                 </div>
                                             <div><small class="text-secondary"><?= $asset_description ?></small></div>
                                             <?php if ($asset_tags_display) { echo $asset_tags_display; } ?>
