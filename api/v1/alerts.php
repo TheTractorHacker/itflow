@@ -3,6 +3,23 @@
 // POST /api/v1/alerts   - body: {source: 'rmm'|'backup', id: <int>, action: 'acknowledge'|'resolve'}
 defined('FROM_API') || die();
 
+// Require module_rmm_alerts permission (mirrors enforceUserPermission on the web page)
+$_api_role = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT u.user_role_id, r.role_is_admin
+     FROM users u LEFT JOIN user_roles r ON r.role_id = u.user_role_id
+     WHERE u.user_id = $api_user_id LIMIT 1"
+));
+if (!$_api_role || (!$_api_role['role_is_admin'] && !mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT urp.user_role_permission_level
+     FROM user_role_permissions urp
+     JOIN modules m ON m.module_id = urp.module_id
+     WHERE urp.user_role_id = {$_api_role['user_role_id']}
+       AND m.module_name = 'module_rmm_alerts'
+       AND urp.user_role_permission_level >= 1 LIMIT 1"
+)))) {
+    api_error(403, 'Insufficient permissions');
+}
+
 if ($method === 'GET') {
     $filter_status   = $_GET['status'] ?? 'new';
     $filter_severity = $_GET['severity'] ?? '';

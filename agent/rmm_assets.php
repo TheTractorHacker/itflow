@@ -45,7 +45,7 @@ if ($filter_intg_id) {
     $sync_target_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT name FROM rmm_integrations WHERE id=$filter_intg_id"));
     if ($sync_target_row) { $sync_target_name = $sync_target_row['name']; }
 }
-$sync_target_name_js = json_encode($sync_target_name);
+$sync_target_name_js = json_encode($sync_target_name, JSON_HEX_TAG);
 ?>
 
 <div class="d-flex align-items-center mb-3">

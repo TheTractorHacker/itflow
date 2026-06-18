@@ -8,6 +8,12 @@ $filter_severity = sanitizeInput($_GET['severity'] ?? '');
 $filter_client   = intval($_GET['client_id'] ?? 0);
 $filter_search   = sanitizeInput($_GET['q'] ?? '');
 
+// HTML-safe versions for href attributes (sanitizeInput uses mysqli_real_escape_string
+// which escapes " to \" — that's SQL escaping, not HTML escaping; use these instead)
+$h_source   = htmlspecialchars($filter_source,   ENT_QUOTES, 'UTF-8');
+$h_status   = htmlspecialchars($filter_status,   ENT_QUOTES, 'UTF-8');
+$h_severity = htmlspecialchars($filter_severity, ENT_QUOTES, 'UTF-8');
+
 $alerts = [];
 
 // ── RMM alerts ──────────────────────────────────────────────────────────────
@@ -195,7 +201,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
 <!-- Stat cards -->
 <div class="row mb-3">
     <div class="col-md-4">
-        <a href="?status=new&source=<?= $filter_source ?>" class="text-decoration-none">
+        <a href="?status=new&source=<?= $h_source ?>" class="text-decoration-none">
         <div class="small-box <?= $filter_status === 'new' ? 'bg-danger' : 'bg-secondary' ?> mb-0">
             <div class="inner"><h3><?= $cnt['new_cnt'] ?></h3><p>New Alerts</p></div>
             <div class="icon"><i class="fas fa-exclamation-circle"></i></div>
@@ -203,7 +209,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
         </div></a>
     </div>
     <div class="col-md-4">
-        <a href="?status=acknowledged&source=<?= $filter_source ?>" class="text-decoration-none">
+        <a href="?status=acknowledged&source=<?= $h_source ?>" class="text-decoration-none">
         <div class="small-box <?= $filter_status === 'acknowledged' ? 'bg-warning' : 'bg-secondary' ?> mb-0">
             <div class="inner"><h3><?= $cnt['ack_cnt'] ?></h3><p>Acknowledged</p></div>
             <div class="icon"><i class="fas fa-eye"></i></div>
@@ -211,7 +217,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
         </div></a>
     </div>
     <div class="col-md-4">
-        <a href="?status=resolved&source=<?= $filter_source ?>" class="text-decoration-none">
+        <a href="?status=resolved&source=<?= $h_source ?>" class="text-decoration-none">
         <div class="small-box <?= $filter_status === 'resolved' ? 'bg-success' : 'bg-secondary' ?> mb-0">
             <div class="inner"><h3><?= $cnt['res_cnt'] ?></h3><p>Resolved</p></div>
             <div class="icon"><i class="fas fa-check-circle"></i></div>
@@ -226,22 +232,22 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
         <form method="get" class="d-flex flex-wrap align-items-center" style="gap:6px">
             <!-- Source filter -->
             <div class="btn-group btn-group-sm mr-2">
-                <a href="?source=all&status=<?= $filter_status ?>" class="btn <?= $filter_source === 'all' ? 'btn-primary' : 'btn-outline-primary' ?>">All</a>
-                <a href="?source=rmm&status=<?= $filter_status ?>" class="btn <?= $filter_source === 'rmm' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-server mr-1"></i>RMM</a>
-                <a href="?source=backup&status=<?= $filter_status ?>" class="btn <?= $filter_source === 'backup' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-cloud-upload-alt mr-1"></i>Backup</a>
-                <a href="?source=network&status=<?= $filter_status ?>" class="btn <?= $filter_source === 'network' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-network-wired mr-1"></i>Network</a>
+                <a href="?source=all&status=<?= $h_status ?>" class="btn <?= $filter_source === 'all' ? 'btn-primary' : 'btn-outline-primary' ?>">All</a>
+                <a href="?source=rmm&status=<?= $h_status ?>" class="btn <?= $filter_source === 'rmm' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-server mr-1"></i>RMM</a>
+                <a href="?source=backup&status=<?= $h_status ?>" class="btn <?= $filter_source === 'backup' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-cloud-upload-alt mr-1"></i>Backup</a>
+                <a href="?source=network&status=<?= $h_status ?>" class="btn <?= $filter_source === 'network' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-network-wired mr-1"></i>Network</a>
             </div>
             <!-- Status filter -->
             <div class="btn-group btn-group-sm mr-2">
-                <a href="?status=all&source=<?= $filter_source ?>" class="btn <?= $filter_status === 'all' ? 'btn-secondary' : 'btn-outline-secondary' ?>">All</a>
-                <a href="?status=new&source=<?= $filter_source ?>" class="btn <?= $filter_status === 'new' ? 'btn-danger' : 'btn-outline-secondary' ?>">New</a>
-                <a href="?status=acknowledged&source=<?= $filter_source ?>" class="btn <?= $filter_status === 'acknowledged' ? 'btn-warning' : 'btn-outline-secondary' ?>">Acked</a>
-                <a href="?status=resolved&source=<?= $filter_source ?>" class="btn <?= $filter_status === 'resolved' ? 'btn-success' : 'btn-outline-secondary' ?>">Resolved</a>
+                <a href="?status=all&source=<?= $h_source ?>" class="btn <?= $filter_status === 'all' ? 'btn-secondary' : 'btn-outline-secondary' ?>">All</a>
+                <a href="?status=new&source=<?= $h_source ?>" class="btn <?= $filter_status === 'new' ? 'btn-danger' : 'btn-outline-secondary' ?>">New</a>
+                <a href="?status=acknowledged&source=<?= $h_source ?>" class="btn <?= $filter_status === 'acknowledged' ? 'btn-warning' : 'btn-outline-secondary' ?>">Acked</a>
+                <a href="?status=resolved&source=<?= $h_source ?>" class="btn <?= $filter_status === 'resolved' ? 'btn-success' : 'btn-outline-secondary' ?>">Resolved</a>
             </div>
             <!-- Severity filter -->
             <div class="btn-group btn-group-sm mr-2">
                 <?php foreach (['critical'=>'danger','error'=>'danger','warning'=>'warning','info'=>'info'] as $sev => $col): ?>
-                <a href="?status=<?= $filter_status ?>&source=<?= $filter_source ?>&severity=<?= $filter_severity === $sev ? '' : $sev ?>"
+                <a href="?status=<?= $h_status ?>&source=<?= $h_source ?>&severity=<?= $filter_severity === $sev ? '' : $sev ?>"
                    class="btn <?= $filter_severity === $sev ? "btn-$col" : "btn-outline-$col" ?>">
                     <?= ucfirst($sev) ?>
                 </a>
