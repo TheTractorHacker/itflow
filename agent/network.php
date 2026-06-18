@@ -14,7 +14,11 @@ $type_esc = $filter_type && in_array($filter_type, $allowed_types)
 
 $where = "a.asset_type IN ('Firewall/Router','Switch','Access Point') AND a.asset_archived_at IS NULL";
 if ($filter_client_id) { $where .= " AND a.asset_client_id=" . intval($filter_client_id); }
-if ($filter_status)    { $where .= " AND arl.rmm_status='" . mysqli_real_escape_string($mysqli, $filter_status) . "'"; }
+if ($filter_status === 'online') {
+    $where .= " AND (arl.rmm_status='online' OR (arl.rmm_status IS NULL AND a.asset_status IN ('Deployed','Active','Connected')))";
+} elseif ($filter_status === 'offline') {
+    $where .= " AND (arl.rmm_status='offline' OR (arl.rmm_status IS NULL AND a.asset_status NOT IN ('Deployed','Active','Connected')))";
+}
 if ($type_esc)         { $where .= " AND a.asset_type=$type_esc"; }
 if ($filter_search !== '') {
     $sq = mysqli_real_escape_string($mysqli, $filter_search);
@@ -24,10 +28,12 @@ if ($filter_search !== '') {
 
 $sql_devices = mysqli_query($mysqli,
     "SELECT a.asset_id, a.asset_name, a.asset_type, a.asset_client_id,
+            a.asset_make, a.asset_model, a.asset_status AS asset_status_raw, a.asset_notes,
             c.client_name,
             arl.rmm_status, arl.hostname, arl.model AS rmm_model, arl.os_version AS rmm_firmware,
             arl.last_seen, arl.integration_id,
-            ri.name AS integration_name, ri.type AS integration_type,
+            ri.name AS integration_name,
+            COALESCE(arl.model, a.asset_model) AS display_model,
             (SELECT COUNT(*) FROM rmm_alerts WHERE asset_id=a.asset_id AND status='new') AS alert_count,
             (SELECT ticket_id FROM rmm_alerts WHERE asset_id=a.asset_id AND status='new'
              AND ticket_id IS NOT NULL ORDER BY created_at DESC LIMIT 1) AS open_alert_ticket_id,
@@ -39,7 +45,7 @@ $sql_devices = mysqli_query($mysqli,
      LEFT JOIN asset_interfaces ai ON ai.interface_asset_id = a.asset_id AND ai.interface_primary = 1
      WHERE $where
      GROUP BY a.asset_id
-     ORDER BY FIELD(a.asset_type,'Firewall/Router','Switch','Access Point'), arl.rmm_status ASC, a.asset_name ASC"
+     ORDER BY FIELD(a.asset_type,'Firewall/Router','Switch','Access Point'), a.asset_name ASC"
 );
 
 $cnt = mysqli_fetch_assoc(mysqli_query($mysqli,
@@ -239,17 +245,51 @@ $type_labels = [
             while ($dev = mysqli_fetch_assoc($sql_devices)):
                 $asset_id  = intval($dev['asset_id']);
                 $dev_type  = $dev['asset_type'];
-                $status    = $dev['rmm_status'] ?: ($dev['integration_id'] ? 'unknown' : null);
-                $sc        = ['online' => 'success', 'offline' => 'danger', 'unknown' => 'secondary'][$status] ?? null;
-                $si        = ['online' => 'check-circle', 'offline' => 'times-circle', 'unknown' => 'question-circle'][$status] ?? null;
-                $icon      = $device_icons[$dev_type] ?? 'network-wired';
-                $label     = $type_labels[$dev_type] ?? $dev_type;
+
+                // Status — prefer RMM link; fall back to asset_status for UniFi ('Deployed'=online)
+                if (!empty($dev['rmm_status'])) {
+                    $status = $dev['rmm_status'];
+                } elseif (!empty($dev['asset_status_raw'])) {
+                    $s = strtolower($dev['asset_status_raw']);
+                    $status = str_contains($s, 'deploy') || str_contains($s, 'active') || str_contains($s, 'connect') ? 'online' : 'offline';
+                } else {
+                    $status = null;
+                }
+                $sc = ['online' => 'success', 'offline' => 'danger', 'unknown' => 'secondary'][$status] ?? null;
+                $si = ['online' => 'check-circle', 'offline' => 'times-circle', 'unknown' => 'question-circle'][$status] ?? null;
+
+                $icon  = $device_icons[$dev_type] ?? 'network-wired';
+                $label = $type_labels[$dev_type] ?? $dev_type;
                 $display_name = nullable_htmlentities($dev['hostname'] ?: $dev['asset_name']);
-                $ip        = nullable_htmlentities($dev['interface_ip'] ?? '');
-                $model     = nullable_htmlentities($dev['rmm_model'] ?: '');
-                $firmware  = nullable_htmlentities($dev['rmm_firmware'] ?: '');
-                $ago       = $dev['last_seen'] ? timeAgo($dev['last_seen']) : '—';
-                $alerts    = intval($dev['alert_count']);
+                $ip    = nullable_htmlentities($dev['interface_ip'] ?? '');
+                $model = nullable_htmlentities($dev['display_model'] ?: '');
+
+                // Firmware — from RMM link, or parse out of UniFi notes
+                $firmware = nullable_htmlentities($dev['rmm_firmware'] ?: '');
+                if (!$firmware && !empty($dev['asset_notes'])) {
+                    if (preg_match('/Firmware:\s*([^|]+)/i', $dev['asset_notes'], $m)) {
+                        $firmware = nullable_htmlentities(trim($m[1]));
+                    }
+                }
+
+                // Last seen — RMM timestamp or parse UniFi "Last synced:" from notes
+                $ago = '—';
+                if (!empty($dev['last_seen'])) {
+                    $ago = timeAgo($dev['last_seen']);
+                } elseif (!empty($dev['asset_notes']) && preg_match('/Last synced:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})/i', $dev['asset_notes'], $m)) {
+                    $ago = timeAgo($m[1]);
+                }
+
+                // Source label
+                if (!empty($dev['integration_name'])) {
+                    $source = nullable_htmlentities($dev['integration_name']);
+                } elseif (!empty($dev['asset_make']) && strtolower($dev['asset_make']) === 'ubiquiti') {
+                    $source = 'UniFi';
+                } else {
+                    $source = 'Manual';
+                }
+
+                $alerts = intval($dev['alert_count']);
 
                 // Type separator row
                 if (!$filter_type && $dev_type !== $current_type):
@@ -307,14 +347,12 @@ $type_labels = [
                             <?php if ($firmware): ?><div class="text-secondary" style="font-size:10px"><?= $firmware ?></div><?php endif; ?>
                         <?php else: ?>—<?php endif; ?>
                     </td>
-                    <td class="align-middle small text-muted">
-                        <?= $dev['integration_name'] ? nullable_htmlentities($dev['integration_name']) : '<span class="text-muted">Manual</span>' ?>
-                    </td>
+                    <td class="align-middle small text-muted"><?= $source ?></td>
                     <td class="align-middle">
                         <?php if ($sc): ?>
                         <span class="badge badge-<?= $sc ?>"><?= ucfirst($status) ?></span>
                         <?php else: ?>
-                        <span class="badge badge-light text-muted">Manual</span>
+                        <span class="badge badge-light text-muted">Unknown</span>
                         <?php endif; ?>
                     </td>
                     <td class="align-middle small text-muted"><?= $ago ?></td>
