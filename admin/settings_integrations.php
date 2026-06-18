@@ -3,21 +3,37 @@ require_once "includes/inc_all_admin.php";
 enforceUserPermission('module_admin');
 require_once "../includes/comet.php";
 
-$active_tab = in_array($_GET['tab'] ?? '', ['rmm', 'backups', 'unifi']) ? $_GET['tab'] : 'rmm';
+$active_tab = in_array($_GET['tab'] ?? '', ['rmm', 'backups', 'firewalls', 'unifi']) ? $_GET['tab'] : 'rmm';
 
-// ───────────────────────── RMM ─────────────────────────
-$sql_rmm_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER BY name ASC");
+// ─── RMM (non-Sophos) ───────────────────────────────────────────────────────
+$sql_rmm_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations WHERE type != 'sophos_central' ORDER BY name ASC");
 $sql_rmm_clients      = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name ASC");
 
-// ───────────────────────── Backups (Comet) ─────────────────────────
+// ─── Backups (Comet) ────────────────────────────────────────────────────────
 $comet_connected = $config_comet_enabled ? comet_test() : null;
 $comet_error     = ($config_comet_enabled && !$comet_connected) ? comet_get_last_error() : null;
 
-// ───────────────────────── UniFi ─────────────────────────
+// ─── Firewalls (Sophos Central) ─────────────────────────────────────────────
+$sql_fw_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations WHERE type='sophos_central' ORDER BY name ASC");
+$sql_fw_assets       = mysqli_query($mysqli,
+    "SELECT arl.*, a.asset_id, a.asset_name, a.asset_client_id, c.client_name
+     FROM asset_rmm_links arl
+     JOIN assets a ON a.asset_id = arl.asset_id
+     LEFT JOIN clients c ON c.client_id = a.asset_client_id
+     WHERE a.asset_type = 'Firewall/Router'
+     ORDER BY arl.rmm_status ASC, arl.hostname ASC"
+);
+$sql_fw_clients_tmp = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name ASC");
+$all_fw_clients = [];
+while ($c = mysqli_fetch_assoc($sql_fw_clients_tmp)) {
+    $all_fw_clients[] = ['id' => intval($c['client_id']), 'name' => $c['client_name']];
+}
+
+// ─── UniFi ──────────────────────────────────────────────────────────────────
 $sql_unifi_integrations = mysqli_query($mysqli, "SELECT * FROM unifi_integrations ORDER BY name ASC");
-$sql_unifi_clients      = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name ASC");
-$all_unifi_clients      = [];
-while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
+$sql_unifi_clients_tmp  = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name ASC");
+$all_unifi_clients = [];
+while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
     $all_unifi_clients[] = ['id' => intval($c['client_id']), 'name' => $c['client_name']];
 }
 ?>
@@ -30,19 +46,16 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
     <div class="card-header p-0">
         <ul class="nav nav-tabs card-header-tabs" id="integrationsTabs">
             <li class="nav-item">
-                <a class="nav-link <?= $active_tab === 'rmm' ? 'active' : '' ?>" data-toggle="tab" href="#tab-rmm" data-tabkey="rmm">
-                    <i class="fas fa-desktop mr-1"></i>RMM
-                </a>
+                <a class="nav-link <?= $active_tab === 'rmm'       ? 'active' : '' ?>" data-toggle="tab" href="#tab-rmm"       data-tabkey="rmm"><i class="fas fa-desktop mr-1"></i>RMM</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $active_tab === 'backups' ? 'active' : '' ?>" data-toggle="tab" href="#tab-backups" data-tabkey="backups">
-                    <i class="fas fa-cloud-upload-alt mr-1"></i>Backups
-                </a>
+                <a class="nav-link <?= $active_tab === 'backups'   ? 'active' : '' ?>" data-toggle="tab" href="#tab-backups"   data-tabkey="backups"><i class="fas fa-cloud-upload-alt mr-1"></i>Backups</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $active_tab === 'unifi' ? 'active' : '' ?>" data-toggle="tab" href="#tab-unifi" data-tabkey="unifi">
-                    <i class="fas fa-wifi mr-1"></i>UniFi
-                </a>
+                <a class="nav-link <?= $active_tab === 'firewalls' ? 'active' : '' ?>" data-toggle="tab" href="#tab-firewalls" data-tabkey="firewalls"><i class="fas fa-fire-alt mr-1"></i>Firewalls</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= $active_tab === 'unifi'     ? 'active' : '' ?>" data-toggle="tab" href="#tab-unifi"     data-tabkey="unifi"><i class="fas fa-wifi mr-1"></i>UniFi</a>
             </li>
         </ul>
     </div>
@@ -50,9 +63,9 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
 
 <div class="tab-content mt-3">
 
-<!-- =======================================================================
+<!-- ═══════════════════════════════════════════════════════════════════════════
      RMM TAB
-     ======================================================================= -->
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="tab-pane <?= $active_tab === 'rmm' ? 'show active' : '' ?>" id="tab-rmm">
 
     <div class="card card-dark mb-3" style="border-top:3px solid #17a2b8;">
@@ -70,8 +83,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 <div class="form-group mb-2">
                     <div class="custom-control custom-switch">
                         <input type="checkbox" class="custom-control-input" id="rmm_module_enabled"
-                               name="config_module_enable_rmm" value="1"
-                               <?= $config_module_enable_rmm ? 'checked' : '' ?>>
+                               name="config_module_enable_rmm" value="1" <?= $config_module_enable_rmm ? 'checked' : '' ?>>
                         <label class="custom-control-label" for="rmm_module_enabled">Enable RMM module (shows RMM features in asset and client pages)</label>
                     </div>
                 </div>
@@ -124,7 +136,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 <div class="text-center text-muted py-5">
                     <i class="fas fa-plug fa-3x mb-3"></i>
                     <p class="mb-1">No integrations configured.</p>
-                    <p class="small">Add a Tactical RMM, Level.io, Action1, or Sophos Central connection to get started.</p>
+                    <p class="small">Add a Tactical RMM, Level.io, or Action1 connection to get started.</p>
                 </div>
             <?php else: ?>
             <table class="table table-sm table-hover mb-0">
@@ -145,23 +157,17 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                     $intg_id   = intval($intg['id']);
                     $intg_type = $intg['type'] ?? 'tactical_rmm';
                     $last_sync_row = mysqli_fetch_assoc(mysqli_query($mysqli,
-                        "SELECT MAX(finished_at) as ls, status FROM rmm_sync_log WHERE integration_id=$intg_id ORDER BY id DESC LIMIT 1"
+                        "SELECT MAX(finished_at) as ls FROM rmm_sync_log WHERE integration_id=$intg_id LIMIT 1"
                     ));
-                    $provider_label = ['tactical_rmm' => 'Tactical RMM', 'level' => 'Level.io', 'action1' => 'Action1', 'sophos_central' => 'Sophos Central'][$intg_type] ?? $intg_type;
-                    $provider_color = ['tactical_rmm' => 'info', 'level' => 'primary', 'action1' => 'warning', 'sophos_central' => 'success'][$intg_type] ?? 'secondary';
+                    $provider_label = ['tactical_rmm' => 'Tactical RMM', 'level' => 'Level.io', 'action1' => 'Action1'][$intg_type] ?? $intg_type;
+                    $provider_color = ['tactical_rmm' => 'info',         'level' => 'primary',   'action1' => 'warning'][$intg_type] ?? 'secondary';
                 ?>
                 <tr>
                     <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
                     <td><span class="badge badge-<?= $provider_color ?>"><?= $provider_label ?></span></td>
                     <td class="text-muted small"><?= nullable_htmlentities($intg['api_url']) ?></td>
-                    <td>
-                        <?= $intg['enabled']
-                            ? '<span class="badge badge-success">Enabled</span>'
-                            : '<span class="badge badge-secondary">Disabled</span>' ?>
-                    </td>
-                    <td class="text-muted small">
-                        <?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?>
-                    </td>
+                    <td><?= $intg['enabled'] ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-secondary">Disabled</span>' ?></td>
+                    <td class="text-muted small"><?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?></td>
                     <td class="text-right pr-3" style="white-space:nowrap">
                         <button class="btn btn-xs btn-info" onclick="rmmTestConnection(<?= $intg_id ?>)">
                             <i class="fas fa-plug mr-1"></i>Test
@@ -171,13 +177,12 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                         </button>
                         <button class="btn btn-xs btn-secondary"
                                 onclick='rmmEditIntegration(<?= json_encode([
-                                    "id"                => $intg_id,
-                                    "name"               => $intg['name'],
-                                    "type"                => $intg_type,
-                                    "api_url"             => $intg['api_url'],
-                                    "web_url"             => $intg['web_url'] ?? '',
-                                    "default_client_id"   => intval($intg['default_client_id'] ?? 0),
-                                    "enabled"             => intval($intg['enabled']),
+                                    "id"              => $intg_id,
+                                    "name"            => $intg['name'],
+                                    "type"            => $intg_type,
+                                    "api_url"         => $intg['api_url'],
+                                    "web_url"         => $intg['web_url'] ?? '',
+                                    "enabled"         => intval($intg['enabled']),
                                 ]) ?>)'>
                             <i class="fas fa-edit"></i>
                         </button>
@@ -208,6 +213,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 "SELECT l.*, i.name as integration_name, i.type as integration_type
                  FROM rmm_sync_log l
                  LEFT JOIN rmm_integrations i ON i.id = l.integration_id
+                 WHERE i.type IN ('tactical_rmm','level','action1') OR i.id IS NULL
                  ORDER BY l.id DESC LIMIT 20"
             );
             if (mysqli_num_rows($sql_rmm_log) == 0): ?>
@@ -228,13 +234,13 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 </thead>
                 <tbody>
                 <?php while ($lr = mysqli_fetch_assoc($sql_rmm_log)):
-                    $badge = ['success'=>'badge-success','failed'=>'badge-danger','running'=>'badge-warning'];
+                    $badge = ['success' => 'badge-success', 'failed' => 'badge-danger', 'running' => 'badge-warning'];
                 ?>
                 <tr>
                     <td class="pl-3">
                         <?= nullable_htmlentities($lr['integration_name']) ?>
                         <?php $tp = $lr['integration_type'] ?? ''; if ($tp): ?>
-                        <span class="badge badge-secondary ml-1" style="font-size:10px"><?= ['level' => 'Level.io', 'action1' => 'Action1', 'sophos_central' => 'Sophos Central'][$tp] ?? 'Tactical' ?></span>
+                        <span class="badge badge-secondary ml-1" style="font-size:10px"><?= ['level' => 'Level.io', 'action1' => 'Action1'][$tp] ?? 'Tactical' ?></span>
                         <?php endif; ?>
                     </td>
                     <td class="text-muted small"><?= nullable_htmlentities($lr['started_at']) ?></td>
@@ -243,9 +249,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                     <td><?= intval($lr['assets_updated']) ?></td>
                     <td><?= intval($lr['assets_matched']) ?></td>
                     <td><?= intval($lr['assets_skipped']) ?></td>
-                    <td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                        <?= nullable_htmlentities($lr['errors']) ?>
-                    </td>
+                    <td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= nullable_htmlentities($lr['errors']) ?></td>
                 </tr>
                 <?php endwhile; ?>
                 </tbody>
@@ -283,14 +287,9 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                                 </label>
                                 <input type="radio" class="btn-check" name="integration_type" id="rmm_type_action1"
                                        value="action1" onchange="rmmUpdateModalLabels('action1')">
-                                <label class="btn btn-outline-warning flex-fill" for="rmm_type_action1" id="rmm_lbl_action1">
-                                    <i class="fas fa-shield-alt mr-1"></i>Action1
-                                </label>
-                                <input type="radio" class="btn-check" name="integration_type" id="rmm_type_sophos"
-                                       value="sophos_central" onchange="rmmUpdateModalLabels('sophos_central')">
-                                <label class="btn btn-outline-success flex-fill" for="rmm_type_sophos" id="rmm_lbl_sophos"
+                                <label class="btn btn-outline-warning flex-fill" for="rmm_type_action1" id="rmm_lbl_action1"
                                        style="border-radius:0 4px 4px 0">
-                                    <i class="fas fa-fire-alt mr-1"></i>Sophos Central
+                                    <i class="fas fa-shield-alt mr-1"></i>Action1
                                 </label>
                             </div>
                         </div>
@@ -306,17 +305,15 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                             <input type="url" class="form-control form-control-sm" name="integration_api_url" id="rmm_integration_api_url"
                                    placeholder="https://api.yourdomain.com" required>
                             <small class="text-light" id="rmm_help_api_url">
-                                Tactical RMM: enter API server base URL (no trailing slash). e.g. <code>https://api.yourdomain.com</code>
+                                Tactical RMM: enter API server base URL (no trailing slash).
                             </small>
                         </div>
 
-                        <div class="form-group" id="rmm_web_url_group">
+                        <div class="form-group">
                             <label class="text-light small" id="rmm_label_web_url">Dashboard / Web URL</label>
                             <input type="url" class="form-control form-control-sm" name="integration_web_url" id="rmm_integration_web_url"
                                    placeholder="https://rmm.yourdomain.com">
-                            <small class="text-light" id="rmm_help_web_url">
-                                The browser-accessible dashboard URL (used for Connect button).
-                            </small>
+                            <small class="text-light" id="rmm_help_web_url">Browser-accessible dashboard URL (used for Connect button).</small>
                         </div>
 
                         <div class="form-group">
@@ -333,22 +330,6 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                             <input type="password" class="form-control form-control-sm" name="integration_client_secret" id="rmm_integration_client_secret"
                                    autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
                             <small class="text-light">Stored encrypted.</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="text-light small">Default Client</label>
-                            <select class="form-control form-control-sm" name="integration_default_client_id" id="rmm_integration_default_client_id">
-                                <option value="0">— None —</option>
-                                <?php
-                                mysqli_data_seek($sql_rmm_clients, 0);
-                                while ($c = mysqli_fetch_assoc($sql_rmm_clients)): ?>
-                                <option value="<?= intval($c['client_id']) ?>"><?= nullable_htmlentities($c['client_name']) ?></option>
-                                <?php endwhile; ?>
-                            </select>
-                            <small class="text-light">
-                                Used when a device has no client/group name to match (e.g. a single-tenant Sophos Central
-                                account). Newly-discovered devices are assigned here instead of being skipped.
-                            </small>
                         </div>
 
                         <div class="custom-control custom-switch">
@@ -370,18 +351,16 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
         </div>
     </div>
 
-</div>
+</div><!-- /#tab-rmm -->
 
-<!-- =======================================================================
+<!-- ═══════════════════════════════════════════════════════════════════════════
      BACKUPS (COMET) TAB
-     ======================================================================= -->
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="tab-pane <?= $active_tab === 'backups' ? 'show active' : '' ?>" id="tab-backups">
 
     <div class="card card-dark mb-3" style="border-top:3px solid #f39c12;">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto">
-                <i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Comet Backup Integration
-            </h3>
+            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Comet Backup Integration</h3>
             <?php if ($config_comet_enabled): ?>
                 <?php if ($comet_connected): ?>
                     <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Connected</span>
@@ -390,11 +369,11 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 <?php endif; ?>
             <?php endif; ?>
         </div>
-        <?php if ($comet_error) { ?>
+        <?php if ($comet_error): ?>
         <div class="px-3 pt-2">
             <div class="small text-danger"><i class="fas fa-exclamation-triangle mr-1"></i><?= nullable_htmlentities($comet_error) ?></div>
         </div>
-        <?php } ?>
+        <?php endif; ?>
         <div class="card-body">
             <form action="post.php" method="post">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -402,8 +381,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 <div class="form-group">
                     <div class="custom-control custom-switch">
                         <input type="checkbox" class="custom-control-input" id="comet_enabled"
-                               name="config_comet_enabled" value="1"
-                               <?= $config_comet_enabled ? 'checked' : '' ?>>
+                               name="config_comet_enabled" value="1" <?= $config_comet_enabled ? 'checked' : '' ?>>
                         <label class="custom-control-label" for="comet_enabled">Enable Comet Backup integration</label>
                     </div>
                 </div>
@@ -412,25 +390,21 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                     <div class="col-md-4">
                         <div class="form-group">
                             <label class="text-muted small mb-1">Server URL</label>
-                            <input type="text" class="form-control form-control-sm"
-                                   name="config_comet_server_url"
-                                   value="<?= nullable_htmlentities($config_comet_server_url) ?>"
-                                   placeholder="http://10.1.0.35:8060">
+                            <input type="text" class="form-control form-control-sm" name="config_comet_server_url"
+                                   value="<?= nullable_htmlentities($config_comet_server_url) ?>" placeholder="http://10.1.0.35:8060">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
                             <label class="text-muted small mb-1">Admin Username</label>
-                            <input type="text" class="form-control form-control-sm"
-                                   name="config_comet_admin_user" autocomplete="off"
+                            <input type="text" class="form-control form-control-sm" name="config_comet_admin_user" autocomplete="off"
                                    value="<?= nullable_htmlentities($config_comet_admin_user) ?>">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
                             <label class="text-muted small mb-1">Admin Password</label>
-                            <input type="password" class="form-control form-control-sm"
-                                   name="config_comet_admin_pass" autocomplete="new-password"
+                            <input type="password" class="form-control form-control-sm" name="config_comet_admin_pass" autocomplete="new-password"
                                    placeholder="<?= $config_comet_admin_pass ? '(saved — leave blank to keep)' : '' ?>">
                         </div>
                     </div>
@@ -439,13 +413,11 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label class="text-muted small mb-1">
-                                TOTP Secret <small>(for 2FA admin accounts — base32 secret from your authenticator)</small>
-                            </label>
+                            <label class="text-muted small mb-1">TOTP Secret <small>(for 2FA admin accounts — base32 secret from your authenticator)</small></label>
                             <input type="password" class="form-control form-control-sm font-monospace"
                                    name="config_comet_totp_secret" autocomplete="new-password"
                                    placeholder="<?= $config_comet_totp_secret ? '(saved)' : 'JBSWY3DPEHPK3PXP...' ?>">
-                            <small class="text-muted">Leave blank to keep existing. Stored to generate TOTP codes automatically — a session key is cached so codes are only generated when needed.</small>
+                            <small class="text-muted">Leave blank to keep existing. Stored to generate TOTP codes automatically.</small>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -463,8 +435,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 <div class="form-group">
                     <div class="custom-control custom-switch">
                         <input type="checkbox" class="custom-control-input" id="comet_auto_ticket"
-                               name="config_comet_auto_ticket" value="1"
-                               <?= $config_comet_auto_ticket ? 'checked' : '' ?>>
+                               name="config_comet_auto_ticket" value="1" <?= $config_comet_auto_ticket ? 'checked' : '' ?>>
                         <label class="custom-control-label" for="comet_auto_ticket">
                             Auto-create tickets on backup failure (one ticket per device, auto-resolves on success)
                         </label>
@@ -523,8 +494,8 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                     </thead>
                     <tbody>
                     <?php while ($client = mysqli_fetch_assoc($sql_comet_clients)):
-                        $cid   = intval($client['client_id']);
-                        $cname = nullable_htmlentities($client['client_name']);
+                        $cid    = intval($client['client_id']);
+                        $cname  = nullable_htmlentities($client['client_name']);
                         $mapped = $comet_maps[$cid] ?? '';
                     ?>
                         <tr>
@@ -533,9 +504,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                                 <select class="form-control form-control-sm" name="comet_map[<?= $cid ?>]">
                                     <option value="">— Not mapped —</option>
                                     <?php foreach ($comet_users as $cu): ?>
-                                        <option value="<?= htmlspecialchars($cu) ?>" <?= $mapped === $cu ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($cu) ?>
-                                        </option>
+                                        <option value="<?= htmlspecialchars($cu) ?>" <?= $mapped === $cu ? 'selected' : '' ?>><?= htmlspecialchars($cu) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </td>
@@ -553,18 +522,281 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
         </div>
     </div>
 
-</div>
+</div><!-- /#tab-backups -->
 
-<!-- =======================================================================
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     FIREWALLS (SOPHOS CENTRAL) TAB
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="tab-pane <?= $active_tab === 'firewalls' ? 'show active' : '' ?>" id="tab-firewalls">
+
+    <!-- Sophos Central connections -->
+    <div class="card card-dark mb-3" style="border-top:3px solid #28a745;">
+        <div class="card-header py-2 d-flex align-items-center">
+            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-fire-alt mr-2"></i>Sophos Central Connections</h3>
+            <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#fw_addModal" onclick="fwResetModal()">
+                <i class="fas fa-plus mr-1"></i>Add Connection
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <?php if (mysqli_num_rows($sql_fw_integrations) == 0): ?>
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-fire-alt fa-3x mb-3"></i>
+                    <p class="mb-1">No Sophos Central connections configured.</p>
+                    <p class="small">Add a Sophos Central API credential (Client ID + Secret) to start syncing firewall inventory.</p>
+                </div>
+            <?php else: ?>
+            <table class="table table-sm table-hover mb-0">
+                <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
+                    <tr>
+                        <th class="pl-3">Name</th>
+                        <th>Status</th>
+                        <th>Last Sync</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php
+                mysqli_data_seek($sql_fw_integrations, 0);
+                while ($intg = mysqli_fetch_assoc($sql_fw_integrations)):
+                    $intg_id = intval($intg['id']);
+                    $last_sync_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+                        "SELECT MAX(finished_at) as ls FROM rmm_sync_log WHERE integration_id=$intg_id LIMIT 1"
+                    ));
+                ?>
+                <tr>
+                    <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
+                    <td><?= $intg['enabled'] ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-secondary">Disabled</span>' ?></td>
+                    <td class="text-muted small"><?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?></td>
+                    <td class="text-right pr-3" style="white-space:nowrap">
+                        <button class="btn btn-xs btn-info" onclick="fwTestConnection(<?= $intg_id ?>)">
+                            <i class="fas fa-plug mr-1"></i>Test
+                        </button>
+                        <button class="btn btn-xs btn-success" onclick="fwSyncNow(<?= $intg_id ?>)">
+                            <i class="fas fa-sync mr-1"></i>Sync Now
+                        </button>
+                        <button class="btn btn-xs btn-secondary"
+                                onclick='fwEditIntegration(<?= json_encode([
+                                    "id"               => $intg_id,
+                                    "name"             => $intg['name'],
+                                    "api_url"          => $intg['api_url'] ?? 'https://api.central.sophos.com',
+                                    "web_url"          => $intg['web_url'] ?? '',
+                                    "default_client_id"=> intval($intg['default_client_id'] ?? 0),
+                                    "enabled"          => intval($intg['enabled']),
+                                ]) ?>)'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <form action="post.php" method="post" class="d-inline"
+                              onsubmit="return confirm('Delete this connection? Firewall assets will remain but lose their RMM link.')">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <input type="hidden" name="integration_id" value="<?= $intg_id ?>">
+                            <button type="submit" name="delete_rmm_integration" class="btn btn-xs btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                <?php endwhile; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Firewall → Client Mapping -->
+    <div class="card card-dark mb-3">
+        <div class="card-header py-2">
+            <h3 class="card-title"><i class="fas fa-fw fa-link mr-2"></i>Firewall &rarr; Client Mapping</h3>
+        </div>
+        <div class="card-body p-0">
+            <?php if (mysqli_num_rows($sql_fw_assets) === 0): ?>
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-fire-alt fa-3x mb-3"></i>
+                    <p class="mb-1">No firewalls synced yet.</p>
+                    <p class="small">Add a Sophos Central connection above and click <strong>Sync Now</strong> to import firewall inventory.</p>
+                </div>
+            <?php else: ?>
+            <form action="post.php" method="post">
+                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                <table class="table table-sm table-borderless table-hover mb-0">
+                    <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
+                        <tr>
+                            <th class="pl-3" style="width:28px;"></th>
+                            <th>Device</th>
+                            <th>Model</th>
+                            <th>Firmware</th>
+                            <th>Assigned Client</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php while ($fw = mysqli_fetch_assoc($sql_fw_assets)):
+                        $st = $fw['rmm_status'] ?: 'unknown';
+                        $sc = ['online' => 'success', 'offline' => 'danger', 'unknown' => 'secondary'][$st] ?? 'secondary';
+                        $si = ['online' => 'check-circle', 'offline' => 'times-circle', 'unknown' => 'question-circle'][$st] ?? 'question-circle';
+                    ?>
+                        <tr>
+                            <td class="pl-3 text-center"><i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i></td>
+                            <td class="font-weight-bold small">
+                                <a href="/agent/asset_details.php?asset_id=<?= intval($fw['asset_id']) ?>">
+                                    <?= nullable_htmlentities($fw['hostname'] ?: $fw['asset_name']) ?>
+                                </a>
+                            </td>
+                            <td class="text-muted small"><?= nullable_htmlentities($fw['model']) ?: '—' ?></td>
+                            <td class="text-muted small"><?= nullable_htmlentities($fw['os_version']) ?: '—' ?></td>
+                            <td style="min-width:200px;">
+                                <select class="form-control form-control-sm" name="fw_client_map[<?= intval($fw['asset_id']) ?>]">
+                                    <option value="0">— Not assigned —</option>
+                                    <?php foreach ($all_fw_clients as $cl): ?>
+                                        <option value="<?= $cl['id'] ?>" <?= intval($fw['asset_client_id']) === $cl['id'] ? 'selected' : '' ?>>
+                                            <?= nullable_htmlentities($cl['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+                <div class="card-footer py-2">
+                    <button type="submit" name="save_firewall_client_mappings" class="btn btn-primary btn-sm">
+                        <i class="fas fa-check mr-1"></i>Save Mappings
+                    </button>
+                </div>
+            </form>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Sophos sync log -->
+    <div class="card card-dark">
+        <div class="card-header py-2">
+            <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>Recent Sync Log</h3>
+        </div>
+        <div class="card-body p-0">
+            <?php
+            $sql_fw_log = mysqli_query($mysqli,
+                "SELECT l.*, i.name as integration_name
+                 FROM rmm_sync_log l
+                 INNER JOIN rmm_integrations i ON i.id = l.integration_id AND i.type = 'sophos_central'
+                 ORDER BY l.id DESC LIMIT 20"
+            );
+            if (mysqli_num_rows($sql_fw_log) == 0): ?>
+                <p class="text-muted text-center py-3 mb-0">No sync history yet.</p>
+            <?php else: ?>
+            <table class="table table-sm table-hover mb-0">
+                <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
+                    <tr>
+                        <th class="pl-3">Connection</th>
+                        <th>Started</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th>Matched</th>
+                        <th>Skipped</th>
+                        <th>Errors</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php while ($lr = mysqli_fetch_assoc($sql_fw_log)):
+                    $badge = ['success' => 'badge-success', 'failed' => 'badge-danger', 'running' => 'badge-warning'];
+                ?>
+                <tr>
+                    <td class="pl-3"><?= nullable_htmlentities($lr['integration_name']) ?></td>
+                    <td class="text-muted small"><?= nullable_htmlentities($lr['started_at']) ?></td>
+                    <td><span class="badge <?= $badge[$lr['status']] ?? 'badge-secondary' ?>"><?= htmlspecialchars($lr['status']) ?></span></td>
+                    <td><?= intval($lr['assets_created']) ?></td>
+                    <td><?= intval($lr['assets_updated']) ?></td>
+                    <td><?= intval($lr['assets_matched']) ?></td>
+                    <td><?= intval($lr['assets_skipped']) ?></td>
+                    <td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= nullable_htmlentities($lr['errors']) ?></td>
+                </tr>
+                <?php endwhile; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Add/Edit Sophos Connection Modal -->
+    <div class="modal fade" id="fw_addModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fw_modalTitle">Add Sophos Central Connection</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <form action="post.php" method="post">
+                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                    <input type="hidden" name="integration_id" id="fw_edit_id" value="">
+                    <input type="hidden" name="integration_type" value="sophos_central">
+                    <div class="modal-body">
+
+                        <div class="form-group">
+                            <label class="text-light small">Connection Name</label>
+                            <input type="text" class="form-control form-control-sm" name="integration_name" id="fw_name" required
+                                   placeholder="e.g. Sophos Central Firewalls">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="text-light small">API Entry Point</label>
+                            <input type="url" class="form-control form-control-sm" name="integration_api_url" id="fw_api_url"
+                                   value="https://api.central.sophos.com" required>
+                            <small class="text-muted">Fixed Sophos Central endpoint — leave as-is.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="text-light small">Client ID</label>
+                            <input type="password" class="form-control form-control-sm" name="integration_api_key" id="fw_client_id"
+                                   autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
+                            <small class="text-muted">From Sophos Central → Global Settings → API Credentials. Single-tenant credentials only.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="text-light small">Client Secret</label>
+                            <input type="password" class="form-control form-control-sm" name="integration_client_secret" id="fw_client_secret"
+                                   autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
+                            <small class="text-muted">Stored encrypted.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="text-light small">Default Client</label>
+                            <select class="form-control form-control-sm" name="integration_default_client_id" id="fw_default_client_id">
+                                <option value="0">— None —</option>
+                                <?php foreach ($all_fw_clients as $cl): ?>
+                                <option value="<?= $cl['id'] ?>"><?= nullable_htmlentities($cl['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted">Newly-synced firewalls are auto-assigned to this client. Override per-device in the mapping table.</small>
+                        </div>
+
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="fw_enabled"
+                                   name="integration_enabled" value="1" checked>
+                            <label class="custom-control-label" for="fw_enabled">Enabled</label>
+                        </div>
+
+                        <div id="fw_test_result" class="mt-3"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                        <button type="submit" name="save_rmm_integration" class="btn btn-primary btn-sm">
+                            <i class="fas fa-check mr-1"></i>Save Connection
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /#tab-firewalls -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
      UNIFI TAB
-     ======================================================================= -->
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="tab-pane <?= $active_tab === 'unifi' ? 'show active' : '' ?>" id="tab-unifi">
 
     <div class="card card-dark mb-3" style="border-top:3px solid #17a2b8;">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto">
-                <i class="fas fa-fw fa-wifi mr-2"></i>UniFi Integration Settings
-            </h3>
+            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-wifi mr-2"></i>UniFi Integration Settings</h3>
             <?php if ($config_module_enable_unifi): ?>
                 <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Module Enabled</span>
             <?php else: ?>
@@ -581,8 +813,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 <div class="form-group mb-2">
                     <div class="custom-control custom-switch">
                         <input type="checkbox" class="custom-control-input" id="unifi_module_enabled"
-                               name="config_module_enable_unifi" value="1"
-                               <?= $config_module_enable_unifi ? 'checked' : '' ?>>
+                               name="config_module_enable_unifi" value="1" <?= $config_module_enable_unifi ? 'checked' : '' ?>>
                         <label class="custom-control-label" for="unifi_module_enabled">Enable UniFi module</label>
                     </div>
                 </div>
@@ -625,21 +856,15 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 while ($intg = mysqli_fetch_assoc($sql_unifi_integrations)):
                     $intg_id = intval($intg['id']);
                     $last_sync_row = mysqli_fetch_assoc(mysqli_query($mysqli,
-                        "SELECT MAX(finished_at) as ls, status FROM unifi_sync_log WHERE integration_id=$intg_id ORDER BY id DESC LIMIT 1"
+                        "SELECT MAX(finished_at) as ls FROM unifi_sync_log WHERE integration_id=$intg_id LIMIT 1"
                     ));
                 ?>
                 <tr>
                     <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
                     <td class="text-muted small"><?= nullable_htmlentities($intg['host']) ?></td>
                     <td class="text-muted small"><?= intval($intg['port']) ?></td>
-                    <td>
-                        <?= $intg['enabled']
-                            ? '<span class="badge badge-success">Enabled</span>'
-                            : '<span class="badge badge-secondary">Disabled</span>' ?>
-                    </td>
-                    <td class="text-muted small">
-                        <?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?>
-                    </td>
+                    <td><?= $intg['enabled'] ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-secondary">Disabled</span>' ?></td>
+                    <td class="text-muted small"><?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?></td>
                     <td class="text-right pr-3" style="white-space:nowrap">
                         <button class="btn btn-xs btn-info" onclick="unifiTestConnection(<?= $intg_id ?>)">
                             <i class="fas fa-plug mr-1"></i>Test
@@ -707,24 +932,16 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                 </thead>
                 <tbody>
                 <?php while ($lr = mysqli_fetch_assoc($sql_unifi_log)):
-                    $badge = ['success'=>'badge-success','failed'=>'badge-danger','running'=>'badge-warning'];
+                    $badge = ['success' => 'badge-success', 'failed' => 'badge-danger', 'running' => 'badge-warning'];
                 ?>
                 <tr>
                     <td class="pl-3"><?= nullable_htmlentities($lr['integration_name']) ?></td>
                     <td class="text-muted small"><?= nullable_htmlentities($lr['started_at']) ?></td>
                     <td><span class="badge <?= $badge[$lr['status']] ?? 'badge-secondary' ?>"><?= htmlspecialchars($lr['status']) ?></span></td>
-                    <td class="text-muted small">
-                        +<?= intval($lr['devices_created']) ?> / ~<?= intval($lr['devices_updated']) ?> / -<?= intval($lr['devices_skipped']) ?>
-                    </td>
-                    <td class="text-muted small">
-                        +<?= intval($lr['wifi_created']) ?> / ~<?= intval($lr['wifi_updated']) ?> / -<?= intval($lr['wifi_skipped']) ?>
-                    </td>
-                    <td class="text-muted small">
-                        +<?= intval($lr['networks_created']) ?> / ~<?= intval($lr['networks_updated']) ?> / -<?= intval($lr['networks_skipped']) ?>
-                    </td>
-                    <td class="text-muted small" style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                        <?= nullable_htmlentities($lr['errors']) ?>
-                    </td>
+                    <td class="text-muted small">+<?= intval($lr['devices_created']) ?> / ~<?= intval($lr['devices_updated']) ?> / -<?= intval($lr['devices_skipped']) ?></td>
+                    <td class="text-muted small">+<?= intval($lr['wifi_created']) ?> / ~<?= intval($lr['wifi_updated']) ?> / -<?= intval($lr['wifi_skipped']) ?></td>
+                    <td class="text-muted small">+<?= intval($lr['networks_created']) ?> / ~<?= intval($lr['networks_updated']) ?> / -<?= intval($lr['networks_skipped']) ?></td>
+                    <td class="text-muted small" style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= nullable_htmlentities($lr['errors']) ?></td>
                 </tr>
                 <?php endwhile; ?>
                 </tbody>
@@ -768,9 +985,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                             <label class="text-light small">API Key</label>
                             <input type="password" class="form-control form-control-sm" name="integration_api_key" id="unifi_integration_api_key"
                                    autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
-                            <small class="text-light">
-                                Stored encrypted. Generate in UniFi OS &rarr; Settings &rarr; Control Plane &rarr; Integrations &rarr; API Key.
-                            </small>
+                            <small class="text-light">Stored encrypted. Generate in UniFi OS &rarr; Settings &rarr; Control Plane &rarr; Integrations &rarr; API Key.</small>
                         </div>
 
                         <div class="custom-control custom-switch mb-2">
@@ -812,9 +1027,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
                         Use this to override that match, or skip syncing a site entirely.
                     </p>
                     <div id="unifi_siteMappingBody">
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-spinner fa-spin mr-1"></i>Loading sites...
-                        </div>
+                        <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i>Loading sites...</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -827,7 +1040,7 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients)) {
         </div>
     </div>
 
-</div>
+</div><!-- /#tab-unifi -->
 
 </div><!-- /.tab-content -->
 
@@ -840,7 +1053,6 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-// Keep the active tab in the URL so reloads/bookmarks land back on it
 $('#integrationsTabs a').on('shown.bs.tab', function (e) {
     const tab = e.target.getAttribute('data-tabkey');
     const url = new URL(window.location);
@@ -848,9 +1060,9 @@ $('#integrationsTabs a').on('shown.bs.tab', function (e) {
     history.replaceState(null, '', url);
 });
 
-/* =========================================================================
+/* ═══════════════════════════════════════════════════════════════════════════
    RMM
-   ========================================================================= */
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const RMM_TYPE_HINTS = {
     tactical_rmm: {
@@ -859,16 +1071,16 @@ const RMM_TYPE_HINTS = {
         help_api_url:        'API server base URL. Older installs: <code>https://api.yourdomain.com</code>. Newer (v0.18+): <code>https://api.yourdomain.com/api/v3</code>',
         label_web_url:       'Dashboard URL',
         placeholder_web_url: 'https://rmm.yourdomain.com',
-        help_web_url:        'Browser dashboard URL (used for Connect button). e.g. <code>https://rmm.yourdomain.com</code>',
+        help_web_url:        'Browser dashboard URL (used for Connect button).',
         help_api_key:        'Generate in Tactical RMM → Settings → Global Settings → API Keys.',
     },
     level: {
         placeholder_name:    'e.g. Level.io RMM',
         placeholder_api_url: 'https://api.level.io',
-        help_api_url:        'Level.io API server. Enter <code>https://api.level.io</code> — the <code>/v2</code> prefix is added automatically. Do NOT enter app.level.io.',
+        help_api_url:        'Level.io API server. Enter <code>https://api.level.io</code> — the <code>/v2</code> prefix is added automatically.',
         label_web_url:       'Organization ID (optional)',
         placeholder_web_url: 'your-org-id',
-        help_web_url:        'Your Level.io organization slug (leave blank if unsure — device URLs will still work).',
+        help_web_url:        'Your Level.io organization slug (leave blank if unsure).',
         help_api_key:        'Generate in Level.io → Settings → API Keys.',
     },
     action1: {
@@ -877,19 +1089,9 @@ const RMM_TYPE_HINTS = {
         help_api_url:        'Action1 API base URL. e.g. <code>https://app.action1.com/api/3.0</code>',
         label_web_url:       'Dashboard URL',
         placeholder_web_url: 'https://app.action1.com',
-        help_web_url:        'Browser dashboard URL (used for Connect button). e.g. <code>https://app.action1.com</code>',
+        help_web_url:        'Browser dashboard URL (used for Connect button).',
         label_api_key:       'Client ID',
         help_api_key:        'Generate in Action1 → Automation → API → Add API Credential.',
-    },
-    sophos_central: {
-        placeholder_name:    'e.g. Sophos Central Firewalls',
-        placeholder_api_url: 'https://api.central.sophos.com',
-        help_api_url:        'Fixed Sophos Central API entry point — leave as-is.',
-        label_web_url:       'Dashboard URL (optional)',
-        placeholder_web_url: 'https://cloud.sophos.com',
-        help_web_url:        'Not required — only used as a fallback link.',
-        label_api_key:       'Client ID',
-        help_api_key:        'Generate in Sophos Central → Global Settings → API Credentials. Single-tenant credentials only (not Partner/Organization).',
     },
 };
 
@@ -898,15 +1100,11 @@ function rmmUpdateModalLabels(type) {
     document.getElementById('rmm_integration_name').placeholder    = h.placeholder_name;
     document.getElementById('rmm_integration_api_url').placeholder = h.placeholder_api_url;
     document.getElementById('rmm_help_api_url').innerHTML          = h.help_api_url;
-    document.getElementById('rmm_label_web_url').textContent       = h.label_web_url;
+    document.getElementById('rmm_label_web_url').textContent       = h.label_web_url || 'Dashboard / Web URL';
     document.getElementById('rmm_integration_web_url').placeholder = h.placeholder_web_url;
     document.getElementById('rmm_help_web_url').innerHTML          = h.help_web_url;
     document.getElementById('rmm_label_api_key').textContent       = h.label_api_key || 'API Key';
     document.getElementById('rmm_help_api_key').innerHTML          = h.help_api_key;
-
-    if (type === 'sophos_central' && !document.getElementById('rmm_integration_api_url').value) {
-        document.getElementById('rmm_integration_api_url').value = 'https://api.central.sophos.com';
-    }
 
     document.getElementById('rmm_lbl_tactical').className = type === 'tactical_rmm'
         ? 'btn btn-info flex-fill' : 'btn btn-outline-info flex-fill';
@@ -914,16 +1112,12 @@ function rmmUpdateModalLabels(type) {
         ? 'btn btn-primary flex-fill' : 'btn btn-outline-primary flex-fill';
     document.getElementById('rmm_lbl_action1').className = type === 'action1'
         ? 'btn btn-warning flex-fill' : 'btn btn-outline-warning flex-fill';
-    document.getElementById('rmm_lbl_sophos').className = type === 'sophos_central'
-        ? 'btn btn-success flex-fill' : 'btn btn-outline-success flex-fill';
 
     document.getElementById('rmm_lbl_tactical').style.borderRadius = '4px 0 0 0';
     document.getElementById('rmm_lbl_level').style.borderRadius    = '0';
-    document.getElementById('rmm_lbl_action1').style.borderRadius = '0';
-    document.getElementById('rmm_lbl_sophos').style.borderRadius  = '0 4px 4px 0';
+    document.getElementById('rmm_lbl_action1').style.borderRadius  = '0 4px 4px 0';
 
-    document.getElementById('rmm_client_secret_group').style.display =
-        (type === 'action1' || type === 'sophos_central') ? '' : 'none';
+    document.getElementById('rmm_client_secret_group').style.display = type === 'action1' ? '' : 'none';
 }
 
 function rmmResetModal() {
@@ -935,7 +1129,6 @@ function rmmResetModal() {
     document.getElementById('rmm_integration_api_key').value = '';
     document.getElementById('rmm_integration_client_secret').value = '';
     document.getElementById('rmm_integration_api_key').placeholder = '(leave blank to keep existing when editing)';
-    document.getElementById('rmm_integration_default_client_id').value = '0';
     document.getElementById('rmm_integration_enabled').checked = true;
     document.getElementById('rmm_type_tactical').checked = true;
     document.getElementById('rmm_test_result').innerHTML = '';
@@ -950,13 +1143,12 @@ function rmmEditIntegration(data) {
     document.getElementById('rmm_integration_web_url').value    = data.web_url || '';
     document.getElementById('rmm_integration_api_key').value    = '';
     document.getElementById('rmm_integration_client_secret').value = '';
-    document.getElementById('rmm_integration_default_client_id').value = data.default_client_id || '0';
-    document.getElementById('rmm_integration_enabled').checked  = data.enabled == 1;
     document.getElementById('rmm_integration_api_key').placeholder = '(leave blank to keep existing)';
     document.getElementById('rmm_integration_client_secret').placeholder = '(leave blank to keep existing)';
+    document.getElementById('rmm_integration_enabled').checked  = data.enabled == 1;
     document.getElementById('rmm_test_result').innerHTML = '';
 
-    const typeIds = {level: 'rmm_type_level', action1: 'rmm_type_action1', tactical_rmm: 'rmm_type_tactical', sophos_central: 'rmm_type_sophos'};
+    const typeIds = {level: 'rmm_type_level', action1: 'rmm_type_action1', tactical_rmm: 'rmm_type_tactical'};
     const typeRadio = document.getElementById(typeIds[data.type] || 'rmm_type_tactical');
     if (typeRadio) typeRadio.checked = true;
     rmmUpdateModalLabels(data.type || 'tactical_rmm');
@@ -990,10 +1182,7 @@ function rmmTestConnection(integrationId) {
             btn.disabled = false;
         }, 3000);
     })
-    .catch(() => {
-        btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error';
-        btn.disabled = false;
-    });
+    .catch(() => { btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error'; btn.disabled = false; });
 }
 
 function rmmSyncNow(integrationId) {
@@ -1009,21 +1198,94 @@ function rmmSyncNow(integrationId) {
     .then(d => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
-        if (d.success) {
-            location.reload();
-        } else {
-            alert('Sync failed: ' + (d.error || 'Unknown error'));
-        }
+        if (d.success) { location.reload(); } else { alert('Sync failed: ' + (d.error || 'Unknown error')); }
     })
-    .catch(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
-    });
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now'; });
 }
 
-/* =========================================================================
+/* ═══════════════════════════════════════════════════════════════════════════
+   FIREWALLS (SOPHOS CENTRAL)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function fwResetModal() {
+    document.getElementById('fw_modalTitle').textContent = 'Add Sophos Central Connection';
+    document.getElementById('fw_edit_id').value          = '';
+    document.getElementById('fw_name').value             = '';
+    document.getElementById('fw_api_url').value          = 'https://api.central.sophos.com';
+    document.getElementById('fw_client_id').value        = '';
+    document.getElementById('fw_client_secret').value    = '';
+    document.getElementById('fw_client_id').placeholder  = '(required)';
+    document.getElementById('fw_client_secret').placeholder = '(required)';
+    document.getElementById('fw_default_client_id').value = '0';
+    document.getElementById('fw_enabled').checked        = true;
+    document.getElementById('fw_test_result').innerHTML  = '';
+}
+
+function fwEditIntegration(data) {
+    document.getElementById('fw_modalTitle').textContent    = 'Edit Sophos Connection';
+    document.getElementById('fw_edit_id').value             = data.id;
+    document.getElementById('fw_name').value                = data.name;
+    document.getElementById('fw_api_url').value             = data.api_url || 'https://api.central.sophos.com';
+    document.getElementById('fw_client_id').value           = '';
+    document.getElementById('fw_client_secret').value       = '';
+    document.getElementById('fw_client_id').placeholder     = '(leave blank to keep existing)';
+    document.getElementById('fw_client_secret').placeholder = '(leave blank to keep existing)';
+    document.getElementById('fw_default_client_id').value   = data.default_client_id || '0';
+    document.getElementById('fw_enabled').checked           = data.enabled == 1;
+    document.getElementById('fw_test_result').innerHTML     = '';
+    $('#fw_addModal').modal('show');
+}
+
+function fwTestConnection(integrationId) {
+    const btn = event.target.closest('button');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Testing...';
+    fetch('/admin/post.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=' + CSRF + '&test_rmm_connection=1&integration_id=' + integrationId
+    })
+    .then(r => r.json())
+    .then(d => {
+        btn.disabled = false;
+        if (d.success) {
+            btn.innerHTML = '<i class="fas fa-check mr-1"></i>Connected';
+            btn.classList.replace('btn-info', 'btn-success');
+        } else {
+            btn.innerHTML = '<i class="fas fa-times mr-1"></i>Failed';
+            btn.classList.replace('btn-info', 'btn-danger');
+            alert('Connection failed: ' + (d.error || 'Unknown error'));
+        }
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-plug mr-1"></i>Test';
+            btn.className = btn.className.replace(/btn-(success|danger)/g, 'btn-info');
+            btn.disabled = false;
+        }, 3000);
+    })
+    .catch(() => { btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error'; btn.disabled = false; });
+}
+
+function fwSyncNow(integrationId) {
+    const btn = event.target.closest('button');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...';
+    fetch('/admin/post.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=' + CSRF + '&sync_rmm_now=1&integration_id=' + integrationId
+    })
+    .then(r => r.json())
+    .then(d => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
+        if (d.success) { location.reload(); } else { alert('Sync failed: ' + (d.error || 'Unknown error')); }
+    })
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now'; });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    UNIFI
-   ========================================================================= */
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const UNIFI_ALL_CLIENTS = <?= json_encode($all_unifi_clients) ?>;
 let unifiSiteMappingIntegrationId = null;
@@ -1052,7 +1314,6 @@ function unifiEditIntegration(data) {
     document.getElementById('unifi_integration_verify_ssl').checked = data.verify_ssl == 1;
     document.getElementById('unifi_integration_enabled').checked = data.enabled == 1;
     document.getElementById('unifi_test_result').innerHTML = '';
-
     $('#unifi_addIntegrationModal').modal('show');
 }
 
@@ -1082,10 +1343,7 @@ function unifiTestConnection(integrationId) {
             btn.disabled = false;
         }, 3000);
     })
-    .catch(() => {
-        btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error';
-        btn.disabled = false;
-    });
+    .catch(() => { btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error'; btn.disabled = false; });
 }
 
 function unifiSyncNow(integrationId) {
@@ -1101,16 +1359,9 @@ function unifiSyncNow(integrationId) {
     .then(d => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
-        if (d.success) {
-            location.reload();
-        } else {
-            alert('Sync failed: ' + (d.error || 'Unknown error'));
-        }
+        if (d.success) { location.reload(); } else { alert('Sync failed: ' + (d.error || 'Unknown error')); }
     })
-    .catch(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
-    });
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now'; });
 }
 
 function unifiOpenSiteMappings(integrationId, integrationName) {
@@ -1150,17 +1401,12 @@ function unifiRenderSiteMappings(sites) {
         return;
     }
 
-    let clientOptions = '<option value="">-- Select client --</option>';
-    UNIFI_ALL_CLIENTS.forEach(c => {
-        clientOptions += `<option value="${c.id}">${escapeHtml(c.name)}</option>`;
-    });
-
     let html = '<table class="table table-sm table-hover mb-0"><thead class="text-muted small">' +
         '<tr><th>UniFi Site</th><th>Auto-Match</th><th>Mapping</th></tr></thead><tbody>';
 
     sites.forEach(site => {
-        const siteId   = site.unifi_site_id;
-        const current  = site.client_id;
+        const siteId  = site.unifi_site_id;
+        const current = site.client_id;
         const autoName = site.auto_client_name;
 
         let selected = 'auto';
@@ -1208,16 +1454,10 @@ function unifiSaveSiteMappings() {
     .then(d => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check mr-1"></i>Save Mapping';
-        if (d.success) {
-            $('#unifi_siteMappingModal').modal('hide');
-        } else {
-            alert('Failed to save mapping: ' + (d.error || 'Unknown error'));
-        }
+        if (d.success) { $('#unifi_siteMappingModal').modal('hide'); }
+        else { alert('Failed to save mapping: ' + (d.error || 'Unknown error')); }
     })
-    .catch(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check mr-1"></i>Save Mapping';
-    });
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check mr-1"></i>Save Mapping'; });
 }
 </script>
 

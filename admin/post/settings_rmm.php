@@ -48,7 +48,10 @@ if (isset($_POST['save_rmm_integration'])) {
     }
 
     if ($integration_id > 0) {
-        $set = "name='$name', type='$type', api_url='$api_url', web_url='$web_url', enabled=$enabled, default_client_id=$default_client_sql";
+        $set = "name='$name', type='$type', api_url='$api_url', web_url='$web_url', enabled=$enabled";
+        if (isset($_POST['integration_default_client_id'])) {
+            $set .= ", default_client_id=$default_client_sql";
+        }
         if (in_array($type, $oauth_types, true)) {
             if (!empty($api_key) || !empty($client_secret)) {
                 $existing = ['client_id' => '', 'client_secret' => ''];
@@ -127,6 +130,23 @@ if (isset($_POST['test_rmm_connection'])) {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit;
+}
+
+// Save per-firewall client assignments (Firewalls tab mapping table)
+if (isset($_POST['save_firewall_client_mappings'])) {
+    validateCSRFToken($_POST['csrf_token']);
+    $mappings = $_POST['fw_client_map'] ?? [];
+    foreach ($mappings as $asset_id => $client_id) {
+        $asset_id  = intval($asset_id);
+        $client_id = intval($client_id);
+        if ($asset_id > 0) {
+            $cid_sql = $client_id > 0 ? $client_id : 'NULL';
+            mysqli_query($mysqli, "UPDATE assets SET asset_client_id=$cid_sql WHERE asset_id=$asset_id AND asset_type='Firewall/Router'");
+        }
+    }
+    logAction('Firewall Settings', 'Edit', "$session_name updated firewall client mappings");
+    flash_alert('Firewall mappings saved');
+    redirect();
 }
 
 // AJAX sync now (assets + alerts) — lets an admin sync any integration
