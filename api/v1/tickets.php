@@ -55,7 +55,7 @@ function api_save_ticket_attachments($mysqli, int $ticket_id, ?int $reply_id, st
 }
 
 // LIST
-if ($method === 'GET' && $id === null) {
+if ($method === 'GET' && $id === null && $resource === 'tickets') {
     $page    = max(1, intval($_GET['page'] ?? 1));
     $limit   = min(50, max(1, intval($_GET['limit'] ?? 20)));
     $offset  = ($page - 1) * $limit;
@@ -396,6 +396,23 @@ if ($method === 'POST' && $id !== null && $sub === 'chat') {
         'created_at'  => date('Y-m-d H:i:s'),
     ]);
 
+    // Push/notify the assigned agent when a contact (e.g. ITPanel Pro on a
+    // client's machine) sends the message - otherwise chat never reaches
+    // the mobile app, unlike ticket replies.
+    if ($sender_type === 'contact') {
+        $chat_ticket_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_subject, ticket_assigned_to, ticket_client_id FROM tickets WHERE ticket_id = $id LIMIT 1"));
+        if ($chat_ticket_row && intval($chat_ticket_row['ticket_assigned_to'])) {
+            notifyUser(
+                intval($chat_ticket_row['ticket_assigned_to']),
+                'Ticket',
+                "$sender_name sent a chat message on Ticket {$chat_ticket_row['ticket_prefix']}{$chat_ticket_row['ticket_number']} - {$chat_ticket_row['ticket_subject']}",
+                "/agent/ticket.php?ticket_id=$id",
+                intval($chat_ticket_row['ticket_client_id']),
+                $id
+            );
+        }
+    }
+
     api_response(201, ['id' => $chat_id]);
 }
 
@@ -453,11 +470,15 @@ if ($method === 'POST' && $id === null) {
     );
     $new_id = mysqli_insert_id($mysqli);
 
-    // Notify the assigned agent of the new ticket
+    // Notify the assigned agent of the new ticket, or broadcast to active
+    // agents if it wasn't auto-assigned (e.g. ITPanel Pro quick-ticket
+    // submissions) so the mobile app gets a push for it either way.
+    global $config_ticket_prefix;
+    $client_uri = $client ? "&client_id=$client" : '';
     if ($assigned != 0 && $assigned != $uid) {
-        global $config_ticket_prefix;
-        $client_uri = $client ? "&client_id=$client" : '';
         notifyUser($assigned, 'Ticket', "New ticket {$config_ticket_prefix}$next_num - $subject has been assigned to you", "/agent/ticket.php?ticket_id=$new_id$client_uri", $client, $new_id);
+    } elseif ($assigned == 0) {
+        appNotify('Ticket', "New ticket {$config_ticket_prefix}$next_num - $subject has been created via API", "/agent/ticket.php?ticket_id=$new_id$client_uri", $client, $new_id);
     }
 
     $response = ['id' => $new_id, 'number' => $next_num];

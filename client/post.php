@@ -51,6 +51,11 @@ if (isset($_POST['add_ticket'])) {
     mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$config_ticket_prefix', ticket_number = $ticket_number, ticket_source = 'Portal', ticket_category = $category, ticket_subject = '$subject', ticket_details = '$details', ticket_priority = '$priority', ticket_status = 1, ticket_billable = $config_ticket_default_billable, ticket_created_by = $session_user_id, ticket_contact_id = $session_contact_id, ticket_asset_id = $asset, ticket_url_key = '$url_key', ticket_client_id = $session_client_id");
     $ticket_id = mysqli_insert_id($mysqli);
 
+    // New tickets from the client portal aren't assigned to anyone, so the
+    // only existing notice was an optional DL email - nothing in-app/push.
+    // Broadcast to active agents so the mobile app gets a push for it too.
+    appNotify("Ticket", "$session_contact_name raised a new ticket $config_ticket_prefix$ticket_number - $subject", "/agent/ticket.php?ticket_id=$ticket_id&client_id=$session_client_id", $session_client_id, $ticket_id);
+
     // Notify agent DL of the new ticket, if populated with a valid email
     if ($config_ticket_new_ticket_notification_email) {
 
@@ -224,6 +229,20 @@ if (isset($_POST['add_ticket_chat_message'])) {
         'sender_name' => $session_contact_name,
         'created_at' => date('Y-m-d H:i:s'),
     ]);
+
+    // Push/notify the assigned agent - chat messages otherwise never reach
+    // the mobile app, unlike ticket replies.
+    $ticket_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_subject, ticket_assigned_to FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+    if ($ticket_row && intval($ticket_row['ticket_assigned_to'])) {
+        notifyUser(
+            intval($ticket_row['ticket_assigned_to']),
+            'Ticket',
+            "$session_contact_name sent a chat message on Ticket {$ticket_row['ticket_prefix']}{$ticket_row['ticket_number']} - {$ticket_row['ticket_subject']}",
+            "/agent/ticket.php?ticket_id=$ticket_id",
+            $session_client_id,
+            $ticket_id
+        );
+    }
 
     echo json_encode(['ok' => true, 'id' => $chat_id]);
     exit;

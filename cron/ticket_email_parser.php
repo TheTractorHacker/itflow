@@ -115,6 +115,10 @@ function addTicket($contact_id, $contact_name, $contact_email, $client_id, $date
     // Logging
     logAction("Ticket", "Create", "Email parser: Client contact $contact_email_esc created ticket $ticket_prefix_esc$ticket_number ($subject) ($id)", $client_id, $id);
 
+    // Email-parsed tickets are never auto-assigned, so broadcast to active
+    // agents so the mobile app gets a push for it too.
+    appNotify("Ticket", "Email parser: $contact_email_esc raised a new ticket $ticket_prefix_esc$ticket_number - $subject", "/agent/ticket.php?ticket_id=$id" . ($client_id ? "&client_id=$client_id" : ''), $client_id, $id);
+
     mkdirMissing('../uploads/tickets/');
     $att_dir = "../uploads/tickets/" . $id . "/";
     mkdirMissing($att_dir);
