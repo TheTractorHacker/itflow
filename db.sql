@@ -2271,6 +2271,7 @@ CREATE TABLE `rmm_integrations` (
   `type` varchar(50) NOT NULL DEFAULT 'tactical_rmm',
   `api_url` varchar(500) NOT NULL,
   `web_url` varchar(500) DEFAULT NULL,
+  `default_client_id` int(11) DEFAULT NULL,
   `api_key_enc` text NOT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` datetime DEFAULT current_timestamp(),

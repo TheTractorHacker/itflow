@@ -5026,3 +5026,16 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.12'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.12') {
+
+        // Single-tenant integrations (e.g. Sophos Central without a Partner/
+        // Organization credential) have no per-device "client name" field to
+        // match against — every device belongs to the one tenant. Lets an
+        // admin pick a fallback client so newly-discovered devices aren't
+        // silently skipped for having no resolvable client.
+        mysqli_query($mysqli, "ALTER TABLE `rmm_integrations`
+            ADD COLUMN `default_client_id` INT(11) DEFAULT NULL AFTER `web_url`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.13'");
+    }

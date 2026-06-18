@@ -463,13 +463,30 @@ class RmmAssetMapper {
     private function resolveClientId(array $agent): int {
         $m    = $this->mysqli;
         $name = trim((string) ($agent['client_name'] ?? $agent['group_name'] ?? ''));
-        if ($name === '') return 0;
+        if ($name === '') {
+            // Single-tenant integrations (e.g. Sophos Central without a
+            // Partner/Organization credential) have no per-device client/
+            // group name to match against — fall back to the integration's
+            // configured default client instead of skipping the device.
+            return $this->getIntegrationDefaultClientId();
+        }
 
         $esc = mysqli_real_escape_string($m, $name);
         $row = mysqli_fetch_assoc(mysqli_query($m,
             "SELECT client_id FROM clients WHERE LOWER(client_name)=LOWER('$esc') AND client_archived_at IS NULL LIMIT 1"
         ));
         return $row ? intval($row['client_id']) : 0;
+    }
+
+    private function getIntegrationDefaultClientId(): int {
+        static $cache = [];
+        if (array_key_exists($this->integration_id, $cache)) {
+            return $cache[$this->integration_id];
+        }
+        $row = mysqli_fetch_assoc(mysqli_query($this->mysqli,
+            "SELECT default_client_id FROM rmm_integrations WHERE id={$this->integration_id}"
+        ));
+        return $cache[$this->integration_id] = intval($row['default_client_id'] ?? 0);
     }
 
     // Assigns an asset to its resolved client if it doesn't already have one.
@@ -492,6 +509,7 @@ class RmmAssetMapper {
 
     private function guessAssetType(string $os_name): string {
         $os = strtolower($os_name);
+        if (str_contains($os, 'firewall') || str_contains($os, 'sfos')) return 'Firewall/Router';
         if (str_contains($os, 'server')) return 'Server';
         if (str_contains($os, 'linux'))  return 'Server';
         return 'Desktop';

@@ -3,6 +3,7 @@ require_once "includes/inc_all_admin.php";
 enforceUserPermission('module_admin');
 
 $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER BY name ASC");
+$sql_rmm_clients  = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name ASC");
 ?>
 
 <style>
@@ -111,8 +112,8 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                 $last_sync_row = mysqli_fetch_assoc(mysqli_query($mysqli,
                     "SELECT MAX(finished_at) as ls, status FROM rmm_sync_log WHERE integration_id=$intg_id ORDER BY id DESC LIMIT 1"
                 ));
-                $provider_label = ['tactical_rmm' => 'Tactical RMM', 'level' => 'Level.io', 'action1' => 'Action1'][$intg_type] ?? $intg_type;
-                $provider_color = ['tactical_rmm' => 'info', 'level' => 'primary', 'action1' => 'warning'][$intg_type] ?? 'secondary';
+                $provider_label = ['tactical_rmm' => 'Tactical RMM', 'level' => 'Level.io', 'action1' => 'Action1', 'sophos_central' => 'Sophos Central'][$intg_type] ?? $intg_type;
+                $provider_color = ['tactical_rmm' => 'info', 'level' => 'primary', 'action1' => 'warning', 'sophos_central' => 'success'][$intg_type] ?? 'secondary';
             ?>
             <tr>
                 <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
@@ -132,12 +133,13 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                     </button>
                     <button class="btn btn-xs btn-secondary"
                             onclick='editIntegration(<?= json_encode([
-                                "id"      => $intg_id,
-                                "name"    => $intg['name'],
-                                "type"    => $intg_type,
-                                "api_url" => $intg['api_url'],
-                                "web_url" => $intg['web_url'] ?? '',
-                                "enabled" => intval($intg['enabled']),
+                                "id"                => $intg_id,
+                                "name"               => $intg['name'],
+                                "type"                => $intg_type,
+                                "api_url"             => $intg['api_url'],
+                                "web_url"             => $intg['web_url'] ?? '',
+                                "default_client_id"   => intval($intg['default_client_id'] ?? 0),
+                                "enabled"             => intval($intg['enabled']),
                             ]) ?>)'>
                         <i class="fas fa-edit"></i>
                     </button>
@@ -195,7 +197,7 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                 <td class="pl-3">
                     <?= nullable_htmlentities($lr['integration_name']) ?>
                     <?php $tp = $lr['integration_type'] ?? ''; if ($tp): ?>
-                    <span class="badge badge-secondary ml-1" style="font-size:10px"><?= ['level' => 'Level.io', 'action1' => 'Action1'][$tp] ?? 'Tactical' ?></span>
+                    <span class="badge badge-secondary ml-1" style="font-size:10px"><?= ['level' => 'Level.io', 'action1' => 'Action1', 'sophos_central' => 'Sophos Central'][$tp] ?? 'Tactical' ?></span>
                     <?php endif; ?>
                 </td>
                 <td class="text-muted small"><?= nullable_htmlentities($lr['started_at']) ?></td>
@@ -245,9 +247,14 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                             </label>
                             <input type="radio" class="btn-check" name="integration_type" id="type_action1"
                                    value="action1" onchange="updateModalLabels('action1')">
-                            <label class="btn btn-outline-warning flex-fill" for="type_action1" id="lbl_action1"
-                                   style="border-radius:0 4px 4px 0">
+                            <label class="btn btn-outline-warning flex-fill" for="type_action1" id="lbl_action1">
                                 <i class="fas fa-shield-alt mr-1"></i>Action1
+                            </label>
+                            <input type="radio" class="btn-check" name="integration_type" id="type_sophos"
+                                   value="sophos_central" onchange="updateModalLabels('sophos_central')">
+                            <label class="btn btn-outline-success flex-fill" for="type_sophos" id="lbl_sophos"
+                                   style="border-radius:0 4px 4px 0">
+                                <i class="fas fa-fire-alt mr-1"></i>Sophos Central
                             </label>
                         </div>
                     </div>
@@ -291,6 +298,20 @@ $sql_integrations = mysqli_query($mysqli, "SELECT * FROM rmm_integrations ORDER 
                                autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
                         <small class="text-light">
                             Stored encrypted. Generate in Action1 → Automation → API → Add API Credential.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="text-light small">Default Client</label>
+                        <select class="form-control form-control-sm" name="integration_default_client_id" id="integration_default_client_id">
+                            <option value="0">— None —</option>
+                            <?php while ($c = mysqli_fetch_assoc($sql_rmm_clients)): ?>
+                            <option value="<?= intval($c['client_id']) ?>"><?= nullable_htmlentities($c['client_name']) ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                        <small class="text-light">
+                            Used when a device has no client/group name to match (e.g. a single-tenant Sophos Central
+                            account). Newly-discovered devices are assigned here instead of being skipped.
                         </small>
                     </div>
 
@@ -345,6 +366,16 @@ const TYPE_HINTS = {
         label_api_key:       'Client ID',
         help_api_key:        'Generate in Action1 → Automation → API → Add API Credential.',
     },
+    sophos_central: {
+        placeholder_name:    'e.g. Sophos Central Firewalls',
+        placeholder_api_url: 'https://api.central.sophos.com',
+        help_api_url:        'Fixed Sophos Central API entry point — leave as-is.',
+        label_web_url:       'Dashboard URL (optional)',
+        placeholder_web_url: 'https://cloud.sophos.com',
+        help_web_url:        'Not required — only used as a fallback link.',
+        label_api_key:       'Client ID',
+        help_api_key:        'Generate in Sophos Central → Global Settings → API Credentials. Single-tenant credentials only (not Partner/Organization).',
+    },
 };
 
 function updateModalLabels(type) {
@@ -358,6 +389,11 @@ function updateModalLabels(type) {
     document.getElementById('label_api_key').textContent       = h.label_api_key || 'API Key';
     document.getElementById('help_api_key').innerHTML          = h.help_api_key;
 
+    // Sophos's API URL is fixed — pre-fill it and stop the admin wondering what to put there
+    if (type === 'sophos_central' && !document.getElementById('integration_api_url').value) {
+        document.getElementById('integration_api_url').value = 'https://api.central.sophos.com';
+    }
+
     // Highlight the selected type button
     document.getElementById('lbl_tactical').className = type === 'tactical_rmm'
         ? 'btn btn-info flex-fill' : 'btn btn-outline-info flex-fill';
@@ -365,14 +401,18 @@ function updateModalLabels(type) {
         ? 'btn btn-primary flex-fill' : 'btn btn-outline-primary flex-fill';
     document.getElementById('lbl_action1').className = type === 'action1'
         ? 'btn btn-warning flex-fill' : 'btn btn-outline-warning flex-fill';
+    document.getElementById('lbl_sophos').className = type === 'sophos_central'
+        ? 'btn btn-success flex-fill' : 'btn btn-outline-success flex-fill';
 
     // Fix border-radius back (gets clobbered by bootstrap button-group)
     document.getElementById('lbl_tactical').style.borderRadius = '4px 0 0 0';
     document.getElementById('lbl_level').style.borderRadius    = '0';
-    document.getElementById('lbl_action1').style.borderRadius  = '0 4px 4px 0';
+    document.getElementById('lbl_action1').style.borderRadius  = '0';
+    document.getElementById('lbl_sophos').style.borderRadius   = '0 4px 4px 0';
 
-    // Client Secret field only applies to Action1 (OAuth2 client credentials)
-    document.getElementById('client_secret_group').style.display = type === 'action1' ? '' : 'none';
+    // Client Secret field applies to OAuth2 client-credentials providers
+    document.getElementById('client_secret_group').style.display =
+        (type === 'action1' || type === 'sophos_central') ? '' : 'none';
 }
 
 function resetModal() {
@@ -384,6 +424,7 @@ function resetModal() {
     document.getElementById('integration_api_key').value = '';
     document.getElementById('integration_client_secret').value = '';
     document.getElementById('integration_api_key').placeholder = '(leave blank to keep existing when editing)';
+    document.getElementById('integration_default_client_id').value = '0';
     document.getElementById('integration_enabled').checked = true;
     document.getElementById('type_tactical').checked = true;
     document.getElementById('test_result').innerHTML = '';
@@ -398,13 +439,14 @@ function editIntegration(data) {
     document.getElementById('integration_web_url').value    = data.web_url || '';
     document.getElementById('integration_api_key').value    = '';
     document.getElementById('integration_client_secret').value = '';
+    document.getElementById('integration_default_client_id').value = data.default_client_id || '0';
     document.getElementById('integration_enabled').checked  = data.enabled == 1;
     document.getElementById('integration_api_key').placeholder = '(leave blank to keep existing)';
     document.getElementById('integration_client_secret').placeholder = '(leave blank to keep existing)';
     document.getElementById('test_result').innerHTML = '';
 
     // Set type radio
-    const typeIds = {level: 'type_level', action1: 'type_action1', tactical_rmm: 'type_tactical'};
+    const typeIds = {level: 'type_level', action1: 'type_action1', tactical_rmm: 'type_tactical', sophos_central: 'type_sophos'};
     const typeRadio = document.getElementById(typeIds[data.type] || 'type_tactical');
     if (typeRadio) typeRadio.checked = true;
     updateModalLabels(data.type || 'tactical_rmm');
