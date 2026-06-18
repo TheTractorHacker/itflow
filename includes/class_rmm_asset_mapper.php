@@ -258,11 +258,11 @@ class RmmAssetMapper {
             }
 
             $asset_type = $this->guessAssetType($os_name);
-            $client_sql = $resolved_client_id ?: 'NULL';
             $h  = mysqli_real_escape_string($m, $hostname);
             $s  = mysqli_real_escape_string($m, $serial);
             $o  = mysqli_real_escape_string($m, trim("$os_name $os_version"));
             $mk = mysqli_real_escape_string($m, $manufacturer);
+            $client_set = $resolved_client_id ? "asset_client_id=$resolved_client_id," : '';
             mysqli_query($m,
                 "INSERT INTO assets SET
                  asset_type='$asset_type',
@@ -271,7 +271,7 @@ class RmmAssetMapper {
                  asset_os='$o',
                  asset_make='$mk',
                  asset_status='Active',
-                 asset_client_id=$client_sql,
+                 $client_set
                  asset_created_at=NOW()"
             );
             $asset_id = intval(mysqli_insert_id($m));
