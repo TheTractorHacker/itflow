@@ -5,7 +5,7 @@ enforceUserPermission('module_rmm');
 // Filter params
 $filter_status    = sanitizeInput($_GET['status'] ?? '');
 $filter_client_id = intval($_GET['client_id'] ?? 0);
-$filter_intg_id   = intval($_GET['integration_id'] ?? $config_rmm_default_integration_id);
+$filter_intg_id   = intval($_GET['integration_id'] ?? 0);
 
 // Build WHERE clause
 $where = "1=1";
@@ -50,7 +50,7 @@ $sync_target_name_js = json_encode($sync_target_name);
 
 <div class="d-flex align-items-center mb-3">
     <h4 class="mb-0 mr-auto"><i class="fas fa-desktop mr-2"></i>RMM Assets</h4>
-    <?php if (lookupUserPermission('module_rmm_sync') >= 1): ?>
+    <?php if (lookupUserPermission('module_rmm_sync') >= 1 && $filter_intg_id): ?>
     <button class="btn btn-success btn-sm mr-2" id="syncBtn" onclick="triggerSync()">
         <i class="fas fa-sync mr-1"></i>Sync from <?= nullable_htmlentities($sync_target_name) ?>
     </button>

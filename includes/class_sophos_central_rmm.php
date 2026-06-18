@@ -269,16 +269,12 @@ class SophosCentralRmmClient {
     // scoped to firewalls only.
     public function getAlerts(bool $resolved = false): array {
         try {
-            $firewall_ids = array_column($this->getAgents(), 'agent_id');
-            if (empty($firewall_ids)) return [];
-
             $items = $this->paginate('/common/v1/alerts');
             $out   = [];
             foreach ($items as $a) {
                 $device_id = (string) (
                     $a['managedAgent']['id'] ?? $a['source']['id'] ?? $a['asset']['id'] ?? $a['id'] ?? ''
                 );
-                if (!in_array($device_id, $firewall_ids, true)) continue;
 
                 $sev = strtolower((string) ($a['severity'] ?? 'info'));
                 $out[] = [
