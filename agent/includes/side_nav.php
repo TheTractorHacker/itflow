@@ -251,6 +251,12 @@
                         <p>Check Policies</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/agent/firewalls.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'firewalls.php') { echo 'active'; } ?>">
+                        <i class="nav-icon fas fa-fire-alt"></i>
+                        <p>Firewalls</p>
+                    </a>
+                </li>
                 <?php } ?>
 
                 <?php if (!empty($config_comet_enabled) && lookupUserPermission("module_rmm") >= 1) { ?>
