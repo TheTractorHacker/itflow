@@ -23,12 +23,14 @@ if ($filter_source === 'all' || $filter_source === 'rmm') {
         $where .= " AND (a.message LIKE '%$sq%' OR ast.asset_name LIKE '%$sq%' OR c.client_name LIKE '%$sq%')";
     }
     $sql = mysqli_query($mysqli,
-        "SELECT a.*, ast.asset_name, c.client_name, u.user_name, t.ticket_prefix, t.ticket_number
+        "SELECT a.*, ast.asset_name, c.client_name, u.user_name, t.ticket_prefix, t.ticket_number,
+                i.name AS integration_name, i.type AS integration_type
          FROM rmm_alerts a
          LEFT JOIN assets ast ON ast.asset_id = a.asset_id
          LEFT JOIN clients c ON c.client_id = a.client_id
          LEFT JOIN users u ON u.user_id = a.acknowledged_by
          LEFT JOIN tickets t ON t.ticket_id = a.ticket_id
+         LEFT JOIN rmm_integrations i ON i.id = a.integration_id
          WHERE $where
          ORDER BY FIELD(a.severity,'critical','error','warning','info'), a.created_at DESC
          LIMIT 300"
@@ -43,6 +45,8 @@ if ($filter_source === 'all' || $filter_source === 'rmm') {
             'subject_url'=> $row['asset_id'] ? "/agent/asset_details.php?asset_id={$row['asset_id']}" : null,
             'client_id'  => $row['client_id'] ? intval($row['client_id']) : null,
             'client_name'=> $row['client_name'],
+            'integration_name' => $row['integration_name'],
+            'integration_type' => $row['integration_type'],
             'status'     => $row['status'] ?: 'new',
             'ack_by'     => $row['user_name'],
             'created_at' => $row['created_at'],
@@ -278,10 +282,18 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                     <?php endif; ?>
                 </td>
                 <td>
-                    <?php if ($alert['source'] === 'rmm') { ?>
-                    <span class="badge badge-primary" title="RMM"><i class="fas fa-server"></i></span>
+                    <?php if ($alert['source'] === 'rmm') {
+                        $itype = $alert['integration_type'] ?? '';
+                        $iname = $alert['integration_name'] ?? 'RMM';
+                        $iicon = $itype === 'sophos_central' ? 'fa-fire-alt' : 'fa-server';
+                        $ibadge = $itype === 'sophos_central' ? 'badge-success' : 'badge-primary';
+                    ?>
+                    <span class="badge <?= $ibadge ?>" title="<?= nullable_htmlentities($iname) ?>">
+                        <i class="fas <?= $iicon ?>"></i>
+                    </span>
+                    <div class="text-muted" style="font-size:.65rem;margin-top:.1rem;line-height:1;"><?= nullable_htmlentities($iname) ?></div>
                     <?php } else { ?>
-                    <span class="badge" style="background:#6f42c1;color:#fff;" title="<?= $alert['alert_type'] === 'missed' ? 'Backup — Missed' : 'Backup — Failed' ?>">
+                    <span class="badge" style="background:#6f42c1;color:#fff;" title="<?= ($alert['alert_type'] ?? '') === 'missed' ? 'Backup — Missed' : 'Backup — Failed' ?>">
                         <i class="fas fa-cloud-upload-alt"></i>
                     </span>
                     <?php } ?>

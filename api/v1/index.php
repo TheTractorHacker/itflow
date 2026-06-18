@@ -146,6 +146,7 @@ switch ($resource) {
         }
         break;
     case 'statuses':      require __DIR__ . '/tickets.php';      break;
+    case 'alerts':        require __DIR__ . '/alerts.php';       break;
     case 'ticket-categories':
     case 'ticket_categories':
         require __DIR__ . '/ticket_categories.php';

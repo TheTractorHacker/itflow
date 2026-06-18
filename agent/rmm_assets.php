@@ -37,16 +37,25 @@ $sql_integrations = mysqli_query($mysqli, "SELECT id, name FROM rmm_integrations
 $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name ASC");
 $clients_list = [];
 while ($c = mysqli_fetch_assoc($sql_clients)) $clients_list[] = $c;
+
+// Button label should reflect whichever integration is actually selected
+// (Tactical, Sophos, etc.) rather than a hardcoded provider name.
+$sync_target_name = 'RMM';
+if ($filter_intg_id) {
+    $sync_target_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT name FROM rmm_integrations WHERE id=$filter_intg_id"));
+    if ($sync_target_row) { $sync_target_name = $sync_target_row['name']; }
+}
+$sync_target_name_js = json_encode($sync_target_name);
 ?>
 
 <div class="d-flex align-items-center mb-3">
     <h4 class="mb-0 mr-auto"><i class="fas fa-desktop mr-2"></i>RMM Assets</h4>
     <?php if (lookupUserPermission('module_rmm_sync') >= 1): ?>
     <button class="btn btn-success btn-sm mr-2" id="syncBtn" onclick="triggerSync()">
-        <i class="fas fa-sync mr-1"></i>Sync from Tactical RMM
+        <i class="fas fa-sync mr-1"></i>Sync from <?= nullable_htmlentities($sync_target_name) ?>
     </button>
     <?php endif; ?>
-    <a href="/admin/settings_rmm.php" class="btn btn-secondary btn-sm">
+    <a href="/admin/settings_integrations.php?tab=rmm" class="btn btn-secondary btn-sm">
         <i class="fas fa-cog mr-1"></i>Settings
     </a>
 </div>
@@ -119,7 +128,7 @@ while ($c = mysqli_fetch_assoc($sql_clients)) $clients_list[] = $c;
         <?php if (mysqli_num_rows($sql_links) === 0): ?>
             <div class="text-center text-muted py-5">
                 <i class="fas fa-desktop fa-3x mb-3"></i>
-                <p>No RMM assets found. <a href="#" onclick="triggerSync()">Sync from Tactical RMM</a> to import devices.</p>
+                <p>No RMM assets found. <a href="#" onclick="triggerSync()">Sync from <?= nullable_htmlentities($sync_target_name) ?></a> to import devices.</p>
             </div>
         <?php else: ?>
         <table class="table table-hover table-sm mb-0" id="rmm-assets-table">
@@ -192,9 +201,10 @@ function triggerSync() {
     const btn = document.getElementById('syncBtn');
     const bar = document.getElementById('syncStatus');
     const txt = document.getElementById('syncStatusText');
+    const syncTargetName = <?= $sync_target_name_js ?>;
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...'; }
     bar.classList.remove('d-none');
-    txt.textContent = 'Syncing assets from Tactical RMM...';
+    txt.textContent = `Syncing assets from ${syncTargetName}...`;
 
     fetch('/agent/post/rmm_sync.php', {
         method: 'POST',
@@ -210,13 +220,13 @@ function triggerSync() {
         } else {
             txt.textContent = 'Sync failed: ' + (d.error || 'Unknown error');
             bar.classList.replace('alert-info', 'alert-danger');
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync from Tactical RMM'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-sync mr-1"></i>Sync from ${syncTargetName}`; }
         }
     })
     .catch(() => {
         txt.textContent = 'Network error during sync.';
         bar.classList.replace('alert-info', 'alert-danger');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync from Tactical RMM'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-sync mr-1"></i>Sync from ${syncTargetName}`; }
     });
 }
 

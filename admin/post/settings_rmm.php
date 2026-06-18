@@ -128,3 +128,58 @@ if (isset($_POST['test_rmm_connection'])) {
     }
     exit;
 }
+
+// AJAX sync now (assets + alerts) — lets an admin sync any integration
+// (e.g. Sophos firewalls) directly from the integration list, without
+// needing to find it in the Assets page's integration filter first.
+if (isset($_POST['sync_rmm_now'])) {
+    validateCSRFToken($_POST['csrf_token']);
+    header('Content-Type: application/json');
+    $integration_id = intval($_POST['integration_id'] ?? 0);
+
+    // Rate-limit: one sync per integration per 60 seconds
+    $recent = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT id FROM rmm_sync_log WHERE integration_id=$integration_id
+         AND started_at > DATE_SUB(NOW(), INTERVAL 60 SECOND) AND status='running' LIMIT 1"
+    ));
+    if ($recent) {
+        echo json_encode(['success' => false, 'error' => 'A sync is already running. Please wait 60 seconds.']);
+        exit;
+    }
+
+    try {
+        require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/rmm_client_factory.php';
+        require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/class_rmm_asset_mapper.php';
+
+        $client = getRmmClient($integration_id);
+        $mapper = new RmmAssetMapper($mysqli, $integration_id, $session_user_id, $client);
+        $log_id = $mapper->startSyncLog();
+
+        $agents = $client->getAgents();
+        $stats  = $mapper->syncAgents($agents);
+        $mapper->finishSyncLog($log_id, $stats);
+
+        $alert_stats = $mapper->syncAlerts();
+
+        logAction('RMM Settings', 'Import',
+            "$session_name synced RMM assets: {$stats['created']} created, {$stats['updated']} updated, {$stats['matched']} matched" .
+            "; alerts: {$alert_stats['created']} new, {$alert_stats['resolved']} resolved"
+        );
+
+        echo json_encode([
+            'success'        => true,
+            'created'        => $stats['created'],
+            'updated'        => $stats['updated'],
+            'matched'        => $stats['matched'],
+            'skipped'        => $stats['skipped'],
+            'alerts_created' => $alert_stats['created'],
+        ]);
+    } catch (RuntimeException $e) {
+        if (isset($log_id)) {
+            mysqli_query($mysqli, "UPDATE rmm_sync_log SET finished_at=NOW(), status='failed', errors='" .
+                mysqli_real_escape_string($mysqli, $e->getMessage()) . "' WHERE id=$log_id");
+        }
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
