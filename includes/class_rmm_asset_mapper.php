@@ -248,13 +248,17 @@ class RmmAssetMapper {
 
         // ----- Step 3: Create new ITFlow asset if no match -----
         if (!$asset_id) {
-            // No matching ITFlow client for this RMM client/group name —
-            // don't import an unowned asset.
-            if (!$resolved_client_id) {
+            // Only skip when the agent carries a named client/group that we
+            // couldn't match — it belongs to someone, we just don't know who.
+            // Integrations with no per-device client name (e.g. Sophos Central)
+            // should still create the asset unowned so the user can assign it.
+            $has_named_client = trim((string) ($agent['client_name'] ?? $agent['group_name'] ?? '')) !== '';
+            if ($has_named_client && !$resolved_client_id) {
                 return 'skipped';
             }
 
             $asset_type = $this->guessAssetType($os_name);
+            $client_sql = $resolved_client_id ?: 'NULL';
             $h  = mysqli_real_escape_string($m, $hostname);
             $s  = mysqli_real_escape_string($m, $serial);
             $o  = mysqli_real_escape_string($m, trim("$os_name $os_version"));
@@ -267,7 +271,7 @@ class RmmAssetMapper {
                  asset_os='$o',
                  asset_make='$mk',
                  asset_status='Active',
-                 asset_client_id=$resolved_client_id,
+                 asset_client_id=$client_sql,
                  asset_created_at=NOW()"
             );
             $asset_id = intval(mysqli_insert_id($m));
