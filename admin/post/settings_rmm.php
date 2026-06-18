@@ -199,7 +199,8 @@ if (isset($_POST['sync_rmm_now'])) {
             mysqli_query($mysqli, "UPDATE rmm_sync_log SET finished_at=NOW(), status='failed', errors='" .
                 mysqli_real_escape_string($mysqli, $e->getMessage()) . "' WHERE id=$log_id");
         }
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        error_log("sync_rmm_now failed for integration $integration_id: " . $e->getMessage());
+        echo json_encode(['success' => false, 'error' => 'Sync failed — check the sync log for details.']);
     }
     exit;
 }
