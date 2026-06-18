@@ -221,12 +221,23 @@ class SophosCentralRmmClient {
     }
 
     private function normalizeFirewall(array $fw): array {
-        $status_raw = strtolower((string) ($fw['status'] ?? $fw['health'] ?? $fw['healthStatus'] ?? ''));
+        // status may be a string ("good"/"bad") or an object {"connected":true,"ipAddress":"..."}
+        $status_field = $fw['status'] ?? $fw['health'] ?? $fw['healthStatus'] ?? '';
+        $ip_from_status = '';
+        if (is_array($status_field)) {
+            $ip_from_status = (string) ($status_field['ipAddress'] ?? '');
+            $status_raw     = !empty($status_field['connected']) ? 'connected' : 'disconnected';
+        } else {
+            $status_raw = strtolower((string) $status_field);
+        }
+
         $status = match (true) {
             str_contains($status_raw, 'good'), str_contains($status_raw, 'online'), str_contains($status_raw, 'connected') => 'online',
             str_contains($status_raw, 'bad'), str_contains($status_raw, 'offline'), str_contains($status_raw, 'disconnected') => 'offline',
             default => 'unknown',
         };
+
+        $ip = $ip_from_status ?: (string) ($fw['ipAddress'] ?? $fw['wanIp'] ?? '');
 
         return [
             'agent_id'         => (string) ($fw['id'] ?? ''),
@@ -239,7 +250,7 @@ class SophosCentralRmmClient {
             'serial_number'    => (string) ($fw['serialNumber'] ?? $fw['serial'] ?? ''),
             'status'           => $status,
             'last_seen'        => (string) ($fw['lastSeenAt'] ?? $fw['lastSeen'] ?? ''),
-            'local_ips'        => (string) ($fw['ipAddress'] ?? $fw['wanIp'] ?? ''),
+            'local_ips'        => $ip,
         ];
     }
 

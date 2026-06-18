@@ -26,7 +26,7 @@ $sql_devices = mysqli_query($mysqli,
     "SELECT a.asset_id, a.asset_name, a.asset_type, a.asset_client_id,
             c.client_name,
             arl.rmm_status, arl.hostname, arl.model AS rmm_model, arl.os_version AS rmm_firmware,
-            arl.last_seen, arl.local_ips, arl.integration_id,
+            arl.last_seen, arl.integration_id,
             ri.name AS integration_name, ri.type AS integration_type,
             (SELECT COUNT(*) FROM rmm_alerts WHERE asset_id=a.asset_id AND status='new') AS alert_count,
             (SELECT ticket_id FROM rmm_alerts WHERE asset_id=a.asset_id AND status='new'
@@ -245,7 +245,7 @@ $type_labels = [
                 $icon      = $device_icons[$dev_type] ?? 'network-wired';
                 $label     = $type_labels[$dev_type] ?? $dev_type;
                 $display_name = nullable_htmlentities($dev['hostname'] ?: $dev['asset_name']);
-                $ip        = nullable_htmlentities($dev['local_ips'] ?: $dev['interface_ip']);
+                $ip        = nullable_htmlentities($dev['interface_ip'] ?? '');
                 $model     = nullable_htmlentities($dev['rmm_model'] ?: '');
                 $firmware  = nullable_htmlentities($dev['rmm_firmware'] ?: '');
                 $ago       = $dev['last_seen'] ? timeAgo($dev['last_seen']) : '—';
