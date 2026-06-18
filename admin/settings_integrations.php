@@ -1258,7 +1258,11 @@ function fwTestConnection(integrationId) {
             btn.disabled = false;
         }, 3000);
     })
-    .catch(() => { btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error'; btn.disabled = false; });
+    .catch(err => {
+        btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error';
+        btn.disabled = false;
+        alert('Connection test error: ' + err.message);
+    });
 }
 
 function fwSyncNow(integrationId) {
@@ -1270,13 +1274,24 @@ function fwSyncNow(integrationId) {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: 'csrf_token=' + CSRF + '&sync_rmm_now=1&integration_id=' + integrationId
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' — check server logs');
+        return r.json();
+    })
     .then(d => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
-        if (d.success) { location.reload(); } else { alert('Sync failed: ' + (d.error || 'Unknown error')); }
+        if (d.success) {
+            location.reload();
+        } else {
+            alert('Sync failed: ' + (d.error || 'Unknown error'));
+        }
     })
-    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now'; });
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
+        alert('Sync error: ' + err.message);
+    });
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
