@@ -42,26 +42,22 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
     <h4 class="mb-0"><i class="fas fa-plug mr-2"></i>Integrations</h4>
 </div>
 
-<div class="card card-dark">
-    <div class="card-header p-0">
-        <ul class="nav nav-tabs card-header-tabs" id="integrationsTabs">
-            <li class="nav-item">
-                <a class="nav-link <?= $active_tab === 'rmm'       ? 'active' : '' ?>" data-toggle="tab" href="#tab-rmm"       data-tabkey="rmm"><i class="fas fa-desktop mr-1"></i>RMM</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= $active_tab === 'backups'   ? 'active' : '' ?>" data-toggle="tab" href="#tab-backups"   data-tabkey="backups"><i class="fas fa-cloud-upload-alt mr-1"></i>Backups</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= $active_tab === 'firewalls' ? 'active' : '' ?>" data-toggle="tab" href="#tab-firewalls" data-tabkey="firewalls"><i class="fas fa-fire-alt mr-1"></i>Firewalls</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= $active_tab === 'unifi'     ? 'active' : '' ?>" data-toggle="tab" href="#tab-unifi"     data-tabkey="unifi"><i class="fas fa-wifi mr-1"></i>UniFi</a>
-            </li>
-        </ul>
-    </div>
-</div>
+<ul class="nav nav-tabs mb-3" id="integrationsTabs">
+    <li class="nav-item">
+        <a class="nav-link <?= $active_tab === 'rmm'       ? 'active' : '' ?>" data-toggle="tab" href="#tab-rmm"       data-tabkey="rmm"><i class="fas fa-desktop mr-1"></i>RMM</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $active_tab === 'backups'   ? 'active' : '' ?>" data-toggle="tab" href="#tab-backups"   data-tabkey="backups"><i class="fas fa-cloud-upload-alt mr-1"></i>Backups</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $active_tab === 'firewalls' ? 'active' : '' ?>" data-toggle="tab" href="#tab-firewalls" data-tabkey="firewalls"><i class="fas fa-fire-alt mr-1"></i>Firewalls</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $active_tab === 'unifi'     ? 'active' : '' ?>" data-toggle="tab" href="#tab-unifi"     data-tabkey="unifi"><i class="fas fa-wifi mr-1"></i>UniFi</a>
+    </li>
+</ul>
 
-<div class="tab-content mt-3">
+<div class="tab-content">
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      RMM TAB
