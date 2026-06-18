@@ -1621,15 +1621,19 @@ if ($config_module_enable_rmm) {
     while ($rmm_intg = mysqli_fetch_assoc($sql_rmm_integrations)) {
         $rmm_intg_id = intval($rmm_intg['id']);
         try {
-            $rmm_client  = getRmmClient($rmm_intg_id);
-            $rmm_mapper  = new RmmAssetMapper($mysqli, $rmm_intg_id, 0, $rmm_client);
-            $alert_stats = $rmm_mapper->syncAlerts();
+            $rmm_client = getRmmClient($rmm_intg_id);
+            $rmm_mapper = new RmmAssetMapper($mysqli, $rmm_intg_id, 0, $rmm_client);
 
-            if ($alert_stats['created'] > 0 || $alert_stats['resolved'] > 0) {
-                logApp("Cron", "info", "RMM alerts synced for '{$rmm_intg['name']}': {$alert_stats['created']} new, {$alert_stats['resolved']} resolved");
-            }
+            $agents       = $rmm_client->getAgents();
+            $asset_stats  = $rmm_mapper->syncAgents($agents);
+            $alert_stats  = $rmm_mapper->syncAlerts();
+
+            logApp("Cron", "info",
+                "RMM sync for '{$rmm_intg['name']}': assets {$asset_stats['created']} created, {$asset_stats['updated']} updated, {$asset_stats['matched']} matched, {$asset_stats['skipped']} skipped" .
+                "; alerts {$alert_stats['created']} new, {$alert_stats['resolved']} resolved"
+            );
         } catch (RuntimeException $e) {
-            logApp("Cron", "error", "RMM alert sync failed for '{$rmm_intg['name']}': " . $e->getMessage());
+            logApp("Cron", "error", "RMM sync failed for '{$rmm_intg['name']}': " . $e->getMessage());
         }
     }
 }
