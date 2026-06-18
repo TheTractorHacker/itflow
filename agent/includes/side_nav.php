@@ -223,14 +223,7 @@
                 <li class="nav-item">
                     <a href="/agent/rmm_assets.php" class="nav-link <?php if (in_array(basename($_SERVER['PHP_SELF']), ['rmm_assets.php','rmm_asset.php'])) { echo 'active'; } ?>">
                         <i class="nav-icon fas fa-desktop"></i>
-                        <p>
-                            Assets
-                            <?php
-                            $num_rmm_alerts = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) as c FROM rmm_alerts WHERE status='new'"))['c'] ?? 0);
-                            if ($num_rmm_alerts) { ?>
-                                <span class="right badge badge-danger" data-toggle="tooltip" title="Open RMM Alerts"><?php echo $num_rmm_alerts; ?></span>
-                            <?php } ?>
-                        </p>
+                        <p>Assets</p>
                     </a>
                 </li>
                 <li class="nav-item">
