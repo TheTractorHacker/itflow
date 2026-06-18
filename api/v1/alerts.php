@@ -108,6 +108,19 @@ if ($method === 'POST') {
         $alert = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id, client_id, asset_id FROM rmm_alerts WHERE id=$alert_id"));
         if (!$alert) api_error(404, 'Alert not found');
 
+        // Enforce per-client access: if this user has explicit client restrictions, check them
+        $alert_client = intval($alert['client_id']);
+        if ($alert_client) {
+            $has_restriction = mysqli_num_rows(mysqli_query($mysqli,
+                "SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id LIMIT 1"
+            )) > 0;
+            if ($has_restriction && !mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id AND client_id=$alert_client LIMIT 1"
+            ))) {
+                api_error(403, 'Access denied');
+            }
+        }
+
         if ($action === 'acknowledge') {
             mysqli_query($mysqli, "UPDATE rmm_alerts SET status='acknowledged', acknowledged_by=$api_user_id, acknowledged_at=NOW() WHERE id=$alert_id");
         } else {
@@ -117,6 +130,19 @@ if ($method === 'POST') {
     } else {
         $alert = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT alert_id, alert_client_id FROM comet_backup_alerts WHERE alert_id=$alert_id"));
         if (!$alert) api_error(404, 'Alert not found');
+
+        // Enforce per-client access
+        $alert_client = intval($alert['alert_client_id']);
+        if ($alert_client) {
+            $has_restriction = mysqli_num_rows(mysqli_query($mysqli,
+                "SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id LIMIT 1"
+            )) > 0;
+            if ($has_restriction && !mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id AND client_id=$alert_client LIMIT 1"
+            ))) {
+                api_error(403, 'Access denied');
+            }
+        }
 
         if ($action === 'acknowledge') {
             mysqli_query($mysqli, "UPDATE comet_backup_alerts SET alert_status='acknowledged', alert_acknowledged_by=$api_user_id, alert_acknowledged_at=NOW() WHERE alert_id=$alert_id");

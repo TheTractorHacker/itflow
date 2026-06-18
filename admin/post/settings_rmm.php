@@ -121,6 +121,10 @@ if (isset($_POST['test_rmm_connection'])) {
     validateCSRFToken($_POST['csrf_token']);
     header('Content-Type: application/json');
     $integration_id = intval($_POST['integration_id'] ?? 0);
+    if (!mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id FROM rmm_integrations WHERE id=$integration_id LIMIT 1"))) {
+        echo json_encode(['success' => false, 'error' => 'Integration not found']);
+        exit;
+    }
     try {
         require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/rmm_client_factory.php';
         $client = getRmmClient($integration_id);
@@ -139,10 +143,16 @@ if (isset($_POST['save_firewall_client_mappings'])) {
     foreach ($mappings as $asset_id => $client_id) {
         $asset_id  = intval($asset_id);
         $client_id = intval($client_id);
-        if ($asset_id > 0) {
-            $cid_sql = $client_id > 0 ? $client_id : 'NULL';
-            mysqli_query($mysqli, "UPDATE assets SET asset_client_id=$cid_sql WHERE asset_id=$asset_id AND asset_type='Firewall/Router'");
+        if ($asset_id <= 0) continue;
+        $cid_sql = 'NULL';
+        if ($client_id > 0) {
+            $valid_client = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT client_id FROM clients WHERE client_id=$client_id AND client_archived_at IS NULL LIMIT 1"
+            ));
+            if (!$valid_client) continue;
+            $cid_sql = $client_id;
         }
+        mysqli_query($mysqli, "UPDATE assets SET asset_client_id=$cid_sql WHERE asset_id=$asset_id AND asset_type='Firewall/Router'");
     }
     logAction('Firewall Settings', 'Edit', "$session_name updated firewall client mappings");
     flash_alert('Firewall mappings saved');
@@ -156,6 +166,11 @@ if (isset($_POST['sync_rmm_now'])) {
     validateCSRFToken($_POST['csrf_token']);
     header('Content-Type: application/json');
     $integration_id = intval($_POST['integration_id'] ?? 0);
+
+    if (!mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id FROM rmm_integrations WHERE id=$integration_id LIMIT 1"))) {
+        echo json_encode(['success' => false, 'error' => 'Integration not found']);
+        exit;
+    }
 
     // Rate-limit: one sync per integration per 60 seconds
     $recent = mysqli_fetch_assoc(mysqli_query($mysqli,
