@@ -100,6 +100,53 @@ if ($filter_source === 'all' || $filter_source === 'backup') {
     }
 }
 
+// ── Network alerts (RMM alerts scoped to network device types) ──────────────
+if ($filter_source === 'network') {
+    $where = "ast.asset_type IN ('Firewall/Router','Switch','Access Point')";
+    if ($filter_status && $filter_status !== 'all') {
+        $where .= " AND a.status='" . mysqli_real_escape_string($mysqli, $filter_status) . "'";
+    }
+    if ($filter_severity) { $where .= " AND a.severity='" . mysqli_real_escape_string($mysqli, $filter_severity) . "'"; }
+    if ($filter_client)   { $where .= " AND a.client_id=$filter_client"; }
+    if ($filter_search) {
+        $sq = mysqli_real_escape_string($mysqli, $filter_search);
+        $where .= " AND (a.message LIKE '%$sq%' OR ast.asset_name LIKE '%$sq%' OR c.client_name LIKE '%$sq%')";
+    }
+    $sql = mysqli_query($mysqli,
+        "SELECT a.*, ast.asset_name, c.client_name, u.user_name, t.ticket_prefix, t.ticket_number,
+                i.name AS integration_name, i.type AS integration_type
+         FROM rmm_alerts a
+         LEFT JOIN assets ast ON ast.asset_id = a.asset_id
+         LEFT JOIN clients c ON c.client_id = a.client_id
+         LEFT JOIN users u ON u.user_id = a.acknowledged_by
+         LEFT JOIN tickets t ON t.ticket_id = a.ticket_id
+         LEFT JOIN rmm_integrations i ON i.id = a.integration_id
+         WHERE $where
+         ORDER BY FIELD(a.severity,'critical','error','warning','info'), a.created_at DESC
+         LIMIT 300"
+    );
+    while ($row = mysqli_fetch_assoc($sql)) {
+        $alerts[] = [
+            'source'      => 'network',
+            'id'          => intval($row['id']),
+            'severity'    => $row['severity'] ?: 'info',
+            'message'     => $row['message'],
+            'subject'     => $row['asset_name'] ? $row['asset_name'] : null,
+            'subject_url' => $row['asset_id'] ? "/agent/asset_details.php?asset_id={$row['asset_id']}" : null,
+            'client_id'   => $row['client_id'] ? intval($row['client_id']) : null,
+            'client_name' => $row['client_name'],
+            'integration_name' => $row['integration_name'],
+            'integration_type' => $row['integration_type'],
+            'status'      => $row['status'] ?: 'new',
+            'ack_by'      => $row['user_name'],
+            'created_at'  => $row['created_at'],
+            'ticket_id'   => $row['ticket_id'] ? intval($row['ticket_id']) : null,
+            'ticket_label'=> $row['ticket_id'] ? ($row['ticket_prefix'] . $row['ticket_number']) : null,
+            'can_create_ticket' => !$row['ticket_id'],
+        ];
+    }
+}
+
 // Merge sort: severity rank, then newest first
 $sev_rank = ['critical' => 0, 'error' => 1, 'warning' => 2, 'info' => 3];
 usort($alerts, function ($a, $b) use ($sev_rank) {
@@ -182,6 +229,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                 <a href="?source=all&status=<?= $filter_status ?>" class="btn <?= $filter_source === 'all' ? 'btn-primary' : 'btn-outline-primary' ?>">All</a>
                 <a href="?source=rmm&status=<?= $filter_status ?>" class="btn <?= $filter_source === 'rmm' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-server mr-1"></i>RMM</a>
                 <a href="?source=backup&status=<?= $filter_status ?>" class="btn <?= $filter_source === 'backup' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-cloud-upload-alt mr-1"></i>Backup</a>
+                <a href="?source=network&status=<?= $filter_status ?>" class="btn <?= $filter_source === 'network' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-network-wired mr-1"></i>Network</a>
             </div>
             <!-- Status filter -->
             <div class="btn-group btn-group-sm mr-2">
@@ -272,7 +320,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                 $status_color = ['new'=>'danger','acknowledged'=>'warning','resolved'=>'success'][$alert['status']] ?? 'secondary';
                 $aid          = $alert['id'];
                 $row_class    = $alert['severity'] === 'critical' ? 'table-danger' : '';
-                $endpoint     = $alert['source'] === 'rmm' ? '/agent/post/rmm_alert.php' : '/agent/post/comet_alert.php';
+                $endpoint     = in_array($alert['source'], ['rmm', 'network']) ? '/agent/post/rmm_alert.php' : '/agent/post/comet_alert.php';
                 $row_id       = $alert['source'] . '-' . $aid;
             ?>
             <tr id="alert-row-<?= $row_id ?>" class="<?= $row_class ?>">
@@ -290,6 +338,13 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                     ?>
                     <span class="badge <?= $ibadge ?>" title="<?= nullable_htmlentities($iname) ?>">
                         <i class="fas <?= $iicon ?>"></i>
+                    </span>
+                    <div class="text-muted" style="font-size:.65rem;margin-top:.1rem;line-height:1;"><?= nullable_htmlentities($iname) ?></div>
+                    <?php } elseif ($alert['source'] === 'network') {
+                        $iname = $alert['integration_name'] ?? 'Network';
+                    ?>
+                    <span class="badge badge-info" title="<?= nullable_htmlentities($iname) ?>">
+                        <i class="fas fa-network-wired"></i>
                     </span>
                     <div class="text-muted" style="font-size:.65rem;margin-top:.1rem;line-height:1;"><?= nullable_htmlentities($iname) ?></div>
                     <?php } else { ?>
@@ -353,7 +408,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
 
 <script>
 const CSRF = '<?= $_SESSION['csrf_token'] ?>';
-const ENDPOINTS = {rmm: '/agent/post/rmm_alert.php', backup: '/agent/post/comet_alert.php'};
+const ENDPOINTS = {rmm: '/agent/post/rmm_alert.php', network: '/agent/post/rmm_alert.php', backup: '/agent/post/comet_alert.php'};
 
 function alertAction(source, alertId, action, rowId) {
     if (action === 'create_ticket' && !confirm('Create a ticket from this alert?')) return;

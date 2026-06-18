@@ -135,7 +135,7 @@ $type_labels = [
         <div class="small-box bg-warning shadow-sm">
             <div class="inner"><h3><?= intval($cnt['with_alerts']) ?></h3><p>With Alerts</p></div>
             <div class="icon"><i class="fas fa-bell"></i></div>
-            <a href="/agent/alerts.php?source=rmm&status=new" class="small-box-footer">View Alerts <i class="fas fa-arrow-circle-right"></i></a>
+            <a href="/agent/alerts.php?source=network&status=new" class="small-box-footer">View Alerts <i class="fas fa-arrow-circle-right"></i></a>
         </div>
     </div>
 </div>
@@ -196,180 +196,230 @@ $type_labels = [
     </div>
 </div>
 
-<!-- Device table -->
+<!-- Devices -->
+<?php
+$all_devices = [];
+while ($dev = mysqli_fetch_assoc($sql_devices)) {
+    $all_devices[] = $dev;
+}
+
+if (empty($all_devices)): ?>
 <div class="card card-dark">
-    <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mb-0">
-            <?php if ($filter_type): ?>
-                <i class="fas fa-<?= htmlspecialchars($device_icons[$filter_type] ?? 'network-wired') ?> mr-2"></i>
-                <?= htmlspecialchars($type_labels[$filter_type] ?? $filter_type) ?>s
-            <?php else: ?>
-                <i class="fas fa-network-wired mr-2"></i>All Network Devices
-            <?php endif; ?>
-            <?php if (mysqli_num_rows($sql_devices) > 0): ?>
-            <span class="badge badge-secondary ml-2"><?= mysqli_num_rows($sql_devices) ?></span>
-            <?php endif; ?>
-        </h3>
-        <?php if ($filter_type): ?>
-        <a href="?" class="btn btn-sm btn-outline-secondary ml-auto">Show All Types</a>
-        <?php endif; ?>
-    </div>
-    <div class="card-body p-0">
-        <?php if (mysqli_num_rows($sql_devices) === 0): ?>
-        <div class="text-center text-muted py-5">
-            <i class="fas fa-network-wired fa-3x mb-3"></i>
-            <p class="mb-1">No network devices found<?= ($filter_client_id || $filter_status || $filter_type || $filter_search !== '') ? ' matching your filters' : '' ?>.</p>
-            <?php if (!empty($sophos_integrations) && (!$filter_type || $filter_type === 'Firewall/Router')): ?>
-            <p class="small"><a href="#" onclick="triggerNetSync();return false;">Sync from Sophos Central</a> to import firewalls.</p>
-            <?php endif; ?>
-        </div>
-        <?php else: ?>
-        <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0">
-            <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;background:#f8f9fa;" class="text-muted border-bottom">
-                <tr>
-                    <th class="pl-3" style="width:40px"></th>
-                    <th>Device</th>
-                    <th>Client</th>
-                    <th>IP Address</th>
-                    <th>Model / Firmware</th>
-                    <th>Source</th>
-                    <th>Status</th>
-                    <th>Last Seen</th>
-                    <th style="width:60px"></th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php
-            $current_type = null;
-            while ($dev = mysqli_fetch_assoc($sql_devices)):
-                $asset_id  = intval($dev['asset_id']);
-                $dev_type  = $dev['asset_type'];
-
-                // Status — prefer RMM link; fall back to asset_status for UniFi ('Deployed'=online)
-                if (!empty($dev['rmm_status'])) {
-                    $status = $dev['rmm_status'];
-                } elseif (!empty($dev['asset_status_raw'])) {
-                    $s = strtolower($dev['asset_status_raw']);
-                    $status = str_contains($s, 'deploy') || str_contains($s, 'active') || str_contains($s, 'connect') ? 'online' : 'offline';
-                } else {
-                    $status = null;
-                }
-                $sc = ['online' => 'success', 'offline' => 'danger', 'unknown' => 'secondary'][$status] ?? null;
-                $si = ['online' => 'check-circle', 'offline' => 'times-circle', 'unknown' => 'question-circle'][$status] ?? null;
-
-                $icon  = $device_icons[$dev_type] ?? 'network-wired';
-                $label = $type_labels[$dev_type] ?? $dev_type;
-                $display_name = nullable_htmlentities($dev['hostname'] ?: $dev['asset_name']);
-                $ip    = nullable_htmlentities($dev['interface_ip'] ?? '');
-                $model = nullable_htmlentities($dev['display_model'] ?: '');
-
-                // Firmware — from RMM link, or parse out of UniFi notes
-                $firmware = nullable_htmlentities($dev['rmm_firmware'] ?: '');
-                if (!$firmware && !empty($dev['asset_notes'])) {
-                    if (preg_match('/Firmware:\s*([^|]+)/i', $dev['asset_notes'], $m)) {
-                        $firmware = nullable_htmlentities(trim($m[1]));
-                    }
-                }
-
-                // Last seen — RMM timestamp or parse UniFi "Last synced:" from notes
-                $ago = '—';
-                if (!empty($dev['last_seen'])) {
-                    $ago = timeAgo($dev['last_seen']);
-                } elseif (!empty($dev['asset_notes']) && preg_match('/Last synced:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})/i', $dev['asset_notes'], $m)) {
-                    $ago = timeAgo($m[1]);
-                }
-
-                // Source label
-                if (!empty($dev['integration_name'])) {
-                    $source = nullable_htmlentities($dev['integration_name']);
-                } elseif (!empty($dev['asset_make']) && strtolower($dev['asset_make']) === 'ubiquiti') {
-                    $source = 'UniFi';
-                } else {
-                    $source = 'Manual';
-                }
-
-                $alerts = intval($dev['alert_count']);
-
-                // Type separator row
-                if (!$filter_type && $dev_type !== $current_type):
-                    $current_type = $dev_type;
-            ?>
-            <tr style="background:#f4f6f9;">
-                <td colspan="9" class="pl-3 py-1">
-                    <small class="font-weight-bold text-uppercase text-muted" style="letter-spacing:.5px;">
-                        <i class="fas fa-<?= $icon ?> mr-1"></i><?= htmlspecialchars($label) ?>s
-                    </small>
-                </td>
-            </tr>
-            <?php endif; ?>
-                <tr>
-                    <td class="pl-3 text-center align-middle">
-                        <?php if ($sc): ?>
-                        <i class="fas fa-<?= $si ?> text-<?= $sc ?> fa-lg" title="<?= ucfirst($status) ?>"></i>
-                        <?php else: ?>
-                        <i class="fas fa-<?= $icon ?> text-muted fa-lg"></i>
-                        <?php endif; ?>
-                    </td>
-                    <td class="align-middle">
-                        <a class="font-weight-bold text-dark" href="/agent/asset_details.php?asset_id=<?= $asset_id ?>">
-                            <?= $display_name ?>
-                        </a>
-                        <?php if ($alerts > 0): ?>
-                        <?php if ($dev['open_alert_ticket_id']): ?>
-                        <a href="/agent/ticket.php?ticket_id=<?= intval($dev['open_alert_ticket_id']) ?>"
-                           class="badge badge-danger ml-1" title="<?= $alerts ?> open alert(s) — click to view ticket">
-                            <i class="fas fa-bell mr-1"></i><?= $alerts ?>
-                        </a>
-                        <?php else: ?>
-                        <a href="/agent/alerts.php?source=rmm&status=new"
-                           class="badge badge-danger ml-1" title="<?= $alerts ?> open alert(s)">
-                            <i class="fas fa-bell mr-1"></i><?= $alerts ?>
-                        </a>
-                        <?php endif; ?>
-                        <?php endif; ?>
-                    </td>
-                    <td class="align-middle small">
-                        <?php if ($dev['asset_client_id']): ?>
-                        <a href="/agent/client_overview.php?client_id=<?= intval($dev['asset_client_id']) ?>">
-                            <?= nullable_htmlentities($dev['client_name']) ?>
-                        </a>
-                        <?php else: ?>
-                        <span class="text-muted">—</span>
-                        <?php endif; ?>
-                    </td>
-                    <td class="align-middle small text-monospace">
-                        <?= $ip ?: '<span class="text-muted">—</span>' ?>
-                    </td>
-                    <td class="align-middle small text-muted">
-                        <?php if ($model || $firmware): ?>
-                            <?php if ($model): ?><div><?= $model ?></div><?php endif; ?>
-                            <?php if ($firmware): ?><div class="text-secondary" style="font-size:10px"><?= $firmware ?></div><?php endif; ?>
-                        <?php else: ?>—<?php endif; ?>
-                    </td>
-                    <td class="align-middle small text-muted"><?= $source ?></td>
-                    <td class="align-middle">
-                        <?php if ($sc): ?>
-                        <span class="badge badge-<?= $sc ?>"><?= ucfirst($status) ?></span>
-                        <?php else: ?>
-                        <span class="badge badge-light text-muted">Unknown</span>
-                        <?php endif; ?>
-                    </td>
-                    <td class="align-middle small text-muted"><?= $ago ?></td>
-                    <td class="align-middle text-right pr-3">
-                        <a href="/agent/asset_details.php?asset_id=<?= $asset_id ?>"
-                           class="btn btn-xs btn-outline-secondary" title="View asset">
-                            <i class="fas fa-external-link-alt"></i>
-                        </a>
-                    </td>
-                </tr>
-            <?php endwhile; ?>
-            </tbody>
-        </table>
-        </div>
+    <div class="card-body text-center text-muted py-5">
+        <i class="fas fa-network-wired fa-3x mb-3 d-block"></i>
+        <p class="mb-1">No network devices found<?= ($filter_client_id || $filter_status || $filter_type || $filter_search !== '') ? ' matching your filters' : '' ?>.</p>
+        <?php if (!empty($sophos_integrations) && (!$filter_type || $filter_type === 'Firewall/Router')): ?>
+        <p class="small"><a href="#" onclick="triggerNetSync();return false;">Sync from Sophos Central</a> to import firewalls.</p>
         <?php endif; ?>
     </div>
 </div>
+<?php else:
+$by_type = ['Firewall/Router' => [], 'Switch' => [], 'Access Point' => []];
+foreach ($all_devices as $dev) {
+    $t = $dev['asset_type'];
+    if (isset($by_type[$t])) $by_type[$t][] = $dev;
+}
+
+$proc = function(array $dev) use ($device_icons): array {
+    if (!empty($dev['rmm_status'])) {
+        $status = $dev['rmm_status'];
+    } elseif (!empty($dev['asset_status_raw'])) {
+        $s = strtolower($dev['asset_status_raw']);
+        $status = str_contains($s, 'deploy') || str_contains($s, 'active') || str_contains($s, 'connect') ? 'online' : 'offline';
+    } else {
+        $status = 'unknown';
+    }
+    $firmware = nullable_htmlentities($dev['rmm_firmware'] ?: '');
+    if (!$firmware && !empty($dev['asset_notes']) && preg_match('/Firmware:\s*([^|]+)/i', $dev['asset_notes'], $m2)) {
+        $firmware = nullable_htmlentities(trim($m2[1]));
+    }
+    $ago = '—';
+    if (!empty($dev['last_seen'])) {
+        $ago = timeAgo($dev['last_seen']);
+    } elseif (!empty($dev['asset_notes']) && preg_match('/Last synced:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})/i', $dev['asset_notes'], $m2)) {
+        $ago = timeAgo($m2[1]);
+    }
+    if (!empty($dev['integration_name'])) {
+        $source = nullable_htmlentities($dev['integration_name']);
+    } elseif (!empty($dev['asset_make']) && strtolower($dev['asset_make']) === 'ubiquiti') {
+        $source = 'UniFi';
+    } else {
+        $source = 'Manual';
+    }
+    $sc     = ['online' => 'success', 'offline' => 'danger'][$status] ?? 'secondary';
+    $si     = ['online' => 'check-circle', 'offline' => 'times-circle'][$status] ?? 'question-circle';
+    $border = ['success' => '#28a745', 'danger' => '#dc3545', 'secondary' => '#6c757d'][$sc];
+    return [
+        'asset_id'    => intval($dev['asset_id']),
+        'display_name'=> nullable_htmlentities($dev['hostname'] ?: $dev['asset_name']),
+        'status'      => $status, 'sc' => $sc, 'si' => $si, 'border' => $border,
+        'ip'          => nullable_htmlentities($dev['interface_ip'] ?? ''),
+        'model'       => nullable_htmlentities($dev['display_model'] ?: ''),
+        'firmware'    => $firmware, 'source' => $source, 'ago' => $ago,
+        'alerts'      => intval($dev['alert_count']),
+        'ticket_id'   => $dev['open_alert_ticket_id'] ? intval($dev['open_alert_ticket_id']) : null,
+        'client_id'   => $dev['asset_client_id'] ? intval($dev['asset_client_id']) : null,
+        'client_name' => nullable_htmlentities($dev['client_name']),
+    ];
+};
+?>
+
+<?php if (!empty($by_type['Firewall/Router'])): ?>
+<div class="card card-dark mb-3">
+    <div class="card-header py-2 d-flex align-items-center">
+        <h3 class="card-title mb-0"><i class="fas fa-shield-alt mr-2 text-danger"></i>Firewalls
+            <span class="badge badge-secondary ml-2"><?= count($by_type['Firewall/Router']) ?></span>
+        </h3>
+        <?php if ($filter_type): ?><a href="?" class="btn btn-sm btn-outline-secondary ml-auto">Show All</a><?php endif; ?>
+    </div>
+    <div class="card-body">
+        <div class="row">
+        <?php foreach ($by_type['Firewall/Router'] as $dev):
+            $d = $proc($dev);
+            $alert_href = $d['ticket_id'] ? "/agent/ticket.php?ticket_id={$d['ticket_id']}" : "/agent/alerts.php?source=network&status=new";
+        ?>
+        <div class="col-lg-6 mb-3">
+            <div class="card mb-0 h-100" style="border-left:4px solid <?= $d['border'] ?>">
+                <div class="card-body py-3 px-3">
+                    <div class="d-flex align-items-start">
+                        <div class="mr-3 pt-1">
+                            <i class="fas fa-shield-alt fa-2x text-<?= $d['sc'] ?>"></i>
+                        </div>
+                        <div class="flex-grow-1 min-width-0">
+                            <div class="d-flex align-items-start flex-wrap mb-2" style="gap:4px">
+                                <a href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>"
+                                   class="font-weight-bold text-dark mr-1" style="font-size:15px;line-height:1.4">
+                                    <?= $d['display_name'] ?>
+                                </a>
+                                <span class="badge badge-<?= $d['sc'] ?>"><?= ucfirst($d['status']) ?></span>
+                                <?php if ($d['alerts'] > 0): ?>
+                                <a href="<?= $alert_href ?>" class="badge badge-danger" title="<?= $d['alerts'] ?> open alert(s)">
+                                    <i class="fas fa-bell mr-1"></i>Click to view
+                                </a>
+                                <?php endif; ?>
+                            </div>
+                            <?php if ($d['client_id']): ?>
+                            <div class="small text-muted mb-2">
+                                <i class="fas fa-building mr-1"></i>
+                                <a href="/agent/client_overview.php?client_id=<?= $d['client_id'] ?>"><?= $d['client_name'] ?></a>
+                            </div>
+                            <?php endif; ?>
+                            <div class="row no-gutters" style="font-size:13px">
+                                <div class="col-6 pr-2 mb-1">
+                                    <div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">IP Address</div>
+                                    <div class="text-monospace font-weight-bold"><?= $d['ip'] ?: '<span class="text-muted">—</span>' ?></div>
+                                </div>
+                                <div class="col-6 mb-1">
+                                    <div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">Model</div>
+                                    <div><?= $d['model'] ?: '<span class="text-muted">—</span>' ?></div>
+                                </div>
+                                <div class="col-6 pr-2">
+                                    <div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">Firmware</div>
+                                    <div class="text-secondary" style="font-size:12px"><?= $d['firmware'] ?: '<span class="text-muted">—</span>' ?></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">Last Seen</div>
+                                    <div style="font-size:12px"><?= $d['ago'] ?></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer py-2 d-flex justify-content-between align-items-center bg-light" style="font-size:12px">
+                    <span class="text-muted"><i class="fas fa-plug mr-1"></i><?= $d['source'] ?></span>
+                    <a href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>" class="btn btn-xs btn-outline-secondary">
+                        <i class="fas fa-external-link-alt mr-1"></i>Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php
+$net_sections = [
+    ['type' => 'Switch',       'icon' => 'network-wired', 'label' => 'Switches',     'color' => 'text-primary'],
+    ['type' => 'Access Point', 'icon' => 'wifi',          'label' => 'Access Points', 'color' => 'text-success'],
+];
+foreach ($net_sections as $sect):
+    if (empty($by_type[$sect['type']])) continue;
+?>
+<div class="card card-dark mb-3">
+    <div class="card-header py-2 d-flex align-items-center">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-<?= $sect['icon'] ?> mr-2 <?= $sect['color'] ?>"></i><?= $sect['label'] ?>
+            <span class="badge badge-secondary ml-2"><?= count($by_type[$sect['type']]) ?></span>
+        </h3>
+        <?php if ($filter_type): ?><a href="?" class="btn btn-sm btn-outline-secondary ml-auto">Show All</a><?php endif; ?>
+    </div>
+    <div class="card-body p-0">
+    <div class="table-responsive">
+    <table class="table table-hover mb-0">
+        <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;background:#f8f9fa" class="text-muted border-bottom">
+            <tr>
+                <th class="pl-3" style="width:50px"></th>
+                <th>Device</th>
+                <th>Client</th>
+                <th>IP Address</th>
+                <th>Model / Firmware</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Last Seen</th>
+                <th style="width:70px"></th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($by_type[$sect['type']] as $dev):
+            $d = $proc($dev);
+            $alert_href = $d['ticket_id'] ? "/agent/ticket.php?ticket_id={$d['ticket_id']}" : "/agent/alerts.php?source=network&status=new";
+        ?>
+        <tr>
+            <td class="pl-3 text-center align-middle">
+                <i class="fas fa-<?= $d['si'] ?> text-<?= $d['sc'] ?> fa-lg"></i>
+            </td>
+            <td class="align-middle" style="padding-top:12px;padding-bottom:12px">
+                <a class="font-weight-bold text-dark" href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>">
+                    <?= $d['display_name'] ?>
+                </a>
+                <?php if ($d['alerts'] > 0): ?>
+                <a href="<?= $alert_href ?>" class="badge badge-danger ml-1" title="<?= $d['alerts'] ?> open alert(s)">
+                    <i class="fas fa-bell mr-1"></i>Click to view
+                </a>
+                <?php endif; ?>
+            </td>
+            <td class="align-middle small">
+                <?php if ($d['client_id']): ?>
+                <a href="/agent/client_overview.php?client_id=<?= $d['client_id'] ?>"><?= $d['client_name'] ?></a>
+                <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+            </td>
+            <td class="align-middle small text-monospace"><?= $d['ip'] ?: '<span class="text-muted">—</span>' ?></td>
+            <td class="align-middle small text-muted">
+                <?php if ($d['model'] || $d['firmware']): ?>
+                    <?php if ($d['model']): ?><div><?= $d['model'] ?></div><?php endif; ?>
+                    <?php if ($d['firmware']): ?><div class="text-secondary" style="font-size:10px"><?= $d['firmware'] ?></div><?php endif; ?>
+                <?php else: ?>—<?php endif; ?>
+            </td>
+            <td class="align-middle small text-muted"><?= $d['source'] ?></td>
+            <td class="align-middle"><span class="badge badge-<?= $d['sc'] ?>"><?= ucfirst($d['status']) ?></span></td>
+            <td class="align-middle small text-muted"><?= $d['ago'] ?></td>
+            <td class="text-right pr-3 align-middle">
+                <a href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>" class="btn btn-xs btn-outline-secondary">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    </div>
+    </div>
+</div>
+<?php endforeach; ?>
+
+<?php endif; ?>
 
 <script>
 function triggerNetSync() {
