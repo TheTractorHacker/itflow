@@ -36,7 +36,7 @@ if ($method === 'GET') {
         'timeout'          => 60000,
         'rpId'             => wa_rp_id(),
         'allowCredentials' => [],
-        'userVerification' => 'required',
+        'userVerification' => 'preferred',
         'challengeToken'   => $challenge_token,
     ]);
 }
@@ -114,7 +114,8 @@ if (isset($body['passkey_response'], $body['challenge_token'])) {
             $pkRow['passkey_public_key'],
             intval($pkRow['passkey_sign_count']),
             $row['challenge_b64u'],
-            $androidOrigins
+            $androidOrigins,
+            false   // requireUV=false — we ask for 'preferred', not 'required'
         );
 
         $passkey_id = intval($pkRow['passkey_id']);

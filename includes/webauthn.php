@@ -213,7 +213,8 @@ function wa_verify_assertion(
     string $storedPubKeyPem,
     int    $storedSignCount,
     string $expectedChallenge_b64u,
-    array  $allowedOrigins = []
+    array  $allowedOrigins = [],
+    bool   $requireUV = true
 ): int {
     $clientDataJSON    = wa_b64u_decode($clientDataJSON_b64u);
     $authenticatorData = wa_b64u_decode($authenticatorData_b64u);
@@ -242,7 +243,7 @@ function wa_verify_assertion(
         throw new RuntimeException('RP ID hash mismatch');
     }
     if (!$ad['UP']) throw new RuntimeException('User Present flag not set');
-    if (!$ad['UV']) throw new RuntimeException('User Verified flag not set');
+    if ($requireUV && !$ad['UV']) throw new RuntimeException('User Verified flag not set');
 
     // 3. Verify signature
     $clientDataHash = hash('sha256', $clientDataJSON, true);
