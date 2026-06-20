@@ -397,6 +397,8 @@ if (isset($_POST['edit_ticket_status'])) {
     $ticket_id = intval($_POST['ticket_id']);
     $new_status_id = intval($_POST['ticket_status_id']);
     $client_id = intval($_POST['client_id']);
+    $is_resolving = ($new_status_id == 4);
+    if ($is_resolving) { $new_status_id = 5; }
 
     $sql = mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_status_name, ticket_client_id FROM tickets LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id WHERE ticket_id = $ticket_id");
     $row = mysqli_fetch_assoc($sql);
@@ -415,6 +417,9 @@ if (isset($_POST['edit_ticket_status'])) {
     $new_status_color = sanitizeInput($new_status_row['ticket_status_color']);
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $ticket_id");
+    if ($is_resolving) {
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id");
+    }
 
     mysqli_query($mysqli, "INSERT INTO ticket_history SET ticket_history_status = '$new_status_name', ticket_history_description = '$session_name changed status from $original_status to $new_status_name', ticket_history_ticket_id = $ticket_id");
 
@@ -1537,7 +1542,7 @@ if (isset($_POST['bulk_resolve_tickets'])) {
                 }
 
                 // Update ticket & insert reply
-                mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 4, ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id");
+                mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 5, ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id");
 
                 mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$details', ticket_reply_type = '$ticket_reply_type', ticket_reply_time_worked = '$ticket_reply_time_worked', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 
@@ -1570,8 +1575,8 @@ if (isset($_POST['bulk_resolve_tickets'])) {
                     $company_phone = sanitizeInput(formatPhoneNumber($row['company_phone'], $row['company_phone_country_code']));
 
                     // EMAIL
-                    $subject = "Ticket resolved - [$ticket_prefix$ticket_number] - $ticket_subject | (pending closure)";
-                    $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Your ticket regarding \"$ticket_subject\" has been marked as solved and is pending closure.<br><br>$details<br><br> If your request/issue is resolved, you can simply ignore this email. If you need further assistance, please reply or <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>re-open</a> to let us know! <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+                    $subject = "Ticket resolved - [$ticket_prefix$ticket_number] - $ticket_subject";
+                    $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Your ticket regarding \"$ticket_subject\" has been resolved and closed.<br><br>$details<br><br>If you need further assistance, please reply or <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>re-open</a> to let us know! <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
 
                     // Check email valid
                     if (filter_var($contact_email, FILTER_VALIDATE_EMAIL)) {
@@ -1697,7 +1702,7 @@ if (isset($_POST['bulk_ticket_reply'])) {
 
             // Resolve the ticket, if set
             if ($ticket_status == 4) {
-                mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id");
+                mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 5, ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id");
 
                 // Logging
                 logAction("Ticket", "Resolved", "$session_name resolved Ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
@@ -2019,7 +2024,7 @@ if (isset($_POST['add_ticket_reply'])) {
 
     // Resolve the ticket, if set
     if ($ticket_status == 4) {
-        mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id");
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 5, ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id");
 
         logAction("Ticket", "Resolved", "$session_name resolved Ticket ticket ID $ticket_id", $client_id, $ticket_id);
     }
@@ -2110,9 +2115,9 @@ if (isset($_POST['add_ticket_reply'])) {
             // Slightly different email subject/text depending on if this update set auto-close
 
             if ($ticket_status == 4) {
-                // Resolved
-                $subject = "Ticket resolved - [$ticket_prefix$ticket_number] - $ticket_subject | (pending closure)";
-                $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Your ticket regarding $ticket_subject has been marked as solved and is pending closure.<br><br>--------------------------------<br>$ticket_reply<br>--------------------------------<br><br>If your request/issue is resolved, you can simply ignore this email. If you need further assistance, please reply or <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>re-open</a> to let us know! <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: $ticket_status_name<br>Portal: <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>View ticket</a><br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+                // Resolved and closed
+                $subject = "Ticket resolved - [$ticket_prefix$ticket_number] - $ticket_subject";
+                $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Your ticket regarding $ticket_subject has been resolved and closed.<br><br>--------------------------------<br>$ticket_reply<br>--------------------------------<br><br>If you need further assistance, please reply or <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>re-open</a> to let us know! <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: $ticket_status_name<br>Portal: <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>View ticket</a><br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
             } else {
                 // Anything else
                 $subject = "Ticket update - [$ticket_prefix$ticket_number] - $ticket_subject";
@@ -2449,8 +2454,8 @@ if (isset($_GET['resolve_ticket'])) {
         mysqli_query($mysqli, "UPDATE tickets SET ticket_first_response_at = NOW() WHERE ticket_id = $ticket_id");
     }
 
-    // Resolve
-    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 4, ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id");
+    // Resolve and immediately close
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 5, ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id");
 
     logAction("Ticket", "Resolved", "$session_name resolved ticket $ticket_prefix$ticket_number (ID: $ticket_id)", $client_id, $ticket_id);
     queueWebhookEvent('ticket.resolved', getWebhookTicketPayload($ticket_id));
