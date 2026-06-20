@@ -2552,9 +2552,9 @@ if (isset($_GET['resolve_ticket'])) {
     }
     //End Mail IF
 
-    flash_alert("Ticket resolved");
+    flash_alert("Ticket closed");
 
-    redirect();
+    redirect('/agent/tickets.php?status=Closed');
 
 }
 

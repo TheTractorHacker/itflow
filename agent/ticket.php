@@ -442,25 +442,19 @@ if (isset($_GET['ticket_id'])) {
                             <a href="#" class="btn btn-light btn-sm ajax-modal" data-modal-url="modals/ticket/ticket_invoice_add.php?ticket_id=<?= $ticket_id ?>" data-modal-size="lg">
                                 <i class="fas fa-fw fa-file-invoice mr-2"></i>Invoice
                             </a>
-                        <?php }
+                        <?php } ?>
 
-                        if (empty($ticket_closed_at)) { ?>
+                        <?php if (!empty($ticket_resolved_at) || !empty($ticket_closed_at)) { ?>
+                            <a href="post.php?reopen_ticket=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-light btn-sm">
+                                <i class="fas fa-fw fa-redo mr-2"></i>Reopen
+                            </a>
+                        <?php } ?>
 
-                            <?php if (!empty($ticket_resolved_at)) { ?>
-                                <a href="post.php?reopen_ticket=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-light btn-sm">
-                                    <i class="fas fa-fw fa-redo mr-2"></i>Reopen
-                                </a>
-                            <?php } ?>
+                        <?php if (empty($ticket_closed_at)) { ?>
 
                             <?php if (empty($ticket_resolved_at) && $task_count == $completed_task_count) { ?>
                                 <a href="post.php?resolve_ticket=<?php echo $ticket_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>" class="btn btn-dark btn-sm confirm-link" id="ticket_close">
                                     <i class="fas fa-fw fa-check mr-2"></i>Resolve
-                                </a>
-                            <?php } ?>
-
-                            <?php if (!empty($ticket_resolved_at) && $task_count == $completed_task_count) { ?>
-                                <a href="post.php?close_ticket=<?php echo $ticket_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>" class="btn btn-dark btn-sm confirm-link" id="ticket_close">
-                                    <i class="fas fa-fw fa-gavel mr-2"></i>Close
                                 </a>
                             <?php } ?>
 
