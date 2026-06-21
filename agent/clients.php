@@ -496,6 +496,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         </td>
                         <td>
                             <a href="client_overview.php?client_id=<?= $client_id ?>"
+                                class="text-dark"
                                 data-toggle="popover"
                                 data-trigger="hover"
                                 data-placement="right"
@@ -511,7 +512,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     <i class="fas fa-fw fa-2x fa-user text-dark mr-2"></i>
                                     <div class="media-body">
                                         <div class="text-bold"><?= $client_name ?></div>
-                                        <div class="text-secondary"><?= $client_type ?></div>
+                                        <div class="text-dark"><?= $client_type ?></div>
 
                                     </div>
                                 </div>
@@ -549,7 +550,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                             if (!empty($contact_email)) { ?>
                                 <div class="mt-1 text-dark">
-                                    <i class="fa fa-fw fa-envelope text-secondary mr-2"></i><a href="mailto:<?php echo $contact_email; ?>"><?php echo $contact_email; ?></a><button class='btn btn-sm clipboardjs' type="button" data-clipboard-text='<?php echo $contact_email; ?>'><i class='far fa-copy text-secondary'></i></button>
+                                    <i class="fa fa-fw fa-envelope text-secondary mr-2"></i><a class="text-dark" href="mailto:<?php echo $contact_email; ?>"><?php echo $contact_email; ?></a><button class='btn btn-sm clipboardjs' type="button" data-clipboard-text='<?php echo $contact_email; ?>'><i class='far fa-copy text-secondary'></i></button>
                                 </div>
                             <?php } ?>
                         </td>
