@@ -511,7 +511,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     <i class="fas fa-fw fa-2x fa-user text-dark mr-2"></i>
                                     <div class="media-body">
                                         <div class="text-bold"><?= $client_name ?></div>
-                                        <div class="text-dark"><?= $client_type ?></div>
+                                        <div class="text-secondary"><?= $client_type ?></div>
 
                                     </div>
                                 </div>
@@ -525,8 +525,8 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             }
 
                             if (!empty($contact_name)) { ?>
-                                <div class="text-bold text-dark">
-                                    <i class="fa fa-fw fa-user text-secondary mr-2 mb-2"></i><a class="ajax-modal" href="#"
+                                <div class="text-bold">
+                                    <i class="fa fa-fw fa-user text-secondary mr-2 mb-2"></i><a class="ajax-modal text-dark" href="#"
                                         data-modal-url="modals/contact/contact_details.php?client_id=<?= $client_id ?>&id=<?= $contact_id ?>" data-modal-size="lg"><?= $contact_name; ?>
 
                                      </a>
