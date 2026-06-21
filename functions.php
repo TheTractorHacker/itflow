@@ -35,24 +35,7 @@ function nullable_htmlentities($unsanitizedInput) {
 
 // Returns 'text-dark' or 'text-light' depending on which gives better contrast against the given hex color
 function tagTextClass($hex_color) {
-    $hex = ltrim((string) $hex_color, '#');
-
-    if (strlen($hex) === 3) {
-        $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
-    }
-
-    if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
-        return 'text-light';
-    }
-
-    $r = hexdec(substr($hex, 0, 2));
-    $g = hexdec(substr($hex, 2, 2));
-    $b = hexdec(substr($hex, 4, 2));
-
-    // Perceived brightness (ITU-R BT.601)
-    $brightness = (($r * 299) + ($g * 587) + ($b * 114)) / 1000;
-
-    return $brightness > 150 ? 'text-dark' : 'text-light';
+    return 'text-light';
 }
 
 // Curated set of preset tag colors offered in the tag color picker
