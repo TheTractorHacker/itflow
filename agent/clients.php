@@ -511,7 +511,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     <i class="fas fa-fw fa-2x fa-user text-dark mr-2"></i>
                                     <div class="media-body">
                                         <div class="text-bold"><?= $client_name ?></div>
-                                        <div class="text-secondary"><?= $client_type ?></div>
+                                        <div class="text-dark"><?= $client_type ?></div>
 
                                     </div>
                                 </div>
@@ -525,7 +525,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             }
 
                             if (!empty($contact_name)) { ?>
-                                <div class="text-bold">
+                                <div class="text-bold text-dark">
                                     <i class="fa fa-fw fa-user text-secondary mr-2 mb-2"></i><a class="ajax-modal" href="#"
                                         data-modal-url="modals/contact/contact_details.php?client_id=<?= $client_id ?>&id=<?= $contact_id ?>" data-modal-size="lg"><?= $contact_name; ?>
 
@@ -536,19 +536,19 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             }
 
                             if (!empty($contact_phone)) { ?>
-                                <div class="mt-1">
+                                <div class="mt-1 text-dark">
                                     <i class="fa fa-fw fa-phone text-secondary mr-2 mb-2"></i><?php echo $contact_phone; ?> <?php if (!empty($contact_extension)) { echo "x$contact_extension"; } ?>
                                 </div>
                             <?php }
 
                             if (!empty($contact_mobile)) { ?>
-                                <div class="mt-1">
+                                <div class="mt-1 text-dark">
                                     <i class="fa fa-fw fa-mobile-alt text-secondary mr-2"></i><?php echo $contact_mobile; ?>
                                 </div>
                             <?php }
 
                             if (!empty($contact_email)) { ?>
-                                <div class="mt-1">
+                                <div class="mt-1 text-dark">
                                     <i class="fa fa-fw fa-envelope text-secondary mr-2"></i><a href="mailto:<?php echo $contact_email; ?>"><?php echo $contact_email; ?></a><button class='btn btn-sm clipboardjs' type="button" data-clipboard-text='<?php echo $contact_email; ?>'><i class='far fa-copy text-secondary'></i></button>
                                 </div>
                             <?php } ?>
