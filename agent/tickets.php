@@ -466,8 +466,8 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
         <div class="card-header py-2">
             <h3 class="card-title mt-2"><i class="fa fa-fw fa-life-ring mr-2"></i>Tickets
                 <small class="ml-3">
-                    <a href="?<?= $client_url ?>status=Open" class="badge badge-pill text-light p-1 <?php if($status == 'Open') { echo "badge-light text-dark"; } ?>"><strong><?= $total_tickets_open ?></strong> Open</a> |
-                    <a href="?<?= $client_url ?>status=Closed" class="badge badge-pill text-light p-1 <?php if($status == 'Closed') { echo "badge-light text-dark"; } ?>"><strong><?= $total_tickets_closed ?></strong> Closed</a>
+                    <a href="?<?= $client_url ?>status=Open" class="badge badge-pill p-1 <?= $status == 'Open' ? 'badge-light text-dark' : 'badge-secondary text-light' ?>"><strong><?= $total_tickets_open ?></strong> Open</a> |
+                    <a href="?<?= $client_url ?>status=Closed" class="badge badge-pill p-1 <?= $status == 'Closed' ? 'badge-light text-dark' : 'badge-secondary text-light' ?>"><strong><?= $total_tickets_closed ?></strong> Closed</a>
                 </small>
             </h3>
             <?php if (lookupUserPermission("module_support") >= 2) { ?>
