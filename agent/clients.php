@@ -113,12 +113,10 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
             <div class="row">
                 <div class="col-md-5">
                     <div class="form-group">
-                        <div class="input-group">
+                        <div class="d-flex" style="gap:.5rem;">
                             <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search <?php if($leads_filter == 0){ echo "clients"; } else { echo "leads"; } ?>" autofocus>
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary px-3" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
-                                <button class="btn btn-primary px-3"><i class="fa fa-search"></i></button>
-                            </div>
+                            <button class="btn btn-secondary px-3" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
+                            <button class="btn btn-primary px-3"><i class="fa fa-search"></i></button>
                         </div>
                     </div>
                 </div>
