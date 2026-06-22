@@ -43,7 +43,7 @@ ob_start();
                 strtotime($row["notification_timestamp"])
             );
             $notification_client_id = intval($row["notification_client_id"]);
-            if (empty($notification_action)) {
+            if (empty($notification_action) || $notification_action === 'NULL') {
                 $notification_action = "#";
             }
             ?>

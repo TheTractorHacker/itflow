@@ -322,7 +322,7 @@ if (mysqli_num_rows($sql_queue) > 0) {
             $email_from_logging = sanitizeInput($rowq['email_from']);
             mysqli_query($mysqli, "UPDATE email_queue SET email_status = 2, email_attempts = 99 WHERE email_id = $email_id");
             logApp("Cron-Mail-Queue", "Error", "Failed to send email #$email_id due to invalid sender address: $email_from_logging - check configuration in settings.");
-            appNotify("Mail", "Failed to send email #$email_id due to invalid sender address");
+            appNotify("Mail", "Failed to send email #$email_id due to invalid sender address", "/admin/logs.php");
             continue;
         }
 
@@ -334,7 +334,7 @@ if (mysqli_num_rows($sql_queue) > 0) {
             $email_to_logging = sanitizeInput($email_recipient);
             $email_subject_logging = sanitizeInput($rowq['email_subject']);
             logApp("Cron-Mail-Queue", "Error", "Failed to send email: $email_id to $email_to_logging due to invalid recipient address. Email subject was: $email_subject_logging");
-            appNotify("Mail", "Failed to send email #$email_id to $email_to_logging due to invalid recipient address: Email subject was: $email_subject_logging");
+            appNotify("Mail", "Failed to send email #$email_id to $email_to_logging due to invalid recipient address: Email subject was: $email_subject_logging", "/admin/logs.php");
             continue;
         }
 
@@ -345,7 +345,7 @@ if (mysqli_num_rows($sql_queue) > 0) {
             $email_to_logging = sanitizeInput($email_recipient);
             $email_subject_logging = sanitizeInput($rowq['email_subject']);
             logApp("Cron-Mail-Queue", "Error", "Failed to send email: $email_id to $email_to_logging due to invalid recipient domain (no MX). Email subject was: $email_subject_logging");
-            appNotify("Mail", "Failed to send email #$email_id to $email_to_logging due to invalid recipient domain (no MX): Email subject was: $email_subject_logging");
+            appNotify("Mail", "Failed to send email #$email_id to $email_to_logging due to invalid recipient domain (no MX): Email subject was: $email_subject_logging", "/admin/logs.php");
             continue;
         }
 
@@ -381,7 +381,7 @@ if (mysqli_num_rows($sql_queue) > 0) {
             $email_subject_logging   = sanitizeInput($rowq['email_subject']);
             $err = substr("Mailer Error: " . $e->getMessage(), 0, 100) . "...";
 
-            appNotify("Cron-Mail-Queue", "Failed to send email #$email_id to $email_recipient_logging");
+            appNotify("Cron-Mail-Queue", "Failed to send email #$email_id to $email_recipient_logging", "/admin/logs.php");
             logApp("Cron-Mail-Queue", "Error", "Failed to send email: $email_id to $email_recipient_logging regarding $email_subject_logging. $err");
         }
     }

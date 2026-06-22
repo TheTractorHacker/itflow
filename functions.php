@@ -1781,13 +1781,12 @@ function appNotify($type, $details, $action = null, $client_id = 0, $entity_id =
 
     $push_action = $action;
 
-    if (is_null($action)) {
-        $action = "NULL"; // Without quotes for SQL NULL
-    }
-
-    $type = substr($type, 0, 200);
+    $type    = substr($type, 0, 200);
     $details = substr($details, 0, 1000);
-    $action = substr($action, 0, 250);
+
+    $action_sql = is_null($action)
+        ? "NULL"
+        : "'" . mysqli_real_escape_string($mysqli, substr($action, 0, 250)) . "'";
 
     $sql = mysqli_query($mysqli, "SELECT user_id FROM users
         WHERE user_type = 1 AND user_status = 1 AND user_archived_at IS NULL
@@ -1796,7 +1795,7 @@ function appNotify($type, $details, $action = null, $client_id = 0, $entity_id =
     while ($row = mysqli_fetch_assoc($sql)) {
         $user_id = intval($row['user_id']);
 
-        mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = '$type', notification = '$details', notification_action = '$action', notification_client_id = $client_id, notification_entity_id = $entity_id, notification_user_id = $user_id");
+        mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = '$type', notification = '$details', notification_action = $action_sql, notification_client_id = $client_id, notification_entity_id = $entity_id, notification_user_id = $user_id");
 
         publishUserNotification($user_id, [
             'id'        => mysqli_insert_id($mysqli),
