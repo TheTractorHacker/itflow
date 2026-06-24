@@ -186,7 +186,7 @@ require_once "includes/inc_all_admin.php";
                 </div>
 
                 <!-- OAuth shared fields (show for google_oauth / microsoft_oauth) -->
-                <div id="smtp_oauth_fields" style="display:none;">
+                <div id="oauth_fields" style="display:none;">
                     <hr>
                     <h5 class="mb-2">OAuth Settings (shared for IMAP & SMTP)</h5>
                     <p class="text-secondary" id="oauth_hint">
@@ -266,6 +266,7 @@ require_once "includes/inc_all_admin.php";
                     </div>
                     <small class="text-secondary">
                         Add this callback URI in Entra App Registration, then click Connect to authorize and store refresh token automatically.
+                        <a href="#" data-toggle="modal" data-target="#ms365OAuthGuideModal" class="ml-2"><i class="fas fa-question-circle mr-1"></i>Setup Guide</a>
                     </small>
                 </div>
 
@@ -522,6 +523,243 @@ require_once "includes/inc_all_admin.php";
     </div>
 
     <?php } ?>
+
+<!-- Microsoft 365 OAuth Setup Guide Modal -->
+<div class="modal fade" id="ms365OAuthGuideModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background:#1f2d40;color:#c2cfd6;">
+            <div class="modal-header" style="border-color:#2d3f55;">
+                <h5 class="modal-title text-white"><i class="fab fa-microsoft mr-2"></i>Microsoft 365 OAuth Setup Guide</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+
+                <p class="text-muted mb-3">Follow these steps to connect ITFlow to Microsoft 365 for IMAP email monitoring and SMTP sending using OAuth.</p>
+
+                <div id="ms365GuideAccordion">
+
+                    <!-- Step 1 -->
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
+                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                            <h6 class="mb-0">
+                                <a href="#" data-toggle="collapse" data-target="#ms365Step1" aria-expanded="true" aria-controls="ms365Step1" class="text-white d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge badge-primary mr-2 px-2 py-1">1</span>
+                                    <span>Register an App in Entra ID</span>
+                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                </a>
+                            </h6>
+                        </div>
+                        <div id="ms365Step1" class="collapse show" data-parent="#ms365GuideAccordion">
+                            <div style="padding:1rem 1.25rem;">
+                                <ol class="mb-0 pl-3 text-light">
+                                    <li>Go to <strong>portal.azure.com</strong> &rarr; <strong>Microsoft Entra ID</strong> &rarr; <strong>App registrations</strong> &rarr; <strong>New registration</strong></li>
+                                    <li class="mt-2">Give it a name (e.g. <code>ITFlow Mail</code>)</li>
+                                    <li class="mt-2">Supported account types: <strong>Accounts in this organizational directory only (Single tenant)</strong></li>
+                                    <li class="mt-2">
+                                        Redirect URI &mdash; set type to <strong>Web</strong> and paste this URI:
+                                        <div class="input-group mt-1">
+                                            <input type="text" class="form-control form-control-sm border-0 text-white" readonly
+                                                   style="background:#111d2b;"
+                                                   value="<?php echo htmlspecialchars($mail_oauth_callback_uri); ?>"
+                                                   id="ms365GuideCallbackUri">
+                                            <div class="input-group-append">
+                                                <button class="btn btn-sm btn-outline-secondary text-light" type="button"
+                                                        onclick="navigator.clipboard.writeText(document.getElementById('ms365GuideCallbackUri').value); this.innerHTML='<i class=\'fas fa-check text-success\'></i>'">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="mt-2">Click <strong>Register</strong></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
+                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                            <h6 class="mb-0">
+                                <a href="#" data-toggle="collapse" data-target="#ms365Step2" aria-expanded="false" aria-controls="ms365Step2" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge badge-primary mr-2 px-2 py-1">2</span>
+                                    <span>Add API Permissions</span>
+                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                </a>
+                            </h6>
+                        </div>
+                        <div id="ms365Step2" class="collapse" data-parent="#ms365GuideAccordion">
+                            <div style="padding:1rem 1.25rem;">
+                                <ol class="mb-0 pl-3 text-light">
+                                    <li>In your new app, go to <strong>API permissions</strong> &rarr; <strong>Add a permission</strong></li>
+                                    <li class="mt-2">
+                                        Click the <strong>"APIs my organization uses"</strong> tab &mdash; <em>not</em> "Microsoft APIs"
+                                        <div class="alert alert-warning mt-2 mb-0 py-2">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                            <strong>Do not use Microsoft Graph.</strong> The <code>Mail.Read</code> / <code>Mail.Send</code> permissions listed there will not work for IMAP OAuth. You need the Exchange Online API specifically.
+                                        </div>
+                                    </li>
+                                    <li class="mt-2">Search for <strong>Office 365 Exchange Online</strong> and select it</li>
+                                    <li class="mt-2">Choose <strong>Delegated permissions</strong> (your application accesses the API as the signed-in user)</li>
+                                    <li class="mt-2">
+                                        In the <strong>filter/search box</strong>, type <code>IMAP</code> &mdash; tick <strong>IMAP.AccessAsUser.All</strong>
+                                        <div class="alert alert-warning mt-2 mb-0 py-2">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                            <strong>Search returns "No results"?</strong> IMAP OAuth is not enabled in your tenant. You need to enable it first:
+                                            <ol class="mt-2 mb-1 pl-4">
+                                                <li>Open a new tab &rarr; go to <strong>admin.exchange.microsoft.com</strong></li>
+                                                <li>Go to <strong>Settings &rarr; Mail flow</strong> (or search <em>Modern authentication</em>)</li>
+                                                <li>Alternatively, run this in <strong>Exchange Online PowerShell</strong>:<br>
+                                                    <code>Set-OrganizationConfig -OAuth2ClientProfileEnabled $true</code>
+                                                </li>
+                                                <li>Wait a few minutes, then <strong>refresh</strong> this Azure page and search again</li>
+                                            </ol>
+                                        </div>
+                                    </li>
+                                    <li class="mt-2">
+                                        Clear the filter, type <code>SMTP</code> &mdash; tick <strong>SMTP.Send</strong>
+                                    </li>
+                                    <li class="mt-2">Click <strong>Add permissions</strong> at the bottom</li>
+                                    <li class="mt-2">Back on the permissions list, click <strong>Grant admin consent for [your org]</strong> and confirm</li>
+                                </ol>
+                                <div class="alert alert-info mt-3 mb-0 py-2">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    These must be <strong>Delegated</strong> permissions, not Application. The OAuth flow requires a real user to sign in interactively.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
+                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                            <h6 class="mb-0">
+                                <a href="#" data-toggle="collapse" data-target="#ms365Step3" aria-expanded="false" aria-controls="ms365Step3" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge badge-primary mr-2 px-2 py-1">3</span>
+                                    <span>Create a Client Secret</span>
+                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                </a>
+                            </h6>
+                        </div>
+                        <div id="ms365Step3" class="collapse" data-parent="#ms365GuideAccordion">
+                            <div style="padding:1rem 1.25rem;">
+                                <ol class="mb-0 pl-3 text-light">
+                                    <li>Under your app &rarr; <strong>Certificates &amp; secrets</strong> &rarr; <strong>New client secret</strong></li>
+                                    <li class="mt-2">Set an expiry and note the date &mdash; you must rotate the secret before it expires or mail will stop working</li>
+                                    <li class="mt-2">Copy the <strong>Value</strong> immediately &mdash; it is hidden after you navigate away</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
+                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                            <h6 class="mb-0">
+                                <a href="#" data-toggle="collapse" data-target="#ms365Step4" aria-expanded="false" aria-controls="ms365Step4" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge badge-primary mr-2 px-2 py-1">4</span>
+                                    <span>Fill In ITFlow Settings &amp; Connect</span>
+                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                </a>
+                            </h6>
+                        </div>
+                        <div id="ms365Step4" class="collapse" data-parent="#ms365GuideAccordion">
+                            <div style="padding:1rem 1.25rem;">
+                                <p class="mb-2 text-light">From your app's <strong>Overview</strong> page, copy the following into the IMAP settings form:</p>
+                                <table class="table table-sm mb-3" style="color:#e9ecef;border-color:#3d5166;">
+                                    <thead>
+                                        <tr style="background:#111d2b;color:#fff;border-color:#3d5166;">
+                                            <th style="border-color:#3d5166;">ITFlow Field</th>
+                                            <th style="border-color:#3d5166;">Where to find it in Azure</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr style="background:#162032;border-color:#3d5166;"><td style="border-color:#3d5166;">IMAP Provider</td><td style="border-color:#3d5166;">Set to <strong class="text-white">Microsoft 365 (OAuth)</strong></td></tr>
+                                        <tr style="background:#1a2a40;border-color:#3d5166;"><td style="border-color:#3d5166;">IMAP Username</td><td style="border-color:#3d5166;">The mailbox email to monitor (e.g. <code>support@company.com</code>)</td></tr>
+                                        <tr style="background:#162032;border-color:#3d5166;"><td style="border-color:#3d5166;">OAuth Client ID</td><td style="border-color:#3d5166;">App Overview &rarr; <strong class="text-white">Application (client) ID</strong></td></tr>
+                                        <tr style="background:#1a2a40;border-color:#3d5166;"><td style="border-color:#3d5166;">OAuth Client Secret</td><td style="border-color:#3d5166;">The value you copied in Step 3</td></tr>
+                                        <tr style="background:#162032;border-color:#3d5166;"><td style="border-color:#3d5166;">Tenant ID</td><td style="border-color:#3d5166;">App Overview &rarr; <strong class="text-white">Directory (tenant) ID</strong></td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="mb-1 text-light">Then:</p>
+                                <ol class="mb-0 pl-3 text-light">
+                                    <li>Click <strong>Save</strong> on the IMAP settings form</li>
+                                    <li class="mt-2">Click <strong>Connect Microsoft 365</strong> &mdash; a Microsoft login window will open</li>
+                                    <li class="mt-2">Sign in with the mailbox account (or the licensed user who has access to a shared mailbox)</li>
+                                    <li class="mt-2">Grant consent &mdash; you'll be redirected back with a success message and tokens stored automatically</li>
+                                </ol>
+                                <div class="alert alert-danger mt-3 mb-0 py-2">
+                                    <i class="fas fa-times-circle mr-1"></i>
+                                    <strong>Error: AADSTS700016 &mdash; Application not found in directory?</strong>
+                                    <ul class="mt-2 mb-0 pl-4">
+                                        <li>The <strong>Client ID</strong> doesn't match any app in your tenant. Go back to Azure &rarr; App registrations &rarr; your app &rarr; <strong>Overview</strong>.</li>
+                                        <li>Make sure you copied the <strong>Application (client) ID</strong> &mdash; <em>not</em> the Object ID (it's just below it and easy to grab by mistake).</li>
+                                        <li>Confirm the app was registered in the <strong>same tenant</strong> as the account you're signing in with. If you have multiple tenants, check the directory switcher in the top-right of the Azure portal.</li>
+                                        <li>If you registered the app in a personal Microsoft account tenant by mistake, delete it and re-register under your organization directory.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 — Shared Mailbox -->
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
+                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                            <h6 class="mb-0">
+                                <a href="#" data-toggle="collapse" data-target="#ms365Step5" aria-expanded="false" aria-controls="ms365Step5" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge badge-info mr-2 px-2 py-1"><i class="fas fa-users"></i></span>
+                                    <span>Using a Shared Mailbox</span>
+                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                </a>
+                            </h6>
+                        </div>
+                        <div id="ms365Step5" class="collapse" data-parent="#ms365GuideAccordion">
+                            <div style="padding:1rem 1.25rem;">
+                                <p class="text-light">Shared mailboxes are supported. The OAuth token is obtained from a licensed user who has access to the shared mailbox.</p>
+                                <ol class="pl-3 mb-3 text-light">
+                                    <li>In <strong>Exchange Admin Center</strong>, grant the licensed user <strong>Full Access</strong> to the shared mailbox</li>
+                                    <li class="mt-2">Set <strong>IMAP Username</strong> to the <em>shared mailbox</em> address (e.g. <code>support@company.com</code>)</li>
+                                    <li class="mt-2">When clicking <strong>Connect Microsoft 365</strong>, sign in with the <em>licensed user account</em>, not the shared mailbox itself</li>
+                                    <li class="mt-2">ITFlow will access the shared mailbox using that user's token</li>
+                                </ol>
+                                <div class="alert alert-info py-2 mb-0">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    To <strong>send from</strong> the shared mailbox address, also grant the licensed user <strong>Send As</strong> permission in Exchange Admin Center.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6 — Token Maintenance -->
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
+                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                            <h6 class="mb-0">
+                                <a href="#" data-toggle="collapse" data-target="#ms365Step6" aria-expanded="false" aria-controls="ms365Step6" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge badge-secondary mr-2 px-2 py-1"><i class="fas fa-sync-alt"></i></span>
+                                    <span>Token Maintenance</span>
+                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                </a>
+                            </h6>
+                        </div>
+                        <div id="ms365Step6" class="collapse" data-parent="#ms365GuideAccordion">
+                            <div style="padding:1rem 1.25rem;">
+                                <ul class="pl-3 mb-0 text-light">
+                                    <li>The refresh token stays valid as long as ITFlow polls regularly. If idle for <strong>90 days</strong>, Microsoft invalidates it and you must click <strong>Connect Microsoft 365</strong> again.</li>
+                                    <li class="mt-2">Your <strong>Client Secret</strong> has its own expiry date (set in Step 3). Rotate it in Azure before it expires and update the value here, then click <strong>Connect Microsoft 365</strong> again.</li>
+                                    <li class="mt-2">Use <strong>Test OAuth Token Refresh</strong> (shown on this page when credentials are configured) to verify your tokens are working at any time.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /accordion -->
+            </div>
+            <div class="modal-footer py-2" style="border-color:#2d3f55;">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- /Microsoft 365 OAuth Setup Guide Modal -->
 
 <script>
 (function(){

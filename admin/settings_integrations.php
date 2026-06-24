@@ -36,6 +36,31 @@ $all_unifi_clients = [];
 while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
     $all_unifi_clients[] = ['id' => intval($c['client_id']), 'name' => $c['client_name']];
 }
+
+// All discovered site mappings, grouped by integration
+$sql_unifi_site_maps = mysqli_query($mysqli,
+    "SELECT sm.id, sm.integration_id, sm.unifi_site_id, sm.unifi_site_name, sm.client_id,
+            i.name AS integration_name, i.type AS integration_type,
+            c.client_name AS mapped_client_name,
+            ac.client_id AS auto_client_id, ac.client_name AS auto_client_name
+     FROM unifi_site_mappings sm
+     JOIN unifi_integrations i ON i.id = sm.integration_id
+     LEFT JOIN clients c  ON c.client_id  = sm.client_id AND c.client_archived_at IS NULL
+     LEFT JOIN clients ac ON LOWER(ac.client_name) = LOWER(sm.unifi_site_name) AND ac.client_archived_at IS NULL
+     ORDER BY i.name ASC, sm.unifi_site_name ASC"
+);
+$unifi_site_maps_by_integration = [];
+while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
+    $iid = intval($sm['integration_id']);
+    if (!isset($unifi_site_maps_by_integration[$iid])) {
+        $unifi_site_maps_by_integration[$iid] = [
+            'name' => $sm['integration_name'],
+            'type' => $sm['integration_type'] ?? 'local',
+            'sites' => [],
+        ];
+    }
+    $unifi_site_maps_by_integration[$iid]['sites'][] = $sm;
+}
 ?>
 
 <div class="d-flex align-items-center mb-3">
@@ -839,8 +864,8 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
                 <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                     <tr>
                         <th class="pl-3">Name</th>
-                        <th>Host</th>
-                        <th>Port</th>
+                        <th>Type</th>
+                        <th>Host / Endpoint</th>
                         <th>Status</th>
                         <th>Last Sync</th>
                         <th></th>
@@ -850,15 +875,25 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
                 <?php
                 mysqli_data_seek($sql_unifi_integrations, 0);
                 while ($intg = mysqli_fetch_assoc($sql_unifi_integrations)):
-                    $intg_id = intval($intg['id']);
+                    $intg_id   = intval($intg['id']);
+                    $intg_type = $intg['type'] ?? 'local';
                     $last_sync_row = mysqli_fetch_assoc(mysqli_query($mysqli,
                         "SELECT MAX(finished_at) as ls FROM unifi_sync_log WHERE integration_id=$intg_id LIMIT 1"
                     ));
+                    $host_display = $intg_type === 'cloud'
+                        ? 'api.ui.com (Cloud)'
+                        : nullable_htmlentities($intg['host']) . ':' . intval($intg['port']);
                 ?>
                 <tr>
                     <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
-                    <td class="text-muted small"><?= nullable_htmlentities($intg['host']) ?></td>
-                    <td class="text-muted small"><?= intval($intg['port']) ?></td>
+                    <td>
+                        <?php if ($intg_type === 'cloud'): ?>
+                            <span class="badge badge-info"><i class="fas fa-cloud mr-1"></i>Cloud</span>
+                        <?php else: ?>
+                            <span class="badge badge-secondary"><i class="fas fa-server mr-1"></i>Local</span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-muted small"><?= $host_display ?></td>
                     <td><?= $intg['enabled'] ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-secondary">Disabled</span>' ?></td>
                     <td class="text-muted small"><?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?></td>
                     <td class="text-right pr-3" style="white-space:nowrap">
@@ -871,10 +906,19 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
                         <button class="btn btn-xs btn-primary" onclick='unifiOpenSiteMappings(<?= $intg_id ?>, <?= json_encode($intg['name']) ?>)'>
                             <i class="fas fa-sitemap mr-1"></i>Sites
                         </button>
+                        <?php if ($intg_type === 'cloud'): ?>
+                        <button class="btn btn-xs btn-warning" onclick="unifiInspectCloudSites(<?= $intg_id ?>)">
+                            <i class="fas fa-bug mr-1"></i>Inspect Hosts
+                        </button>
+                        <button class="btn btn-xs btn-warning" onclick="unifiInspectCloudDevices(<?= $intg_id ?>)">
+                            <i class="fas fa-hdd mr-1"></i>Inspect Devices
+                        </button>
+                        <?php endif; ?>
                         <button class="btn btn-xs btn-secondary"
                                 onclick='unifiEditIntegration(<?= json_encode([
                                     "id"         => $intg_id,
                                     "name"       => $intg['name'],
+                                    "type"       => $intg_type,
                                     "host"       => $intg['host'],
                                     "port"       => intval($intg['port']),
                                     "verify_ssl" => intval($intg['verify_ssl']),
@@ -946,12 +990,100 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
         </div>
     </div>
 
+    <!-- ── Site → Client Mappings (all controllers) ─────────────────────── -->
+    <div class="card card-dark mt-3">
+        <div class="card-header py-2 d-flex align-items-center">
+            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-sitemap mr-2"></i>Site &rarr; Client Mappings</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="unifiRefreshAllSites(this)">
+                <i class="fas fa-sync mr-1"></i>Refresh All Sites
+            </button>
+        </div>
+        <?php if (empty($unifi_site_maps_by_integration)): ?>
+        <div class="card-body text-center text-muted py-5">
+            <i class="fas fa-sitemap fa-3x mb-3"></i>
+            <p class="mb-1">No sites discovered yet.</p>
+            <p class="small">Click <strong>Sync Now</strong> on a controller above, or <strong>Refresh All Sites</strong>, to import site data.</p>
+        </div>
+        <?php else: ?>
+        <form action="post.php" method="post">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+            <?php $_unifi_intg_idx = 0; foreach ($unifi_site_maps_by_integration as $intg_id => $intg_data):
+                $type_badge = $intg_data['type'] === 'cloud'
+                    ? '<span class="badge badge-info ml-1"><i class="fas fa-cloud mr-1"></i>Cloud</span>'
+                    : '<span class="badge badge-secondary ml-1"><i class="fas fa-server mr-1"></i>Local</span>';
+            ?>
+            <div class="px-3 pt-3 pb-1">
+                <div class="d-flex align-items-center mb-2">
+                    <strong class="mr-2"><?= nullable_htmlentities($intg_data['name']) ?></strong>
+                    <?= $type_badge ?>
+                    <button type="button" class="btn btn-xs btn-outline-secondary ml-auto"
+                            onclick="unifiRefreshSites(<?= $intg_id ?>, this)">
+                        <i class="fas fa-sync mr-1"></i>Refresh
+                    </button>
+                </div>
+                <table class="table table-sm table-borderless mb-2" style="background:transparent">
+                    <thead class="text-muted small" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
+                        <tr>
+                            <th style="width:30%">UniFi Site</th>
+                            <th style="width:25%">Auto-Match</th>
+                            <th>Client Mapping</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($intg_data['sites'] as $sm):
+                        $map_id = intval($sm['id']);
+                        if ($sm['client_id'] === null) {
+                            $selected = 'auto';
+                        } elseif (intval($sm['client_id']) === 0) {
+                            $selected = 'skip';
+                        } else {
+                            $selected = strval(intval($sm['client_id']));
+                        }
+                    ?>
+                    <tr>
+                        <td class="small font-weight-bold align-middle"><?= nullable_htmlentities($sm['unifi_site_name']) ?></td>
+                        <td class="small text-muted align-middle">
+                            <?php if ($sm['auto_client_name']): ?>
+                                <i class="fas fa-check-circle text-success mr-1"></i><?= nullable_htmlentities($sm['auto_client_name']) ?>
+                            <?php else: ?>
+                                <span class="text-muted"><em>no match</em></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <select class="form-control form-control-sm" name="site_map[<?= $map_id ?>]">
+                                <option value="auto" <?= $selected === 'auto' ? 'selected' : '' ?>>Auto (match by name)</option>
+                                <option value="skip" <?= $selected === 'skip' ? 'selected' : '' ?>>Skip (don't sync)</option>
+                                <?php foreach ($all_unifi_clients as $cl): ?>
+                                <option value="<?= $cl['id'] ?>" <?= $selected === strval($cl['id']) ? 'selected' : '' ?>>
+                                    <?= nullable_htmlentities($cl['name']) ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php if (++$_unifi_intg_idx < count($unifi_site_maps_by_integration)): ?>
+            <hr class="my-0">
+            <?php endif; ?>
+            <?php endforeach; unset($_unifi_intg_idx); ?>
+            <div class="card-footer py-2">
+                <button type="submit" name="save_all_unifi_site_mappings" class="btn btn-primary btn-sm">
+                    <i class="fas fa-check mr-1"></i>Save All Mappings
+                </button>
+            </div>
+        </form>
+        <?php endif; ?>
+    </div>
+
     <!-- Add/Edit UniFi Controller Modal -->
     <div class="modal fade" id="unifi_addIntegrationModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content bg-dark">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="unifi_integrationModalTitle">Add UniFi Controller</h5>
+                    <h5 class="modal-title" id="unifi_integrationModalTitle">Add UniFi Connection</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <form action="post.php" method="post">
@@ -959,35 +1091,68 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
                     <input type="hidden" name="integration_id" id="unifi_edit_integration_id" value="">
                     <div class="modal-body">
 
+                        <input type="hidden" name="integration_type" id="unifi_integration_type" value="local">
+                        <div class="form-group">
+                            <label class="text-light small mb-2">Connection Type</label>
+                            <div class="d-flex" style="gap:10px">
+                                <div id="unifi_card_local" onclick="unifiSelectType('local')"
+                                     class="flex-fill text-center rounded py-3 px-2"
+                                     style="cursor:pointer;border:2px solid #6c757d;background:rgba(108,117,125,.15);transition:border-color .15s,background .15s;">
+                                    <i class="fas fa-server d-block mb-1" style="font-size:1.3rem"></i>
+                                    <div class="font-weight-bold" style="font-size:.85rem">Local Controller</div>
+                                    <div class="text-muted" style="font-size:11px">UDM / CloudKey / etc.</div>
+                                </div>
+                                <div id="unifi_card_cloud" onclick="unifiSelectType('cloud')"
+                                     class="flex-fill text-center rounded py-3 px-2"
+                                     style="cursor:pointer;border:2px solid transparent;background:transparent;transition:border-color .15s,background .15s;">
+                                    <i class="fas fa-cloud d-block mb-1 text-info" style="font-size:1.3rem"></i>
+                                    <div class="font-weight-bold" style="font-size:.85rem">Cloud Site Manager</div>
+                                    <div class="text-muted" style="font-size:11px">api.ui.com</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <label class="text-light small">Name</label>
                             <input type="text" class="form-control form-control-sm" name="integration_name" id="unifi_integration_name" required
                                    placeholder="e.g. Main Office UniFi">
                         </div>
 
-                        <div class="form-group">
-                            <label class="text-light small">Controller Host / IP</label>
-                            <input type="text" class="form-control form-control-sm" name="integration_host" id="unifi_integration_host" required
-                                   placeholder="10.1.0.30">
+                        <div id="unifi_local_fields">
+                            <div class="form-group">
+                                <label class="text-light small">Controller Host / IP</label>
+                                <input type="text" class="form-control form-control-sm" name="integration_host" id="unifi_integration_host"
+                                       placeholder="10.1.0.30">
+                                <small class="text-muted">Hostname or IP of your UniFi OS device (UDM, CloudKey, etc.)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="text-light small">Port</label>
+                                <input type="number" class="form-control form-control-sm" name="integration_port" id="unifi_integration_port"
+                                       placeholder="443" min="1" max="65535" value="443">
+                            </div>
+
+                            <div class="custom-control custom-switch mb-3">
+                                <input type="checkbox" class="custom-control-input" id="unifi_integration_verify_ssl"
+                                       name="integration_verify_ssl" value="1">
+                                <label class="custom-control-label" for="unifi_integration_verify_ssl">Verify SSL certificate</label>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label class="text-light small">Port</label>
-                            <input type="number" class="form-control form-control-sm" name="integration_port" id="unifi_integration_port"
-                                   placeholder="443" min="1" max="65535" value="443">
+                        <div id="unifi_cloud_info" style="display:none">
+                            <div class="alert alert-info py-2 mb-3">
+                                <i class="fas fa-cloud mr-1"></i>
+                                <strong>UniFi Site Manager</strong> — connects to <code>api.ui.com</code> and syncs devices from
+                                <em>all</em> sites in your account. Each UniFi site is matched to an ITFlow client by name.<br>
+                                <small class="text-muted mt-1 d-block">Devices sync from the cloud API for all sites. Wi-Fi SSIDs/passwords and networks sync via each host's <code>*.id.ui.direct</code> local proxy — works for controllers on the same network as this server or with remote access enabled.</small>
+                            </div>
                         </div>
 
                         <div class="form-group">
                             <label class="text-light small">API Key</label>
                             <input type="password" class="form-control form-control-sm" name="integration_api_key" id="unifi_integration_api_key"
                                    autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
-                            <small class="text-light">Stored encrypted. Generate in UniFi OS &rarr; Settings &rarr; Control Plane &rarr; Integrations &rarr; API Key.</small>
-                        </div>
-
-                        <div class="custom-control custom-switch mb-2">
-                            <input type="checkbox" class="custom-control-input" id="unifi_integration_verify_ssl"
-                                   name="integration_verify_ssl" value="1">
-                            <label class="custom-control-label" for="unifi_integration_verify_ssl">Verify SSL certificate</label>
+                            <small class="text-light" id="unifi_api_key_help">Stored encrypted. Generate in UniFi OS &rarr; Settings &rarr; Control Plane &rarr; Integrations &rarr; API Key.</small>
                         </div>
 
                         <div class="custom-control custom-switch">
@@ -1001,10 +1166,29 @@ while ($c = mysqli_fetch_assoc($sql_unifi_clients_tmp)) {
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
                         <button type="submit" name="save_unifi_integration" class="btn btn-primary btn-sm">
-                            <i class="fas fa-check mr-1"></i>Save Controller
+                            <i class="fas fa-check mr-1"></i>Save
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloud API Inspect Modal -->
+    <div class="modal fade" id="unifi_inspectModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content bg-dark">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title"><i class="fas fa-bug mr-2"></i><span id="unifi_inspectTitle">Raw API Response</span></h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-2" id="unifi_inspectDesc"></p>
+                    <pre id="unifi_inspectBody" class="p-3 rounded text-light small" style="background:#111;max-height:500px;overflow:auto;white-space:pre-wrap;word-break:break-all;">Loading...</pre>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1301,8 +1485,30 @@ function fwSyncNow(integrationId) {
 const UNIFI_ALL_CLIENTS = <?= json_encode($all_unifi_clients) ?>;
 let unifiSiteMappingIntegrationId = null;
 
+function unifiSelectType(type) {
+    const isCloud = type === 'cloud';
+    document.getElementById('unifi_integration_type').value = type;
+
+    // Card highlight
+    const localCard = document.getElementById('unifi_card_local');
+    const cloudCard = document.getElementById('unifi_card_cloud');
+    localCard.style.borderColor  = !isCloud ? '#6c757d' : 'transparent';
+    localCard.style.background   = !isCloud ? 'rgba(108,117,125,.15)' : 'transparent';
+    cloudCard.style.borderColor  = isCloud  ? '#17a2b8' : 'transparent';
+    cloudCard.style.background   = isCloud  ? 'rgba(23,162,184,.12)' : 'transparent';
+
+    // Field visibility
+    document.getElementById('unifi_local_fields').style.display = isCloud ? 'none' : '';
+    document.getElementById('unifi_cloud_info').style.display   = isCloud ? '' : 'none';
+    document.getElementById('unifi_integration_host').required  = !isCloud;
+
+    document.getElementById('unifi_api_key_help').innerHTML = isCloud
+        ? 'Stored encrypted. Generate at <strong>unifi.ui.com</strong> &rarr; Account &rarr; API Keys.'
+        : 'Stored encrypted. Generate in UniFi OS &rarr; Settings &rarr; Control Plane &rarr; Integrations &rarr; API Key.';
+}
+
 function unifiResetModal() {
-    document.getElementById('unifi_integrationModalTitle').textContent = 'Add UniFi Controller';
+    document.getElementById('unifi_integrationModalTitle').textContent = 'Add UniFi Connection';
     document.getElementById('unifi_edit_integration_id').value = '';
     document.getElementById('unifi_integration_name').value = '';
     document.getElementById('unifi_integration_host').value = '';
@@ -1312,19 +1518,21 @@ function unifiResetModal() {
     document.getElementById('unifi_integration_verify_ssl').checked = false;
     document.getElementById('unifi_integration_enabled').checked = true;
     document.getElementById('unifi_test_result').innerHTML = '';
+    unifiSelectType('local');
 }
 
 function unifiEditIntegration(data) {
-    document.getElementById('unifi_integrationModalTitle').textContent = 'Edit UniFi Controller';
+    document.getElementById('unifi_integrationModalTitle').textContent = 'Edit UniFi Connection';
     document.getElementById('unifi_edit_integration_id').value = data.id;
     document.getElementById('unifi_integration_name').value = data.name;
-    document.getElementById('unifi_integration_host').value = data.host;
-    document.getElementById('unifi_integration_port').value = data.port;
+    document.getElementById('unifi_integration_host').value = data.host || '';
+    document.getElementById('unifi_integration_port').value = data.port || 443;
     document.getElementById('unifi_integration_api_key').value = '';
     document.getElementById('unifi_integration_api_key').placeholder = '(leave blank to keep existing)';
     document.getElementById('unifi_integration_verify_ssl').checked = data.verify_ssl == 1;
     document.getElementById('unifi_integration_enabled').checked = data.enabled == 1;
     document.getElementById('unifi_test_result').innerHTML = '';
+    unifiSelectType(data.type || 'local');
     $('#unifi_addIntegrationModal').modal('show');
 }
 
@@ -1440,6 +1648,107 @@ function unifiRenderSiteMappings(sites) {
 
     html += '</tbody></table>';
     document.getElementById('unifi_siteMappingBody').innerHTML = html;
+}
+
+// Refresh a single controller's sites then reload page so inline table updates
+function unifiRefreshSites(integrationId, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Refreshing...';
+    fetch('/admin/post.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=' + CSRF + '&load_unifi_sites=1&integration_id=' + integrationId
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) { location.reload(); }
+        else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Refresh';
+            alert('Failed to load sites: ' + (d.error || 'Unknown error'));
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Refresh';
+    });
+}
+
+// Refresh ALL controllers in sequence then reload
+function unifiRefreshAllSites(btn) {
+    const ids = <?= json_encode(array_keys($unifi_site_maps_by_integration) ?: []) ?>;
+
+    // Also pick up integrations that have no sites yet
+    <?php
+    mysqli_data_seek($sql_unifi_integrations, 0);
+    $all_intg_ids = [];
+    while ($r = mysqli_fetch_assoc($sql_unifi_integrations)) $all_intg_ids[] = intval($r['id']);
+    mysqli_data_seek($sql_unifi_integrations, 0);
+    ?>
+    const allIds = <?= json_encode($all_intg_ids) ?>;
+    const toRefresh = [...new Set([...allIds, ...ids])];
+
+    if (!toRefresh.length) { location.reload(); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Refreshing...';
+
+    const chain = toRefresh.reduce((p, id) =>
+        p.then(() => fetch('/admin/post.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'csrf_token=' + CSRF + '&load_unifi_sites=1&integration_id=' + id
+        }).then(r => r.json())),
+    Promise.resolve());
+
+    chain.then(() => location.reload()).catch(() => location.reload());
+}
+
+function unifiInspectCloudSites(integrationId) {
+    document.getElementById('unifi_inspectTitle').textContent = 'Raw API Response — api.ui.com/ea/hosts';
+    document.getElementById('unifi_inspectDesc').textContent  = 'Raw JSON from /ea/hosts. Each object is a UDM/gateway/CloudKey in your account.';
+    document.getElementById('unifi_inspectBody').textContent  = 'Loading...';
+    $('#unifi_inspectModal').modal('show');
+    fetch('/admin/post.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=' + CSRF + '&inspect_unifi_cloud_sites=1&integration_id=' + integrationId
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            document.getElementById('unifi_inspectBody').textContent =
+                'HTTP ' + d.http_status + '\n\n' + JSON.stringify(d.raw, null, 2);
+        } else {
+            document.getElementById('unifi_inspectBody').textContent = 'Error: ' + (d.error || 'Unknown');
+        }
+    })
+    .catch(e => { document.getElementById('unifi_inspectBody').textContent = 'Request failed: ' + e.message; });
+}
+
+function unifiInspectCloudDevices(integrationId) {
+    document.getElementById('unifi_inspectTitle').textContent = 'Raw API Response — api.ui.com/ea/devices';
+    document.getElementById('unifi_inspectDesc').textContent  = 'Raw JSON from /v1/devices. Response is nested: data[].devices[]. Each outer object is a host; devices[] contains the actual network gear.';
+    document.getElementById('unifi_inspectBody').textContent  = 'Loading...';
+    $('#unifi_inspectModal').modal('show');
+    fetch('/admin/post.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=' + CSRF + '&inspect_unifi_cloud_devices=1&integration_id=' + integrationId + '&host_id='
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            const count = (d.raw && d.raw.data) ? d.raw.data.length : 0;
+            document.getElementById('unifi_inspectBody').textContent =
+                'HTTP ' + d.http_status + ' — URL: ' + d.url + '\n' +
+                'Devices returned: ' + count + '\n\n' +
+                JSON.stringify(d.raw, null, 2);
+        } else {
+            document.getElementById('unifi_inspectBody').textContent = 'Error: ' + (d.error || 'Unknown');
+        }
+    })
+    .catch(e => { document.getElementById('unifi_inspectBody').textContent = 'Request failed: ' + e.message; });
 }
 
 function unifiSaveSiteMappings() {

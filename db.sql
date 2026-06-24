@@ -3464,7 +3464,8 @@ DROP TABLE IF EXISTS `unifi_integrations`;
 CREATE TABLE `unifi_integrations` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(200) NOT NULL,
-  `host` varchar(255) NOT NULL,
+  `type` varchar(20) NOT NULL DEFAULT 'local',
+  `host` varchar(255) NOT NULL DEFAULT '',
   `port` int(11) NOT NULL DEFAULT 443,
   `api_key_enc` text NOT NULL,
   `verify_ssl` tinyint(1) NOT NULL DEFAULT 1,

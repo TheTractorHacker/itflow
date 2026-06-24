@@ -14,7 +14,7 @@ require_once "../functions.php";
 require_once "../includes/class_unifi.php";
 require_once "../includes/class_unifi_sync_mapper.php";
 
-$result = mysqli_query($mysqli, "SELECT id, name FROM unifi_integrations WHERE enabled=1");
+$result = mysqli_query($mysqli, "SELECT id, name, type FROM unifi_integrations WHERE enabled=1");
 if (!$result || mysqli_num_rows($result) === 0) {
     echo date('Y-m-d H:i:s') . " - No enabled UniFi integrations configured.\n";
     exit(0);
@@ -23,14 +23,22 @@ if (!$result || mysqli_num_rows($result) === 0) {
 while ($integration = mysqli_fetch_assoc($result)) {
     $integration_id = intval($integration['id']);
     $name           = $integration['name'];
+    $type           = $integration['type'] ?? 'local';
 
-    echo date('Y-m-d H:i:s') . " - Starting UniFi sync for '$name' (id=$integration_id)...\n";
+    echo date('Y-m-d H:i:s') . " - Starting UniFi sync for '$name' [type=$type] (id=$integration_id)...\n";
 
     try {
-        $client = new UnifiClient($integration_id);
         $mapper = new UnifiSyncMapper($mysqli, $integration_id, 0);
         $log_id = $mapper->startSyncLog();
-        $stats  = $mapper->sync($client);
+
+        if ($type === 'cloud') {
+            $client = new UnifiCloudClient($integration_id);
+            $stats  = $mapper->syncCloud($client);
+        } else {
+            $client = new UnifiClient($integration_id);
+            $stats  = $mapper->sync($client);
+        }
+
         $mapper->finishSyncLog($log_id, $stats);
 
         echo date('Y-m-d H:i:s') . " - Devices: {$stats['devices_created']} created, {$stats['devices_updated']} updated, {$stats['devices_skipped']} skipped\n";

@@ -36,6 +36,160 @@ class UnifiSyncMapper {
         $this->triggered_by   = $triggered_by;
     }
 
+    // -------------------------------------------------------------------
+    // Cloud (api.ui.com) sync
+    //
+    // Devices come from /v1/devices (cloud API — always available).
+    //
+    // WiFi credentials and networks require the local Network controller API.
+    // We reach it via the host's directConnectDomain (*.id.ui.direct), which
+    // resolves to the device's LAN IP when queried from the same network, or
+    // routes through Ubiquiti's cloud relay when remote access is enabled.
+    // If the domain doesn't resolve or the controller rejects the key, WiFi/
+    // network sync is skipped for that host and the error is logged.
+    // -------------------------------------------------------------------
+
+    public function syncCloud(UnifiCloudClient $client): array {
+        $stats = [
+            'devices_created' => 0, 'devices_updated' => 0, 'devices_matched' => 0, 'devices_skipped' => 0,
+            'wifi_created' => 0, 'wifi_updated' => 0, 'wifi_skipped' => 0,
+            'networks_created' => 0, 'networks_updated' => 0, 'networks_skipped' => 0,
+            'errors' => [],
+        ];
+
+        $sites = $client->getSites();
+        if (empty($sites)) {
+            $stats['errors'][] = 'No UniFi hosts returned from cloud API';
+            return $stats;
+        }
+
+        $canonical_key = getCanonicalVaultKey($this->mysqli);
+        $synced_hosts  = [];
+
+        foreach ($sites as $site) {
+            $site_id      = $site['name'] ?? '';
+            $site_display = $site['desc'] ?? $site_id;
+            $host_id      = $site['hostId'] ?? '';
+            $direct_domain = $site['directDomain'] ?? '';
+            $has_network  = $site['hasNetwork'] ?? false;
+
+            if ($site_id === '' || $host_id === '') continue;
+
+            $this->ensureSiteMapping($site_id, $site_display);
+            $client_id = $this->resolveSiteClientId($site_id, $site_display);
+            if (!$client_id) continue;
+
+            if (isset($synced_hosts[$host_id])) continue;
+            $synced_hosts[$host_id] = true;
+
+            // Devices via cloud API (always)
+            try {
+                $devices = $client->getDevicesByHost($host_id);
+                $this->syncCloudDevices($devices, $client_id, $stats);
+            } catch (\Throwable $e) {
+                $stats['errors'][] = "Site $site_display devices: " . $e->getMessage();
+            }
+
+            // WiFi + networks via local controller proxy (when directDomain is available)
+            if ($direct_domain !== '' && $has_network) {
+                try {
+                    $localSites   = $client->getLocalSites($direct_domain);
+                    $localSiteId  = $localSites[0]['name'] ?? 'default';
+
+                    $wlans = $client->getLocalWlans($direct_domain, $localSiteId);
+                    $this->syncWlans($wlans, $client_id, $site_display, $canonical_key, $stats);
+
+                    $networks = $client->getLocalNetworks($direct_domain, $localSiteId);
+                    $this->syncNetworks($networks, $client_id, $stats);
+                } catch (\Throwable $e) {
+                    // Silently skip — proxy unreachable means controller is at a
+                    // different location or doesn't have remote access enabled.
+                }
+            }
+        }
+
+        return $stats;
+    }
+
+    private function syncCloudDevices(array $devices, int $client_id, array &$stats): void {
+        $m = $this->mysqli;
+
+        $existing_assets = [];
+        $res = mysqli_query($m, "SELECT asset_id, asset_serial, asset_name FROM assets WHERE asset_client_id=$client_id AND asset_archived_at IS NULL");
+        while ($row = mysqli_fetch_assoc($res)) {
+            $existing_assets[] = $row;
+        }
+
+        foreach ($devices as $device) {
+            // v1 API fields: shortname (e.g. UDMPROSE, UAP6PRO), productLine (network/protect/etc.)
+            // Use shortname for type detection, falling back to productLine.
+            $raw_type   = strtoupper((string) ($device['shortname'] ?? $device['productLine'] ?? ''));
+            $asset_type = 'Network Device';
+            foreach (self::TYPE_MAP as $prefix => $label) {
+                if ($raw_type === $prefix || str_starts_with($raw_type, $prefix)) {
+                    $asset_type = $label;
+                    break;
+                }
+            }
+
+            $name       = (string) ($device['name'] ?? $device['mac'] ?? 'Unknown');
+            $model      = (string) ($device['model'] ?? $device['shortname'] ?? '');
+            // MAC comes without colons from v1 API (e.g. "F4E2C6C23F13")
+            $mac_raw    = strtoupper((string) ($device['mac'] ?? ''));
+            $mac_colon  = preg_replace('/([0-9A-F]{2})(?=[0-9A-F])/', '$1:', $mac_raw);
+            $mac_norm   = $mac_raw; // already normalised (no colons, uppercase)
+            $ip         = (string) ($device['ip'] ?? '');
+            $serial     = (string) ($device['serial'] ?? '');
+            $firmware   = (string) ($device['version'] ?? '');
+            $status_raw = (string) ($device['status'] ?? 'unknown');
+            $status     = $status_raw === 'online' ? 'Deployed' : 'Spare';
+
+            $notes = sprintf(
+                "UniFi Cloud | MAC: %s | Model: %s | Firmware: %s | Status: %s | Last synced: %s",
+                $mac_colon, $model, $firmware, $status_raw, date('Y-m-d H:i')
+            );
+
+            $existing = $this->findExistingAsset($existing_assets, $serial, $name, $mac_norm);
+
+            $name_esc   = mysqli_real_escape_string($m, sanitizeInput($name));
+            $type_esc   = mysqli_real_escape_string($m, $asset_type);
+            $model_esc  = mysqli_real_escape_string($m, sanitizeInput($model));
+            $serial_esc = mysqli_real_escape_string($m, sanitizeInput($serial));
+            $notes_esc  = mysqli_real_escape_string($m, $notes);
+            $mac_esc    = mysqli_real_escape_string($m, $mac_colon); // store with colons for readability
+            $ip_esc     = mysqli_real_escape_string($m, $ip);
+
+            if ($existing) {
+                $asset_id = intval($existing['asset_id']);
+                mysqli_query($m,
+                    "UPDATE assets SET
+                     asset_name='$name_esc', asset_type='$type_esc', asset_make='Ubiquiti',
+                     asset_model='$model_esc', asset_serial='$serial_esc',
+                     asset_status='$status', asset_notes='$notes_esc'
+                     WHERE asset_id=$asset_id"
+                );
+                $this->upsertPrimaryInterface($asset_id, $mac_esc, $ip_esc);
+                $stats['devices_updated']++;
+            } else {
+                mysqli_query($m,
+                    "INSERT INTO assets SET
+                     asset_name='$name_esc', asset_type='$type_esc', asset_make='Ubiquiti',
+                     asset_model='$model_esc', asset_serial='$serial_esc',
+                     asset_status='$status', asset_notes='$notes_esc',
+                     asset_client_id=$client_id, asset_created_at=NOW()"
+                );
+                $asset_id = intval(mysqli_insert_id($m));
+                $this->upsertPrimaryInterface($asset_id, $mac_esc, $ip_esc);
+                $existing_assets[] = ['asset_id' => $asset_id, 'asset_serial' => $serial, 'asset_name' => $name];
+                $stats['devices_created']++;
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // Local controller sync
+    // -------------------------------------------------------------------
+
     public function sync(UnifiClient $client): array {
         $stats = [
             'devices_created' => 0, 'devices_updated' => 0, 'devices_matched' => 0, 'devices_skipped' => 0,

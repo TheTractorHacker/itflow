@@ -37,6 +37,31 @@ header("X-Frame-Options: DENY");
     <link rel="stylesheet" href="/plugins/adminlte/css/adminlte.min.css">
     <link rel="stylesheet" href="/css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
 
+    <!-- Content area text color — inline to win over all external stylesheets -->
+    <style>
+    <?php if ($user_config_theme_dark): ?>
+    .content-wrapper { color: #e9ecef !important; }
+    .content-wrapper td,
+    .content-wrapper th { color: #e9ecef !important; }
+    .content-wrapper .card-body,
+    .content-wrapper p { color: #e9ecef !important; }
+    .content-wrapper .text-muted,
+    .content-wrapper small.text-muted { color: #adb5bd !important; }
+    .content-wrapper table a:not(.btn):not(.nav-link):not(.dropdown-item) { color: #e9ecef !important; }
+    .content-wrapper table a:not(.btn):not(.nav-link):not(.dropdown-item):hover { color: #fff !important; text-decoration: underline; }
+    <?php else: ?>
+    .content-wrapper { color: #0F172A !important; }
+    .content-wrapper td,
+    .content-wrapper th { color: #0F172A !important; }
+    .content-wrapper .card-body,
+    .content-wrapper p { color: #0F172A !important; }
+    .content-wrapper .text-muted,
+    .content-wrapper small.text-muted { color: #64748B !important; }
+    .content-wrapper table a:not(.btn):not(.nav-link):not(.dropdown-item) { color: #0F172A !important; }
+    .content-wrapper table a:not(.btn):not(.nav-link):not(.dropdown-item):hover { color: #0F172A !important; text-decoration: underline; }
+    <?php endif; ?>
+    </style>
+
     <!-- Scripts -->
     <script src="/plugins/jquery/jquery.min.js"></script>
     <script src="/plugins/toastr/toastr.min.js"></script>

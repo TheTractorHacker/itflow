@@ -530,3 +530,187 @@ a:hover {
     background: rgba(var(--color-accent-rgb), .05);
 }
 
+/* ===== Base text color ===== */
+body:not(.dark-mode),
+body:not(.dark-mode) .content-wrapper,
+body:not(.dark-mode) .wrapper {
+    color: var(--color-text) !important;
+}
+/* Table cells need explicit override since DataTables resets inheritance */
+body:not(.dark-mode) .table td,
+body:not(.dark-mode) .table th,
+body:not(.dark-mode) table.dataTable td,
+body:not(.dark-mode) table.dataTable th {
+    color: var(--color-text) !important;
+}
+/* Muted text should still be muted */
+body:not(.dark-mode) .text-muted,
+body:not(.dark-mode) small.text-muted {
+    color: var(--color-text-muted) !important;
+}
+
+/* ===== Design-kit token additions ===== */
+:root {
+    --font-mono: 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo,
+                 Consolas, 'Liberation Mono', monospace;
+    --priority-low:    #17A2B8;
+    --priority-medium: #FFC107;
+    --priority-high:   #DC3545;
+    --stat-slate:      #64748B;
+    --stat-amber:      #F59E0B;
+    --stat-blue:       #3B82F6;
+    --stat-orange:     #D97706;
+    --stat-red:        #EF4444;
+    --stat-violet:     #8B5CF6;
+}
+
+/* ===== Sidebar brand icon ===== */
+.brand-link .brand-image {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px;
+    max-height: 30px !important;
+    border-radius: 7px;
+    background: var(--color-accent);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    float: none !important;
+    margin: 0 .5rem 0 0 !important;
+    line-height: 1;
+}
+.brand-link .brand-image::after {
+    content: '\f0e7';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1;
+}
+.brand-link {
+    display: flex !important;
+    align-items: center;
+}
+.brand-link .brand-text {
+    font-size: 1.15rem !important;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* ===== Sidebar nav: rounded active pills ===== */
+.main-sidebar .nav-sidebar .nav-link {
+    border-radius: 6px;
+    margin: 1px 0;
+    transition: background-color .15s ease, color .15s ease;
+}
+.main-sidebar .nav-sidebar .nav-link.active {
+    background-color: var(--color-accent) !important;
+    color: #fff !important;
+    border-radius: 6px;
+}
+.main-sidebar .nav-sidebar .nav-link:not(.active):hover {
+    background-color: rgba(255, 255, 255, .08) !important;
+    color: #fff;
+}
+/* Badge/count pills on sidebar nav items */
+.main-sidebar .nav-sidebar .badge {
+    font-size: .7rem;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 2px 7px;
+    background: rgba(255, 255, 255, .16) !important;
+    color: #fff !important;
+}
+.main-sidebar .nav-sidebar .nav-link.active .badge {
+    background: rgba(255, 255, 255, .25) !important;
+}
+
+/* ===== Global form control border-radius ===== */
+.form-control,
+.custom-select {
+    border-radius: var(--input-radius);
+    border-color: var(--color-border);
+}
+.form-control:focus,
+.custom-select:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 .2rem rgba(var(--color-accent-rgb), .2);
+}
+/* Preserve input-group shape */
+.input-group > .form-control:not(:last-child),
+.input-group > .custom-select:not(:last-child) {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+.input-group > .form-control:not(:first-child),
+.input-group > .custom-select:not(:first-child) {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}
+.input-group-text {
+    border-color: var(--color-border);
+    background-color: var(--color-surface-alt);
+}
+.input-group > .input-group-prepend > .input-group-text {
+    border-radius: var(--input-radius) 0 0 var(--input-radius);
+}
+.input-group > .input-group-append > .input-group-text {
+    border-radius: 0 var(--input-radius) var(--input-radius) 0;
+}
+.input-group > .input-group-prepend > .btn {
+    border-radius: var(--input-radius) 0 0 var(--input-radius) !important;
+}
+.input-group > .input-group-append > .btn {
+    border-radius: 0 var(--input-radius) var(--input-radius) 0 !important;
+}
+
+/* Select2 border-radius */
+.select2-container--bootstrap4 .select2-selection--single,
+.select2-container--bootstrap4 .select2-selection--multiple {
+    border-radius: var(--input-radius) !important;
+    border-color: var(--color-border) !important;
+}
+.select2-container--bootstrap4.select2-container--focus .select2-selection {
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 0 .2rem rgba(var(--color-accent-rgb), .2) !important;
+}
+
+/* ===== Dashboard small-box refinements ===== */
+.small-box {
+    border-radius: var(--input-radius);
+    overflow: hidden;
+}
+.small-box h3 {
+    font-weight: 700;
+    font-size: 2rem;
+}
+.small-box-footer {
+    background: rgba(0, 0, 0, .1) !important;
+    font-size: .8rem;
+    padding: .35rem .75rem;
+}
+.small-box-footer:hover {
+    background: rgba(0, 0, 0, .15) !important;
+}
+
+/* ===== Dropdown / modal border-radius ===== */
+.dropdown-menu {
+    border-radius: var(--input-radius);
+    border-color: var(--color-border);
+    box-shadow: 0 6px 14px -4px rgba(16, 24, 40, .18);
+}
+.modal-content {
+    border-radius: var(--card-radius);
+    border: none;
+    box-shadow: 0 10px 30px -5px rgba(16, 24, 40, .25);
+}
+.modal-header {
+    border-radius: var(--card-radius) var(--card-radius) 0 0;
+}
+
+/* ===== Table row hover accent ===== */
+.table-hover tbody tr:hover {
+    background-color: var(--color-accent-soft);
+}
+

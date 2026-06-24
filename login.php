@@ -94,6 +94,28 @@ $config_login_key_secret   = $row['config_login_key_secret'];
 
 $azure_client_id = $row['config_azure_client_id'] ?? null;
 
+$config_theme = nullable_htmlentities($row['config_theme'] ?? 'teal');
+
+// Map AdminLTE theme name → RGB for the login-page gradient
+$_theme_rgb_map = [
+    'teal'      => '13, 148, 136',
+    'primary'   => '0, 123, 255',
+    'lightblue' => '60, 141, 188',
+    'blue'      => '0, 123, 255',
+    'green'     => '40, 167, 69',
+    'cyan'      => '23, 162, 184',
+    'yellow'    => '255, 193, 7',
+    'red'       => '220, 53, 69',
+    'orange'    => '253, 126, 20',
+    'purple'    => '111, 66, 193',
+    'indigo'    => '102, 16, 242',
+    'pink'      => '232, 62, 140',
+    'black'     => '52, 58, 64',
+    'gray-dark' => '52, 58, 64',
+    'gray'      => '108, 117, 125',
+];
+$_login_accent_rgb = $_theme_rgb_map[$config_theme] ?? '13, 148, 136';
+
 $response         = null;
 $token_field      = null;
 $show_role_choice = false;
@@ -692,16 +714,80 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
     <?php } ?>
 
     <link rel="stylesheet" href="plugins/adminlte/css/adminlte.min.css">
+    <link rel="stylesheet" href="css/itflow_custom.css">
+    <style>
+        body.login-page {
+            background-color: #343A40;
+        }
+        .login-box {
+            width: 400px;
+        }
+        .login-logo {
+            color: #fff;
+            margin-bottom: 1.25rem;
+            text-align: center;
+        }
+        .login-box .card {
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: 0 6px 24px -6px rgba(0,0,0,.45);
+        }
+        .login-box .card .card-body {
+            border-radius: var(--card-radius);
+            padding: 1.75rem;
+        }
+        .login-box-branding {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .5rem;
+        }
+        .login-box-branding .brand-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 13px;
+            background: var(--color-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-box-branding .brand-icon i {
+            font-size: 1.5rem;
+            color: #fff;
+        }
+        .login-box-branding .brand-logo img {
+            max-height: 52px;
+            max-width: 200px;
+            object-fit: contain;
+        }
+        .login-box-branding .brand-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+        }
+        .login-box-branding .brand-sub {
+            font-size: .8rem;
+            color: rgba(255,255,255,.6);
+            margin: 0;
+        }
+    </style>
 </head>
-<body class="hold-transition login-page">
+<body class="hold-transition login-page accent-<?= $config_theme ?>" style="background-color:#343A40;background-image:radial-gradient(circle at 30% 20%,rgba(<?= $_login_accent_rgb ?>,.35),transparent 55%),radial-gradient(circle at 80% 90%,rgba(<?= $_login_accent_rgb ?>,.20),transparent 50%)">
 
 <div class="login-box">
     <div class="login-logo">
-        <?php if (!empty($company_logo)) { ?>
-            <img alt="<?=nullable_htmlentities($company_name)?> logo" height="110" width="380" class="img-fluid" src="<?php echo "uploads/settings/$company_logo"; ?>">
-        <?php } else { ?>
-            <span class="text-primary text-bold"><i class="fas fa-paper-plane mr-2"></i>IT</span>Flow
-        <?php } ?>
+        <div class="login-box-branding">
+            <?php if (!empty($company_logo)) { ?>
+                <div class="brand-logo">
+                    <img alt="<?= nullable_htmlentities($company_name) ?> logo" src="uploads/settings/<?= nullable_htmlentities($company_logo) ?>" height="52" style="max-height:52px;max-width:200px;width:auto;object-fit:contain;">
+                </div>
+            <?php } else { ?>
+                <div class="brand-icon"><i class="fas fa-bolt"></i></div>
+            <?php } ?>
+            <div class="brand-name"><?= nullable_htmlentities($company_name) ?></div>
+            <div class="brand-sub">ITFlow · MSP Edition</div>
+        </div>
     </div>
 
     <div class="card">
