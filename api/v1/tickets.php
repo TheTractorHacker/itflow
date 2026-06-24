@@ -203,7 +203,7 @@ if ($method === 'GET' && $id !== null && $sub === null) {
 // ADD REPLY
 if ($method === 'POST' && $id !== null && $sub === 'reply') {
     $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
-    if (stripos($content_type, 'multipart/form-data') === 0) {
+    if (stripos($content_type, 'multipart/form-data') === 0 || stripos($content_type, 'application/x-www-form-urlencoded') === 0) {
         $body = $_POST;
     } else {
         $body = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -419,7 +419,7 @@ if ($method === 'POST' && $id !== null && $sub === 'chat') {
 // CREATE TICKET
 if ($method === 'POST' && $id === null) {
     $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
-    if (stripos($content_type, 'multipart/form-data') === 0) {
+    if (stripos($content_type, 'multipart/form-data') === 0 || stripos($content_type, 'application/x-www-form-urlencoded') === 0) {
         $body = $_POST;
     } else {
         $body = json_decode(file_get_contents('php://input'), true) ?? [];
