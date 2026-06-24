@@ -463,10 +463,11 @@ if ($method === 'POST' && $id === null) {
     }
     $status = intval($status_row['ticket_status_id']);
 
+    $prefix_esc = mysqli_real_escape_string($mysqli, $config_ticket_prefix ?? '');
     mysqli_query($mysqli,
-        "INSERT INTO tickets (ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
+        "INSERT INTO tickets (ticket_prefix, ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
          ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_created_at, ticket_updated_at)
-         VALUES ('$subject', '$details', $client, $contact, '$priority', $status, $assigned, $uid, 'API', $next_num, $category, $asset_id, NOW(), NOW())"
+         VALUES ('$prefix_esc', '$subject', '$details', $client, $contact, '$priority', $status, $assigned, $uid, 'API', $next_num, $category, $asset_id, NOW(), NOW())"
     );
     $new_id = mysqli_insert_id($mysqli);
 
