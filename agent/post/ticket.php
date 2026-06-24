@@ -417,8 +417,10 @@ if (isset($_POST['edit_ticket_status'])) {
     $new_status_color = sanitizeInput($new_status_row['ticket_status_color']);
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $ticket_id");
+    if ($new_status_id == 5) {
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id AND ticket_resolved_at IS NULL");
+    }
     if ($is_resolving) {
-        mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id");
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket closed.', ticket_reply_type = 'System', ticket_reply_time_worked = '00:01:00', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
         logAction("Ticket", "Closed", "$session_name closed ticket $ticket_prefix$ticket_number via Resolve", $client_id, $ticket_id);
         customAction('ticket_close', $ticket_id);
