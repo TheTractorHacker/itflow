@@ -5039,3 +5039,24 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.13'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.13') {
+
+        // Add type column to unifi_integrations so a single table can hold
+        // both self-hosted local controllers and UniFi Site Manager (api.ui.com)
+        // cloud connections. Existing rows default to 'local'.
+        mysqli_query($mysqli, "ALTER TABLE `unifi_integrations`
+            ADD COLUMN `type` VARCHAR(20) NOT NULL DEFAULT 'local' AFTER `name`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.14'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.14') {
+
+        // Track which ticket a merged ticket was merged into, so they can be
+        // displayed with a "Merged → TCK-X" badge in the ticket list.
+        mysqli_query($mysqli, "ALTER TABLE `tickets`
+            ADD COLUMN `ticket_merged_into_id` INT DEFAULT NULL AFTER `ticket_closed_by`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.15'");
+    }

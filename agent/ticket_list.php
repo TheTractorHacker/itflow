@@ -292,6 +292,9 @@ foreach ($_cat_subs as $_pid => $_subs) {
                                 <!-- Ticket Subject -->
                                 <td>
                                     <a href="ticket.php?ticket_id=<?= "$ticket_id$has_client" ?>"><?= $ticket_subject ?></a>
+                                    <?php if (!empty($row['ticket_merged_into_id'])) { ?>
+                                    <small class="text-muted ml-1"><i class="fas fa-code-branch fa-sm"></i> Merged</small>
+                                    <?php } ?>
 
                                     <?php if($task_count && $completed_task_count > 0) { ?>
                                     <div class="progress mt-1" style="height: 15px; font-size: 10px;">

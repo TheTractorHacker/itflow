@@ -1474,7 +1474,7 @@ if (isset($_POST['bulk_merge_tickets'])) {
                     mysqli_query($mysqli, "UPDATE tickets SET ticket_first_response_at = NOW() WHERE ticket_id = $ticket_id");
                 }
                 mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket $ticket_prefix$ticket_number bulk merged into <a href=\"ticket.php?ticket_id=$merge_into_ticket_id\">$ticket_prefix$merge_into_ticket_number</a>. Comment: $merge_comment', ticket_reply_time_worked = '00:01:00', ticket_reply_type = '$ticket_reply_type', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
-                mysqli_query($mysqli, "UPDATE tickets SET ticket_status = '5', ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id") or die(mysqli_error($mysqli));
+                mysqli_query($mysqli, "UPDATE tickets SET ticket_status = '5', ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id, ticket_merged_into_id = $merge_into_ticket_id WHERE ticket_id = $ticket_id") or die(mysqli_error($mysqli));
 
                 // Update new parent ticket
                 mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket $ticket_prefix$ticket_number was bulk merged into this ticket with comment: $merge_comment.<br><br><b>$ticket_subject</b><br>$ticket_details', ticket_reply_time_worked = '00:01:00', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $merge_into_ticket_id");
@@ -2388,7 +2388,7 @@ if (isset($_POST['merge_ticket'])) {
 
     mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket $ticket_prefix$ticket_number merged into <a href=\"ticket.php?ticket_id=$merge_into_ticket_id\">$ticket_prefix$merge_into_ticket_number</a>. Comment: $merge_comment', ticket_reply_time_worked = '00:01:00', ticket_reply_type = '$ticket_reply_type', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
 
-    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = '5', ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id") or die(mysqli_error($mysqli));
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = '5', ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id, ticket_merged_into_id = $merge_into_ticket_id WHERE ticket_id = $ticket_id") or die(mysqli_error($mysqli));
 
     //Update new parent ticket
     mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket $ticket_prefix$ticket_number was merged into this ticket with comment: $merge_comment.<br><br><b>$ticket_subject</b><br>$ticket_details', ticket_reply_time_worked = '00:01:00', ticket_reply_type = '$ticket_reply_type', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $merge_into_ticket_id");
@@ -3511,4 +3511,127 @@ if (isset($_GET['delete_ticket_attachment'])) {
     }
 
     redirect();
+}
+
+// ── Multiple Schedule Entries ────────────────────────────────────────────────
+
+if (isset($_POST['add_ticket_schedule'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id    = intval($_POST['ticket_id']);
+    $onsite       = intval($_POST['schedule_onsite']);
+    $start        = sanitizeInput($_POST['schedule_start']);
+    $end_raw      = sanitizeInput($_POST['schedule_end'] ?? '');
+    $end_sql      = $end_raw ? "'$end_raw'" : 'NULL';
+    $notes        = sanitizeInput($_POST['schedule_notes'] ?? '');
+
+    // Multi-tech: collect selected tech IDs; fall back to unassigned (0) if none checked
+    $raw_tech_ids = isset($_POST['schedule_tech_ids']) ? array_map('intval', (array)$_POST['schedule_tech_ids']) : [];
+    if (empty($raw_tech_ids)) $raw_tech_ids = [0];
+
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    if ($client_id) enforceClientAccess();
+
+    foreach ($raw_tech_ids as $tech_id) {
+        mysqli_query($mysqli, "INSERT INTO ticket_schedules
+            (schedule_ticket_id, schedule_start, schedule_end, schedule_onsite, schedule_tech_id, schedule_notes, schedule_created_by)
+            VALUES ($ticket_id, '$start', $end_sql, $onsite, $tech_id, '$notes', $session_user_id)");
+    }
+
+    $tech_count = count($raw_tech_ids);
+    logAction("Ticket", "Edit", "Added schedule entry ($tech_count tech(s)) to ticket #$ticket_id", $client_id, $ticket_id);
+    flash_alert("Schedule entry added", 'success');
+    redirect("ticket.php?ticket_id=$ticket_id");
+}
+
+if (isset($_POST['edit_ticket_schedule_entry'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $schedule_id  = intval($_POST['schedule_id']);
+    $ticket_id    = intval($_POST['ticket_id']);
+    $onsite       = intval($_POST['schedule_onsite']);
+    $tech_id      = intval($_POST['schedule_tech_id'] ?? 0);
+    $start        = sanitizeInput($_POST['schedule_start']);
+    $end_raw      = sanitizeInput($_POST['schedule_end'] ?? '');
+    $end_sql      = $end_raw ? "'$end_raw'" : 'NULL';
+    $notes        = sanitizeInput($_POST['schedule_notes'] ?? '');
+
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    if ($client_id) enforceClientAccess();
+
+    mysqli_query($mysqli, "UPDATE ticket_schedules SET
+        schedule_start   = '$start',
+        schedule_end     = $end_sql,
+        schedule_onsite  = $onsite,
+        schedule_tech_id = $tech_id,
+        schedule_notes   = '$notes'
+        WHERE schedule_id = $schedule_id");
+
+    logAction("Ticket", "Edit", "Updated schedule entry #$schedule_id on ticket #$ticket_id", $client_id, $ticket_id);
+    flash_alert("Schedule entry updated", 'success');
+    redirect("ticket.php?ticket_id=$ticket_id");
+}
+
+if (isset($_GET['delete_ticket_schedule'])) {
+
+    validateCSRFToken($_GET['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $schedule_id = intval($_GET['delete_ticket_schedule']);
+    $ticket_id   = intval($_GET['ticket_id']);
+
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    if ($client_id) enforceClientAccess();
+
+    mysqli_query($mysqli, "UPDATE ticket_schedules SET schedule_archived_at = NOW() WHERE schedule_id = $schedule_id");
+
+    logAction("Ticket", "Edit", "Removed schedule entry #$schedule_id from ticket #$ticket_id", $client_id, $ticket_id);
+    flash_alert("Schedule entry removed", 'error');
+    redirect("ticket.php?ticket_id=$ticket_id");
+}
+
+// ── Multiple Technicians ─────────────────────────────────────────────────────
+
+if (isset($_POST['add_ticket_tech'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id = intval($_POST['ticket_id']);
+    $user_id   = intval($_POST['tech_user_id']);
+
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    if ($client_id) enforceClientAccess();
+
+    if ($user_id > 0) {
+        mysqli_query($mysqli, "INSERT IGNORE INTO ticket_techs
+            (tech_ticket_id, tech_user_id, tech_created_by)
+            VALUES ($ticket_id, $user_id, $session_user_id)");
+        logAction("Ticket", "Edit", "Added technician to ticket #$ticket_id", $client_id, $ticket_id);
+        flash_alert("Technician added", 'success');
+    }
+
+    redirect("ticket.php?ticket_id=$ticket_id");
+}
+
+if (isset($_GET['delete_ticket_tech'])) {
+
+    validateCSRFToken($_GET['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $tech_id   = intval($_GET['delete_ticket_tech']);
+    $ticket_id = intval($_GET['ticket_id']);
+
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    if ($client_id) enforceClientAccess();
+
+    mysqli_query($mysqli, "DELETE FROM ticket_techs WHERE tech_id = $tech_id AND tech_ticket_id = $ticket_id");
+
+    logAction("Ticket", "Edit", "Removed technician from ticket #$ticket_id", $client_id, $ticket_id);
+    flash_alert("Technician removed", 'error');
+    redirect("ticket.php?ticket_id=$ticket_id");
 }

@@ -382,6 +382,34 @@ while ($row = mysqli_fetch_assoc($sql)) {
                 echo "{ id: $event_id, title: $event_title, start: $event_start, end: $event_end, color: '$event_color', url: 'ticket.php?ticket_id=$event_id$client_url' },";
             }
 
+            // ticket_schedules table entries (new-style multi-schedule per ticket)
+            $sql_ts = mysqli_query($mysqli, "SELECT ts.schedule_id, ts.schedule_start, ts.schedule_end,
+                t.ticket_id, t.ticket_prefix, t.ticket_number, t.ticket_subject,
+                st.ticket_status_name, u.user_name, u.user_color
+            FROM clients c
+            LEFT JOIN tickets t ON t.ticket_client_id = c.client_id
+            LEFT JOIN ticket_schedules ts ON ts.schedule_ticket_id = t.ticket_id
+            LEFT JOIN ticket_statuses st ON t.ticket_status = st.ticket_status_id
+            LEFT JOIN users u ON u.user_id = ts.schedule_tech_id
+            $client_query $access_permission_query AND ts.schedule_archived_at IS NULL");
+            while ($row = mysqli_fetch_assoc($sql_ts)) {
+                $event_id  = intval($row['ticket_id']) * 100000 + intval($row['schedule_id']);
+                $tech_name = $row['user_name'] ? substr($row['user_name'], 0, 9) . '...' : '';
+                if (!empty($row['user_color'])) {
+                    $event_color = nullable_htmlentities($row['user_color']);
+                } elseif (strtotime($row['schedule_start']) < time()) {
+                    $event_color = 'red';
+                } else {
+                    $event_color = 'grey';
+                }
+                $tkt_status  = strval($row['ticket_status_name']);
+                $event_title = json_encode($row['ticket_prefix'] . $row['ticket_number'] . ' scheduled - ' . $row['ticket_subject'] . ($tech_name ? ' [' . $tech_name . ']' : '') . '{' . $tkt_status . '}');
+                $event_start = json_encode($row['schedule_start']);
+                $event_end   = $row['schedule_end'] ? json_encode($row['schedule_end']) : 'null';
+                $ticket_id_link = intval($row['ticket_id']);
+                echo "{ id: $event_id, title: $event_title, start: $event_start, end: $event_end, color: '$event_color', url: 'ticket.php?ticket_id=$ticket_id_link$client_url' },";
+            }
+
             // Vendors Added Created
             $sql = mysqli_query($mysqli, "SELECT * FROM clients LEFT JOIN vendors ON client_id = vendor_client_id $client_query $access_permission_query");
             while ($row = mysqli_fetch_assoc($sql)) {

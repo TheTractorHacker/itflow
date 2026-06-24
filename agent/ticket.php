@@ -248,6 +248,22 @@ if (isset($_GET['ticket_id'])) {
         $row = mysqli_fetch_assoc($ticket_total_reply_time);
         $ticket_total_reply_time = nullable_htmlentities($row['ticket_total_reply_time']);
 
+        // Get multiple schedule entries
+        $sql_schedules = mysqli_query($mysqli, "SELECT ts.*, u.user_name AS tech_name
+            FROM ticket_schedules ts
+            LEFT JOIN users u ON u.user_id = ts.schedule_tech_id
+            WHERE ts.schedule_ticket_id = $ticket_id AND ts.schedule_archived_at IS NULL
+            ORDER BY ts.schedule_start ASC");
+
+        // Get additional technicians
+        $sql_techs = mysqli_query($mysqli, "SELECT tt.tech_id, tt.tech_user_id, u.user_name
+            FROM ticket_techs tt
+            LEFT JOIN users u ON u.user_id = tt.tech_user_id
+            WHERE tt.tech_ticket_id = $ticket_id
+            ORDER BY tt.tech_created_at ASC");
+        $ticket_techs_rows = [];
+        while ($tt = mysqli_fetch_assoc($sql_techs)) $ticket_techs_rows[] = $tt;
+
         // Get individual time entries for the Time Entry Log card
         $sql_time_entries = mysqli_query($mysqli, "SELECT ticket_reply_id, ticket_reply_time_worked, ticket_reply_created_at, ticket_reply_by,
             COALESCE(users.user_name, contacts.contact_name) AS time_entry_user_name
@@ -885,29 +901,36 @@ if (isset($_GET['ticket_id'])) {
                                 </div>
                                 <?php } ?>
 
-                                <!-- Status -->
-                                <div class="col-auto flex-grow-1">
+                                <!-- Submit with status split-button (Syncro-style) -->
+                                <div class="col-auto ml-auto">
                                     <div class="form-group mb-2">
-                                        <select class="form-control select2" name="status" required>
-                                            <?php
-                                            $status_snippet = '';
-                                            if ($task_count !== $completed_task_count) {
-                                                $status_snippet = "AND ticket_status_id != 4";
-                                            }
-                                            $sql_ticket_status = mysqli_query($mysqli, "SELECT * FROM ticket_statuses WHERE ticket_status_id != 1 AND ticket_status_id != 5 AND ticket_status_active = 1 $status_snippet ORDER BY ticket_status_order");
-                                            while ($row = mysqli_fetch_assoc($sql_ticket_status)) {
-                                                $ticket_status_id_select = intval($row['ticket_status_id']);
-                                                $ticket_status_name_select = nullable_htmlentities($row['ticket_status_name']); ?>
-                                                <option value="<?= $ticket_status_id_select ?>" <?php if ($ticket_status == $ticket_status_id_select) echo 'selected'; ?>><?= $ticket_status_name_select ?></option>
-                                            <?php } ?>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- Submit -->
-                                <div class="col-auto">
-                                    <div class="form-group mb-2">
-                                        <button type="submit" id="ticket_add_reply" name="add_ticket_reply" class="btn btn-success"><i class="fas fa-check mr-2"></i>Submit</button>
+                                        <input type="hidden" name="status" id="reply_status_val" value="<?= $ticket_status ?>">
+                                        <div class="btn-group">
+                                            <button type="submit" id="ticket_add_reply" name="add_ticket_reply" class="btn btn-success">
+                                                <i class="fas fa-check mr-1"></i><span id="reply_submit_label">Submit</span>
+                                            </button>
+                                            <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                <span class="sr-only">Set status &amp; submit</span>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right">
+                                                <h6 class="dropdown-header">Submit &amp; set status to…</h6>
+                                                <?php
+                                                $status_snippet_reply = '';
+                                                if ($task_count !== $completed_task_count) {
+                                                    $status_snippet_reply = "AND ticket_status_id != 4";
+                                                }
+                                                $sql_ticket_status_reply = mysqli_query($mysqli, "SELECT ticket_status_id, ticket_status_name, ticket_status_color FROM ticket_statuses WHERE ticket_status_id != 1 AND ticket_status_id != 5 AND ticket_status_active = 1 $status_snippet_reply ORDER BY ticket_status_order");
+                                                while ($row_ts = mysqli_fetch_assoc($sql_ticket_status_reply)) {
+                                                    $sid   = intval($row_ts['ticket_status_id']);
+                                                    $sname = nullable_htmlentities($row_ts['ticket_status_name']);
+                                                    $scol  = nullable_htmlentities($row_ts['ticket_status_color']);
+                                                    $active = ($ticket_status == $sid) ? ' active' : '';
+                                                    echo "<a class=\"dropdown-item reply-status-submit$active\" href=\"#\" data-status-id=\"$sid\" data-status-name=\"$sname\">"
+                                                       . "<span class=\"d-inline-block rounded-circle mr-2\" style=\"width:10px;height:10px;background:$scol;vertical-align:middle;\"></span>$sname</a>";
+                                                }
+                                                ?>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1136,6 +1159,143 @@ if (isset($_GET['ticket_id'])) {
                     <?php } ?>
                 </div>
                 <?php } ?>
+
+                <!-- ── Schedules card ──────────────────────────────────── -->
+                <div class="card">
+                    <div class="card-header px-3 py-2">
+                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-calendar-alt mr-2"></i>Schedules</h5>
+                        <div class="card-tools">
+                            <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
+                            <a href="#" class="btn btn-tool ajax-modal"
+                               data-modal-url="modals/ticket/ticket_schedule_add.php?ticket_id=<?= $ticket_id ?>"
+                               title="Add Schedule"><i class="fas fa-plus"></i></a>
+                            <?php } ?>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-chevron-down"></i></button>
+                        </div>
+                    </div>
+                    <?php if (mysqli_num_rows($sql_schedules) > 0) { ?>
+                    <div class="card-body p-0">
+                        <?php $sched_idx = 0; while ($se = mysqli_fetch_assoc($sql_schedules)) {
+                            $sched_idx++;
+                            $se_start   = date('M j, Y · g:i A', strtotime($se['schedule_start']));
+                            $se_end_str = '';
+                            if ($se['schedule_end']) {
+                                $se_end_str = ' – ' . date('g:i A', strtotime($se['schedule_end']));
+                                $dur_mins = round((strtotime($se['schedule_end']) - strtotime($se['schedule_start'])) / 60);
+                                if ($dur_mins >= 60) {
+                                    $h = $dur_mins / 60;
+                                    $se_end_str .= ' (' . (($h == floor($h)) ? intval($h) : number_format($h, 1)) . 'hr)';
+                                } else {
+                                    $se_end_str .= " ({$dur_mins}m)";
+                                }
+                            }
+                            $se_onsite  = intval($se['schedule_onsite']);
+                            $se_tech    = nullable_htmlentities($se['tech_name'] ?? '');
+                            $se_notes   = nullable_htmlentities($se['schedule_notes'] ?? '');
+                        ?>
+                        <div class="px-3 py-2 small <?= $sched_idx > 1 ? 'border-top' : '' ?>">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="font-weight-bold"><?= $se_start . $se_end_str ?></div>
+                                    <div class="text-muted">
+                                        <?php if ($se_tech) { ?><i class="fas fa-user-cog fa-fw mr-1"></i><?= $se_tech ?> &nbsp;<?php } ?>
+                                        <span class="badge badge-<?= $se_onsite ? 'warning' : 'secondary' ?>"><?= $se_onsite ? 'Onsite' : 'Remote' ?></span>
+                                        <?php if ($se_notes) { ?><br><span class="text-muted"><?= $se_notes ?></span><?php } ?>
+                                    </div>
+                                </div>
+                                <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
+                                <a href="#" class="btn btn-sm btn-tool ajax-modal ml-2"
+                                   data-modal-url="modals/ticket/ticket_schedule_edit.php?schedule_id=<?= intval($se['schedule_id']) ?>"
+                                   title="Edit"><i class="fas fa-pencil-alt text-muted"></i></a>
+                                <?php } ?>
+                            </div>
+                        </div>
+                        <?php } ?>
+                    </div>
+                    <?php } else { ?>
+                    <div class="card-body p-3">
+                        <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
+                        <a href="#" class="ajax-modal text-muted small"
+                           data-modal-url="modals/ticket/ticket_schedule_add.php?ticket_id=<?= $ticket_id ?>">
+                            <i class="fa fa-plus mr-1"></i>Add schedule
+                        </a>
+                        <?php } else { ?>
+                        <span class="text-muted small">No schedules</span>
+                        <?php } ?>
+                    </div>
+                    <?php } ?>
+                </div>
+                <!-- ── End Schedules card ──────────────────────────────── -->
+
+                <!-- ── Additional Technicians card ────────────────────── -->
+                <div class="card">
+                    <div class="card-header px-3 py-2">
+                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-user-cog mr-2"></i>Technicians</h5>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-chevron-down"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+
+                        <!-- Primary assigned tech (read-only display) -->
+                        <?php if ($ticket_assigned_to) { ?>
+                        <div class="d-flex align-items-center justify-content-between mb-2 small">
+                            <div>
+                                <span class="avatar-badge mr-2" style="width:24px;height:24px;font-size:.65rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--color-accent);color:#fff;"><?= initials($ticket_assigned_user_name) ?></span>
+                                <?= htmlspecialchars($ticket_assigned_user_name) ?>
+                            </div>
+                            <span class="badge badge-light border">Primary</span>
+                        </div>
+                        <?php } ?>
+
+                        <!-- Additional techs -->
+                        <?php foreach ($ticket_techs_rows as $tt) {
+                            $tt_name = nullable_htmlentities($tt['user_name']);
+                        ?>
+                        <div class="d-flex align-items-center justify-content-between mb-2 small">
+                            <div>
+                                <span class="avatar-badge mr-2" style="width:24px;height:24px;font-size:.65rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#6c757d;color:#fff;"><?= initials($tt_name) ?></span>
+                                <?= $tt_name ?>
+                            </div>
+                            <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
+                            <a href="post.php?delete_ticket_tech=<?= intval($tt['tech_id']) ?>&ticket_id=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                               class="confirm-link text-danger ml-2" title="Remove tech" style="font-size:.75rem;">
+                                <i class="fas fa-times"></i>
+                            </a>
+                            <?php } ?>
+                        </div>
+                        <?php } ?>
+
+                        <!-- Add tech form -->
+                        <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
+                        <form action="post.php" method="post" class="mt-2">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <input type="hidden" name="ticket_id" value="<?= $ticket_id ?>">
+                            <div class="input-group input-group-sm">
+                                <select name="tech_user_id" class="form-control" required>
+                                    <option value="">+ Add technician</option>
+                                    <?php
+                                    $existing_ids = array_column($ticket_techs_rows, 'tech_user_id');
+                                    $existing_ids[] = $ticket_assigned_to;
+                                    mysqli_data_seek($sql_assign_to_select, 0);
+                                    while ($u = mysqli_fetch_assoc($sql_assign_to_select)) {
+                                        $uid   = intval($u['user_id']);
+                                        $uname = nullable_htmlentities($u['user_name']);
+                                        if (in_array($uid, $existing_ids)) continue;
+                                        echo "<option value=\"$uid\">$uname</option>";
+                                    }
+                                    ?>
+                                </select>
+                                <div class="input-group-append">
+                                    <button type="submit" name="add_ticket_tech" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+                        </form>
+                        <?php } ?>
+
+                    </div>
+                </div>
+                <!-- ── End Additional Technicians card ────────────────── -->
 
                 <?php if ($config_module_enable_live_chat) {
                     $ticket_chat_history = [];
@@ -2077,6 +2237,22 @@ require_once "../includes/footer.php";
     <!-- Ticket Time Tracking JS -->
     <script src="js/ticket_time_tracking.js"></script>
 
+    <script>
+    // Warn when "Charge now" is checked + time logged but no labor type selected
+    $('#ticketReplyForm').on('submit', function (e) {
+        var chargeNow  = $('#reply_charge_now').is(':checked');
+        var hasTime    = (parseInt($('#hours').val()) || 0) > 0
+                      || (parseInt($('#minutes').val()) || 0) > 0
+                      || (parseInt($('#seconds').val()) || 0) > 0;
+        var laborType  = parseInt($('#reply_labor_type_id').val()) || 0;
+        if (chargeNow && hasTime && laborType === 0) {
+            if (!confirm('No labor type selected — time will be logged but no charge will be created.\n\nContinue anyway?')) {
+                e.preventDefault();
+            }
+        }
+    });
+    </script>
+
     <!-- Ticket collision detect JS (jQuery is called in footer, so collision detection script MUST be below it) -->
     <script src="js/ticket_collision_detection.js"></script>
 <?php } ?>
@@ -2183,6 +2359,16 @@ $(document).on('click', '.insert-canned-response', function(e) {
     if (!ed) return;
     var message = JSON.parse($(this).attr('data-message'));
     ed.execCommand('mceInsertContent', false, message);
+});
+
+// Reply status split-button: pick a status and auto-submit the reply form
+$(document).on('click', '.reply-status-submit', function(e) {
+    e.preventDefault();
+    var sid   = $(this).data('status-id');
+    var sname = $(this).data('status-name');
+    $('#reply_status_val').val(sid);
+    $('#reply_submit_label').text('Submit & ' + sname);
+    $('#ticketReplyForm').find('[name="add_ticket_reply"]').click();
 });
 
 // Inline quick-status on ticket detail
