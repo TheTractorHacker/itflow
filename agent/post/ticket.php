@@ -3540,11 +3540,12 @@ if (isset($_POST['add_ticket_schedule'])) {
         mysqli_query($mysqli, "INSERT INTO ticket_schedules
             (schedule_ticket_id, schedule_start, schedule_end, schedule_onsite, schedule_tech_id, schedule_notes, schedule_created_by)
             VALUES ($ticket_id, '$start', $end_sql, $onsite, $tech_id, '$notes', $session_user_id)");
+        syncScheduleEntryToOutlook(mysqli_insert_id($mysqli));
     }
 
     $tech_count = count($raw_tech_ids);
-    logAction("Ticket", "Edit", "Added schedule entry ($tech_count tech(s)) to ticket #$ticket_id", $client_id, $ticket_id);
-    flash_alert("Schedule entry added", 'success');
+    logAction("Ticket", "Edit", "Added appointment ($tech_count tech(s)) to ticket #$ticket_id", $client_id, $ticket_id);
+    flash_alert("Appointment added", 'success');
     redirect("ticket.php?ticket_id=$ticket_id");
 }
 
@@ -3573,8 +3574,10 @@ if (isset($_POST['edit_ticket_schedule_entry'])) {
         schedule_notes   = '$notes'
         WHERE schedule_id = $schedule_id");
 
-    logAction("Ticket", "Edit", "Updated schedule entry #$schedule_id on ticket #$ticket_id", $client_id, $ticket_id);
-    flash_alert("Schedule entry updated", 'success');
+    syncScheduleEntryToOutlook($schedule_id);
+
+    logAction("Ticket", "Edit", "Updated appointment #$schedule_id on ticket #$ticket_id", $client_id, $ticket_id);
+    flash_alert("Appointment updated", 'success');
     redirect("ticket.php?ticket_id=$ticket_id");
 }
 

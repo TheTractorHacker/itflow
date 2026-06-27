@@ -5060,3 +5060,13 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.15'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.15') {
+
+        // Store the Outlook calendar event ID per ticket_schedules row so that
+        // editing an appointment updates the existing event rather than duplicating it.
+        mysqli_query($mysqli, "ALTER TABLE `ticket_schedules`
+            ADD COLUMN `schedule_outlook_event_id` VARCHAR(500) DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.16'");
+    }

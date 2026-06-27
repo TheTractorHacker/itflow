@@ -1436,6 +1436,75 @@ function syncTicketToOutlook($ticket_id) {
     }
 }
 
+function syncScheduleEntryToOutlook($schedule_id) {
+    global $mysqli;
+
+    $schedule_id = intval($schedule_id);
+    $sql = mysqli_query($mysqli,
+        "SELECT ts.*, t.ticket_number, t.ticket_subject, t.ticket_details, t.ticket_onsite,
+                c.client_name, l.location_address
+         FROM ticket_schedules ts
+         LEFT JOIN tickets t ON t.ticket_id = ts.schedule_ticket_id
+         LEFT JOIN clients c ON t.ticket_client_id = c.client_id
+         LEFT JOIN contacts ct ON t.ticket_contact_id = ct.contact_id
+         LEFT JOIN locations l ON ct.contact_location_id = l.location_id
+         WHERE ts.schedule_id = $schedule_id LIMIT 1");
+    $s = mysqli_fetch_assoc($sql);
+
+    if (!$s || !$s['schedule_start'] || !$s['schedule_tech_id']) return;
+
+    $access_token = getOutlookAccessToken($s['schedule_tech_id']);
+    if (!$access_token) return;
+
+    $tz_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_timezone FROM settings WHERE company_id = 1 LIMIT 1"));
+    $tz = ($tz_row && $tz_row['config_timezone']) ? $tz_row['config_timezone'] : 'America/Chicago';
+
+    $subject   = ($s['ticket_number'] ? '#' . $s['ticket_number'] . ': ' : '') . ($s['client_name'] ?? '') . ' — ' . $s['ticket_subject'];
+    $start_dt  = date('Y-m-d\TH:i:s', strtotime($s['schedule_start']));
+    $end_dt    = $s['schedule_end']
+        ? date('Y-m-d\TH:i:s', strtotime($s['schedule_end']))
+        : date('Y-m-d\TH:i:s', strtotime($s['schedule_start']) + 3600);
+    $location  = $s['schedule_onsite'] ? 'Onsite' : 'Remote';
+    if (!empty($s['location_address'])) $location .= ' — ' . $s['location_address'];
+    $body_text = strip_tags($s['ticket_details'] ?? '');
+    if ($s['schedule_notes']) $body_text .= "\n\nAppointment Notes: " . $s['schedule_notes'];
+
+    $payload = json_encode([
+        'subject'  => $subject,
+        'body'     => ['contentType' => 'text', 'content' => $body_text],
+        'start'    => ['dateTime' => $start_dt, 'timeZone' => $tz],
+        'end'      => ['dateTime' => $end_dt,   'timeZone' => $tz],
+        'location' => ['displayName' => $location],
+    ]);
+
+    $existing_event_id = $s['schedule_outlook_event_id'] ?? null;
+    if ($existing_event_id) {
+        $url    = "https://graph.microsoft.com/v1.0/me/events/" . rawurlencode($existing_event_id);
+        $method = 'PATCH';
+    } else {
+        $url    = "https://graph.microsoft.com/v1.0/me/events";
+        $method = 'POST';
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST  => $method,
+        CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_HTTPHEADER     => [
+            "Authorization: Bearer $access_token",
+            "Content-Type: application/json",
+        ],
+    ]);
+    $response = json_decode(curl_exec($ch), true);
+    curl_close($ch);
+
+    if ($method === 'POST' && !empty($response['id'])) {
+        $event_id = mysqli_real_escape_string($mysqli, $response['id']);
+        mysqli_query($mysqli, "UPDATE ticket_schedules SET schedule_outlook_event_id = '$event_id' WHERE schedule_id = $schedule_id");
+    }
+}
+
 function deleteOutlookCalendarEvent($ticket_id) {
     global $mysqli;
 

@@ -636,19 +636,6 @@ if (isset($_GET['ticket_id'])) {
                         <i class="fas fa-fw fa-folder mr-1"></i><?= $ticket_category_display ?: "No category" ?>
                     </div>
 
-                    <!-- Schedule -->
-                    <?php if (empty($ticket_closed_at)) { ?>
-                    <div>
-                        <i class="fa fa-fw fa-calendar-check text-secondary mr-1"></i>
-                        <?php if ($ticket_scheduled_for) { ?>
-                            <a class="ajax-modal font-weight-bold" href="#" data-modal-url="modals/ticket/ticket_edit_schedule.php?ticket_id=<?= $ticket_id ?>"><?= $ticket_scheduled_wording ?></a>
-                            <?php if ($ticket_onsite) { ?><span class="badge badge-warning ml-1">Onsite</span><?php } else { ?><span class="badge badge-secondary ml-1">Remote</span><?php } ?>
-                            <?php if ($ticket_appt_notes) { ?><br><small class="text-muted ml-4"><?= $ticket_appt_notes ?></small><?php } ?>
-                        <?php } else { ?>
-                            <a class="ajax-modal text-muted" href="#" data-modal-url="modals/ticket/ticket_edit_schedule.php?ticket_id=<?= $ticket_id ?>"><i class="fa fa-plus mr-1"></i>Schedule</a>
-                        <?php } ?>
-                    </div>
-                    <?php } ?>
 
                 </div>
                 <!-- End Assigned To / Priority / Board / Category / Schedule -->
@@ -1167,15 +1154,15 @@ if (isset($_GET['ticket_id'])) {
                 </div>
                 <?php } ?>
 
-                <!-- ── Schedules card ──────────────────────────────────── -->
+                <!-- ── Appointments card ──────────────────────────────── -->
                 <div class="card">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-calendar-alt mr-2"></i>Schedules</h5>
+                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-calendar-alt mr-2"></i>Appointments</h5>
                         <div class="card-tools">
                             <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <a href="#" class="btn btn-tool ajax-modal"
                                data-modal-url="modals/ticket/ticket_schedule_add.php?ticket_id=<?= $ticket_id ?>"
-                               title="Add Schedule"><i class="fas fa-plus"></i></a>
+                               title="Add Appointment"><i class="fas fa-plus"></i></a>
                             <?php } ?>
                             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-chevron-down"></i></button>
                         </div>
@@ -1224,15 +1211,15 @@ if (isset($_GET['ticket_id'])) {
                         <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
                         <a href="#" class="ajax-modal text-muted small"
                            data-modal-url="modals/ticket/ticket_schedule_add.php?ticket_id=<?= $ticket_id ?>">
-                            <i class="fa fa-plus mr-1"></i>Add schedule
+                            <i class="fa fa-plus mr-1"></i>Add appointment
                         </a>
                         <?php } else { ?>
-                        <span class="text-muted small">No schedules</span>
+                        <span class="text-muted small">No appointments</span>
                         <?php } ?>
                     </div>
                     <?php } ?>
                 </div>
-                <!-- ── End Schedules card ──────────────────────────────── -->
+                <!-- ── End Appointments card ────────────────────────────── -->
 
                 <!-- ── Additional Technicians card ────────────────────── -->
                 <div class="card">
