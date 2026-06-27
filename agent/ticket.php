@@ -970,11 +970,18 @@ if (isset($_GET['ticket_id'])) {
                     $ticket_reply_updated_at_ago = timeAgo($row['ticket_reply_updated_at']);
                     $ticket_reply_by = intval($row['ticket_reply_by']);
 
+                    $is_portal_reply = (stripos($row['ticket_reply'] ?? '', 'Client message from portal') === 0);
+
                     if ($ticket_reply_type == "Client") {
                         $ticket_reply_by_display = nullable_htmlentities($row['contact_name']);
                         $user_initials = initials($row['contact_name']);
                         $user_avatar = nullable_htmlentities($row['contact_photo']);
                         $avatar_link = "../uploads/clients/$client_id/$user_avatar";
+                    } elseif ($is_portal_reply) {
+                        $ticket_reply_by_display = 'Client Portal';
+                        $user_initials = 'CP';
+                        $user_avatar = '';
+                        $avatar_link = '';
                     } else {
                         $ticket_reply_by_display = nullable_htmlentities($row['user_name']);
                         $user_id = intval($row['user_id']);
@@ -1011,7 +1018,7 @@ if (isset($_GET['ticket_id'])) {
                                     <div class="ml-2">
                                         <h3 class="card-title"><?php echo $ticket_reply_by_display; ?></h3>
                                         <div>
-                                            <?php if ($ticket_reply_type !== "Client" && $ticket_reply_time_worked !== "00:00:00") { ?>
+                                            <?php if (!$is_portal_reply && $ticket_reply_type !== "Client" && !empty($ticket_reply_time_worked) && $ticket_reply_time_worked !== "00:00:00") { ?>
                                                 <div>
                                                     <br>
                                                     <small>
