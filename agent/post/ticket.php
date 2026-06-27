@@ -2015,6 +2015,7 @@ if (isset($_POST['add_ticket_reply'])) {
     $ticket_reply_time_worked = sanitizeInput(sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds));
     $reply_labor_type_id = intval($_POST['reply_labor_type_id'] ?? 0);
     $reply_charge_now    = isset($_POST['reply_charge_now']) ? 1 : 0;
+    $reply_onsite        = intval($_POST['reply_onsite'] ?? 0);
 
     // Defaults
     $send_email = 0;
@@ -2065,7 +2066,8 @@ if (isset($_POST['add_ticket_reply'])) {
         }
 
         // Add reply
-        mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$ticket_reply', ticket_reply_time_worked = '$ticket_reply_time_worked', ticket_reply_type = '$ticket_reply_type', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+        $lt_id_sql = $reply_labor_type_id > 0 ? $reply_labor_type_id : 'NULL';
+        mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$ticket_reply', ticket_reply_time_worked = '$ticket_reply_time_worked', ticket_reply_type = '$ticket_reply_type', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id, ticket_reply_onsite = $reply_onsite, ticket_reply_labor_type_id = $lt_id_sql");
 
         $ticket_reply_id = mysqli_insert_id($mysqli);
 

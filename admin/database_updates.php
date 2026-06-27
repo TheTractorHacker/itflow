@@ -5070,3 +5070,14 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.16'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.16') {
+
+        // Track per-reply whether the work was remote or onsite, and which
+        // labor type was selected, so the Time Entry Log can show this info.
+        mysqli_query($mysqli, "ALTER TABLE `ticket_replies`
+            ADD COLUMN IF NOT EXISTS `ticket_reply_onsite` TINYINT(1) NOT NULL DEFAULT 0,
+            ADD COLUMN `ticket_reply_labor_type_id` INT DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.17'");
+    }

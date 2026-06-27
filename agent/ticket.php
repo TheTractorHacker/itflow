@@ -265,16 +265,20 @@ if (isset($_GET['ticket_id'])) {
         while ($tt = mysqli_fetch_assoc($sql_techs)) $ticket_techs_rows[] = $tt;
 
         // Get individual time entries for the Time Entry Log card
-        $sql_time_entries = mysqli_query($mysqli, "SELECT ticket_reply_id, ticket_reply_time_worked, ticket_reply_created_at, ticket_reply_by,
-            COALESCE(users.user_name, contacts.contact_name) AS time_entry_user_name
-            FROM ticket_replies
-            LEFT JOIN users ON ticket_reply_by = user_id
-            LEFT JOIN contacts ON ticket_reply_by = contact_id
-            WHERE ticket_reply_ticket_id = $ticket_id
-            AND ticket_reply_archived_at IS NULL
-            AND ticket_reply_time_worked IS NOT NULL
-            AND ticket_reply_time_worked != '00:00:00'
-            ORDER BY ticket_reply_created_at DESC, ticket_reply_id DESC");
+        $sql_time_entries = mysqli_query($mysqli, "SELECT tr.ticket_reply_id, tr.ticket_reply_time_worked, tr.ticket_reply_created_at,
+            tr.ticket_reply_by, tr.ticket_reply_onsite, tr.ticket_reply_type, tr.ticket_reply_labor_type_id,
+            COALESCE(u.user_name, c.contact_name) AS time_entry_user_name,
+            lt.labor_type_name, lt.labor_type_color
+            FROM ticket_replies tr
+            LEFT JOIN users u ON tr.ticket_reply_by = u.user_id
+            LEFT JOIN contacts c ON tr.ticket_reply_by = c.contact_id
+            LEFT JOIN labor_types lt ON lt.labor_type_id = tr.ticket_reply_labor_type_id
+            WHERE tr.ticket_reply_ticket_id = $ticket_id
+            AND tr.ticket_reply_archived_at IS NULL
+            AND tr.ticket_reply_time_worked IS NOT NULL
+            AND tr.ticket_reply_time_worked != '00:00:00'
+            AND tr.ticket_reply_type NOT IN ('System','Automation','RMM Alert')
+            ORDER BY tr.ticket_reply_created_at DESC, tr.ticket_reply_id DESC");
 
         // Get the number of ticket Responses
         $ticket_responses_sql = mysqli_query($mysqli, "SELECT COUNT(ticket_reply_id) AS ticket_responses FROM ticket_replies WHERE ticket_reply_archived_at IS NULL AND ticket_reply_ticket_id = $ticket_id");
@@ -1110,7 +1114,7 @@ if (isset($_GET['ticket_id'])) {
                             <button type="button" class="btn btn-outline-purple" id="resetTimer"><i class="fas fa-redo-alt mr-1"></i>Reset</button>
                         </div>
                         <?php if ($lt_reply_rows) { ?>
-                        <select class="form-control" name="reply_labor_type_id" id="reply_labor_type_id" form="ticketReplyForm">
+                        <select class="form-control mb-2" name="reply_labor_type_id" id="reply_labor_type_id" form="ticketReplyForm">
                             <option value="0">— Labor Type —</option>
                             <?php foreach ($lt_reply_rows as $lt) { ?>
                             <option value="<?= intval($lt['labor_type_id']) ?>" data-color="<?= nullable_htmlentities($lt['labor_type_color']) ?>">
@@ -1119,6 +1123,15 @@ if (isset($_GET['ticket_id'])) {
                             <?php } ?>
                         </select>
                         <?php } ?>
+                        <div class="btn-group btn-group-sm btn-block" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" id="reply_onsite_remote" onclick="document.getElementById('reply_onsite_val').value='0';this.classList.add('active');document.getElementById('reply_onsite_onsite').classList.remove('active');">
+                                <i class="fas fa-laptop mr-1"></i>Remote
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="reply_onsite_onsite" onclick="document.getElementById('reply_onsite_val').value='1';this.classList.add('active');document.getElementById('reply_onsite_remote').classList.remove('active');">
+                                <i class="fas fa-map-marker-alt mr-1"></i>Onsite
+                            </button>
+                        </div>
+                        <input type="hidden" name="reply_onsite" id="reply_onsite_val" value="0" form="ticketReplyForm">
                         <?php } else { ?>
                         <span class="text-muted">Ticket closed</span>
                         <?php } ?>
@@ -1135,13 +1148,23 @@ if (isset($_GET['ticket_id'])) {
                         </div>
                     </div>
                     <div class="card-body p-3" style="max-height:220px;overflow-y:auto;">
-                        <?php while ($te = mysqli_fetch_assoc($sql_time_entries)) { ?>
-                        <div class="d-flex justify-content-between align-items-center mb-2 small">
+                        <?php while ($te = mysqli_fetch_assoc($sql_time_entries)) {
+                            $te_onsite     = intval($te['ticket_reply_onsite'] ?? 0);
+                            $te_lt_name    = nullable_htmlentities($te['labor_type_name'] ?? '');
+                            $te_lt_color   = nullable_htmlentities($te['labor_type_color'] ?? '#6c757d');
+                        ?>
+                        <div class="d-flex justify-content-between align-items-start mb-2 small">
                             <div>
-                                <div class="text-muted"><?= nullable_htmlentities($te['time_entry_user_name']) ?: 'System' ?></div>
+                                <div class="font-weight-500"><?= nullable_htmlentities($te['time_entry_user_name']) ?: 'System' ?></div>
                                 <div class="text-muted" style="font-size:.75rem;"><?= date('M j, Y g:i A', strtotime($te['ticket_reply_created_at'])) ?></div>
+                                <div class="mt-1">
+                                    <span class="badge badge-<?= $te_onsite ? 'warning' : 'secondary' ?>"><?= $te_onsite ? 'Onsite' : 'Remote' ?></span>
+                                    <?php if ($te_lt_name) { ?>
+                                    <span class="badge" style="background-color:<?= $te_lt_color ?>;color:#fff;"><?= $te_lt_name ?></span>
+                                    <?php } ?>
+                                </div>
                             </div>
-                            <span class="badge badge-pill tkt-pill-badge badge-light border"><?= formatDuration($te['ticket_reply_time_worked']) ?></span>
+                            <span class="badge badge-pill tkt-pill-badge badge-light border ml-2 flex-shrink-0"><?= formatDuration($te['ticket_reply_time_worked']) ?></span>
                         </div>
                         <?php } ?>
                     </div>
