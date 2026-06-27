@@ -209,24 +209,55 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
         $body = json_decode(file_get_contents('php://input'), true) ?? [];
     }
     $reply      = mysqli_real_escape_string($mysqli, trim($body['reply'] ?? ''));
-    $type       = in_array($body['type'] ?? 'reply', ['reply', 'note']) ? ($body['type'] ?? 'reply') : 'reply';
     $time_w     = mysqli_real_escape_string($mysqli, trim($body['time_worked'] ?? ''));
     $onsite     = isset($body['onsite']) ? intval($body['onsite']) : 0;
     $contact_id = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
 
     if (!$reply) api_error(400, 'reply is required');
 
-    // contact_id posts a "Client" reply on behalf of one of the ticket's
-    // client's contacts, mirroring client/post.php's add_ticket_comment.
+    // Normalize type: Customer/Client/Portal/Website all mean a client-side reply.
+    // "note" stays as note. Everything else (reply/agent/blank) is an agent reply.
+    $raw_type = strtolower(trim($body['type'] ?? 'reply'));
+    $is_customer = in_array($raw_type, ['client', 'customer', 'portal', 'website']);
+    if ($is_customer) {
+        $type = 'Client';
+    } elseif ($raw_type === 'note') {
+        $type = 'note';
+    } else {
+        $type = 'reply';
+    }
+
+    // Load ticket (validates it exists; also get contact fallback and current status).
+    $ticket_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT ticket_prefix, ticket_number, ticket_subject, ticket_assigned_to, ticket_created_by,
+                ticket_client_id, ticket_contact_id, ticket_status, ticket_resolved_at
+         FROM tickets WHERE ticket_id = $id LIMIT 1"));
+    if (!$ticket_row) api_error(404, 'Ticket not found');
+
+    $t_prefix     = $ticket_row['ticket_prefix'];
+    $t_number     = $ticket_row['ticket_number'];
+    $t_subject    = $ticket_row['ticket_subject'];
+    $t_assigned   = intval($ticket_row['ticket_assigned_to']);
+    $t_created_by = intval($ticket_row['ticket_created_by']);
+    $t_client_id  = intval($ticket_row['ticket_client_id']);
+    $t_contact_id = intval($ticket_row['ticket_contact_id']);
+    $t_client_uri = $t_client_id ? "&client_id=$t_client_id" : '';
+    $t_action     = "/agent/ticket.php?ticket_id=$id$t_client_uri";
+
+    // Resolve reply_by: for client replies, use the provided contact_id, fall back to
+    // the ticket's existing contact, or the API user as a last resort.
     $reply_by = $uid;
-    if ($contact_id) {
-        $contact_row = mysqli_fetch_assoc(mysqli_query($mysqli,
-            "SELECT c.contact_id FROM contacts c
-             INNER JOIN tickets t ON t.ticket_client_id = c.contact_client_id
-             WHERE c.contact_id = $contact_id AND t.ticket_id = $id LIMIT 1"));
-        if (!$contact_row) api_error(400, "contact_id does not belong to this ticket's client");
-        $type     = 'Client';
-        $reply_by = $contact_id;
+    if ($type === 'Client') {
+        if ($contact_id) {
+            $contact_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT c.contact_id FROM contacts c
+                 INNER JOIN tickets t ON t.ticket_client_id = c.contact_client_id
+                 WHERE c.contact_id = $contact_id AND t.ticket_id = $id LIMIT 1"));
+            if (!$contact_row) api_error(400, "contact_id does not belong to this ticket's client");
+            $reply_by = $contact_id;
+        } elseif ($t_contact_id) {
+            $reply_by = $t_contact_id;
+        }
     }
 
     $time_sql = $time_w ? "'$time_w'" : 'NULL';
@@ -237,45 +268,57 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     $reply_id = mysqli_insert_id($mysqli);
     mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
 
-    // Notify the relevant party about the new reply
-    $ticket_row = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT ticket_prefix, ticket_number, ticket_subject, ticket_assigned_to, ticket_created_by, ticket_client_id
-         FROM tickets WHERE ticket_id = $id LIMIT 1"));
-    if ($ticket_row) {
-        $t_prefix    = $ticket_row['ticket_prefix'];
-        $t_number    = $ticket_row['ticket_number'];
-        $t_subject   = $ticket_row['ticket_subject'];
-        $t_assigned  = intval($ticket_row['ticket_assigned_to']);
-        $t_created_by = intval($ticket_row['ticket_created_by']);
-        $t_client_id = intval($ticket_row['ticket_client_id']);
-        $t_client_uri = $t_client_id ? "&client_id=$t_client_id" : '';
-        $t_action = "/agent/ticket.php?ticket_id=$id$t_client_uri";
+    // Status auto-update
+    $new_status_id = null;
+    if ($type === 'Client') {
+        // Customer reply: reopen resolved/closed ticket, then move to In Progress.
+        if (!empty($ticket_row['ticket_resolved_at'])) {
+            mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NULL, ticket_closed_at = NULL WHERE ticket_id = $id");
+        }
+        $progress_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT ticket_status_id FROM ticket_statuses
+             WHERE ticket_status_name IN ('In Progress','Open') AND ticket_status_active = 1
+             ORDER BY FIELD(ticket_status_name,'In Progress','Open') LIMIT 1"));
+        $new_status_id = $progress_row ? intval($progress_row['ticket_status_id']) : 2;
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $id");
+    } elseif ($type === 'reply') {
+        // Agent reply: move to Waiting on Customer so the client knows action is needed.
+        $woc_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT ticket_status_id FROM ticket_statuses
+             WHERE ticket_status_name = 'Waiting on Customer' AND ticket_status_active = 1 LIMIT 1"));
+        if ($woc_row) {
+            $new_status_id = intval($woc_row['ticket_status_id']);
+            mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $id");
+        }
+    }
 
-        if ($type === 'Client') {
-            // Client/contact replied - notify the assigned agent
-            if ($t_assigned != 0) {
-                notifyUser($t_assigned, 'Ticket', "New reply on Ticket $t_prefix$t_number - $t_subject", $t_action, $t_client_id, $id);
-            }
+    // Notifications
+    if ($type === 'Client') {
+        if ($t_assigned != 0) {
+            notifyUser($t_assigned, 'Ticket', "Customer reply on Ticket $t_prefix$t_number - $t_subject", $t_action, $t_client_id, $id);
         } else {
-            // Agent replied - notify the other party (assignee or creator) if different
-            if ($t_assigned != 0 && $t_assigned != $uid) {
-                notifyUser($t_assigned, 'Ticket', "$session_name replied to Ticket $t_prefix$t_number - $t_subject that is assigned to you", $t_action, $t_client_id, $id);
-            } elseif ($t_created_by != 0 && $t_created_by != $uid) {
-                notifyUser($t_created_by, 'Ticket', "$session_name replied to Ticket $t_prefix$t_number - $t_subject that you opened", $t_action, $t_client_id, $id);
-            }
+            appNotify('Ticket', "Customer reply on Ticket $t_prefix$t_number - $t_subject", $t_action, $t_client_id, $id);
+        }
+    } else {
+        if ($t_assigned != 0 && $t_assigned != $uid) {
+            notifyUser($t_assigned, 'Ticket', "$session_name replied to Ticket $t_prefix$t_number - $t_subject that is assigned to you", $t_action, $t_client_id, $id);
+        } elseif ($t_created_by != 0 && $t_created_by != $uid) {
+            notifyUser($t_created_by, 'Ticket', "$session_name replied to Ticket $t_prefix$t_number - $t_subject that you opened", $t_action, $t_client_id, $id);
         }
     }
 
     publishTicketEvent($id, 'reply', ['reply_id' => $reply_id, 'reply_type' => $type, 'by' => $session_name ?? 'API', 'by_type' => $type === 'Client' ? 'contact' : 'agent']);
 
-    if ($type === 'Client') {
-        // A client reply reopens the ticket, same as the client portal.
-        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 2 WHERE ticket_id = $id");
-        $reply_status_info = getTicketStatusInfo($mysqli, 2);
-        publishTicketEvent($id, 'status', ['status_id' => $reply_status_info['id'], 'status_name' => $reply_status_info['name'], 'status_color' => $reply_status_info['color'], 'by' => $session_name ?? 'API']);
+    if ($new_status_id) {
+        $new_status_info = getTicketStatusInfo($mysqli, $new_status_id);
+        publishTicketEvent($id, 'status', ['status_id' => $new_status_info['id'], 'status_name' => $new_status_info['name'], 'status_color' => $new_status_info['color'], 'by' => $type === 'Client' ? 'Customer' : ($session_name ?? 'API')]);
     }
 
-    $response = ['id' => $reply_id];
+    $response = ['id' => $reply_id, 'type' => $type];
+    if ($new_status_id) {
+        $si = getTicketStatusInfo($mysqli, $new_status_id);
+        $response['ticket_status'] = ['id' => $si['id'], 'name' => $si['name']];
+    }
     $attachments = api_save_ticket_attachments($mysqli, $id, $reply_id, $DOCUMENT_ROOT);
     if ($attachments) $response['attachments'] = $attachments;
 
