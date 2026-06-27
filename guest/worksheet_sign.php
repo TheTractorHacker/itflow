@@ -204,6 +204,7 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
                 <li><strong>Payment for Parts and Services:</strong> The undersigned agrees to pay for all parts and services rendered. Payment terms are as agreed upon in your service agreement or our standard payment policy.</li>
                 <li><strong>Acknowledgement of Work:</strong> The undersigned acknowledges that the work performed, as described in this form, has been completed.</li>
             </ul>
+            <p class="mt-2 mb-0">For full terms and conditions, please visit <a href="https://foleyit.com/ticket-terms" target="_blank" rel="noopener">foleyit.com/ticket-terms</a>.</p>
         </div>
 
         <!-- Signature -->
@@ -219,7 +220,13 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
                 <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="clearCanvas('main')">Clear</button>
                 <small class="text-secondary align-self-center">Draw your signature above</small>
             </div>
-            <div class="mt-3">
+            <div class="form-check mt-3 mb-3">
+                <input class="form-check-input" type="checkbox" id="terms_agree" required>
+                <label class="form-check-label" for="terms_agree" style="font-size:13px;">
+                    I have read and agree to the <a href="https://foleyit.com/ticket-terms" target="_blank" rel="noopener">Terms &amp; Conditions</a>
+                </label>
+            </div>
+            <div class="mt-2">
                 <button type="submit" name="sign_worksheet" class="btn btn-success btn-block btn-lg">
                     <i class="fas fa-check-circle mr-2"></i>Submit & Sign Outtake Form
                 </button>

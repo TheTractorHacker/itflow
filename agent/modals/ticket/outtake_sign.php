@@ -68,6 +68,13 @@ if (!$row) {
         </div>
     </div>
 
+    <div class="form-check mt-1 mb-2">
+        <input class="form-check-input" type="checkbox" id="outtake_terms_agree">
+        <label class="form-check-label" style="font-size:13px;" for="outtake_terms_agree">
+            I have read and agree to the <a href="https://foleyit.com/ticket-terms" target="_blank" rel="noopener">Terms &amp; Conditions</a>
+        </label>
+    </div>
+
     <div id="outtake_sign_error" class="alert alert-danger d-none mb-0"></div>
 
 </div>
@@ -96,13 +103,15 @@ if (!$row) {
 
     document.getElementById('outtake_sign_submit').addEventListener('click', function () {
         var btn = this;
-        var name = document.getElementById('outtake_signed_name').value.trim();
-        var sig  = document.getElementById('outtake_sig_data').value;
+        var name   = document.getElementById('outtake_signed_name').value.trim();
+        var sig    = document.getElementById('outtake_sig_data').value;
+        var agreed = document.getElementById('outtake_terms_agree').checked;
         var errBox = document.getElementById('outtake_sign_error');
         errBox.classList.add('d-none');
 
-        if (!name) { errBox.textContent = 'Please enter a full name.'; errBox.classList.remove('d-none'); return; }
-        if (!sig)  { errBox.textContent = 'Please draw a signature.'; errBox.classList.remove('d-none'); return; }
+        if (!name)   { errBox.textContent = 'Please enter a full name.'; errBox.classList.remove('d-none'); return; }
+        if (!sig)    { errBox.textContent = 'Please draw a signature.'; errBox.classList.remove('d-none'); return; }
+        if (!agreed) { errBox.textContent = 'Please agree to the Terms & Conditions.'; errBox.classList.remove('d-none'); return; }
 
         btn.disabled = true;
         fetch('post.php', {
