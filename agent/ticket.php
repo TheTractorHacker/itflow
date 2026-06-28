@@ -1114,7 +1114,7 @@ if (isset($_GET['ticket_id'])) {
                             <button type="button" class="btn btn-outline-purple" id="resetTimer"><i class="fas fa-redo-alt mr-1"></i>Reset</button>
                         </div>
                         <?php if ($lt_reply_rows) { ?>
-                        <select class="form-control mb-2" name="reply_labor_type_id" id="reply_labor_type_id" form="ticketReplyForm">
+                        <select class="form-control" name="reply_labor_type_id" id="reply_labor_type_id" form="ticketReplyForm">
                             <option value="0">— Labor Type —</option>
                             <?php foreach ($lt_reply_rows as $lt) { ?>
                             <option value="<?= intval($lt['labor_type_id']) ?>" data-color="<?= nullable_htmlentities($lt['labor_type_color']) ?>">
@@ -1123,15 +1123,6 @@ if (isset($_GET['ticket_id'])) {
                             <?php } ?>
                         </select>
                         <?php } ?>
-                        <div class="btn-group btn-group-sm btn-block" role="group">
-                            <button type="button" class="btn btn-outline-secondary active" id="reply_onsite_remote" onclick="document.getElementById('reply_onsite_val').value='0';this.classList.add('active');document.getElementById('reply_onsite_onsite').classList.remove('active');">
-                                <i class="fas fa-laptop mr-1"></i>Remote
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" id="reply_onsite_onsite" onclick="document.getElementById('reply_onsite_val').value='1';this.classList.add('active');document.getElementById('reply_onsite_remote').classList.remove('active');">
-                                <i class="fas fa-map-marker-alt mr-1"></i>Onsite
-                            </button>
-                        </div>
-                        <input type="hidden" name="reply_onsite" id="reply_onsite_val" value="0" form="ticketReplyForm">
                         <?php } else { ?>
                         <span class="text-muted">Ticket closed</span>
                         <?php } ?>

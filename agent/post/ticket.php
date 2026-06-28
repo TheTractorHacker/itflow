@@ -2015,7 +2015,15 @@ if (isset($_POST['add_ticket_reply'])) {
     $ticket_reply_time_worked = sanitizeInput(sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds));
     $reply_labor_type_id = intval($_POST['reply_labor_type_id'] ?? 0);
     $reply_charge_now    = isset($_POST['reply_charge_now']) ? 1 : 0;
-    $reply_onsite        = intval($_POST['reply_onsite'] ?? 0);
+
+    // Derive onsite from the labor type name (matches "onsite" or "on-site")
+    $reply_onsite = 0;
+    if ($reply_labor_type_id > 0) {
+        $lt_name_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT labor_type_name FROM labor_types WHERE labor_type_id = $reply_labor_type_id LIMIT 1"));
+        if ($lt_name_row && preg_match('/on.?site/i', $lt_name_row['labor_type_name'])) {
+            $reply_onsite = 1;
+        }
+    }
 
     // Defaults
     $send_email = 0;
