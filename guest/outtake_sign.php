@@ -41,7 +41,7 @@ $outtake_id    = intval($row['outtake_id']);
 $ticket_id     = intval($row['ticket_id']);
 $ticket_num    = nullable_htmlentities($row['ticket_prefix']) . intval($row['ticket_number']);
 $ticket_subj   = nullable_htmlentities($row['ticket_subject']);
-$ticket_detail = $row['ticket_details'] ? trim(strip_tags($row['ticket_details'])) : '';
+$ticket_detail = $row['ticket_details'] ?? '';
 $ticket_date   = date('m/d/Y', strtotime($row['ticket_created_at']));
 $client_name   = nullable_htmlentities($row['client_name']);
 $contact_name  = nullable_htmlentities($row['contact_name']);
@@ -123,7 +123,7 @@ $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_ty
     <!-- Show ticket details for record -->
     <?php if ($ticket_detail) { ?>
     <div class="section-bar">Ticket Problem</div>
-    <div class="section-body" style="white-space:pre-wrap;color:#333;"><?= htmlspecialchars($ticket_detail) ?></div>
+    <div class="section-body" style="color:#333;"><?= $ticket_detail ?></div>
     <?php } ?>
 
     <?php if ($tech_notes) { ?>
@@ -140,7 +140,7 @@ $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_ty
     <!-- Ticket Problem -->
     <?php if ($ticket_detail) { ?>
     <div class="section-bar">Ticket Problem</div>
-    <div class="section-body" style="white-space:pre-wrap;color:#333;"><?= htmlspecialchars($ticket_detail) ?></div>
+    <div class="section-body" style="color:#333;"><?= $ticket_detail ?></div>
     <?php } ?>
 
     <!-- Ticket Comments -->

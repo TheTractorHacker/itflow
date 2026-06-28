@@ -3642,3 +3642,15 @@ if (isset($_GET['delete_ticket_tech'])) {
     flash_alert("Technician removed", 'error');
     redirect("ticket.php?ticket_id=$ticket_id");
 }
+
+if (isset($_POST['toggle_reply_onsite'])) {
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $reply_id  = intval($_POST['ticket_reply_id']);
+    $onsite    = intval($_POST['onsite']);
+    $ticket_id = intval($_POST['ticket_id']);
+
+    mysqli_query($mysqli, "UPDATE ticket_replies SET ticket_reply_onsite = $onsite WHERE ticket_reply_id = $reply_id");
+    redirect("ticket.php?ticket_id=$ticket_id");
+}

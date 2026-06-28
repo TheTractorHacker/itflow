@@ -58,6 +58,59 @@ if (isset($_POST['save_outtake_notes'])) {
     redirect();
 }
 
+if (isset($_POST['send_outtake_email'])) {
+    validateCSRFToken($_POST['csrf_token']);
+    enforceUserPermission('module_support', 2);
+
+    $outtake_id = intval($_POST['outtake_id']);
+    $ticket_id  = intval($_POST['ticket_id']);
+    $client_id  = intval($_POST['client_id'] ?? 0);
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT ot.outtake_sign_token, t.ticket_prefix, t.ticket_number, t.ticket_subject,
+                co.contact_email, co.contact_name, c.client_name
+         FROM ticket_outtake_forms ot
+         JOIN tickets t ON ot.outtake_ticket_id = t.ticket_id
+         LEFT JOIN contacts co ON t.ticket_contact_id = co.contact_id
+         LEFT JOIN clients c ON t.ticket_client_id = c.client_id
+         WHERE ot.outtake_id = $outtake_id LIMIT 1"));
+
+    if (!$row || empty($row['contact_email'])) {
+        flash_alert("No contact email found for this ticket.", "error");
+        redirect();
+    }
+
+    $sign_url       = "https://$config_base_url/guest/outtake_sign.php?token=" . $row['outtake_sign_token'];
+    $ticket_num     = $row['ticket_prefix'] . intval($row['ticket_number']);
+    $ticket_subj    = $row['ticket_subject'];
+    $recipient      = mysqli_real_escape_string($mysqli, $row['contact_email']);
+    $recipient_name = mysqli_real_escape_string($mysqli, $row['contact_name'] ?? $row['client_name']);
+    $from           = mysqli_real_escape_string($mysqli, $config_ticket_from_email);
+    $from_name      = mysqli_real_escape_string($mysqli, $config_ticket_from_name ?: $session_company_name);
+    $subject        = mysqli_real_escape_string($mysqli, "Please sign your outtake form — Ticket $ticket_num");
+    $body           = mysqli_real_escape_string($mysqli,
+        "Hello " . ($row['contact_name'] ?: $row['client_name']) . ",<br><br>"
+        . "Your outtake form for ticket <strong>$ticket_num — $ticket_subj</strong> is ready to sign.<br><br>"
+        . "Please click the link below to review and sign. No account or login is required:<br><br>"
+        . "<a href=\"$sign_url\">$sign_url</a><br><br>"
+        . "This link is unique to your form. Do not share it with others.<br><br>"
+        . "Thank you,<br>$session_company_name"
+    );
+
+    mysqli_query($mysqli, "INSERT INTO email_queue SET
+        email_recipient      = '$recipient',
+        email_recipient_name = '$recipient_name',
+        email_from           = '$from',
+        email_from_name      = '$from_name',
+        email_subject        = '$subject',
+        email_content        = '$body',
+        email_queued_at      = NOW()");
+
+    logAction("Outtake", "Email", "Sent outtake signing link for ticket $ticket_num to {$row['contact_email']}", $client_id, $ticket_id);
+    flash_alert("Signing link emailed to <strong>{$row['contact_email']}</strong>.", "success");
+    redirect();
+}
+
 if (isset($_GET['delete_outtake'])) {
     validateCSRFToken($_GET['csrf_token']);
     enforceUserPermission('module_support', 2);

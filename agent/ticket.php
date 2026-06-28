@@ -1158,7 +1158,19 @@ if (isset($_GET['ticket_id'])) {
                                 <div class="font-weight-500"><?= nullable_htmlentities($te['time_entry_user_name']) ?: 'System' ?></div>
                                 <div class="text-muted" style="font-size:.75rem;"><?= date('M j, Y g:i A', strtotime($te['ticket_reply_created_at'])) ?></div>
                                 <div class="mt-1">
+                                    <?php if (lookupUserPermission("module_support") >= 2) { ?>
+                                    <form action="post.php" method="post" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                        <input type="hidden" name="ticket_reply_id" value="<?= intval($te['ticket_reply_id']) ?>">
+                                        <input type="hidden" name="ticket_id" value="<?= $ticket_id ?>">
+                                        <input type="hidden" name="onsite" value="<?= $te_onsite ? 0 : 1 ?>">
+                                        <button type="submit" name="toggle_reply_onsite" class="badge badge-<?= $te_onsite ? 'warning' : 'secondary' ?> border-0 p-1" style="cursor:pointer;" title="Click to toggle">
+                                            <?= $te_onsite ? 'Onsite' : 'Remote' ?>
+                                        </button>
+                                    </form>
+                                    <?php } else { ?>
                                     <span class="badge badge-<?= $te_onsite ? 'warning' : 'secondary' ?>"><?= $te_onsite ? 'Onsite' : 'Remote' ?></span>
+                                    <?php } ?>
                                     <?php if ($te_lt_name) { ?>
                                     <span class="badge" style="background-color:<?= $te_lt_color ?>;color:#fff;"><?= $te_lt_name ?></span>
                                     <?php } ?>

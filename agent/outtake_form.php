@@ -41,12 +41,17 @@ $ticket_id  = intval($row['outtake_ticket_id']);
 $client_id  = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id"))[0]);
 
 // Ticket replies for "comments" section
-$sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply_details, tr.ticket_reply_type, tr.ticket_reply_created_at, u.user_name, co.contact_name
+$sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_type, tr.ticket_reply_created_at, u.user_name, co.contact_name
     FROM ticket_replies tr
     LEFT JOIN users u ON tr.ticket_reply_by = u.user_id
     LEFT JOIN contacts co ON tr.ticket_reply_by = co.contact_id
     WHERE tr.ticket_reply_ticket_id = $ticket_id AND tr.ticket_reply_archived_at IS NULL
+    AND tr.ticket_reply_type NOT IN ('System','Automation','RMM Alert')
     ORDER BY tr.ticket_reply_id ASC LIMIT 10");
+
+// Contact email for sending the magic link
+$contact_email_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT co.contact_email FROM tickets t LEFT JOIN contacts co ON t.ticket_contact_id = co.contact_id WHERE t.ticket_id = $ticket_id LIMIT 1"));
+$contact_email = nullable_htmlentities($contact_email_row['contact_email'] ?? '');
 
 $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
 
@@ -69,18 +74,35 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
             <?php if ($signature) { ?><br><img src="<?= $signature ?>" style="max-height:80px;border:1px solid #ccc;border-radius:4px;background:#fff;display:block;margin-top:8px;"><?php } ?>
         </div>
         <?php } else { ?>
-        <div class="alert alert-warning d-flex align-items-center flex-wrap">
-            <div class="flex-grow-1">
-                <i class="fas fa-clock mr-2"></i><strong>Awaiting customer signature.</strong>
-                <?php if ($ot_token) { ?>
-                <div class="mt-1" style="font-size:12px;word-break:break-all;color:#856404;"><?= $sign_url ?></div>
-                <?php } ?>
-            </div>
-            <div class="ml-3 mt-2 mt-md-0">
-                <button type="button" class="btn btn-success" title="Sign now in-person"
-                    onclick="openOuttakeSignModal(<?= $outtake_id ?>, <?= $ticket_id ?>, <?= $client_id ?: 0 ?>)">
-                    <i class="fas fa-pen-nib mr-1"></i>Sign In-Person
-                </button>
+        <div class="alert alert-warning">
+            <div class="d-flex align-items-start flex-wrap">
+                <div class="flex-grow-1">
+                    <i class="fas fa-clock mr-2"></i><strong>Awaiting customer signature.</strong>
+                    <?php if ($ot_token) { ?>
+                    <div class="mt-1" style="font-size:12px;word-break:break-all;color:#856404;"><?= $sign_url ?></div>
+                    <?php } ?>
+                </div>
+                <div class="d-flex flex-wrap mt-2 mt-md-0 ml-md-3" style="gap:6px;">
+                    <?php if ($ot_token && $contact_email) { ?>
+                    <form action="post.php" method="post" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                        <input type="hidden" name="outtake_id" value="<?= $outtake_id ?>">
+                        <input type="hidden" name="ticket_id" value="<?= $ticket_id ?>">
+                        <input type="hidden" name="client_id" value="<?= $client_id ?>">
+                        <button type="submit" name="send_outtake_email" class="btn btn-primary" title="Email signing link to <?= $contact_email ?>">
+                            <i class="fas fa-envelope mr-1"></i>Email Link to <?= $contact_email ?>
+                        </button>
+                    </form>
+                    <?php } elseif ($ot_token) { ?>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText('<?= $sign_url ?>').then(()=>alert('Link copied!'))">
+                        <i class="fas fa-copy mr-1"></i>Copy Link
+                    </button>
+                    <?php } ?>
+                    <button type="button" class="btn btn-success" title="Sign now in-person"
+                        onclick="openOuttakeSignModal(<?= $outtake_id ?>, <?= $ticket_id ?>, <?= $client_id ?: 0 ?>)">
+                        <i class="fas fa-pen-nib mr-1"></i>Sign In-Person
+                    </button>
+                </div>
             </div>
         </div>
         <?php } ?>
@@ -105,12 +127,13 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
                 <div class="mt-4">
                     <strong class="text-secondary d-block mb-2">Ticket Comments (will appear on form)</strong>
                     <?php while ($reply = mysqli_fetch_assoc($sql_replies)) {
-                        $by = $reply['ticket_reply_type'] == 'Agent' ? nullable_htmlentities($reply['user_name']) : nullable_htmlentities($reply['contact_name']);
+                        $by = !empty($reply['user_name']) ? nullable_htmlentities($reply['user_name']) : nullable_htmlentities($reply['contact_name']);
                         $date = date('M j, Y', strtotime($reply['ticket_reply_created_at']));
+                        $excerpt = substr(strip_tags($reply['ticket_reply']), 0, 300);
                     ?>
                     <div class="border rounded p-2 mb-2 bg-light">
                         <small class="text-secondary"><?= $by ?> — <?= $date ?></small>
-                        <div class="mt-1" style="font-size:13px;"><?= nullable_htmlentities(substr(strip_tags($reply['ticket_reply_details']), 0, 300)) ?>...</div>
+                        <div class="mt-1" style="font-size:13px;"><?= nullable_htmlentities($excerpt) ?><?= strlen(strip_tags($reply['ticket_reply'])) > 300 ? '…' : '' ?></div>
                     </div>
                     <?php } ?>
                 </div>
