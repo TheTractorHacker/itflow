@@ -187,6 +187,8 @@ $sql      = mysqli_query($mysqli,
             user_failed_login_count, user_failed_login_at
      FROM users
      WHERE (user_name = '$esc_user' OR user_email = '$esc_user')
+     AND user_type = 1
+     AND user_status = 1
      AND user_archived_at IS NULL
      LIMIT 1"
 );

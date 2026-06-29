@@ -4,7 +4,7 @@ define('FROM_API', true);
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Biometric');
+header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Biometric, X-Api-Key');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
@@ -94,10 +94,12 @@ if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {
     }
 }
 
-// Legacy ?api_key= fallback for backward compatibility with old API clients
+// Legacy api_key auth: accept header (preferred — keeps key out of server logs) or ?api_key= query param
 $legacy_api_key_auth = false;
 $legacy_key_raw = null;
-if (isset($_GET['api_key'])) {
+if (!empty($_SERVER['HTTP_X_API_KEY'])) {
+    $legacy_key_raw = $_SERVER['HTTP_X_API_KEY'];
+} elseif (isset($_GET['api_key'])) {
     $legacy_key_raw = $_GET['api_key'];
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Some clients send the api_key in the JSON body instead of the query string
