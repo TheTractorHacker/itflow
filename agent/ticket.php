@@ -1784,8 +1784,8 @@ if (isset($_GET['ticket_id'])) {
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-paperclip mr-2"></i>Attachments</h5>
                     </div>
                     <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
-                    <div class="card-body px-3 py-2 border-bottom">
-                        <a href="#" class="btn btn-sm btn-outline-purple ajax-modal mr-2" data-modal-url="modals/ticket/ticket_attachment_add.php?ticket_id=<?= $ticket_id ?>">
+                    <div class="card-body px-3 py-2 border-bottom d-flex flex-wrap" style="gap:6px;">
+                        <a href="#" class="btn btn-sm btn-outline-purple ajax-modal" data-modal-url="modals/ticket/ticket_attachment_add.php?ticket_id=<?= $ticket_id ?>">
                             <i class="fas fa-fw fa-upload mr-1"></i>Upload File
                         </a>
                         <a href="#" class="btn btn-sm btn-outline-purple" onclick="createAndSignOuttake(<?= $ticket_id ?>, <?= $client_id ?: 0 ?>, '<?= $_SESSION['csrf_token'] ?>'); return false;">
@@ -1799,17 +1799,17 @@ if (isset($_GET['ticket_id'])) {
                             $ot_id    = intval($ot['outtake_id']);
                             $ot_date  = date('M j, Y', strtotime($ot['outtake_created_at']));
                         ?>
-                        <div class="border-bottom px-3 py-2 d-flex align-items-center">
-                            <i class="fas fa-file-signature text-secondary mr-2"></i>
-                            <span class="flex-grow-1">
+                        <div class="border-bottom px-3 py-2 d-flex align-items-center flex-wrap" style="gap:4px;">
+                            <i class="fas fa-file-signature text-secondary mr-2 flex-shrink-0"></i>
+                            <span class="flex-grow-1 mr-2" style="min-width:0;">
                                 <strong>Outtake Form</strong> <small class="text-secondary"><?= $ot_date ?></small>
                                 <span class="badge badge-warning text-dark ml-1">Awaiting Signature</span>
                             </span>
-                            <div class="ml-2 d-flex" style="gap:6px;">
+                            <div class="d-flex flex-shrink-0" style="gap:4px;">
                                 <?php if (lookupUserPermission("module_support") >= 2) { ?>
                                 <button type="button" class="btn btn-xs btn-success" title="Sign now in-person"
                                     onclick="openOuttakeSignModal(<?= $ot_id ?>, <?= $ticket_id ?>, <?= $client_id ?: 0 ?>)">
-                                    <i class="fas fa-pen-nib mr-1"></i>Sign In-Person
+                                    <i class="fas fa-pen-nib mr-1"></i><span class="d-none d-sm-inline">Sign In-Person</span><span class="d-sm-none">Sign</span>
                                 </button>
                                 <?php } ?>
                                 <a href="outtake_form.php?outtake_id=<?= $ot_id ?>&ticket_id=<?= $ticket_id ?><?= $client_id ? "&client_id=".$client_id : "" ?>" class="btn btn-xs btn-secondary" title="View/Edit"><i class="fas fa-edit"></i></a>
@@ -1884,13 +1884,14 @@ if (isset($_GET['ticket_id'])) {
                         <?php if (empty($charge_rows)) { ?>
                             <p class="text-secondary text-center p-3 mb-0">No charges yet.</p>
                         <?php } else { ?>
+                        <div class="table-responsive">
                         <table class="table table-sm mb-0">
                             <thead class="thead-light">
                                 <tr>
                                     <th>Item</th>
-                                    <th class="text-right">Qty</th>
-                                    <th class="text-right">Unit Price</th>
-                                    <th class="text-right">Total</th>
+                                    <th class="text-right" style="white-space:nowrap;">Qty</th>
+                                    <th class="text-right" style="white-space:nowrap;"><span class="d-none d-md-inline">Unit </span>Price</th>
+                                    <th class="text-right" style="white-space:nowrap;">Total</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -1908,7 +1909,7 @@ if (isset($_GET['ticket_id'])) {
                                     $cr_invoiced = !empty($cr['charge_invoiced_at']);
                                 ?>
                                 <tr>
-                                    <td>
+                                    <td style="min-width:120px;">
                                         <?php if ($cr_lt_name) { ?>
                                             <span class="badge badge-pill text-white mr-1" style="background:<?= $cr_lt_color ?>;"><?= $cr_lt_name ?></span>
                                         <?php } ?>
@@ -1916,9 +1917,9 @@ if (isset($_GET['ticket_id'])) {
                                         <?php if ($cr_desc) { ?><br><small class="text-muted"><?= $cr_desc ?></small><?php } ?>
                                         <?php if ($cr_tax) { ?><br><small class="text-muted"><?= $cr_tax ?></small><?php } ?>
                                     </td>
-                                    <td class="text-right"><?= $cr_qty ?></td>
-                                    <td class="text-right">$<?= number_format($cr_price, 2) ?></td>
-                                    <td class="text-right"><strong>$<?= number_format($cr_total, 2) ?></strong></td>
+                                    <td class="text-right" style="white-space:nowrap;"><?= $cr_qty ?></td>
+                                    <td class="text-right" style="white-space:nowrap;">$<?= number_format($cr_price, 2) ?></td>
+                                    <td class="text-right" style="white-space:nowrap;"><strong>$<?= number_format($cr_total, 2) ?></strong></td>
                                     <td class="text-right" style="white-space:nowrap;">
                                         <?php if (!$cr_invoiced && empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                                         <a href="#" class="btn btn-xs btn-secondary ajax-modal"
@@ -1937,11 +1938,12 @@ if (isset($_GET['ticket_id'])) {
                             <tfoot>
                                 <tr>
                                     <td colspan="3" class="text-right"><strong>Subtotal</strong></td>
-                                    <td class="text-right"><strong>$<?= number_format($charges_subtotal, 2) ?></strong></td>
+                                    <td class="text-right" style="white-space:nowrap;"><strong>$<?= number_format($charges_subtotal, 2) ?></strong></td>
                                     <td></td>
                                 </tr>
                             </tfoot>
                         </table>
+                        </div>
                         <?php } ?>
                     </div>
                 </div>
