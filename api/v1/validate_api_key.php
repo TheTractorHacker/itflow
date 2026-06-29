@@ -52,17 +52,18 @@ if ($_SERVER['REQUEST_METHOD'] !== "GET" && $_SERVER['REQUEST_METHOD'] !== "POST
     exit();
 }
 
-// Check API key is provided
-if (!isset($_GET['api_key']) && !isset($_POST['api_key'])) {
+// Check API key is provided (header preferred; query param kept for backward compat)
+if (empty($_SERVER['HTTP_X_API_KEY']) && !isset($_GET['api_key']) && !isset($_POST['api_key'])) {
     header(WORDING_UNAUTHORIZED);
     exit();
 }
 
-// Set API key variable
-if (isset($_GET['api_key'])) {
+// Set API key variable — X-Api-Key header takes priority so the key stays out of server logs
+if (!empty($_SERVER['HTTP_X_API_KEY'])) {
+    $api_key = sanitizeInput($_SERVER['HTTP_X_API_KEY']);
+} elseif (isset($_GET['api_key'])) {
     $api_key = sanitizeInput($_GET['api_key']);
-}
-if (isset($_POST['api_key'])) {
+} elseif (isset($_POST['api_key'])) {
     $api_key = sanitizeInput($_POST['api_key']);
 }
 
