@@ -395,13 +395,14 @@ function setupFirstUserSpecificKey($user_password, $site_encryption_master_key) 
     $iv = randomString();
     $salt = randomString();
 
-    //Generate 128-bit (16 byte/char) kdhash of the users password
-    $user_password_kdhash = hash_pbkdf2('sha256', $user_password, $salt, 100000, 16);
+    // Derive a full 16 raw bytes (128 bits) of AES key material from the password.
+    // The "V2:" prefix marks this ciphertext so decryptUserSpecificKey() knows to
+    // use raw-byte derivation instead of the old hex-string derivation.
+    $user_password_kdhash = hash_pbkdf2('sha256', $user_password, $salt, 100000, 16, true);
 
-    //Encrypt the master key with the users kdf'd hash and the IV
     $ciphertext = openssl_encrypt($site_encryption_master_key, 'aes-128-cbc', $user_password_kdhash, 0, $iv);
 
-    return $salt . $iv . $ciphertext;
+    return 'V2:' . $salt . $iv . $ciphertext;
 }
 
 // Returns the canonical site encryption master key (decrypted), or null if one
@@ -452,29 +453,35 @@ function encryptUserSpecificKey($user_password) {
     // Decrypt the session key to get the master key
     $site_encryption_master_key = openssl_decrypt($user_encryption_session_ciphertext, 'aes-128-cbc', $user_encryption_session_key, 0, $user_encryption_session_iv);
 
-    // Generate 128-bit (16 byte/char) kdhash of the users (new) password
-    $user_password_kdhash = hash_pbkdf2('sha256', $user_password, $salt, 100000, 16);
+    // Derive 16 raw bytes of AES key material (V2 format — full 128-bit entropy)
+    $user_password_kdhash = hash_pbkdf2('sha256', $user_password, $salt, 100000, 16, true);
 
-    // Encrypt the master key with the users kdf'd hash and the IV
     $ciphertext = openssl_encrypt($site_encryption_master_key, 'aes-128-cbc', $user_password_kdhash, 0, $iv);
 
-    return $salt . $iv . $ciphertext;
+    return 'V2:' . $salt . $iv . $ciphertext;
 }
 
 // Given a ciphertext (incl. IV) and the user's (or API key) password, returns the site master key
 // Ran at login, to facilitate generateUserSessionKey
 function decryptUserSpecificKey($user_encryption_ciphertext, $user_password)
 {
-    //Get the IV, salt and ciphertext
-    $salt = substr($user_encryption_ciphertext, 0, 16);
-    $iv = substr($user_encryption_ciphertext, 16, 16);
-    $ciphertext = substr($user_encryption_ciphertext, 32);
+    // V2 ciphertexts (produced by setupFirstUserSpecificKey / encryptUserSpecificKey after the
+    // PBKDF2 fix) are prefixed with "V2:" and use raw-byte key derivation (128-bit entropy).
+    // V1 (legacy) ciphertexts have no prefix and used a hex-string key (64-bit effective entropy).
+    if (substr($user_encryption_ciphertext, 0, 3) === 'V2:') {
+        $payload = substr($user_encryption_ciphertext, 3);
+        $salt     = substr($payload, 0, 16);
+        $iv       = substr($payload, 16, 16);
+        $ciphertext = substr($payload, 32);
+        $key = hash_pbkdf2('sha256', $user_password, $salt, 100000, 16, true);
+    } else {
+        $salt     = substr($user_encryption_ciphertext, 0, 16);
+        $iv       = substr($user_encryption_ciphertext, 16, 16);
+        $ciphertext = substr($user_encryption_ciphertext, 32);
+        $key = hash_pbkdf2('sha256', $user_password, $salt, 100000, 16);
+    }
 
-    //Generate 128-bit (16 byte/char) kdhash of the users password
-    $user_password_kdhash = hash_pbkdf2('sha256', $user_password, $salt, 100000, 16);
-
-    //Use this hash to get the original/master key
-    return openssl_decrypt($ciphertext, 'aes-128-cbc', $user_password_kdhash, 0, $iv);
+    return openssl_decrypt($ciphertext, 'aes-128-cbc', $key, 0, $iv);
 }
 
 /*

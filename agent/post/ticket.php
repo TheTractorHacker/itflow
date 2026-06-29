@@ -2001,9 +2001,10 @@ if (isset($_POST['add_ticket_reply'])) {
     $ticket_id = intval($_POST['ticket_id']);
     $ticket_reply = $_POST['ticket_reply']; // Reply is SQL escaped below
     $ticket_status = intval($_POST['status']);
-    $client_id = intval($_POST['client_id']);
 
-    // Don't Enforce Client Access if Ticket doesn't have an assigned client
+    // Look up client_id from the ticket record (not from POST) to prevent IDOR bypass
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+
     if ($client_id) {
         enforceClientAccess();
     }
@@ -2248,9 +2249,10 @@ if (isset($_POST['edit_ticket_reply'])) {
     $ticket_reply_type = sanitizeInput($_POST['ticket_reply_type']);
     $ticket_reply_time_worked = sanitizeInput($_POST['time']);
 
-    $client_id = intval($_POST['client_id']);
+    // Derive client_id from the reply's ticket (not from POST) to prevent IDOR bypass
+    $reply_ticket_id = intval(getFieldById('ticket_replies', $ticket_reply_id, 'ticket_reply_ticket_id'));
+    $client_id = intval(getFieldById('tickets', $reply_ticket_id, 'ticket_client_id'));
 
-    // Don't Enforce Client Access if Ticket doesn't have an assigned client
     if ($client_id) {
         enforceClientAccess();
     }
@@ -2274,9 +2276,10 @@ if (isset($_POST['redact_ticket_reply'])) {
     $ticket_reply_id = intval($_POST['ticket_reply_id']);
     $ticket_reply = mysqli_real_escape_string($mysqli, $_POST['ticket_reply']);
 
-    $client_id = intval($_POST['client_id']);
+    // Derive client_id from the reply's ticket (not from POST) to prevent IDOR bypass
+    $reply_ticket_id = intval(getFieldById('ticket_replies', $ticket_reply_id, 'ticket_reply_ticket_id'));
+    $client_id = intval(getFieldById('tickets', $reply_ticket_id, 'ticket_client_id'));
 
-    // Don't Enforce Client Access if Ticket doesn't have an assigned client
     if ($client_id) {
         enforceClientAccess();
     }
@@ -2920,15 +2923,23 @@ if (isset($_POST['export_tickets_csv'])) {
 
     enforceUserPermission('module_support', 2);
 
+    // Per-agent client access restriction (mirrors the ticket list view)
+    $export_access_clause = '';
+    if (!empty($client_access_string)) {
+        $export_access_clause = "AND ticket_client_id IN (0,$client_access_string)";
+    }
+
     if ($_POST['client_id']) {
         $client_id = intval($_POST['client_id']);
-        $client_query = "WHERE ticket_client_id = $client_id";
+        enforceClientAccess();
+        $client_query = "WHERE ticket_client_id = $client_id $export_access_clause";
         $client_name = getFieldById('clients', $client_id, 'client_name');
         $file_name_prepend = "$client_name-";
     } else {
-        $client_query = '';
+        $client_id = 0;
         $client_name = '';
         $file_name_prepend = "$session_company_name-";
+        $client_query = $export_access_clause ? "WHERE 1=1 $export_access_clause" : '';
     }
 
     $sql = mysqli_query(
