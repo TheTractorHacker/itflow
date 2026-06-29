@@ -1353,6 +1353,17 @@ function getOutlookAccessToken($user_id) {
     curl_close($ch);
 
     if (empty($data['access_token'])) {
+        // If the refresh token was revoked (password change, sign-out-all, etc.),
+        // clear it from the DB so user_integrations.php shows "not connected"
+        // and the user knows to reconnect rather than silently failing indefinitely.
+        if (isset($data['error']) && in_array($data['error'], ['invalid_grant', 'interaction_required'])) {
+            mysqli_query($mysqli, "UPDATE users SET
+                user_outlook_access_token  = NULL,
+                user_outlook_refresh_token = NULL,
+                user_outlook_token_expires = NULL
+                WHERE user_id = $user_id");
+            error_log("ITFlow: Outlook token for user $user_id revoked ({$data['error']}). User must reconnect at /agent/user/user_integrations.php");
+        }
         return null;
     }
 
