@@ -296,13 +296,13 @@ foreach ($_cat_subs as $_pid => $_subs) {
                                     <small class="text-muted ml-1"><i class="fas fa-code-branch fa-sm"></i> Merged</small>
                                     <?php } ?>
 
-                                    <?php if($task_count && $completed_task_count > 0) { ?>
-                                    <div class="progress mt-1" style="height: 15px; font-size: 10px;">
-                                        <div class="progress-bar" style="width: <?php echo $tasks_completed_percent; ?>%; line-height: 15px;"><?php echo $completed_task_count.' / '.$task_count; ?></div>
+                                    <?php if ($task_count) { ?>
+                                    <div class="d-flex align-items-center mt-1" style="gap:5px;">
+                                        <div class="progress flex-grow-1" style="height:4px;min-width:40px;">
+                                            <div class="progress-bar <?= $tasks_completed_percent == 100 ? 'bg-success' : '' ?>" style="width:<?= $tasks_completed_percent ?>%;"></div>
+                                        </div>
+                                        <span style="font-size:10px;color:#888;white-space:nowrap;flex-shrink:0;"><?= $completed_task_count ?>/<?= $task_count ?></span>
                                     </div>
-                                    <?php } ?>
-                                    <?php if($task_count && $completed_task_count == 0) { ?>
-                                    <div class="mt-1 text-center" style="height: 15px; line-height: 15px; font-size: 10px; background-color:#e9ecef;"><?php echo $completed_task_count.' / '.$task_count; ?></div>
                                     <?php } ?>
                                 </td>
 
