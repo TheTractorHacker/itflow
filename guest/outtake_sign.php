@@ -3,6 +3,7 @@
 require_once "../config.php";
 require_once "../functions.php";
 require_once "../includes/load_global_settings.php";
+require_once "../plugins/htmlpurifier/HTMLPurifier.standalone.php";
 
 session_start();
 require_once "../includes/inc_set_timezone.php";
@@ -41,7 +42,11 @@ $outtake_id    = intval($row['outtake_id']);
 $ticket_id     = intval($row['ticket_id']);
 $ticket_num    = nullable_htmlentities($row['ticket_prefix']) . intval($row['ticket_number']);
 $ticket_subj   = nullable_htmlentities($row['ticket_subject']);
-$ticket_detail = $row['ticket_details'] ?? '';
+$_purifier_cfg = HTMLPurifier_Config::createDefault();
+$_purifier_cfg->set('Cache.DefinitionImpl', null);
+$_purifier_cfg->set('URI.AllowedSchemes', ['http' => true, 'https' => true]);
+$_purifier     = new HTMLPurifier($_purifier_cfg);
+$ticket_detail = $_purifier->purify($row['ticket_details'] ?? '');
 $ticket_date   = date('m/d/Y', strtotime($row['ticket_created_at']));
 $client_name   = nullable_htmlentities($row['client_name']);
 $contact_name  = nullable_htmlentities($row['contact_name']);
