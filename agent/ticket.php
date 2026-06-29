@@ -1471,181 +1471,158 @@ if (isset($_GET['ticket_id'])) {
 
                 <!-- Tasks Card -->
                 <?php if (empty($ticket_resolved_at) || (!empty($ticket_resolved_at) && $task_count > 0)) { ?>
-                    <div class="card">
-                        <div class="card-header px-3 py-2">
-                            <h5 class="card-title mt-1">
-                                <i class="fas fa-fw fa-tasks mr-2"></i>Tasks
-                                <?php if ($task_count) { ?>
-                                <span class="progress d-inline-block align-middle ml-2" style="height: 14px; width: 90px;" title="<?= "$completed_task_count/$task_count ($tasks_completed_percent%)" ?>">
-                                    <span class="progress-bar" style="width: <?php echo $tasks_completed_percent; ?>%;"></span>
-                                </span>
+                <div class="card">
+                    <div class="card-header px-3 py-2 d-flex align-items-center" style="gap:8px;">
+                        <i class="fas fa-fw fa-tasks text-muted" style="font-size:13px;flex-shrink:0;"></i>
+                        <span class="font-weight-bold mr-1" style="font-size:14px;">Tasks</span>
+                        <?php if ($task_count) { ?>
+                        <span class="text-muted" style="font-size:12px;white-space:nowrap;"><?= $completed_task_count ?>/<?= $task_count ?></span>
+                        <div class="progress flex-grow-1" style="height:5px;max-width:80px;" title="<?= "$completed_task_count/$task_count ($tasks_completed_percent%)" ?>">
+                            <div class="progress-bar bg-success" style="width:<?= $tasks_completed_percent ?>%;transition:width .3s;"></div>
+                        </div>
+                        <?php } ?>
+                        <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
+                        <div class="dropdown dropleft ml-auto">
+                            <button class="btn btn-sm btn-link text-muted p-0" type="button" data-toggle="dropdown" style="line-height:1;">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item text-success" href="post.php?complete_all_tasks=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                                    <i class="fas fa-fw fa-check-double mr-2"></i>Mark All Complete
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="post.php?undo_complete_all_tasks=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                                    <i class="far fa-fw fa-circle mr-2"></i>Mark All Incomplete
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger confirm-link" href="#">
+                                    <i class="fas fa-fw fa-trash-alt mr-2"></i>Delete All
+                                </a>
+                            </div>
+                        </div>
+                        <?php } ?>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-unstyled mb-0" id="tasks">
+                        <?php
+                        while ($row = mysqli_fetch_assoc($sql_tasks)) {
+                            $task_id = intval($row['task_id']);
+                            $task_name = nullable_htmlentities($row['task_name']);
+                            $task_completion_estimate = intval($row['task_completion_estimate']);
+                            $task_completed_at = nullable_htmlentities($row['task_completed_at']);
+                            $is_done = !empty($task_completed_at);
+
+                            // Check for approvals
+                            $task_needs_approval = mysqli_num_rows(mysqli_query(
+                                $mysqli,
+                                "SELECT 1 FROM task_approvals
+                                 WHERE approval_task_id = $task_id
+                                   AND approval_status IN ('pending','declined')
+                                 LIMIT 1"
+                            )) > 0;
+
+                            $approval_id = 0;
+                            $user_can_approve = false;
+                            $approval_rows = mysqli_query($mysqli,
+                                "SELECT approval_id, approval_scope, approval_type, approval_required_user_id, approval_created_by
+                                 FROM task_approvals WHERE approval_task_id = $task_id AND approval_status = 'pending'"
+                            );
+                            while ($approval = mysqli_fetch_assoc($approval_rows)) {
+                                $scope = nullable_htmlentities($approval['approval_scope']);
+                                $type  = nullable_htmlentities($approval['approval_type']);
+                                $required_user = intval($approval['approval_required_user_id']);
+                                $created_by    = intval($approval['approval_created_by']);
+                                if ($scope == 'internal' && $type == 'specific' && $required_user == $session_user_id) {
+                                    $user_can_approve = true;
+                                    $approval_id = intval($approval['approval_id']);
+                                }
+                                if ($scope == 'internal' && $type == 'any' && $created_by !== $session_user_id) {
+                                    $user_can_approve = true;
+                                    $approval_id = intval($approval['approval_id']);
+                                }
+                            }
+                        ?>
+                        <li data-task-id="<?= $task_id ?>" class="d-flex align-items-center px-3 border-bottom<?= $is_done ? '' : '' ?>" style="padding-top:9px;padding-bottom:9px;gap:10px;<?= $is_done ? 'background:#fafffe;' : '' ?>">
+
+                            <!-- Check icon -->
+                            <div style="flex-shrink:0;width:20px;text-align:center;">
+                                <?php if ($is_done) { ?>
+                                    <i class="fas fa-check-circle text-success" style="font-size:17px;"></i>
+                                <?php } elseif (lookupUserPermission("module_support") >= 2) { ?>
+                                    <?php if ($task_needs_approval) { ?>
+                                        <i class="fas fa-shield-alt text-warning" style="font-size:15px;" data-toggle="tooltip" data-placement="top" title="Approval required"></i>
+                                        <?php if ($user_can_approve) { ?>
+                                        <a class="confirm-link ml-1" href="post.php?approve_ticket_task=<?= $task_id ?>&approval_id=<?= $approval_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                                            <i class="fas fa-thumbs-up text-success" title="Approve task"></i>
+                                        </a>
+                                        <?php } ?>
+                                    <?php } else { ?>
+                                        <a href="post.php?complete_task=<?= $task_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="text-muted" style="font-size:17px;line-height:1;" title="Mark complete">
+                                            <i class="far fa-circle"></i>
+                                        </a>
+                                    <?php } ?>
+                                <?php } else { ?>
+                                    <i class="far fa-circle text-muted" style="font-size:17px;"></i>
                                 <?php } ?>
-                            </h5>
-                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
-                            <div class="card-tools">
-                                <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-tool" type="button" data-toggle="dropdown">
-                                        <i class="fas fa-ellipsis-v"></i>
+                            </div>
+
+                            <!-- Task name -->
+                            <span class="flex-grow-1" style="font-size:13px;<?= $is_done ? 'text-decoration:line-through;color:#aaa;' : 'color:#333;' ?>"><?= $task_name ?></span>
+
+                            <!-- Actions -->
+                            <div class="d-flex align-items-center" style="flex-shrink:0;gap:2px;">
+                                <button class="btn btn-sm btn-link drag-handle text-muted p-0 px-1" style="cursor:grab;" title="Drag to reorder">
+                                    <i class="fas fa-grip-vertical" style="font-size:12px;"></i>
+                                </button>
+                                <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
+                                <div class="dropdown dropleft">
+                                    <button class="btn btn-sm btn-link text-muted p-0 px-1" type="button" data-toggle="dropdown" style="line-height:1;">
+                                        <i class="fas fa-ellipsis-v" style="font-size:12px;"></i>
                                     </button>
                                     <div class="dropdown-menu">
-                                        <a class="dropdown-item text-success" href="post.php?complete_all_tasks=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-check-double mr-2"></i>Mark All Complete
+                                        <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/ticket/ticket_task_edit.php?id=<?= $task_id ?>">
+                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
                                         </a>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="post.php?undo_complete_all_tasks=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="far fa-fw fa-square mr-2"></i>Mark All Incomplete
+                                        <?php if (!$is_done) { ?>
+                                        <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/ticket/ticket_task_approver_add.php?id=<?= $task_id ?>">
+                                            <i class="fas fa-fw fa-shield-alt mr-2"></i>Add Approvers
                                         </a>
+                                        <?php } ?>
+                                        <?php if ($is_done) { ?>
+                                        <a class="dropdown-item" href="post.php?undo_complete_task=<?= $task_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                                            <i class="fas fa-fw fa-arrow-circle-left mr-2"></i>Mark Incomplete
+                                        </a>
+                                        <?php } ?>
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item text-danger confirm-link" href="#">
-                                            <i class="fas fa-fw fa-trash-alt mr-2"></i>Delete All
+                                        <a class="dropdown-item text-danger confirm-link" href="post.php?delete_task=<?= $task_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                                            <i class="fas fa-fw fa-trash-alt mr-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>
+                                <?php } ?>
                             </div>
-                            <?php } ?>
-                        </div>
-                        <div class="card-body p-0">
+                        </li>
+                        <?php } ?>
+                        </ul>
 
-                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
-                                <form action="post.php" method="post" autocomplete="off">
-                                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                                    <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
-                                    <div class="form-group px-2 pt-3">
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control" name="name" placeholder="Create Task" required maxlength="255">
-                                            <div class="input-group-append">
-                                                <button type="submit" name="add_task" class="btn btn-outline-primary">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </form>
-                            <?php } ?>
-
-                            <table class="table table-sm" id="tasks">
-                                <?php
-                                while ($row = mysqli_fetch_assoc($sql_tasks)) {
-                                    $task_id = intval($row['task_id']);
-                                    $task_name = nullable_htmlentities($row['task_name']);
-                                    $task_completion_estimate = intval($row['task_completion_estimate']);
-                                    $task_completed_at = nullable_htmlentities($row['task_completed_at']);
-
-                                    // Check for approvals
-                                    $task_needs_approval = false;
-                                    $task_needs_approval = mysqli_num_rows(mysqli_query(
-                                            $mysqli,
-                                            "SELECT 1 FROM task_approvals
-                                                 WHERE approval_task_id = $task_id
-                                                   AND approval_status IN ('pending','declined')
-                                                 LIMIT 1"
-                                        )) > 0;
-
-                                    $approval_id = 0;
-                                    $user_can_approve = false;
-                                    $approval_rows = mysqli_query($mysqli, "
-                                        SELECT approval_id, approval_scope, approval_type, approval_required_user_id, approval_created_by
-                                        FROM task_approvals WHERE approval_task_id = $task_id AND approval_status = 'pending'
-                                    ");
-
-                                    while ($approval = mysqli_fetch_assoc($approval_rows)) {
-
-                                        $scope = nullable_htmlentities($approval['approval_scope']);
-                                        $type = nullable_htmlentities($approval['approval_type']);
-                                        $required_user = intval($approval['approval_required_user_id']);
-                                        $created_by = intval($approval['approval_created_by']);
-
-                                        // Named, specific user?
-                                        if ($scope == 'internal' && $type == 'specific' && $required_user == $session_user_id) {
-                                            $user_can_approve = true;
-                                            $approval_id = intval($approval['approval_id']);
-                                            continue;
-                                        }
-
-                                        // Any internal user, but the one who created the task
-                                        if ($scope == 'internal' && $type == 'any' && $created_by !== $session_user_id) {
-                                            $user_can_approve = true;
-                                            $approval_id = intval($approval['approval_id']);
-                                            continue;
-                                        }
-
-                                    }
-
-                                    ?>
-                                    <tr data-task-id="<?= $task_id ?>">
-                                        <td class="px-3">
-                                            <?php if ($task_completed_at) { ?>
-                                                <i class="far fa-check-square text-success"></i>
-                                            <?php } elseif (lookupUserPermission("module_support") >= 2) { ?>
-
-                                                <?php if ($task_needs_approval) { ?>
-                                                    <i class="fas fa-shield-alt text-warning"
-                                                       data-toggle="tooltip"
-                                                       data-placement="top"
-                                                       title="Approval required"></i>
-
-                                                    <?php if ($user_can_approve) { ?>
-                                                        <a class="confirm-link" href="post.php?approve_ticket_task=<?= $task_id ?>&approval_id=<?= $approval_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                            <i class="fas fa-thumbs-up text-green" title="Approve task"></i>
-                                                        </a>
-                                                    <?php } ?>
-
-                                                <?php } else { ?>
-                                                    <a href="post.php?complete_task=<?= $task_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                        <i class="far fa-square text-dark"></i>
-                                                    </a>
-                                                <?php } ?>
-
-                                            <?php } ?>
-                                            <span class="text-dark ml-2"><?= $task_name ?></span>
-                                        </td>
-                                        <td class="px-2">
-                                            <div class="float-right">
-
-                                                <div class="btn-group">
-
-                                                    <button class="btn btn-sm btn-link drag-handle"><i class="fas fa-bars text-muted mr-1"></i></button>
-
-                                                    <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
-
-                                                        <div class="dropdown dropleft text-center">
-                                                            <button class="btn btn-light text-secondary btn-sm" type="button" data-toggle="dropdown">
-                                                                <i class="fas fa-ellipsis-v"></i>
-                                                            </button>
-                                                            <div class="dropdown-menu">
-                                                                <a class="dropdown-item ajax-modal" href="#"
-                                                                   data-modal-url="modals/ticket/ticket_task_edit.php?id=<?= $task_id ?>">
-                                                                    <i class="fas fa-fw fa-edit mr-2"></i>Edit
-                                                                </a>
-                                                                <?php if (!$task_completed_at) { ?>
-                                                                    <a class="dropdown-item ajax-modal" href="#"
-                                                                       data-modal-url="modals/ticket/ticket_task_approver_add.php?id=<?= $task_id ?>">
-                                                                        <i class="fas fa-fw fa-shield-alt mr-2"></i>Add Approvers
-                                                                    </a>
-                                                                <?php } ?>
-                                                                <?php if ($task_completed_at) { ?>
-                                                                    <a class="dropdown-item" href="post.php?undo_complete_task=<?= $task_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                                        <i class="fas fa-fw fa-arrow-circle-left mr-2"></i>Mark incomplete
-                                                                    </a>
-                                                                <?php } ?>
-                                                                <div class="dropdown-divider"></div>
-                                                                <a class="dropdown-item text-danger confirm-link" href="post.php?delete_task=<?php echo $task_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                                    <i class="fas fa-fw fa-trash-alt mr-2"></i>Delete
-                                                                </a>
-                                                            </div>
-                                                        </div>
-
-                                                    <?php } ?>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <?php
-                                }
-                                ?>
-                            </table>
-                        </div>
+                        <!-- Add task -->
+                        <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
+                        <form action="post.php" method="post" autocomplete="off" class="px-3 py-2<?= $task_count ? ' border-top' : '' ?>">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <input type="hidden" name="ticket_id" value="<?= $ticket_id ?>">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white border-right-0 text-muted"><i class="fas fa-plus" style="font-size:11px;"></i></span>
+                                </div>
+                                <input type="text" class="form-control border-left-0" name="name" placeholder="Add a task…" required maxlength="255">
+                                <div class="input-group-append">
+                                    <button type="submit" name="add_task" class="btn btn-outline-primary btn-sm">Add</button>
+                                </div>
+                            </div>
+                        </form>
+                        <?php } ?>
                     </div>
+                </div>
                 <?php } ?>
                 <!-- End Tasks Card -->
 
