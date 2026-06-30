@@ -180,7 +180,10 @@ switch ($resource) {
     case 'ticket_views':
         require __DIR__ . '/ticket_views.php';
         break;
-    case 'me':          require __DIR__ . '/me.php';       break;
+    case 'me':
+        if ($legacy_api_key_auth) { api_error(403, 'Profile endpoint requires a user API token'); }
+        require __DIR__ . '/me.php';
+        break;
     case 'appointments': require __DIR__ . '/appointments.php'; break;
     case 'notifications':
         if ($sub === 'stream') {

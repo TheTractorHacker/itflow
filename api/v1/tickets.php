@@ -7,6 +7,22 @@ defined('FROM_API') || die();
 
 $uid = $api_user_id;
 
+// For per-ticket operations, enforce client-scope restrictions.
+// Agents with no user_client_permissions rows have unrestricted access.
+// Agents with rows may only access tickets whose client is in their permitted set.
+if ($id !== null) {
+    $ticket_access_check = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT t.ticket_id FROM tickets t
+         WHERE t.ticket_id = $id
+           AND (
+               NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid LIMIT 1)
+               OR EXISTS (SELECT 1 FROM user_client_permissions ucp WHERE ucp.user_id = $uid AND ucp.client_id = t.ticket_client_id LIMIT 1)
+           )
+         LIMIT 1"
+    ));
+    if (!$ticket_access_check) api_error(403, 'Access denied');
+}
+
 // Saves uploaded files (multipart field "files[]" for multiple, or "file" for a single
 // upload) into uploads/tickets/{ticket_id}/ and records them in ticket_attachments --
 // the same table/storage the agent UI and client portal use.
