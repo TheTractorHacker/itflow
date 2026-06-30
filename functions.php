@@ -1454,6 +1454,7 @@ function syncTicketToOutlook($ticket_id) {
     }
 }
 
+// Returns 'synced', 'skipped' (no tech/token), or 'failed' (API error).
 function syncScheduleEntryToOutlook($schedule_id) {
     global $mysqli;
 
@@ -1469,10 +1470,10 @@ function syncScheduleEntryToOutlook($schedule_id) {
          WHERE ts.schedule_id = $schedule_id LIMIT 1");
     $s = mysqli_fetch_assoc($sql);
 
-    if (!$s || !$s['schedule_start'] || !$s['schedule_tech_id']) return;
+    if (!$s || !$s['schedule_start'] || !$s['schedule_tech_id']) return 'skipped';
 
     $access_token = getOutlookAccessToken($s['schedule_tech_id']);
-    if (!$access_token) return;
+    if (!$access_token) return 'skipped';
 
     $tz_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_timezone FROM settings WHERE company_id = 1 LIMIT 1"));
     $tz = ($tz_row && $tz_row['config_timezone']) ? $tz_row['config_timezone'] : 'America/Chicago';
@@ -1513,14 +1514,23 @@ function syncScheduleEntryToOutlook($schedule_id) {
             "Authorization: Bearer $access_token",
             "Content-Type: application/json",
         ],
+        CURLOPT_TIMEOUT        => 15,
     ]);
     $response = json_decode(curl_exec($ch), true);
     curl_close($ch);
 
+    if ($method === 'PATCH' && empty($response['error'])) {
+        return 'synced';
+    }
+
     if ($method === 'POST' && !empty($response['id'])) {
         $event_id = mysqli_real_escape_string($mysqli, $response['id']);
         mysqli_query($mysqli, "UPDATE ticket_schedules SET schedule_outlook_event_id = '$event_id' WHERE schedule_id = $schedule_id");
+        return 'synced';
     }
+
+    error_log("ITFlow: Outlook event sync failed for schedule $schedule_id: " . json_encode($response['error'] ?? 'no response'));
+    return 'failed';
 }
 
 function deleteOutlookCalendarEvent($ticket_id) {

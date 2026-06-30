@@ -71,6 +71,33 @@ $configured   = !empty($config_outlook_cal_client_id) && !empty($config_outlook_
     </div>
 </div>
 
+<!-- ── Bulk Sync Card ───────────────────────────────────────── -->
+<?php if ($configured) { ?>
+<div class="card card-dark">
+    <div class="card-header py-3">
+        <h3 class="card-title"><i class="fas fa-sync-alt mr-2"></i>Sync All Appointments to Outlook</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">Push all existing ticket appointments to Outlook for every technician who has connected their calendar. Useful after reconnecting a revoked token or migrating from another system. Each appointment creates or updates the corresponding Outlook event.</p>
+        <form action="post.php" method="post" class="form-inline">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+            <div class="form-group mr-3">
+                <label class="mr-2">Scope</label>
+                <select name="sync_scope" class="form-control form-control-sm">
+                    <option value="future">Upcoming appointments only</option>
+                    <option value="all">All appointments (past &amp; future)</option>
+                </select>
+            </div>
+            <button type="submit" name="sync_all_outlook" class="btn btn-primary"
+                    onclick="return confirm('This will create or update Outlook calendar events for all matched appointments. Continue?')">
+                <i class="fas fa-sync-alt mr-1"></i>Sync Now
+            </button>
+        </form>
+        <small class="text-muted d-block mt-2">Only appointments where the assigned tech has connected their Outlook account will sync. Appointments with no assigned tech are skipped.</small>
+    </div>
+</div>
+<?php } ?>
+
 <!-- ── Setup Guide Card ────────────────────────────────────── -->
 <div class="card card-dark">
     <div class="card-header py-3">
