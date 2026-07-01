@@ -7,90 +7,129 @@ enforceUserPermission('module_credential');
 $credential_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM credentials WHERE credential_id = $credential_id LIMIT 1");
-
 $row = mysqli_fetch_assoc($sql);
-$client_id = intval($row['credential_client_id']);
-$credential_name = nullable_htmlentities($row['credential_name']);
-$credential_description = nullable_htmlentities($row['credential_description']);
-$credential_uri = nullable_htmlentities($row['credential_uri']);
-$credential_uri_2 = nullable_htmlentities($row['credential_uri_2']);
-$credential_username = nullable_htmlentities(decryptCredentialEntry($row['credential_username']));
-$credential_password = nullable_htmlentities(decryptCredentialEntry($row['credential_password']));
-$credential_otp_secret = nullable_htmlentities(decryptOtpSecret($row['credential_otp_secret'] ?? ''));
-$credential_id_with_secret = '"' . $row['credential_id'] . '","' . decryptOtpSecret($row['credential_otp_secret'] ?? '') . '"';
+$client_id               = intval($row['credential_client_id']);
+$credential_name         = nullable_htmlentities($row['credential_name']);
+$credential_description  = nullable_htmlentities($row['credential_description']);
+$credential_uri          = nullable_htmlentities($row['credential_uri']);
+$credential_uri_2        = nullable_htmlentities($row['credential_uri_2']);
+$credential_uri_link     = sanitize_url($row['credential_uri']);
+$credential_uri_2_link   = sanitize_url($row['credential_uri_2']);
+$credential_username     = nullable_htmlentities(decryptCredentialEntry($row['credential_username']));
+$credential_password     = nullable_htmlentities(decryptCredentialEntry($row['credential_password']));
+$credential_otp_secret   = nullable_htmlentities(decryptOtpSecret($row['credential_otp_secret'] ?? ''));
+$credential_note         = nullable_htmlentities($row['credential_note']);
+$credential_created_at   = nullable_htmlentities($row['credential_created_at']);
+
 if (empty($credential_otp_secret)) {
-    $otp_display = "-";
+    $otp_display = '<span class="text-muted">—</span>';
 } else {
-    $otp_display = "<span onmouseenter='showOTPViaCredentialID($credential_id)'><i class='far fa-clock'></i> <span id='otp_$credential_id'><i>Hover..</i></span></span>";
+    $otp_display = "<span onmouseenter='showOTPViaCredentialID($credential_id)'><i class='far fa-clock mr-1'></i><span id='otp_$credential_id'><em class='text-muted'>Hover to reveal…</em></span></span>";
 }
-$credential_note = nullable_htmlentities($row['credential_note']);
-$credential_created_at = nullable_htmlentities($row['credential_created_at']);
 
 enforceClientAccess();
 
-// Generate the HTML form content using output buffering.
 ob_start();
 ?>
 
 <div class="modal-header bg-dark text-white">
     <div class="d-flex align-items-center">
-        <i class="fas fa-fw fa-building fa-2x mr-3"></i>
+        <i class="fas fa-fw fa-key fa-2x mr-3"></i>
         <div>
-            <h5 class="modal-title mb-0"><?php echo $name; ?></h5>
-            <div class="text-muted"><?php echo getFallback($description); ?></div>
+            <h5 class="modal-title mb-0"><?= $credential_name ?></h5>
+            <?php if ($credential_description) { ?>
+                <small class="text-muted"><?= $credential_description ?></small>
+            <?php } ?>
         </div>
     </div>
-    <button type="button" class="close text-white" data-dismiss="modal">
-        <span>&times;</span>
-    </button>
+    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
 </div>
 
-<div class="modal-body bg-light">
+<div class="modal-body">
 
-    <!-- Vendor Info Card -->
-    <div class="card mb-3 shadow-sm rounded">
-        <div class="card-body">
-            <h6 class="text-secondary"><i class="fas fa-info-circle mr-2"></i>Vendor Details</h6>
-            <div class="row">
-                <div class="col-sm-6">
-                    <div><strong>Account Number:</strong> <?php echo getFallback($account_number); ?></div>
-                    <div><strong>Hours:</strong> <?php echo getFallback($hours); ?></div>
-                    <div><strong>SLA:</strong> <?php echo getFallback($sla); ?></div>
-                </div>
-                <div class="col-sm-6">
-                    <div><strong>Code:</strong> <?php echo getFallback($code); ?></div>
-                    <div><strong>Website:</strong> <?php echo !empty($website) ? '<a href="' . $website . '" target="_blank" class="text-primary">' . $website . '</a>' : '<span class="text-muted">Not Available</span>'; ?></div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <table class="table table-sm table-borderless mb-0">
+        <tbody>
 
-    <!-- Contact Info Card -->
-    <div class="card mb-3 shadow-sm rounded">
-        <div class="card-body">
-            <h6 class="text-secondary"><i class="fas fa-user mr-2"></i>Contact Information</h6>
-            <div class="row">
-                <div class="col-sm-6">
-                    <div><strong>Contact Name:</strong> <?php echo getFallback($contact_name); ?></div>
-                    <div><strong>Phone:</strong> <?php echo getFallback($phone); ?></div>
-                </div>
-                <div class="col-sm-6">
-                    <div><strong>Email:</strong> <?php echo !empty($email) ? '<a href="mailto:' . $email . '" class="text-primary">' . $email . '</a>' : '<span class="text-muted">Not Available</span>'; ?></div>
-                </div>
-            </div>
-        </div>
-    </div>
+            <tr>
+                <td class="text-muted" style="width:130px;white-space:nowrap;"><i class="fas fa-fw fa-user mr-1"></i>Username</td>
+                <td>
+                    <?php if ($credential_username) { ?>
+                        <span id="cred-username-<?= $credential_id ?>"><?= $credential_username ?></span>
+                        <button class="btn btn-sm clipboardjs ml-1" type="button" title="Copy username" data-clipboard-text="<?= $credential_username ?>"><i class="far fa-copy text-secondary"></i></button>
+                    <?php } else { ?>
+                        <span class="text-muted">—</span>
+                    <?php } ?>
+                </td>
+            </tr>
 
-    <!-- Notes Card -->
-    <div class="card mb-3 shadow-sm rounded">
-        <div class="card-body">
-            <h6 class="text-secondary"><i class="fas fa-sticky-note mr-2"></i>Notes</h6>
-            <div>
-                <?php echo getFallback($notes); ?>
-            </div>
-        </div>
-    </div>
+            <tr>
+                <td class="text-muted"><i class="fas fa-fw fa-lock mr-1"></i>Password</td>
+                <td>
+                    <?php if ($credential_password) { ?>
+                        <span id="cred-pw-<?= $credential_id ?>" style="font-family:monospace;letter-spacing:.1em;">••••••••</span>
+                        <button class="btn btn-sm ml-1" type="button" title="Show / hide"
+                            onclick="var s=document.getElementById('cred-pw-<?= $credential_id ?>');s.textContent=s.textContent==='••••••••'?<?= json_encode($credential_password) ?>:'••••••••';">
+                            <i class="far fa-eye text-secondary"></i>
+                        </button>
+                        <button class="btn btn-sm clipboardjs" type="button" title="Copy password" data-clipboard-text="<?= $credential_password ?>"><i class="far fa-copy text-secondary"></i></button>
+                    <?php } else { ?>
+                        <span class="text-muted">—</span>
+                    <?php } ?>
+                </td>
+            </tr>
 
+            <tr>
+                <td class="text-muted"><i class="fas fa-fw fa-shield-alt mr-1"></i>TOTP</td>
+                <td><?= $otp_display ?></td>
+            </tr>
+
+            <tr>
+                <td class="text-muted"><i class="fas fa-fw fa-link mr-1"></i>URI</td>
+                <td>
+                    <?php if ($credential_uri) { ?>
+                        <a href="<?= $credential_uri_link ?>" target="_blank" rel="noopener noreferrer"><?= $credential_uri ?></a>
+                        <button class="btn btn-sm clipboardjs ml-1" type="button" title="Copy URI" data-clipboard-text="<?= $credential_uri ?>"><i class="far fa-copy text-secondary"></i></button>
+                    <?php } else { ?>
+                        <span class="text-muted">—</span>
+                    <?php } ?>
+                </td>
+            </tr>
+
+            <?php if ($credential_uri_2) { ?>
+            <tr>
+                <td class="text-muted"><i class="fas fa-fw fa-link mr-1"></i>URI 2</td>
+                <td>
+                    <a href="<?= $credential_uri_2_link ?>" target="_blank" rel="noopener noreferrer"><?= $credential_uri_2 ?></a>
+                    <button class="btn btn-sm clipboardjs ml-1" type="button" title="Copy URI 2" data-clipboard-text="<?= $credential_uri_2 ?>"><i class="far fa-copy text-secondary"></i></button>
+                </td>
+            </tr>
+            <?php } ?>
+
+            <?php if ($credential_note) { ?>
+            <tr>
+                <td class="text-muted align-top"><i class="fas fa-fw fa-sticky-note mr-1"></i>Notes</td>
+                <td style="white-space:pre-wrap;"><?= $credential_note ?></td>
+            </tr>
+            <?php } ?>
+
+            <tr>
+                <td class="text-muted"><i class="fas fa-fw fa-calendar-alt mr-1"></i>Created</td>
+                <td class="text-muted"><?= $credential_created_at ?></td>
+            </tr>
+
+        </tbody>
+    </table>
+
+</div>
+
+<div class="modal-footer">
+    <?php if (lookupUserPermission('module_credential') >= 2) { ?>
+    <a href="#" class="btn btn-outline-secondary ajax-modal"
+        data-modal-url="modals/credential/credential_edit.php?id=<?= $credential_id ?>">
+        <i class="fas fa-edit mr-1"></i>Edit
+    </a>
+    <?php } ?>
+    <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fas fa-times mr-1"></i>Close</button>
 </div>
 
 <script src="js/credential_show_otp_via_id.js"></script>

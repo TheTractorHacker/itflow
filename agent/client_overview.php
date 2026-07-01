@@ -45,7 +45,7 @@ $sql_recent_tickets = mysqli_query(
     $mysqli,
     "SELECT * FROM tickets
     WHERE ticket_client_id = $client_id
-    ORDER BY ticket_created_at ASC
+    ORDER BY ticket_created_at DESC
     LIMIT 5"
 );
 
@@ -54,7 +54,7 @@ $sql_recent_credentials = mysqli_query(
     "SELECT * FROM credentials
      WHERE credential_client_id = $client_id
      AND credential_archived_at IS NULL
-     ORDER BY credential_updated_at ASC
+     ORDER BY credential_updated_at DESC
      LIMIT 5"
 );
 
@@ -436,7 +436,7 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
                     <tr>
                         <td>
                             <a href="#" class="ajax-modal"
-                                data-modal-url="modals/credential/credential_edit.php?id=<?= $credential_id ?>">
+                                data-modal-url="modals/credential/credential_view.php?id=<?= $credential_id ?>">
                                     <i class="fas fa-fw fa-key text-dark mr-1"></i><?= $credential_name ?>
                             </a>
                         </td>
@@ -771,7 +771,7 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
 
             <div class="card card-dark mb-3">
                 <div class="card-header p-2">
-                    <h5 class="card-title"><i class="fa fa-fw fa-life-ring mr-2"></i>Stale Tickets <small>(Not updated within 3 days)</small></h5>
+                    <h5 class="card-title"><i class="fa fa-fw fa-life-ring mr-2"></i>Stale Tickets <small>(Not updated within 7 days)</small></h5>
                 </div>
                 <table class="table table table-sm table-hover mb-0">
                     <tbody>
@@ -811,7 +811,7 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
 
             <div class="card card-dark mb-3">
                 <div class="card-header p-2">
-                    <h5 class="card-title"><i class="fa fa-fw fa-history mr-2"></i>Recent Activities <small>(Last 10 tasks)</small></h5>
+                    <h5 class="card-title"><i class="fa fa-fw fa-history mr-2"></i>Recent Activities <small>(Last 5)</small></h5>
                 </div>
                 <table class="table table-sm table-hover mb-0">
                     <tbody>
