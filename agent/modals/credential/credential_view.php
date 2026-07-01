@@ -16,7 +16,8 @@ $credential_uri_2        = nullable_htmlentities($row['credential_uri_2']);
 $credential_uri_link     = sanitize_url($row['credential_uri']);
 $credential_uri_2_link   = sanitize_url($row['credential_uri_2']);
 $credential_username     = nullable_htmlentities(decryptCredentialEntry($row['credential_username']));
-$credential_password     = nullable_htmlentities(decryptCredentialEntry($row['credential_password']));
+$credential_password_raw = decryptCredentialEntry($row['credential_password']);
+$credential_password     = nullable_htmlentities($credential_password_raw);
 $credential_otp_secret   = nullable_htmlentities(decryptOtpSecret($row['credential_otp_secret'] ?? ''));
 $credential_note         = nullable_htmlentities($row['credential_note']);
 $credential_created_at   = nullable_htmlentities($row['credential_created_at']);
@@ -65,10 +66,12 @@ ob_start();
             <tr>
                 <td class="text-muted"><i class="fas fa-fw fa-lock mr-1"></i>Password</td>
                 <td>
-                    <?php if ($credential_password) { ?>
-                        <span id="cred-pw-<?= $credential_id ?>" style="font-family:monospace;letter-spacing:.1em;">••••••••</span>
+                    <?php if ($credential_password_raw) { ?>
+                        <span id="cred-pw-<?= $credential_id ?>"
+                            data-pw="<?= htmlspecialchars($credential_password_raw, ENT_QUOTES, 'UTF-8') ?>"
+                            style="font-family:monospace;letter-spacing:.1em;">••••••••</span>
                         <button class="btn btn-sm ml-1" type="button" title="Show / hide"
-                            onclick="var s=document.getElementById('cred-pw-<?= $credential_id ?>');s.textContent=s.textContent==='••••••••'?<?= json_encode($credential_password) ?>:'••••••••';">
+                            onclick="var s=document.getElementById('cred-pw-<?= $credential_id ?>');var h=s.textContent!=='••••••••';s.textContent=h?'••••••••':s.dataset.pw;">
                             <i class="far fa-eye text-secondary"></i>
                         </button>
                         <button class="btn btn-sm clipboardjs" type="button" title="Copy password" data-clipboard-text="<?= $credential_password ?>"><i class="far fa-copy text-secondary"></i></button>
