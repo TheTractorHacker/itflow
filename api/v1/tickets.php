@@ -378,7 +378,10 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
 if ($method === 'GET' && $id !== null && $sub === 'chat') {
     if (!$config_module_enable_live_chat) api_error(403, 'Live chat is not enabled');
 
-    $ticket_check = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $id LIMIT 1"));
+    $ticket_check = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT t.ticket_id, cl.client_name FROM tickets t
+         JOIN clients cl ON cl.client_id = t.ticket_client_id
+         WHERE t.ticket_id = $id LIMIT 1"));
     if (!$ticket_check) api_error(404, 'Ticket not found');
 
     if (isset($_GET['stream'])) {
@@ -389,19 +392,28 @@ if ($method === 'GET' && $id !== null && $sub === 'chat') {
     $since_id = isset($_GET['since_id']) ? intval($_GET['since_id']) : 0;
 
     $sql = mysqli_query($mysqli,
-        "SELECT cm.*, u.user_name FROM ticket_chat_messages cm
+        "SELECT cm.*, u.user_name, c.contact_name FROM ticket_chat_messages cm
          LEFT JOIN users u ON cm.sender_type = 'agent' AND cm.sender_id = u.user_id
+         LEFT JOIN contacts c ON cm.sender_type = 'contact' AND cm.sender_id = c.contact_id
          WHERE cm.ticket_id = $id AND cm.id > $since_id
          ORDER BY cm.id ASC"
     );
 
     $messages = [];
     while ($row = mysqli_fetch_assoc($sql)) {
+        if ($row['sender_type'] === 'agent') {
+            $sender_name = $row['user_name'];
+        } else {
+            // sender_id = 0 means "the client generally", not one specific
+            // contact (e.g. a machine client with no contact configured) -
+            // fall back to the client's name rather than showing nothing.
+            $sender_name = $row['contact_name'] ?? $ticket_check['client_name'];
+        }
         $messages[] = [
             'id'          => intval($row['id']),
             'sender_type' => $row['sender_type'],
             'sender_id'   => intval($row['sender_id']),
-            'sender_name' => $row['sender_type'] === 'agent' ? $row['user_name'] : null,
+            'sender_name' => $sender_name,
             'message'     => $row['message'],
             'created_at'  => $row['created_at'],
         ];
@@ -414,7 +426,10 @@ if ($method === 'GET' && $id !== null && $sub === 'chat') {
 if ($method === 'POST' && $id !== null && $sub === 'chat') {
     if (!$config_module_enable_live_chat) api_error(403, 'Live chat is not enabled');
 
-    $ticket_check = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $id LIMIT 1"));
+    $ticket_check = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT t.ticket_id, cl.client_name FROM tickets t
+         JOIN clients cl ON cl.client_id = t.ticket_client_id
+         WHERE t.ticket_id = $id LIMIT 1"));
     if (!$ticket_check) api_error(404, 'Ticket not found');
 
     $body    = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -424,8 +439,8 @@ if ($method === 'POST' && $id !== null && $sub === 'chat') {
     $message_escaped = mysqli_real_escape_string($mysqli, $message);
 
     // contact_id posts on behalf of one of the ticket's client's contacts,
-    // mirroring client/post.php's add_ticket_chat_message; otherwise the
-    // message is attributed to the authenticated agent.
+    // mirroring client/post.php's add_ticket_chat_message; a real technician
+    // session/token with no contact_id is attributed to that agent.
     $contact_id = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
     if ($contact_id) {
         $contact_row = mysqli_fetch_assoc(mysqli_query($mysqli,
@@ -437,6 +452,15 @@ if ($method === 'POST' && $id !== null && $sub === 'chat') {
         $sender_type = 'contact';
         $sender_id   = $contact_id;
         $sender_name = $contact_row['contact_name'];
+    } elseif ($legacy_api_key_auth) {
+        // Authenticated with the shared legacy API key (e.g. ITPanel Pro
+        // with no Contact ID configured), not a real technician sitting
+        // down to reply - $uid here is just "the first active admin" that
+        // key resolves to, so attributing the message to them by name would
+        // be misleading. Attribute it to the client generally instead.
+        $sender_type = 'contact';
+        $sender_id   = 0;
+        $sender_name = $ticket_check['client_name'];
     } else {
         $sender_type = 'agent';
         $sender_id   = $uid;
@@ -565,11 +589,22 @@ if ($method === 'POST' && $id !== null && $sub === 'status') {
     $body   = json_decode(file_get_contents('php://input'), true) ?? [];
     $status = intval($body['status_id'] ?? 0);
     if (!$status) api_error(400, 'status_id required');
-    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $status, ticket_updated_at = NOW() WHERE ticket_id = $id");
-    // If status resolves the ticket
-    $resolved_status = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_status_id FROM ticket_statuses WHERE ticket_status_name IN ('Resolved','Closed','Complete') LIMIT 1"));
-    if ($resolved_status && $status == intval($resolved_status['ticket_status_id'])) {
-        mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW() WHERE ticket_id = $id AND ticket_resolved_at IS NULL");
+
+    $status_name_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_status_name FROM ticket_statuses WHERE ticket_status_id = $status"));
+    if (!$status_name_row) api_error(400, 'invalid status_id');
+
+    // Mirror the web app's close-ticket behavior exactly (ticket_status +
+    // ticket_resolved_at + ticket_closed_at + ticket_closed_by all together) -
+    // the web app's "is this open" queries key off ticket_closed_at, not
+    // ticket_status, so a ticket closed from the app must set it or it never
+    // disappears from open-ticket views on the web.
+    $closed_by = intval($session_user_id ?? 0);
+    if ($status_name_row['ticket_status_name'] === 'Closed') {
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $status, ticket_updated_at = NOW(), ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $closed_by WHERE ticket_id = $id");
+    } else {
+        // Moving to any non-Closed status reopens the ticket if it was closed.
+        // ticket_closed_by is NOT NULL (default 0), unlike the two timestamp columns.
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $status, ticket_updated_at = NOW(), ticket_resolved_at = NULL, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $id");
     }
 
     $api_status_info = getTicketStatusInfo($mysqli, $status);
