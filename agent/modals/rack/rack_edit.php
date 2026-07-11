@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support', 2);
+
 $rack_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM racks WHERE rack_id = $rack_id LIMIT 1");
@@ -19,6 +21,8 @@ $rack_notes = nullable_htmlentities($row['rack_notes']);
 $rack_location_id = nullable_htmlentities($row['rack_location_id']);
 $rack_created_at = nullable_htmlentities($row['rack_created_at']);
 $client_id = intval($row['rack_client_id']);
+
+enforceClientAccess();
 
 // Generate the HTML form content using output buffering.
 ob_start();

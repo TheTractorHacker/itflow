@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support');
+
 $asset_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM assets
@@ -217,6 +219,8 @@ if (isset($_GET['client_id'])) {
 } else {
     $client_url = '';
 }
+
+enforceClientAccess();
 
 // Generate the HTML form content using output buffering.
 ob_start();

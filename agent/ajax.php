@@ -161,6 +161,9 @@ if (isset($_GET['share_generate_link'])) {
     $item_encrypted_credential = '';  // Default empty
 
     $client_id = intval($_GET['client_id']);
+
+    enforceClientAccess();
+
     $item_type = sanitizeInput($_GET['type']);
     $item_id = intval($_GET['id']);
     $item_email = sanitizeInput($_GET['contact_email']);
@@ -459,6 +462,12 @@ if (isset($_POST['update_kanban_ticket'])) {
 
     foreach ($positions as $position) {
         $ticket_id = intval($position['ticket_id']);
+
+        // Client perms check
+        $client_query = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id"));
+        $client_id = intval($client_query['ticket_client_id']);
+        enforceClientAccess();
+
         $kanban = intval($position['ticket_order']); // ticket kanban position
         $status = intval($position['ticket_status']); // ticket statuses
 
@@ -898,6 +907,8 @@ if (isset($_GET['ai_create_document_template'])) {
 
 if (isset($_GET['ai_ticket_summary'])) {
 
+    enforceUserPermission('module_support');
+
     header('Content-Type: text/html; charset=UTF-8');
 
     $sql = mysqli_query($mysqli, "SELECT * FROM ai_models LEFT JOIN ai_providers ON ai_model_ai_provider_id = ai_provider_id WHERE ai_model_use_case = 'General' LIMIT 1");
@@ -912,7 +923,7 @@ if (isset($_GET['ai_ticket_summary'])) {
 
     // Query the database for ticket details
     $sql = mysqli_query($mysqli, "
-        SELECT ticket_subject, ticket_details, ticket_source, ticket_priority, ticket_status_name, category_name
+        SELECT ticket_subject, ticket_details, ticket_source, ticket_priority, ticket_status_name, category_name, ticket_client_id
         FROM tickets
         LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id
         LEFT JOIN categories ON ticket_category = category_id
@@ -926,6 +937,9 @@ if (isset($_GET['ai_ticket_summary'])) {
     $ticket_category = $row['category_name'];
     $ticket_source = $row['ticket_source'];
     $ticket_priority = $row['ticket_priority'];
+    $client_id = intval($row['ticket_client_id']);
+
+    enforceClientAccess();
 
     // Get ticket replies
     $sql_replies = mysqli_query($mysqli, "

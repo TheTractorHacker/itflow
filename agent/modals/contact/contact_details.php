@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_client');
+
 $contact_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM contacts
@@ -183,6 +185,8 @@ elseif ($recurring_ticket_count) { $first_tab = "recurring"; }
 elseif ($document_count) { $first_tab = "documents"; }
 elseif ($file_count) { $first_tab = "files"; }
 elseif ($note_count) { $first_tab = "notes"; }
+
+enforceClientAccess();
 
 // Generate the HTML form content using output buffering.
 ob_start();

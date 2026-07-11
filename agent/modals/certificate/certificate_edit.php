@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support', 2);
+
 $certificate_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM certificates WHERE certificate_id = $certificate_id LIMIT 1");
@@ -19,6 +21,8 @@ $certificate_created_at = nullable_htmlentities($row['certificate_created_at']);
 $client_id = intval($row['certificate_client_id']);
 
 $history_sql = mysqli_query($mysqli, "SELECT * FROM certificate_history WHERE certificate_history_certificate_id = $certificate_id");
+
+enforceClientAccess();
 
 // Generate the HTML form content using output buffering.
 ob_start();

@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_client', 2);
+
 $contact_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM contacts
@@ -42,6 +44,8 @@ while ($row = mysqli_fetch_assoc($sql_contact_tags)) {
     $contact_tag_id = intval($row['tag_id']);
     $contact_tag_id_array[] = $contact_tag_id;
 }
+
+enforceClientAccess();
 
 // Generate the HTML form content using output buffering.
 ob_start();
