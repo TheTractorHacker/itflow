@@ -102,6 +102,7 @@ function display_folders($parent_folder_id, $client_id, $indent = 0, $render_roo
         "SELECT * FROM folders
          WHERE parent_folder = $parent_folder_id
          AND folder_client_id = $client_id
+         AND folder_location != 2
          ORDER BY folder_name ASC"
     );
 
@@ -136,7 +137,8 @@ function display_folders($parent_folder_id, $client_id, $indent = 0, $render_roo
             "SELECT COUNT(*) AS count
              FROM folders
              WHERE parent_folder = $folder_id
-             AND folder_client_id = $client_id"
+             AND folder_client_id = $client_id
+             AND folder_location != 2"
         );
         $subfolder_count  = intval(mysqli_fetch_assoc($subfolder_result)['count']);
 

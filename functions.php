@@ -1329,10 +1329,19 @@ function getOutlookAccessToken($user_id) {
         return null;
     }
 
+    // Tokens are encrypted at rest under the site's canonical vault key (see
+    // outlook_calendar_callback.php) since they're read on behalf of whichever
+    // user owns the ticket appointment, not necessarily the current session's user.
+    $canonical_key = getCanonicalVaultKey($mysqli);
+    $stored_refresh_token = decryptCredentialEntryWithKey($row['user_outlook_refresh_token'], $canonical_key);
+    $stored_access_token  = !empty($row['user_outlook_access_token'])
+        ? decryptCredentialEntryWithKey($row['user_outlook_access_token'], $canonical_key)
+        : null;
+
     // Return cached access token if still valid
-    if (!empty($row['user_outlook_access_token']) && !empty($row['user_outlook_token_expires'])
+    if (!empty($stored_access_token) && !empty($row['user_outlook_token_expires'])
         && strtotime($row['user_outlook_token_expires']) > time() + 60) {
-        return $row['user_outlook_access_token'];
+        return $stored_access_token;
     }
 
     // Refresh the access token
@@ -1344,7 +1353,7 @@ function getOutlookAccessToken($user_id) {
             'client_id'     => $config_outlook_cal_client_id,
             'client_secret' => $config_outlook_cal_client_secret,
             'grant_type'    => 'refresh_token',
-            'refresh_token' => $row['user_outlook_refresh_token'],
+            'refresh_token' => $stored_refresh_token,
             'scope'         => 'Calendars.ReadWrite offline_access',
         ]),
         CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
@@ -1367,11 +1376,11 @@ function getOutlookAccessToken($user_id) {
         return null;
     }
 
-    $access_token  = mysqli_real_escape_string($mysqli, $data['access_token']);
+    $access_token  = mysqli_real_escape_string($mysqli, encryptCredentialEntryWithKey($data['access_token'], $canonical_key));
     $expires_at    = date('Y-m-d H:i:s', time() + intval($data['expires_in'] ?? 3600));
     $refresh_extra = '';
     if (!empty($data['refresh_token'])) {
-        $new_refresh   = mysqli_real_escape_string($mysqli, $data['refresh_token']);
+        $new_refresh   = mysqli_real_escape_string($mysqli, encryptCredentialEntryWithKey($data['refresh_token'], $canonical_key));
         $refresh_extra = ", user_outlook_refresh_token = '$new_refresh'";
     }
 
@@ -2081,7 +2090,7 @@ function getFieldById($table, $id, $field, $escape_method = 'sql') {
 function display_folder_options($parent_folder_id, $client_id, $indent = 0) {
     global $mysqli;
 
-    $sql_folders = mysqli_query($mysqli, "SELECT * FROM folders WHERE parent_folder = $parent_folder_id AND folder_client_id = $client_id ORDER BY folder_name ASC");
+    $sql_folders = mysqli_query($mysqli, "SELECT * FROM folders WHERE parent_folder = $parent_folder_id AND folder_client_id = $client_id AND folder_location != 2 ORDER BY folder_name ASC");
     while ($row = mysqli_fetch_assoc($sql_folders)) {
         $folder_id = intval($row['folder_id']);
         $folder_name = nullable_htmlentities($row['folder_name']);

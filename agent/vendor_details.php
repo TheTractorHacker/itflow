@@ -7,6 +7,8 @@ if (isset($_GET['client_id'])) {
     require_once "includes/inc_all.php";
 }
 
+// Perms
+enforceUserPermission('module_support');
 
 if (isset($_GET['vendor_id'])) {
     $vendor_id = intval($_GET['vendor_id']);

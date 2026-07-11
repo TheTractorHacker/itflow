@@ -14,6 +14,8 @@ if (isset($_POST['add_expense'])) {
 
     require_once 'expense_model.php';
 
+    enforceClientAccess();
+
     mysqli_query($mysqli,"INSERT INTO expenses SET expense_date = '$date', expense_amount = $amount, expense_currency_code = '$session_company_currency', expense_account_id = $account, expense_vendor_id = $vendor, expense_client_id = $client_id, expense_category_id = $category, expense_description = '$description', expense_reference = '$reference'");
 
     $expense_id = mysqli_insert_id($mysqli);
@@ -51,9 +53,17 @@ if (isset($_POST['edit_expense'])) {
 
     enforceUserPermission('module_financial', 2);
 
+    $expense_id = intval($_POST['expense_id']);
+
+    // Confirm access to the expense's current client before allowing any edit
+    $client_id = intval(getFieldById('expenses', $expense_id, 'expense_client_id'));
+    enforceClientAccess();
+
     require_once 'expense_model.php';
 
-    $expense_id = intval($_POST['expense_id']);
+    // The form may also reassign the expense to a different client - confirm
+    // access to that destination client too.
+    enforceClientAccess();
 
     // Get old receipt
     $existing_file_name = sanitizeInput(getFieldById('expenses', $expense_id, 'expense_receipt'));
@@ -102,6 +112,8 @@ if (isset($_GET['delete_expense'])) {
     $expense_description = sanitizeInput($row['expense_description']);
     $client_id = intval($row['expense_client_id']);
 
+    enforceClientAccess();
+
     unlink("../uploads/expenses/$expense_receipt");
 
     mysqli_query($mysqli,"DELETE FROM expenses WHERE expense_id = $expense_id");
@@ -140,9 +152,11 @@ if (isset($_POST['bulk_edit_expense_category'])) {
             $expense_description = sanitizeInput($row['expense_description']);
             $client_id = intval($row['expense_client_id']);
 
+            enforceClientAccess();
+
             mysqli_query($mysqli,"UPDATE expenses SET expense_category_id = $category_id WHERE expense_id = $expense_id");
 
-            logAction("Expense", "Edit", "$session_name assigned expense $expense_descrition to category $category_name", $client_id, $expense_id);
+            logAction("Expense", "Edit", "$session_name assigned expense $expense_description to category $category_name", $client_id, $expense_id);
 
         } // End Assign Loop
 
@@ -181,9 +195,11 @@ if (isset($_POST['bulk_edit_expense_account'])) {
             $expense_description = sanitizeInput($row['expense_description']);
             $client_id = intval($row['expense_client_id']);
 
+            enforceClientAccess();
+
             mysqli_query($mysqli,"UPDATE expenses SET expense_account_id = $account_id WHERE expense_id = $expense_id");
 
-            logAction("Expense", "Edit", "$session_name assigned expense $expense_descrition to account $account_name", $client_id, $expense_id);
+            logAction("Expense", "Edit", "$session_name assigned expense $expense_description to account $account_name", $client_id, $expense_id);
 
         } // End Assign Loop
 
@@ -204,6 +220,9 @@ if (isset($_POST['bulk_edit_expense_client'])) {
 
     $client_id = intval($_POST['bulk_client_id']);
 
+    // Confirm access to the destination client
+    enforceClientAccess();
+
     // Get Client name for logging and Notification
     $client_name = sanitizeInput(getFieldById('clients', $client_id, 'client_name'));
 
@@ -216,12 +235,16 @@ if (isset($_POST['bulk_edit_expense_client'])) {
         foreach($_POST['expense_ids'] as $expense_id) {
             $expense_id = intval($expense_id);
 
-            // Get Expense Details for Logging
-            $expense_description = sanitizeInput(getFieldById('expenses', $expense_id, 'expense_description'));
+            // Get Expense Details for Logging, and confirm access to the expense's current client
+            $sql = mysqli_query($mysqli, "SELECT expense_description, expense_client_id FROM expenses WHERE expense_id = $expense_id");
+            $row = mysqli_fetch_assoc($sql);
+            $expense_description = sanitizeInput($row['expense_description']);
+            $source_client_id = intval($row['expense_client_id']);
+            enforceClientAccess($source_client_id);
 
             mysqli_query($mysqli,"UPDATE expenses SET expense_client_id = $client_id WHERE expense_id = $expense_id");
 
-            logAction("Expense", "Edit", "$session_name assigned expense $expense_descrition to client $client_name", $client_id, $expense_id);
+            logAction("Expense", "Edit", "$session_name assigned expense $expense_description to client $client_name", $client_id, $expense_id);
 
         } // End Assign Loop
 
@@ -254,11 +277,13 @@ if (isset($_POST['bulk_delete_expenses'])) {
             $expense_receipt = sanitizeInput($row['expense_receipt']);
             $client_id = intval($row['expense_client_id']);
 
+            enforceClientAccess();
+
             unlink("../uploads/expenses/$expense_receipt");
 
             mysqli_query($mysqli, "DELETE FROM expenses WHERE expense_id = $expense_id");
 
-            logAction("Expense", "Delete", "$session_name deleted expense $expense_descrition", $client_id);
+            logAction("Expense", "Delete", "$session_name deleted expense $expense_description", $client_id);
 
         }
 

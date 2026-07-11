@@ -2,55 +2,31 @@
 
 require_once '../../../includes/modal_header.php';
 
-$file_id = intval($_GET['id']);
+$credential_id = intval($_GET['id']);
 
-$sql = mysqli_query($mysqli, "SELECT * FROM files WHERE file_id = $file_id LIMIT 1");
+$sql = mysqli_query($mysqli, "SELECT credential_name, credential_folder_id, credential_client_id FROM credentials WHERE credential_id = $credential_id LIMIT 1");
 
 $row = mysqli_fetch_assoc($sql);
-$client_id = intval($row['file_client_id']);
-$file_folder_id = nullable_htmlentities($row['file_folder_id']);
-$file_name = nullable_htmlentities($row['file_name']);
-$file_ext = nullable_htmlentities($row['file_ext']);
-if ($file_ext == 'pdf') {
-    $file_icon = "file-pdf";
-} elseif ($file_ext == 'gz' || $file_ext == 'tar' || $file_ext == 'zip' || $file_ext == '7z' || $file_ext == 'rar') {
-    $file_icon = "file-archive";
-} elseif ($file_ext == 'txt' || $file_ext == 'md') {
-    $file_icon = "file-alt";
-} elseif ($file_ext == 'msg') {
-    $file_icon = "envelope";
-} elseif ($file_ext == 'doc' || $file_ext == 'docx' || $file_ext == 'odt') {
-    $file_icon = "file-word";
-} elseif ($file_ext == 'xls' || $file_ext == 'xlsx' || $file_ext == 'ods') {
-    $file_icon = "file-excel";
-} elseif ($file_ext == 'pptx' || $file_ext == 'odp') {
-    $file_icon = "file-powerpoint";
-} elseif ($file_ext == 'mp3' || $file_ext == 'wav' || $file_ext == 'ogg') {
-    $file_icon = "file-audio";
-} elseif ($file_ext == 'mov' || $file_ext == 'mp4' || $file_ext == 'av1') {
-    $file_icon = "file-video";
-} elseif ($file_ext == 'jpg' || $file_ext == 'jpeg' || $file_ext == 'png' || $file_ext == 'gif' || $file_ext == 'webp' || $file_ext == 'bmp' || $file_ext == 'tif') {
-    $file_icon = "file-image";
-} else {
-    $file_icon = "file";
-}
+$client_id = intval($row['credential_client_id']);
+$credential_folder_id = intval($row['credential_folder_id']);
+$credential_name = nullable_htmlentities($row['credential_name']);
 
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-<?php echo $file_icon; ?> mr-2"></i>Moving File: <strong><?php echo $file_name; ?></strong></h5>
+    <h5 class="modal-title"><i class="fa fa-fw fa-key mr-2"></i>Moving Credential: <strong><?php echo $credential_name; ?></strong></h5>
     <button type="button" class="close text-white" data-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-    <input type="hidden" name="file_id" value="<?php echo $file_id; ?>">
+    <input type="hidden" name="credential_id" value="<?php echo $credential_id; ?>">
     <div class="modal-body">
 
         <div class="form-group">
-            <label>Move File to</label>
+            <label>Move Credential to</label>
             <div class="input-group">
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fa fa-fw fa-folder"></i></span>
@@ -58,8 +34,8 @@ ob_start();
                 <select class="form-control select2" name="folder_id">
                     <option value="0">/</option>
                     <?php
-                    // Fetch all folders for the client
-                    $sql_all_folders = mysqli_query($mysqli, "SELECT folder_id, folder_name, parent_folder FROM folders WHERE folder_client_id = $client_id AND folder_location != 2 ORDER BY folder_name ASC");
+                    // Fetch all credential folders for the client
+                    $sql_all_folders = mysqli_query($mysqli, "SELECT folder_id, folder_name, parent_folder FROM folders WHERE folder_client_id = $client_id AND folder_location = 2 ORDER BY folder_name ASC");
                     $folders = array();
 
                     // Build an associative array of folders indexed by folder_id
@@ -104,7 +80,7 @@ ob_start();
 
                         // Check if this folder is selected
                         $selected = '';
-                        if ($folder['folder_id'] == $file_folder_id) {
+                        if ($folder['folder_id'] == $credential_folder_id) {
                             $selected = 'selected';
                         }
 
@@ -124,7 +100,7 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="move_file" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Move</button>
+        <button type="submit" name="move_credential" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Move</button>
         <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
     </div>
 </form>

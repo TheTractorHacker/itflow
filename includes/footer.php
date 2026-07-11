@@ -40,6 +40,9 @@ if (basename(dirname($_SERVER['REQUEST_URI'])) === 'guest') { ?>
 <script src="/plugins/select2/js/select2.min.js"></script>
 <script src="/plugins/inputmask/jquery.inputmask.min.js"></script>
 <script src="/plugins/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="/plugins/marked/marked.min.js"></script>
+<script src="/plugins/turndown/turndown.js"></script>
+<script src="/plugins/turndown/turndown-plugin-gfm.js"></script>
 <script src="/plugins/Show-Hide-Passwords-Bootstrap-4/bootstrap-show-password.min.js"></script>
 <script src="/plugins/clipboardjs/clipboard.min.js"></script>
 <script src="/js/keepalive.js"></script>
@@ -48,10 +51,16 @@ if (basename(dirname($_SERVER['REQUEST_URI'])) === 'guest') { ?>
 
 <!-- AdminLTE App -->
 <script src="/plugins/adminlte/js/adminlte.min.js"></script>
-<script src="/js/app.js"></script>
-<script src="/js/ajax_modal.js"></script>
-<script src="/js/confirm_modal.js"></script>
-<script src="/js/date_filter.js"></script>
+<?php
+// Cache-bust first-party JS on every edit (falls back to the request time if the
+// file is somehow missing) so a stale Cloudflare/browser cache can't keep serving
+// an old copy after a deploy - static assets otherwise have no way to know they changed.
+foreach (['app.js', 'ajax_modal.js', 'confirm_modal.js', 'date_filter.js'] as $__asset) {
+    $__asset_path = __DIR__ . '/../js/' . $__asset;
+    $__asset_version = file_exists($__asset_path) ? filemtime($__asset_path) : time();
+    echo '<script src="/js/' . $__asset . '?v=' . $__asset_version . '"></script>' . "\n";
+}
+?>
 
 </body>
 </html>

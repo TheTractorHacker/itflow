@@ -5,7 +5,11 @@ if (isset($_GET['create_outtake'])) {
     enforceUserPermission('module_support', 2);
 
     $ticket_id = intval($_GET['create_outtake']);
-    $client_id = intval($_GET['client_id'] ?? 0);
+
+    // Derive client from the ticket itself, not the (client-supplied) URL param
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess();
+
     $sign_token = bin2hex(random_bytes(32));
 
     mysqli_query($mysqli, "INSERT INTO ticket_outtake_forms SET outtake_ticket_id = $ticket_id, outtake_sign_token = '$sign_token', outtake_created_by = $session_user_id");
@@ -50,8 +54,11 @@ if (isset($_POST['save_outtake_notes'])) {
 
     $outtake_id = intval($_POST['outtake_id']);
     $ticket_id  = intval($_POST['ticket_id']);
-    $client_id  = intval($_POST['client_id'] ?? 0);
     $notes      = sanitizeInput($_POST['outtake_tech_notes']);
+
+    // Derive client from the ticket itself, not the (client-supplied) form field
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess();
 
     mysqli_query($mysqli, "UPDATE ticket_outtake_forms SET outtake_tech_notes = '$notes' WHERE outtake_id = $outtake_id");
     flash_alert("Outtake form notes saved.");
@@ -64,7 +71,10 @@ if (isset($_POST['send_outtake_email'])) {
 
     $outtake_id = intval($_POST['outtake_id']);
     $ticket_id  = intval($_POST['ticket_id']);
-    $client_id  = intval($_POST['client_id'] ?? 0);
+
+    // Derive client from the ticket itself, not the (client-supplied) form field
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess();
 
     $row = mysqli_fetch_assoc(mysqli_query($mysqli,
         "SELECT ot.outtake_sign_token, t.ticket_prefix, t.ticket_number, t.ticket_subject,
@@ -117,7 +127,10 @@ if (isset($_GET['delete_outtake'])) {
 
     $outtake_id = intval($_GET['delete_outtake']);
     $ticket_id  = intval($_GET['ticket_id']);
-    $client_id  = intval($_GET['client_id'] ?? 0);
+
+    // Derive client from the ticket itself, not the (client-supplied) URL param
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess();
 
     mysqli_query($mysqli, "DELETE FROM ticket_outtake_forms WHERE outtake_id = $outtake_id");
     logAction("Outtake", "Delete", "Deleted outtake form #$outtake_id", $client_id, $ticket_id);

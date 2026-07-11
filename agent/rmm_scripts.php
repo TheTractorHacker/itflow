@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
     if (!validateCSRFToken($_POST['csrf_token'])) { flash_alert('Invalid CSRF token', 'danger'); redirect(); }
 
     if (isset($_POST['save_script'])) {
-        enforceUserPermission('module_rmm_scripts');
+        enforceUserPermission('module_rmm_scripts', 2);
         $sid         = intval($_POST['script_id'] ?? 0);
         $name        = sanitizeInput($_POST['name']);
         $category    = sanitizeInput($_POST['category']);
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
     }
 
     if (isset($_POST['delete_script'])) {
-        enforceUserPermission('module_rmm_scripts');
+        enforceUserPermission('module_rmm_scripts', 3);
         $sid = intval($_POST['script_id']);
         $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT name FROM rmm_scripts WHERE id=$sid"));
         if ($row) {

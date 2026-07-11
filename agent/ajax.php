@@ -432,6 +432,7 @@ if (isset($_GET['get_readable_pass'])) {
  */
 if (isset($_POST['update_kanban_status_position'])) {
     // Update multiple ticket status kanban orders
+    validateCSRFToken($_POST['csrf_token']);
     enforceUserPermission('module_support', 2);
 
     $positions = $_POST['positions'];
@@ -450,6 +451,7 @@ if (isset($_POST['update_kanban_status_position'])) {
 
 if (isset($_POST['update_kanban_ticket'])) {
     // Update ticket kanban order and status
+    validateCSRFToken($_POST['csrf_token']);
     enforceUserPermission('module_support', 2);
 
     // all tickets on the column
@@ -459,7 +461,14 @@ if (isset($_POST['update_kanban_ticket'])) {
         $ticket_id = intval($position['ticket_id']);
         $kanban = intval($position['ticket_order']); // ticket kanban position
         $status = intval($position['ticket_status']); // ticket statuses
-        $oldStatus = intval($position['ticket_oldStatus']); // ticket old status if moved
+
+        // ticket_oldStatus is JS `false` for every card except the one actually
+        // dragged (see tickets_kanban.js) - intval(false) and intval("false") both
+        // come out 0, indistinguishable from a real status id, so detect "not moved"
+        // from the raw value before casting, not after.
+        $oldStatusRaw = $position['ticket_oldStatus'] ?? false;
+        $ticketWasMoved = !($oldStatusRaw === false || $oldStatusRaw === 'false' || $oldStatusRaw === '');
+        $oldStatus = $ticketWasMoved ? intval($oldStatusRaw) : false;
 
         $statuses['Closed'] = 5;
         $statuses['Resolved'] = 4;
@@ -471,13 +480,17 @@ if (isset($_POST['update_kanban_ticket'])) {
 
 
         if ($oldStatus === false) {
-            // if ticket was not moved, just uptdate the order on kanban
-            mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban WHERE ticket_id = $ticket_id");
+            // if ticket was not moved, just uptdate the order on kanban. Also clear
+            // any stale closed_at/closed_by here, since a ticket dragged around the
+            // board (status != Closed, guaranteed by the "continue" above) that still
+            // has these set from a previous bug/edge-case keeps rendering as closed
+            // on the ticket page, which gates on ticket_closed_at rather than status.
+            mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $ticket_id");
             customAction('ticket_update', $ticket_id);
         } else {
             // If the ticket was moved from a resolved status to another status, we need to update ticket_resolved_at
             if ($oldStatus === $statuses['Resolved']) {
-                mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban, ticket_status = $status, ticket_resolved_at = NULL WHERE ticket_id = $ticket_id");
+                mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban, ticket_status = $status, ticket_resolved_at = NULL, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $ticket_id");
                 customAction('ticket_update', $ticket_id);
             } elseif ($status === $statuses['Resolved']) {
                 // If the ticket was moved to a resolved status, we need to update ticket_resolved_at
@@ -561,7 +574,7 @@ if (isset($_POST['update_kanban_ticket'])) {
 
             } else {
                 // If the ticket was moved from any status to another status
-                mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban, ticket_status = $status WHERE ticket_id = $ticket_id");
+                mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban, ticket_status = $status, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $ticket_id");
                 customAction('ticket_update', $ticket_id);
             }
         }

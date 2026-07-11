@@ -19,6 +19,7 @@ $sql = mysqli_query($mysqli, "SELECT SQL_CALC_FOUND_ROWS contracts.*, client_nam
     LEFT JOIN clients ON contract_client_id = client_id
     WHERE contract_archived_at IS NULL $client_query
     AND (contract_name LIKE '%$q%' OR client_name LIKE '%$q%' OR contract_type LIKE '%$q%')
+    $access_permission_query
     ORDER BY contract_renewal_date IS NULL, $sort $order
     LIMIT $record_from, $record_to");
 

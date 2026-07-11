@@ -5,6 +5,7 @@ require_once '../../../includes/modal_header.php';
 $client_id = intval($_GET['client_id'] ?? 0);
 $contact_id = intval($_GET['contact_id'] ?? 0);
 $asset_id = intval($_GET['asset_id'] ?? 0);
+$folder_id = intval($_GET['folder_id'] ?? 0);
 
 ob_start();
 
@@ -17,6 +18,7 @@ ob_start();
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+    <input type="hidden" name="folder_id" value="<?= $folder_id ?>">
 
     <div class="modal-body">
 

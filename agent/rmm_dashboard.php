@@ -2,6 +2,13 @@
 require_once "includes/inc_all.php";
 enforceUserPermission('module_rmm');
 
+// Client-restricted techs should only see RMM data for clients they have access
+// to. asset_rmm_links and rmm_script_runs have no client_id of their own, so
+// they're scoped via a subquery against assets; rmm_alerts/rmm_remote_sessions/
+// tickets/clients carry their own client_id and are scoped directly.
+$rmm_scoped = ($client_access_string && !$session_is_admin);
+$rmm_asset_scope = $rmm_scoped ? "AND asset_id IN (SELECT asset_id FROM assets WHERE asset_client_id IN ($client_access_string))" : '';
+
 // Stats
 $stats = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT
@@ -9,7 +16,8 @@ $stats = mysqli_fetch_assoc(mysqli_query($mysqli,
        SUM(rmm_status='offline') as offline,
        SUM(rmm_status='unknown') as unknown,
        COUNT(*)                  as total
-     FROM asset_rmm_links"
+     FROM asset_rmm_links
+     WHERE 1=1 $rmm_asset_scope"
 ));
 
 $alert_counts = mysqli_fetch_assoc(mysqli_query($mysqli,
@@ -17,11 +25,13 @@ $alert_counts = mysqli_fetch_assoc(mysqli_query($mysqli,
        SUM(status='new')          as new_cnt,
        SUM(status='acknowledged') as ack_cnt,
        SUM(status='new' AND severity IN ('critical','error')) as critical_cnt
-     FROM rmm_alerts"
+     FROM rmm_alerts
+     WHERE 1=1" . ($rmm_scoped ? " AND client_id IN ($client_access_string)" : '')
 ));
 
 $open_tickets = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT COUNT(*) as c FROM tickets WHERE ticket_archived_at IS NULL AND ticket_resolved_at IS NULL"
+    . ($rmm_scoped ? " AND ticket_client_id IN ($client_access_string)" : '')
 ))['c']);
 
 $last_sync_row = mysqli_fetch_assoc(mysqli_query($mysqli,
@@ -35,7 +45,8 @@ $sql_offline = mysqli_query($mysqli,
      FROM asset_rmm_links arl
      JOIN assets a ON a.asset_id = arl.asset_id
      LEFT JOIN clients c ON c.client_id = a.asset_client_id
-     WHERE arl.rmm_status='offline'
+     WHERE arl.rmm_status='offline'"
+     . ($rmm_scoped ? " AND a.asset_client_id IN ($client_access_string)" : '') . "
      ORDER BY arl.last_seen DESC
      LIMIT 20"
 );
@@ -46,7 +57,8 @@ $sql_new_alerts = mysqli_query($mysqli,
      FROM rmm_alerts a
      LEFT JOIN assets ast ON ast.asset_id = a.asset_id
      LEFT JOIN clients c ON c.client_id = a.client_id
-     WHERE a.status='new'
+     WHERE a.status='new'"
+     . ($rmm_scoped ? " AND a.client_id IN ($client_access_string)" : '') . "
      ORDER BY FIELD(a.severity,'critical','error','warning','info'), a.created_at DESC
      LIMIT 15"
 );
@@ -57,6 +69,7 @@ $sql_recent_sessions = mysqli_query($mysqli,
      FROM rmm_remote_sessions rs
      JOIN assets a ON a.asset_id = rs.asset_id
      LEFT JOIN users u ON u.user_id = rs.user_id
+     WHERE 1=1" . ($rmm_scoped ? " AND rs.client_id IN ($client_access_string)" : '') . "
      ORDER BY rs.created_at DESC
      LIMIT 8"
 );
@@ -68,6 +81,7 @@ $sql_recent_runs = mysqli_query($mysqli,
      LEFT JOIN rmm_scripts s ON s.id = sr.script_id
      JOIN assets a ON a.asset_id = sr.asset_id
      LEFT JOIN users u ON u.user_id = sr.user_id
+     WHERE 1=1" . ($rmm_scoped ? " AND a.asset_client_id IN ($client_access_string)" : '') . "
      ORDER BY sr.started_at DESC
      LIMIT 8"
 );
@@ -83,7 +97,8 @@ $sql_clients = mysqli_query($mysqli,
      FROM clients c
      JOIN assets a ON a.asset_client_id = c.client_id
      JOIN asset_rmm_links arl ON arl.asset_id = a.asset_id
-     WHERE c.client_archived_at IS NULL
+     WHERE c.client_archived_at IS NULL"
+     . ($rmm_scoped ? " AND c.client_id IN ($client_access_string)" : '') . "
      GROUP BY c.client_id
      HAVING total > 0
      ORDER BY offline DESC, alerts DESC, c.client_name ASC"

@@ -2,7 +2,11 @@
 <aside class="main-sidebar sidebar-dark-<?php echo nullable_htmlentities($config_theme); ?> d-print-none">
 
     <a class="brand-link" href="/agent/dashboard.php">
-        <div class="brand-image"></div>
+        <?php if (!empty($session_company_logo)) { ?>
+            <img src="/uploads/settings/<?php echo nullable_htmlentities($session_company_logo); ?>" class="brand-image" style="max-height:33px;width:auto;object-fit:contain;" alt="">
+        <?php } else { ?>
+            <div class="brand-image"><i class="fas fa-building fa-2x"></i></div>
+        <?php } ?>
         <span class="brand-text h4"><?php echo nullable_htmlentities($session_company_name); ?></span>
     </a>
 

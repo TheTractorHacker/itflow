@@ -83,7 +83,7 @@ ob_start();
 
         <div class="form-group">
             <label>Content <strong class="text-danger">*</strong></label>
-            <textarea class="form-control tinymce" name="content"><?php echo $kb_article_content; ?></textarea>
+            <textarea class="form-control tinymce tinymce-builder" name="content"><?php echo $kb_article_content; ?></textarea>
         </div>
 
     </div>

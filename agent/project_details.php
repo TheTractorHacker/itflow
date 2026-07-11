@@ -22,7 +22,7 @@ enforceUserPermission('module_support');
 $project_permission_snippet = '';
 
 if (!empty($client_access_string)) {
-    $project_permission_snippet = "AND project_client_id IN ($client_access_string) OR project_client_id = 0";
+    $project_permission_snippet = "AND (project_client_id IN ($client_access_string) OR project_client_id = 0)";
 }
 
 if (isset($_GET['project_id'])) {
@@ -220,7 +220,7 @@ if (isset($_GET['project_id'])) {
                                 <i class="fas fa-fw fa-edit mr-2"></i>Edit
                             </a>
                         <?php } ?>
-                        <?php if (!empty($project_completed_at) && empty($project_archived_at) && lookupUserPermission("module_support" >= 2)) { ?>
+                        <?php if (!empty($project_completed_at) && empty($project_archived_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?archive_project=<?= $project_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                                 <i class="fas fa-fw fa-archive mr-2"></i>Archive
                             </a>

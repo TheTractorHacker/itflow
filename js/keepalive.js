@@ -16,3 +16,13 @@ function keep_alive() {
 
 // Run every 8 mins
 setInterval(keep_alive, 480000);
+
+// Fire immediately when internet reconnects so sessions survive outages
+window.addEventListener('online', keep_alive);
+
+// Fire when the tab becomes visible again (handles backgrounded tabs and returning from other apps)
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        keep_alive();
+    }
+});

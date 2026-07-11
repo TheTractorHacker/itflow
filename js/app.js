@@ -1,3 +1,117 @@
+// Adds Rich Text / Markdown / HTML tabs around a TinyMCE editor whose
+// underlying textarea has the "tinymce-builder" class. TinyMCE stays the
+// canonical source of truth: switching tabs always syncs edits made in the
+// Markdown/HTML boxes back into the editor first, then regenerates the
+// target box from the editor's current content.
+function initDocBuilder(editor) {
+    var textarea = editor.getElement();
+    if (!textarea.classList.contains('tinymce-builder') || editor.docBuilderInitialized) {
+        return;
+    }
+    editor.docBuilderInitialized = true;
+
+    var container = editor.getContainer();
+
+    var tabBar = document.createElement('div');
+    tabBar.className = 'btn-group btn-group-sm doc-builder-tabs mb-2';
+    tabBar.setAttribute('role', 'group');
+    tabBar.innerHTML =
+        '<button type="button" class="btn btn-outline-secondary active" data-mode="richtext">Rich Text</button>' +
+        '<button type="button" class="btn btn-outline-secondary" data-mode="markdown">Markdown</button>' +
+        '<button type="button" class="btn btn-outline-secondary" data-mode="html">HTML</button>';
+
+    var mdTextarea = document.createElement('textarea');
+    mdTextarea.className = 'form-control doc-builder-source';
+    mdTextarea.rows = 14;
+    mdTextarea.style.display = 'none';
+    mdTextarea.style.fontFamily = 'monospace';
+    mdTextarea.placeholder = 'Write Markdown here...';
+
+    var htmlTextarea = document.createElement('textarea');
+    htmlTextarea.className = 'form-control doc-builder-source';
+    htmlTextarea.rows = 14;
+    htmlTextarea.style.display = 'none';
+    htmlTextarea.style.fontFamily = 'monospace';
+    htmlTextarea.placeholder = 'Raw HTML...';
+
+    container.parentNode.insertBefore(tabBar, container);
+    container.parentNode.insertBefore(mdTextarea, container.nextSibling);
+    container.parentNode.insertBefore(htmlTextarea, mdTextarea.nextSibling);
+
+    var turndownService = null;
+    function getTurndown() {
+        if (!turndownService) {
+            turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', bulletListMarker: '-' });
+            if (window.turndownPluginGfm) {
+                turndownService.use(turndownPluginGfm.gfm);
+            }
+        }
+        return turndownService;
+    }
+
+    var currentMode = 'richtext';
+
+    function showMode(mode) {
+        container.style.display = (mode === 'richtext') ? '' : 'none';
+        mdTextarea.style.display = (mode === 'markdown') ? '' : 'none';
+        htmlTextarea.style.display = (mode === 'html') ? '' : 'none';
+
+        tabBar.querySelectorAll('button').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+    }
+
+    // Pull fresh content INTO a source tab from the editor (the canonical model)
+    function syncFromEditor(mode) {
+        if (mode === 'markdown') {
+            mdTextarea.value = getTurndown().turndown(editor.getContent());
+        } else if (mode === 'html') {
+            htmlTextarea.value = editor.getContent();
+        }
+    }
+
+    // Push edits FROM a source tab back into the editor (the canonical model)
+    function syncToEditor(mode) {
+        if (mode === 'markdown') {
+            editor.setContent(marked.parse(mdTextarea.value || ''));
+            editor.save();
+        } else if (mode === 'html') {
+            editor.setContent(htmlTextarea.value || '');
+            editor.save();
+        }
+    }
+
+    tabBar.addEventListener('click', function(e) {
+        var btn = e.target.closest('button[data-mode]');
+        if (!btn || btn.dataset.mode === currentMode) {
+            return;
+        }
+
+        var nextMode = btn.dataset.mode;
+
+        if (currentMode !== 'richtext') {
+            syncToEditor(currentMode);
+        }
+        if (nextMode !== 'richtext') {
+            syncFromEditor(nextMode);
+        }
+
+        showMode(nextMode);
+        currentMode = nextMode;
+    });
+
+    // Whatever tab the user was last typing in, make sure it lands in the
+    // hidden textarea TinyMCE posts, even if they never switch back to Rich Text.
+    var form = textarea.form;
+    if (form) {
+        form.addEventListener('submit', function() {
+            if (currentMode !== 'richtext') {
+                syncToEditor(currentMode);
+            }
+        });
+    }
+}
+
 $(document).ready(function() {
     // Prevents resubmit on forms
     if (window.history.replaceState) {
@@ -118,6 +232,8 @@ $(document).ready(function() {
                         editor.setDirty(false);
                     });
                 }
+
+                initDocBuilder(editor);
             });
 
             var rewordButtonApi;
@@ -413,4 +529,75 @@ $(document).ready(function() {
 
     // Data Tables
     new DataTable('.dataTables');
+
+    // Dropdowns inside a .table-responsive get clipped by its scroll container, and
+    // Popper's flip only swaps left/right for dropleft/dropright menus - it won't flip
+    // to open upward, so a menu near the bottom of the page can render off-screen and
+    // force a page scroll to reach it. Reparent the menu to <body> while open and
+    // position it manually (viewport-aware, flips up if there's no room below).
+    $(document).on('show.bs.dropdown', '.table-responsive .dropdown', function() {
+        var $dropdown = $(this);
+        var $menu = $dropdown.children('.dropdown-menu').first();
+        var $toggle = $dropdown.find('[data-toggle="dropdown"]').first();
+
+        if (!$menu.length || !$toggle.length) {
+            return;
+        }
+
+        var $placeholder = $('<span style="display:none"></span>').insertAfter($menu);
+        $dropdown.data('trf-placeholder', $placeholder);
+        $dropdown.data('trf-menu', $menu);
+        // Reverse pointer so click handlers on items inside the menu (which now sees
+        // $item.closest('.dropdown') fail, since the menu no longer lives under the
+        // original .dropdown while open) can still find their way back to it.
+        $menu.data('trf-dropdown', $dropdown);
+
+        $menu.appendTo('body').css({
+            position: 'fixed',
+            margin: 0,
+            maxHeight: '70vh',
+            overflowY: 'auto',
+            zIndex: 1071
+        });
+    });
+
+    $(document).on('shown.bs.dropdown', '.table-responsive .dropdown', function() {
+        var $dropdown = $(this);
+        var $menu = $dropdown.data('trf-menu');
+        var $toggle = $dropdown.find('[data-toggle="dropdown"]').first();
+
+        if (!$menu || !$menu.length || !$toggle.length) {
+            return;
+        }
+
+        var rect = $toggle[0].getBoundingClientRect();
+        var menuHeight = $menu.outerHeight();
+        var menuWidth = $menu.outerWidth();
+
+        var top = rect.bottom;
+        if (top + menuHeight > $(window).height()) {
+            top = Math.max(rect.top - menuHeight, 8);
+        }
+
+        var left = rect.right - menuWidth;
+        if (left < 8) {
+            left = Math.min(rect.left, $(window).width() - menuWidth - 8);
+        }
+
+        $menu.css({ top: top + 'px', left: left + 'px' });
+    });
+
+    $(document).on('hidden.bs.dropdown', '.table-responsive .dropdown', function() {
+        var $dropdown = $(this);
+        var $menu = $dropdown.data('trf-menu');
+        var $placeholder = $dropdown.data('trf-placeholder');
+
+        if ($menu && $menu.length && $placeholder && $placeholder.length) {
+            $menu.css({ position: '', margin: '', maxHeight: '', overflowY: '', zIndex: '', top: '', left: '' });
+            $placeholder.replaceWith($menu);
+        }
+
+        $dropdown.removeData('trf-menu');
+        $dropdown.removeData('trf-placeholder');
+    });
 });

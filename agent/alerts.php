@@ -28,6 +28,8 @@ if ($filter_source === 'all' || $filter_source === 'rmm') {
         $sq = mysqli_real_escape_string($mysqli, $filter_search);
         $where .= " AND (a.message LIKE '%$sq%' OR ast.asset_name LIKE '%$sq%' OR c.client_name LIKE '%$sq%')";
     }
+    // Client-restricted techs should only see alerts for clients they have access to
+    if ($client_access_string && !$session_is_admin) { $where .= " AND a.client_id IN ($client_access_string)"; }
     $sql = mysqli_query($mysqli,
         "SELECT a.*, ast.asset_name, c.client_name, u.user_name, t.ticket_prefix, t.ticket_number,
                 i.name AS integration_name, i.type AS integration_type
@@ -75,6 +77,8 @@ if ($filter_source === 'all' || $filter_source === 'backup') {
         $sq = mysqli_real_escape_string($mysqli, $filter_search);
         $where .= " AND (a.alert_message LIKE '%$sq%' OR a.alert_device_name LIKE '%$sq%' OR c.client_name LIKE '%$sq%')";
     }
+    // Client-restricted techs should only see alerts for clients they have access to
+    if ($client_access_string && !$session_is_admin) { $where .= " AND a.alert_client_id IN ($client_access_string)"; }
     $sql = mysqli_query($mysqli,
         "SELECT a.*, c.client_name, u.user_name, t.ticket_prefix, t.ticket_number
          FROM comet_backup_alerts a
@@ -118,6 +122,8 @@ if ($filter_source === 'network') {
         $sq = mysqli_real_escape_string($mysqli, $filter_search);
         $where .= " AND (a.message LIKE '%$sq%' OR ast.asset_name LIKE '%$sq%' OR c.client_name LIKE '%$sq%')";
     }
+    // Client-restricted techs should only see alerts for clients they have access to
+    if ($client_access_string && !$session_is_admin) { $where .= " AND a.client_id IN ($client_access_string)"; }
     $sql = mysqli_query($mysqli,
         "SELECT a.*, ast.asset_name, c.client_name, u.user_name, t.ticket_prefix, t.ticket_number,
                 i.name AS integration_name, i.type AS integration_type
@@ -164,11 +170,13 @@ usort($alerts, function ($a, $b) use ($sev_rank) {
 $total_shown = count($alerts);
 
 // Counts (combined, ignoring current status filter so the tabs stay usable)
+$rmm_scope_clause = ($client_access_string && !$session_is_admin) ? " AND client_id IN ($client_access_string)" : '';
+$backup_scope_clause = ($client_access_string && !$session_is_admin) ? " AND alert_client_id IN ($client_access_string)" : '';
 $rmm_cnt = mysqli_fetch_assoc(mysqli_query($mysqli,
-    "SELECT SUM(status='new') new_cnt, SUM(status='acknowledged') ack_cnt, SUM(status='resolved') res_cnt FROM rmm_alerts"
+    "SELECT SUM(status='new') new_cnt, SUM(status='acknowledged') ack_cnt, SUM(status='resolved') res_cnt FROM rmm_alerts WHERE 1=1$rmm_scope_clause"
 ));
 $backup_cnt = mysqli_fetch_assoc(mysqli_query($mysqli,
-    "SELECT SUM(alert_status='new') new_cnt, SUM(alert_status='acknowledged') ack_cnt, SUM(alert_status='resolved') res_cnt FROM comet_backup_alerts"
+    "SELECT SUM(alert_status='new') new_cnt, SUM(alert_status='acknowledged') ack_cnt, SUM(alert_status='resolved') res_cnt FROM comet_backup_alerts WHERE 1=1$backup_scope_clause"
 ));
 $cnt = [
     'new_cnt' => intval($rmm_cnt['new_cnt']) + intval($backup_cnt['new_cnt']),
@@ -181,7 +189,8 @@ $sql_clients = mysqli_query($mysqli,
     "SELECT DISTINCT c.client_id, c.client_name FROM clients c
      WHERE c.client_archived_at IS NULL
        AND (c.client_id IN (SELECT client_id FROM rmm_alerts WHERE client_id IS NOT NULL)
-            OR c.client_id IN (SELECT alert_client_id FROM comet_backup_alerts WHERE alert_client_id IS NOT NULL))
+            OR c.client_id IN (SELECT alert_client_id FROM comet_backup_alerts WHERE alert_client_id IS NOT NULL))"
+     . ($client_access_string && !$session_is_admin ? " AND c.client_id IN ($client_access_string)" : '') . "
      ORDER BY c.client_name"
 );
 

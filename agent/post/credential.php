@@ -15,10 +15,11 @@ if (isset($_POST['add_credential'])) {
     require_once 'credential_model.php';
 
     $client_id = intval($_POST['client_id']);
+    $folder_id = intval($_POST['folder_id'] ?? 0);
 
     enforceClientAccess();
 
-    mysqli_query($mysqli,"INSERT INTO credentials SET credential_name = '$name', credential_description = '$description', credential_uri = '$uri', credential_uri_2 = '$uri_2', credential_username = '$username', credential_password = '$password', credential_otp_secret = '$otp_secret', credential_note = '$note', credential_favorite = $favorite, credential_contact_id = $contact_id, credential_asset_id = $asset_id, credential_client_id = $client_id");
+    mysqli_query($mysqli,"INSERT INTO credentials SET credential_name = '$name', credential_description = '$description', credential_uri = '$uri', credential_uri_2 = '$uri_2', credential_username = '$username', credential_password = '$password', credential_otp_secret = '$otp_secret', credential_note = '$note', credential_favorite = $favorite, credential_folder_id = $folder_id, credential_contact_id = $contact_id, credential_asset_id = $asset_id, credential_client_id = $client_id");
 
     $credential_id = mysqli_insert_id($mysqli);
 
@@ -110,6 +111,105 @@ if (isset($_POST['edit_credential'])) {
     logAction("Credential", "Edit", "$session_name edited credential $name", $client_id, $credential_id);
 
     flash_alert("Credential <strong>$name</strong> edited");
+
+    redirect();
+
+}
+
+if (isset($_POST['move_credential'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_credential', 2);
+
+    $credential_id = intval($_POST['credential_id']);
+    $folder_id = intval($_POST['folder_id']);
+
+    // Get Name and Client ID for logging and alert message
+    $sql = mysqli_query($mysqli,"SELECT credential_name, credential_client_id FROM credentials WHERE credential_id = $credential_id");
+    $row = mysqli_fetch_assoc($sql);
+    $credential_name = sanitizeInput($row['credential_name']);
+    $client_id = intval($row['credential_client_id']);
+
+    enforceClientAccess();
+
+    // Target folder (if not root) must belong to this credential's client and be a
+    // credential folder, or a crafted request could move a credential into another
+    // client's folder, or into a file/document folder.
+    if ($folder_id > 0) {
+        $sql_target_folder = mysqli_query($mysqli, "SELECT folder_id FROM folders WHERE folder_id = $folder_id AND folder_client_id = $client_id AND folder_location = 2");
+        if (mysqli_num_rows($sql_target_folder) !== 1) {
+            flash_alert("Invalid target folder", 'error');
+            redirect();
+        }
+    }
+
+    // Get folder name for logging
+    $folder_name = "/";
+    if ($folder_id > 0) {
+        $folder_name = sanitizeInput(getFieldById('folders', $folder_id, 'folder_name'));
+    }
+
+    mysqli_query($mysqli,"UPDATE credentials SET credential_folder_id = $folder_id, credential_updated_at = credential_updated_at WHERE credential_id = $credential_id");
+
+    logAction("Credential", "Move", "$session_name moved credential $credential_name to folder $folder_name", $client_id, $credential_id);
+
+    flash_alert("Credential <strong>$credential_name</strong> moved to <strong>$folder_name</strong>");
+
+    redirect();
+
+}
+
+if (isset($_POST['bulk_move_credentials'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_credential', 2);
+
+    $folder_id = intval($_POST['bulk_folder_id']);
+
+    // Get folder name for logging
+    $folder_name = "/";
+    if ($folder_id > 0) {
+        $folder_name = sanitizeInput(getFieldById('folders', $folder_id, 'folder_name'));
+    }
+
+    if (isset($_POST['credential_ids'])) {
+
+        $count = count($_POST['credential_ids']);
+
+        foreach ($_POST['credential_ids'] as $credential_id) {
+
+            $credential_id = intval($credential_id);
+
+            // Get Name and Client ID for logging
+            $sql = mysqli_query($mysqli,"SELECT credential_name, credential_client_id FROM credentials WHERE credential_id = $credential_id");
+            $row = mysqli_fetch_assoc($sql);
+            $credential_name = sanitizeInput($row['credential_name']);
+            $client_id = intval($row['credential_client_id']);
+
+            enforceClientAccess();
+
+            // Same ownership/type check as the single-move handler, per credential
+            // since a bulk selection could (in theory) span clients.
+            if ($folder_id > 0) {
+                $sql_target_folder = mysqli_query($mysqli, "SELECT folder_id FROM folders WHERE folder_id = $folder_id AND folder_client_id = $client_id AND folder_location = 2");
+                if (mysqli_num_rows($sql_target_folder) !== 1) {
+                    continue;
+                }
+            }
+
+            mysqli_query($mysqli,"UPDATE credentials SET credential_folder_id = $folder_id, credential_updated_at = credential_updated_at WHERE credential_id = $credential_id");
+
+            logAction("Credential", "Move", "$session_name moved credential $credential_name to folder $folder_name", $client_id, $credential_id);
+
+        }
+
+        logAction("Credential", "Bulk Move", "$session_name moved $count credential(s) to folder $folder_name", $client_id);
+
+        flash_alert("Moved <strong>$count</strong> credential(s) to <strong>$folder_name</strong>");
+
+    }
 
     redirect();
 

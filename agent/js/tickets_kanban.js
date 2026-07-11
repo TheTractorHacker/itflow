@@ -18,6 +18,7 @@ $(document).ready(function () {
             if (CONFIG_TICKET_MOVING_COLUMNS === 1) {
                 $.post('ajax.php', {
                     update_kanban_status_position: true,
+                    csrf_token: KANBAN_CSRF_TOKEN,
                     positions: columnPositions
                 }).done(() => {
                     console.log('Ticket status kanban orders updated.');
@@ -68,6 +69,7 @@ $(document).ready(function () {
 
                 $.post('ajax.php', {
                     update_kanban_ticket: true,
+                    csrf_token: KANBAN_CSRF_TOKEN,
                     positions: positions
                 }).done(() => {
                     console.log('Updated kanban ticket positions.');

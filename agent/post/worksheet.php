@@ -14,6 +14,8 @@ if (isset($_POST['add_ticket_worksheet'])) {
     $t = mysqli_fetch_assoc($sql_ticket);
     $client_id = intval($t['ticket_client_id']);
 
+    enforceClientAccess();
+
     mysqli_query($mysqli, "INSERT INTO ticket_worksheets SET worksheet_ticket_id = $ticket_id, worksheet_template_id = $template_id, worksheet_is_outtake = $is_outtake, worksheet_sign_token = $token_sql, worksheet_created_by = $session_user_id");
 
     $worksheet_id = mysqli_insert_id($mysqli);
@@ -30,7 +32,10 @@ if (isset($_POST['save_worksheet']) || isset($_POST['complete_worksheet'])) {
 
     $worksheet_id = intval($_POST['worksheet_id']);
     $ticket_id = intval($_POST['ticket_id']);
-    $client_id = intval($_POST['client_id']);
+
+    // Derive client from the ticket itself, not the (client-supplied) form field
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess();
 
     $sql_ws = mysqli_query($mysqli, "SELECT worksheet_template_id, worksheet_is_outtake FROM ticket_worksheets WHERE worksheet_id = $worksheet_id LIMIT 1");
     $ws = mysqli_fetch_assoc($sql_ws);
@@ -65,7 +70,10 @@ if (isset($_GET['unfinalize_worksheet'])) {
 
     $worksheet_id = intval($_GET['unfinalize_worksheet']);
     $ticket_id    = intval($_GET['ticket_id']);
-    $client_id    = intval($_GET['client_id'] ?? 0);
+
+    // Derive client from the ticket itself, not the (client-supplied) URL param
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess();
 
     mysqli_query($mysqli, "UPDATE ticket_worksheets SET worksheet_completed_at = NULL WHERE worksheet_id = $worksheet_id AND worksheet_signed_at IS NULL");
 
@@ -81,7 +89,10 @@ if (isset($_GET['delete_ticket_worksheet'])) {
 
     $worksheet_id = intval($_GET['delete_ticket_worksheet']);
     $ticket_id = intval($_GET['ticket_id']);
-    $client_id = intval($_GET['client_id'] ?? 0);
+
+    // Derive client from the ticket itself, not the (client-supplied) URL param
+    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess();
 
     mysqli_query($mysqli, "DELETE FROM ticket_worksheet_responses WHERE response_worksheet_id = $worksheet_id");
     mysqli_query($mysqli, "DELETE FROM ticket_worksheets WHERE worksheet_id = $worksheet_id");

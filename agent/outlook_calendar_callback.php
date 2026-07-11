@@ -52,8 +52,12 @@ if (empty($response['refresh_token'])) {
     exit;
 }
 
-$access_token  = mysqli_real_escape_string($mysqli, $response['access_token']);
-$refresh_token = mysqli_real_escape_string($mysqli, $response['refresh_token']);
+// Encrypted with the site's canonical vault key (not the current session's key)
+// since a token stored here is later read by whichever session is saving a
+// ticket appointment for this user, not necessarily this user's own session.
+$canonical_key = getCanonicalVaultKey($mysqli);
+$access_token  = mysqli_real_escape_string($mysqli, encryptCredentialEntryWithKey($response['access_token'], $canonical_key));
+$refresh_token = mysqli_real_escape_string($mysqli, encryptCredentialEntryWithKey($response['refresh_token'], $canonical_key));
 $expires_at    = date('Y-m-d H:i:s', time() + intval($response['expires_in'] ?? 3600));
 
 mysqli_query($mysqli, "UPDATE users SET

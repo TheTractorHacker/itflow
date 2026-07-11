@@ -13,11 +13,22 @@ if (isset($_POST['create_folder'])) {
     enforceUserPermission('module_support', 2);
 
     $client_id = intval($_POST['client_id']);
-    $folder_location = intval($_POST['folder_location']);
+    $folder_location = intval($_POST['folder_location'] ?? 0);
     $folder_name = sanitizeInput($_POST['folder_name']);
     $parent_folder = intval($_POST['parent_folder']);
 
     enforceClientAccess();
+
+    // Parent folder (if any) must belong to this client and share this folder's
+    // type, or a crafted request could nest a folder under another client's tree,
+    // or mix a credential folder into a file/document tree (and vice versa).
+    if ($parent_folder !== 0) {
+        $sql_parent = mysqli_query($mysqli, "SELECT folder_id FROM folders WHERE folder_id = $parent_folder AND folder_client_id = $client_id AND folder_location = $folder_location");
+        if (mysqli_num_rows($sql_parent) !== 1) {
+            flash_alert("Invalid parent folder", 'error');
+            redirect();
+        }
+    }
 
     // Document folder add query
     $add_folder = mysqli_query($mysqli,"INSERT INTO folders SET folder_name = '$folder_name', parent_folder = $parent_folder, folder_location = $folder_location, folder_client_id = $client_id");
@@ -75,15 +86,20 @@ if (isset($_GET['delete_folder'])) {
 
     enforceClientAccess();
 
-    mysqli_query($mysqli,"DELETE FROM folders WHERE folder_id = $folder_id");
+    // The UI only ever offers this action for empty, childless folders - enforce
+    // that here too, or a direct request could delete a non-empty folder and
+    // (since subfolders aren't reparented) orphan any subfolders it contains.
+    $has_documents  = mysqli_fetch_row(mysqli_query($mysqli, "SELECT 1 FROM documents WHERE document_folder_id = $folder_id LIMIT 1"));
+    $has_files      = mysqli_fetch_row(mysqli_query($mysqli, "SELECT 1 FROM files WHERE file_folder_id = $folder_id LIMIT 1"));
+    $has_credentials = mysqli_fetch_row(mysqli_query($mysqli, "SELECT 1 FROM credentials WHERE credential_folder_id = $folder_id LIMIT 1"));
+    $has_subfolders = mysqli_fetch_row(mysqli_query($mysqli, "SELECT 1 FROM folders WHERE parent_folder = $folder_id LIMIT 1"));
 
-    // Move files in deleted folder back to the root folder /
-    $sql_documents = mysqli_query($mysqli,"SELECT * FROM documents WHERE document_folder_id = $folder_id");
-    while($row = mysqli_fetch_assoc($sql_documents)) {
-        $document_id = intval($row['document_id']);
-
-        mysqli_query($mysqli,"UPDATE documents SET document_folder_id = 0 WHERE document_id = $document_id");
+    if ($has_documents || $has_files || $has_credentials || $has_subfolders) {
+        flash_alert("Folder <strong>$folder_name</strong> is not empty and cannot be deleted", 'error');
+        redirect();
     }
+
+    mysqli_query($mysqli,"DELETE FROM folders WHERE folder_id = $folder_id");
 
     logAction("Folder", "Delete", "$session_name deleted folder $folder_name", $client_id);
 

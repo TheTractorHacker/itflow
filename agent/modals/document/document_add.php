@@ -28,7 +28,7 @@ ob_start();
         </div>
 
         <div class="form-group">
-            <textarea class="form-control tinymce" name="content"></textarea>
+            <textarea class="form-control tinymce tinymce-builder" name="content"></textarea>
         </div>
 
         <div class="form-group">

@@ -839,6 +839,13 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
                         </div>
                     </div>
 
+                    <div class="form-group mb-3">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="remember_me" name="remember_me">
+                            <label class="custom-control-label" for="remember_me">Stay signed in</label>
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn btn-primary btn-block" name="login">Sign In</button>
                 <?php endif; ?>
 

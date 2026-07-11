@@ -21,6 +21,8 @@ if (isset($_POST['add_contract'])) {
     $sla_hr = is_numeric($_POST['sla_high_response'] ?? '') ? intval($_POST['sla_high_response']) : 'NULL';
     $sla_hres = is_numeric($_POST['sla_high_resolution'] ?? '') ? intval($_POST['sla_high_resolution']) : 'NULL';
 
+    enforceClientAccess();
+
     $start_sql = $start ? "'$start'" : 'NULL';
     $end_sql = $end ? "'$end'" : 'NULL';
     $renewal_sql = $renewal ? "'$renewal'" : 'NULL';
@@ -39,6 +41,10 @@ if (isset($_POST['edit_contract'])) {
     enforceUserPermission('module_support', 2);
 
     $contract_id = intval($_POST['contract_id']);
+
+    // Confirm access to the contract's current client before allowing any edit
+    enforceClientAccess(intval(getFieldById('contracts', $contract_id, 'contract_client_id')));
+
     $client_id = intval($_POST['contract_client_id']);
     $name = sanitizeInput($_POST['contract_name']);
     $type = sanitizeInput($_POST['contract_type']);
@@ -54,6 +60,10 @@ if (isset($_POST['edit_contract'])) {
     $sla_mres = is_numeric($_POST['sla_medium_resolution'] ?? '') ? intval($_POST['sla_medium_resolution']) : 'NULL';
     $sla_hr = is_numeric($_POST['sla_high_response'] ?? '') ? intval($_POST['sla_high_response']) : 'NULL';
     $sla_hres = is_numeric($_POST['sla_high_resolution'] ?? '') ? intval($_POST['sla_high_resolution']) : 'NULL';
+
+    // The form may also reassign the contract to a different client - confirm
+    // access to that destination client too.
+    enforceClientAccess();
 
     $start_sql = $start ? "'$start'" : 'NULL';
     $end_sql = $end ? "'$end'" : 'NULL';
@@ -73,7 +83,10 @@ if (isset($_GET['delete_contract'])) {
     enforceUserPermission('module_support', 2);
 
     $contract_id = intval($_GET['delete_contract']);
-    $client_id = intval($_GET['client_id'] ?? 0);
+
+    // Derive the client from the contract itself, not the (attacker-controlled) URL
+    $client_id = intval(getFieldById('contracts', $contract_id, 'contract_client_id'));
+    enforceClientAccess();
 
     mysqli_query($mysqli, "UPDATE contracts SET contract_archived_at = NOW() WHERE contract_id = $contract_id");
     logAction("Contract", "Delete", "Deleted contract #$contract_id", $client_id);
@@ -84,7 +97,7 @@ if (isset($_GET['delete_contract'])) {
 // ── Upload contract document ──────────────────────────────────────────────────
 if (isset($_POST['upload_contract_document'])) {
     validateCSRFToken($_POST['csrf_token']);
-    enforceUserPermission('module_contracts', 2);
+    enforceUserPermission('module_support', 2);
 
     $contract_id = intval($_POST['contract_id']);
     $client_id   = intval(getFieldById('contracts', $contract_id, 'contract_client_id'));
@@ -147,7 +160,7 @@ if (isset($_POST['upload_contract_document'])) {
 // ── Serve (download) contract document ───────────────────────────────────────
 if (isset($_GET['serve_contract_document'])) {
     validateCSRFToken($_GET['csrf_token']);
-    enforceUserPermission('module_contracts');
+    enforceUserPermission('module_support');
 
     $doc_id = intval($_GET['serve_contract_document']);
     $doc = mysqli_fetch_assoc(mysqli_query($mysqli,
@@ -175,7 +188,7 @@ if (isset($_GET['serve_contract_document'])) {
 // ── Delete contract document ──────────────────────────────────────────────────
 if (isset($_GET['delete_contract_document'])) {
     validateCSRFToken($_GET['csrf_token']);
-    enforceUserPermission('module_contracts', 2);
+    enforceUserPermission('module_support', 2);
 
     $doc_id = intval($_GET['delete_contract_document']);
     $doc = mysqli_fetch_assoc(mysqli_query($mysqli,

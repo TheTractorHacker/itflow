@@ -17,6 +17,8 @@ if ($filter_severity) {
 }
 if ($filter_asset_id) { $where .= " AND a.asset_id=$filter_asset_id"; }
 if ($filter_client)   { $where .= " AND a.client_id=$filter_client"; }
+// Client-restricted techs should only see alerts for clients they have access to
+if ($client_access_string && !$session_is_admin) { $where .= " AND a.client_id IN ($client_access_string)"; }
 if ($filter_search) {
     $sq = mysqli_real_escape_string($mysqli, $filter_search);
     $where .= " AND (a.message LIKE '%$sq%' OR ast.asset_name LIKE '%$sq%' OR c.client_name LIKE '%$sq%')";
@@ -46,7 +48,7 @@ $cnt = mysqli_fetch_assoc(mysqli_query($mysqli,
        SUM(status='new' AND severity='error')    as err_cnt,
        SUM(status='new' AND severity='warning')  as warn_cnt,
        SUM(status='new' AND severity='info')     as info_cnt
-     FROM rmm_alerts"
+     FROM rmm_alerts WHERE 1=1" . ($client_access_string && !$session_is_admin ? " AND client_id IN ($client_access_string)" : '')
 ));
 
 // Client list for filter

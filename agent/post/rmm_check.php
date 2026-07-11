@@ -20,6 +20,10 @@ $policy_id = intval($_POST['policy_id'] ?? 0);
 
 // ---- Push policy to all matching agents in a given integration ----
 if ($action === 'push_policy') {
+    // Bulk cross-client deployment - the blanket module_rmm check above only
+    // requires read access, raise to write level for this specific action.
+    enforceUserPermission('module_rmm', 2);
+
     $integration_id = intval($_POST['integration_id'] ?? $config_rmm_default_integration_id);
     if (!$policy_id || !$integration_id) {
         echo json_encode(['success' => false, 'error' => 'Missing parameters']); exit;

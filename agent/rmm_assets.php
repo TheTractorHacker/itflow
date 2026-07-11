@@ -12,6 +12,8 @@ $where = "1=1";
 if ($filter_status)    { $where .= " AND arl.rmm_status='" . mysqli_real_escape_string($mysqli, $filter_status) . "'"; }
 if ($filter_client_id) { $where .= " AND a.asset_client_id=$filter_client_id"; }
 if ($filter_intg_id)   { $where .= " AND arl.integration_id=$filter_intg_id"; }
+// Client-restricted techs should only see assets for clients they have access to
+if ($client_access_string && !$session_is_admin) { $where .= " AND a.asset_client_id IN ($client_access_string)"; }
 
 $sql_links = mysqli_query($mysqli,
     "SELECT arl.*, a.asset_id, a.asset_name, a.asset_type, a.asset_client_id,
@@ -34,7 +36,7 @@ $cnt = mysqli_fetch_assoc(mysqli_query($mysqli,
 ));
 
 $sql_integrations = mysqli_query($mysqli, "SELECT id, name FROM rmm_integrations WHERE enabled=1 ORDER BY name");
-$sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL ORDER BY client_name ASC");
+$sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_archived_at IS NULL" . ($client_access_string && !$session_is_admin ? " AND client_id IN ($client_access_string)" : '') . " ORDER BY client_name ASC");
 $clients_list = [];
 while ($c = mysqli_fetch_assoc($sql_clients)) $clients_list[] = $c;
 

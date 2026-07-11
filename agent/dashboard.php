@@ -43,6 +43,77 @@ $sql_years_select = mysqli_query($mysqli, "
     .chart-h-320 { height: 240px; }
     .chart-h-240 { height: 200px; }
   } */
+
+  /* Dashboard stat tiles: every tile keeps a color identity (a soft tint,
+     not the old solid saturated fill), so the dashboard still feels lively -
+     but success/warning/danger are reserved status colors (good / attention
+     soon / attention now) while primary/info/secondary/pink are just
+     identity hues for informational counts, never implying good or bad. */
+  .small-box.bg-primary, .small-box.bg-gradient-primary,
+  .small-box.bg-info, .small-box.bg-gradient-info,
+  .small-box.bg-success, .small-box.bg-gradient-success,
+  .small-box.bg-warning, .small-box.bg-gradient-warning,
+  .small-box.bg-danger, .small-box.bg-gradient-danger,
+  .small-box.bg-secondary, .small-box.bg-pink {
+    color: #0b0b0b !important;
+    border: 1px solid #e6e5e0;
+    border-left-width: 4px;
+    box-shadow: none;
+    transition: box-shadow .15s ease, border-color .15s ease;
+    overflow: visible;
+  }
+  .small-box:hover { box-shadow: 0 3px 10px rgba(0,0,0,.08); }
+  .small-box > .inner { padding: 14px 16px; }
+  .small-box .inner h3 { font-size: 1.9rem; margin-bottom: 2px; }
+  .small-box .inner p { color: #52514e; opacity: 1; font-weight: 500; font-size: .9rem; margin-bottom: 0; }
+  .small-box .inner p small { color: #898781 !important; opacity: 1; }
+
+  /* Icon: a small fixed chip instead of a giant faded watermark */
+  .small-box .icon {
+    position: absolute; top: 14px; right: 14px;
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 1;
+  }
+  .small-box .icon i {
+    position: static !important;
+    font-size: 15px !important;
+    transform: none !important;
+  }
+  .small-box:hover .icon i { transform: none !important; }
+
+  /* Identity hues - informational counts, no good/bad meaning */
+  .small-box.bg-primary, .small-box.bg-gradient-primary { background: rgba(42,120,214,.07) !important; border-left-color: #2a78d6; }
+  .small-box.bg-primary .icon, .small-box.bg-gradient-primary .icon { background: rgba(42,120,214,.16); }
+  .small-box.bg-primary .icon i, .small-box.bg-gradient-primary .icon i { color: #2a78d6; }
+
+  .small-box.bg-info, .small-box.bg-gradient-info { background: rgba(27,175,122,.07) !important; border-left-color: #1baf7a; }
+  .small-box.bg-info .icon, .small-box.bg-gradient-info .icon { background: rgba(27,175,122,.16); }
+  .small-box.bg-info .icon i, .small-box.bg-gradient-info .icon i { color: #159763; }
+
+  .small-box.bg-secondary { background: rgba(74,58,167,.06) !important; border-left-color: #4a3aa7; }
+  .small-box.bg-secondary .icon { background: rgba(74,58,167,.14); }
+  .small-box.bg-secondary .icon i { color: #4a3aa7; }
+
+  .small-box.bg-pink { background: rgba(232,123,164,.10) !important; border-left-color: #e87ba4; }
+  .small-box.bg-pink .icon { background: rgba(232,123,164,.20); }
+  .small-box.bg-pink .icon i { color: #c94c7c; }
+
+  /* Status hues - reserved meaning: good / attention soon / attention now.
+     The number stays in primary ink regardless of tile color; a colored
+     numeral is harder to read and the tint + icon + label already carry
+     the meaning. */
+  .small-box.bg-success, .small-box.bg-gradient-success { background: rgba(12,163,12,.07) !important; border-left-color: #0ca30c; }
+  .small-box.bg-success .icon, .small-box.bg-gradient-success .icon { background: rgba(12,163,12,.16); }
+  .small-box.bg-success .icon i, .small-box.bg-gradient-success .icon i { color: #0ca30c; }
+
+  .small-box.bg-warning, .small-box.bg-gradient-warning { background: rgba(250,178,25,.12) !important; border-left-color: #fab219; }
+  .small-box.bg-warning .icon, .small-box.bg-gradient-warning .icon { background: rgba(250,178,25,.22); }
+  .small-box.bg-warning .icon i, .small-box.bg-gradient-warning .icon i { color: #9c6b04; }
+
+  .small-box.bg-danger, .small-box.bg-gradient-danger { background: rgba(208,59,59,.07) !important; border-left-color: #d03b3b; }
+  .small-box.bg-danger .icon, .small-box.bg-gradient-danger .icon { background: rgba(208,59,59,.16); }
+  .small-box.bg-danger .icon i, .small-box.bg-gradient-danger .icon i { color: #d03b3b; }
 </style>
 
 

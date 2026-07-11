@@ -557,6 +557,16 @@ $(document).on('click', '.ticket-group-header', function(e) {
     $chevron.css('transform', $body.is(':visible') ? 'rotate(0deg)' : 'rotate(-90deg)');
 });
 
+// While a dropdown-menu is open it may have been reparented to <body> (see
+// app.js's .table-responsive .dropdown handling, which escapes the table's
+// clipping/scroll container) - so $item.closest('.dropdown') can no longer
+// find its way back to the original toggle/pill. Fall back to the reverse
+// pointer app.js leaves on the menu in that case.
+function resolveDropdown($item) {
+    var $menu = $item.closest('.dropdown-menu');
+    return $menu.data('trf-dropdown') || $item.closest('.dropdown');
+}
+
 // Category dropdown item click
 $(document).on('click', '.quick-cat-item', function(e) {
     e.preventDefault();
@@ -565,7 +575,7 @@ $(document).on('click', '.quick-cat-item', function(e) {
     var catId = $item.data('cat-id');
     var catName = $item.data('cat-name');
     var catColor = $item.data('cat-color');
-    var $pill = $item.closest('.dropdown').find('.tkt-pill-badge');
+    var $pill = resolveDropdown($item).find('.tkt-pill-badge');
     var csrf = $('input[name="csrf_token"]').first().val();
 
     $pill.css('opacity', '0.5');
@@ -586,7 +596,7 @@ $(document).on('click', '.quick-priority-item', function(e) {
     var ticketId = $item.data('ticket-id');
     var priority = $item.data('priority');
     var color = $item.data('color');
-    var $pill = $item.closest('.dropdown').find('.tkt-pill-badge');
+    var $pill = resolveDropdown($item).find('.tkt-pill-badge');
     var csrf = $('input[name="csrf_token"]').first().val();
 
     $pill.css('opacity', '0.5');
@@ -607,7 +617,7 @@ $(document).on('click', '.quick-status-item', function(e) {
     var statusId = $item.data('status-id');
     var statusName = $item.data('status-name');
     var statusColor = $item.data('status-color');
-    var $pill = $item.closest('.dropdown').find('.tkt-pill-badge');
+    var $pill = resolveDropdown($item).find('.tkt-pill-badge');
     var csrf = $('input[name="csrf_token"]').first().val();
 
     $pill.css('opacity', '0.5');
@@ -628,7 +638,7 @@ $(document).on('click', '.quick-assign-item', function(e) {
     var userId = $item.data('user-id');
     var userName = $item.data('user-name');
     var userColor = $item.data('user-color');
-    var $pill = $item.closest('.dropdown').find('.tkt-pill-badge');
+    var $pill = resolveDropdown($item).find('.tkt-pill-badge');
     var csrf = $('input[name="csrf_token"]').first().val();
 
     $pill.css('opacity', '0.5');

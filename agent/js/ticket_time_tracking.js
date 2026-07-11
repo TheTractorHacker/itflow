@@ -201,9 +201,15 @@
             });
         }
 
-        const addReplyBtn = document.getElementById("ticket_add_reply");
-        if (addReplyBtn) {
-            addReplyBtn.addEventListener('click', function() {
+        // Bound to the form's submit event (not the button's click) so this only
+        // fires once the submission actually goes through. Other submit handlers
+        // (e.g. ticket.php's "no labor type selected" confirm()) run first and may
+        // call preventDefault() - if the tech clicks Cancel there, we must not wipe
+        // out the time they already entered.
+        const replyForm = document.getElementById("ticketReplyForm");
+        if (replyForm) {
+            replyForm.addEventListener('submit', function(e) {
+                if (e.defaultPrevented) return;
                 setTimeout(forceResetTimer, 100);
             });
         }

@@ -18,7 +18,7 @@ if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
     exit;
 }
 
-enforceUserPermission('module_rmm_scripts');
+enforceUserPermission('module_rmm_scripts', 2);
 
 $script_id = intval($_POST['script_id'] ?? 0);
 $link_id   = intval($_POST['link_id'] ?? 0);

@@ -73,7 +73,7 @@ ob_start();
 
         <div class="form-group">
             <label>Content <strong class="text-danger">*</strong></label>
-            <textarea class="form-control tinymce" name="content"></textarea>
+            <textarea class="form-control tinymce tinymce-builder" name="content"></textarea>
         </div>
 
     </div>

@@ -35,7 +35,7 @@ ob_start();
         </div>
 
         <div class="form-group">
-            <textarea class="form-control tinymce" name="content"><?php echo $document_content; ?></textarea>
+            <textarea class="form-control tinymce tinymce-builder" name="content"><?php echo $document_content; ?></textarea>
         </div>
 
         <label>Description</label>

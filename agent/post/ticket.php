@@ -419,6 +419,11 @@ if (isset($_POST['edit_ticket_status'])) {
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $ticket_id");
     if ($new_status_id == 5) {
         mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id AND ticket_resolved_at IS NULL");
+    } else {
+        // Moving a ticket to any non-Closed status must clear these, or the ticket
+        // page (which gates the reply form / edit controls on ticket_closed_at, not
+        // ticket_status) keeps rendering it as closed even though the status changed.
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NULL, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $ticket_id");
     }
     if ($is_resolving) {
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket closed.', ticket_reply_type = 'System', ticket_reply_time_worked = '00:01:00', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
@@ -983,6 +988,11 @@ if (isset($_POST['quick_status_ticket'])) {
         mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket closed.', ticket_reply_type = 'System', ticket_reply_time_worked = '00:01:00', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
         logAction("Ticket", "Closed", "$session_name closed ticket $ticket_prefix$ticket_number via quick status", $client_id, $ticket_id);
         customAction('ticket_close', $ticket_id);
+    } else {
+        // Moving a ticket to any non-Closed status must clear these, or the ticket
+        // page (which gates the reply form / edit controls on ticket_closed_at, not
+        // ticket_status) keeps rendering it as closed even though the status changed.
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NULL, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $ticket_id");
     }
     mysqli_query($mysqli, "INSERT INTO ticket_history SET ticket_history_status = '$new_status_name', ticket_history_description = '$session_name changed status from $original_status to $new_status_name', ticket_history_ticket_id = $ticket_id");
     logAction("Ticket", "Edit", "$session_name changed status from $original_status to $new_status_name for ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
@@ -2709,7 +2719,7 @@ if (isset($_GET['reopen_ticket'])) {
         enforceClientAccess();
     }
 
-    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 2, ticket_resolved_at = NULL WHERE ticket_id = $ticket_id");
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 2, ticket_resolved_at = NULL, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $ticket_id");
 
     logAction("Ticket", "Reopened", "$session_name reopened ticket ID $ticket_id", $client_id, $ticket_id);
 

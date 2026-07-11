@@ -158,9 +158,10 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 // RMM: bulk-load status for all visible assets in one query
 $rmm_status_map    = [];
 $rmm_alert_map     = [];
+$rmm_link_map      = [];
 if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     $sql_rmm_bulk = mysqli_query($mysqli,
-        "SELECT arl.asset_id, arl.rmm_status,
+        "SELECT arl.asset_id, arl.rmm_status, arl.id AS rmm_link_id, arl.tactical_agent_id, arl.mesh_node_id,
                 (SELECT COUNT(*) FROM rmm_alerts ra WHERE ra.asset_id=arl.asset_id AND ra.status='new') as alert_cnt
          FROM asset_rmm_links arl
          WHERE arl.asset_id IN (SELECT asset_id FROM assets
@@ -170,11 +171,18 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     );
     if ($sql_rmm_bulk) {
         while ($rr = mysqli_fetch_assoc($sql_rmm_bulk)) {
-            $rmm_status_map[intval($rr['asset_id'])] = $rr['rmm_status'];
-            $rmm_alert_map[intval($rr['asset_id'])]  = intval($rr['alert_cnt']);
+            $rmm_asset_id = intval($rr['asset_id']);
+            $rmm_status_map[$rmm_asset_id] = $rr['rmm_status'];
+            $rmm_alert_map[$rmm_asset_id]  = intval($rr['alert_cnt']);
+            $rmm_link_map[$rmm_asset_id]   = [
+                'id'                => intval($rr['rmm_link_id']),
+                'tactical_agent_id' => $rr['tactical_agent_id'],
+                'mesh_node_id'      => $rr['mesh_node_id'],
+            ];
         }
     }
 }
+$can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1;
 
 ?>
 
@@ -746,6 +754,20 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
                             <?php } ?>
                             <td class="text-center">
                                 <div class="btn-group">
+                                    <?php $rmm_link_row = $rmm_link_map[$asset_id] ?? null; ?>
+                                    <?php if ($can_rmm_remote_connect && !empty($rmm_link_row['tactical_agent_id'])) { ?>
+                                        <button type="button" class="btn btn-success btn-sm" onclick="rmmConnect(<?= intval($rmm_link_row['id']) ?>, 'tactical')" title="Remote Connect">
+                                            <i class="fas fa-desktop"></i>
+                                        </button>
+                                        <?php if (!empty($rmm_link_row['mesh_node_id'])) { ?>
+                                        <button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item" href="#" onclick="rmmConnect(<?= intval($rmm_link_row['id']) ?>, 'mesh'); return false;">
+                                                <i class="fas fa-tv mr-2"></i>MeshCentral Remote Desktop
+                                            </a>
+                                        </div>
+                                        <?php } ?>
+                                    <?php } ?>
                                     <div class="dropdown dropleft text-center">
                                         <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown"><i class="fas fa-ellipsis-h"></i></button>
                                         <div class="dropdown-menu">
@@ -791,6 +813,21 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
 </div>
 
 <script src="../js/bulk_actions.js"></script>
+
+<?php if ($config_module_enable_rmm && $can_rmm_remote_connect) { ?>
+<script>
+function rmmConnect(linkId, type) {
+    fetch('/agent/post/rmm_remote.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=<?= $_SESSION["csrf_token"] ?>&link_id=' + linkId + '&type=' + type
+    }).then(r => r.json()).then(d => {
+        if (d.success && d.url) window.open(d.url, '_blank', 'noopener,noreferrer');
+        else alert('Connect failed: ' + (d.error || 'Unknown error'));
+    });
+}
+</script>
+<?php } ?>
 
 <?php
 require_once "../includes/footer.php";

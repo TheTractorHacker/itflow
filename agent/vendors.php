@@ -15,6 +15,9 @@ if (isset($_GET['client_id'])) {
     $client_url = '';
 }
 
+// Perms
+enforceUserPermission('module_support');
+
 $sql = mysqli_query(
     $mysqli,
     "SELECT SQL_CALC_FOUND_ROWS * FROM vendors

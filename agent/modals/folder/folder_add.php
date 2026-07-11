@@ -4,6 +4,7 @@ require_once '../../../includes/modal_header.php';
 
 $client_id = intval($_GET['client_id'] ?? 0);
 $current_folder_id = intval($_GET['current_folder_id'] ?? 0);
+$folder_location = intval($_GET['folder_location'] ?? 0); // 0/1 = files & documents, 2 = credentials
 $folder_name = nullable_htmlentities(getFieldByID('folders', $current_folder_id, 'folder_name') ?? '/');
 
 ob_start();
@@ -19,6 +20,7 @@ ob_start();
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
     <input type="hidden" name="client_id" value="<?= $client_id ?>">
     <input type="hidden" name="parent_folder" value="<?= $current_folder_id ?>">
+    <input type="hidden" name="folder_location" value="<?= $folder_location ?>">
     <div class="modal-body">
 
         <div class="form-group">

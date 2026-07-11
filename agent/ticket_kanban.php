@@ -170,6 +170,7 @@ $kanban = array_values($statuses);
 echo "<script>";
 echo "const CONFIG_TICKET_MOVING_COLUMNS = " . json_encode($config_ticket_moving_columns) . ";";
 echo "const CONFIG_TICKET_ORDERING = " . json_encode($config_ticket_ordering) . ";";
+echo "const KANBAN_CSRF_TOKEN = " . json_encode($_SESSION['csrf_token']) . ";";
 echo "</script>";
 ?>
 

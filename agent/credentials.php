@@ -40,6 +40,72 @@ if (isset($_GET['client_id'])) {
 // Perms
 enforceUserPermission('module_credential');
 
+// Folder navigation (client view only) - credential folders use folder_location = 2
+$folder_id = 0;
+$folder_path = [];
+$credential_folders = [];          // folder_id => ['folder_id', 'folder_name', 'parent_folder']
+$credential_folder_children = [];  // parent_folder_id => [folder_id, folder_id, ...]
+$credential_folder_counts = [];    // folder_id => credential count, filtered by $archive_query (0 = root)
+$credential_folder_total_counts = []; // folder_id => credential count, unfiltered (used for "is this folder empty" checks)
+
+if ($client_url) {
+    if (!empty($_GET['folder_id'])) {
+        $folder_id = intval($_GET['folder_id']);
+    }
+
+    // Load the whole credential folder tree for this client in one query, indexed for O(1) lookups -
+    // avoids running a query per folder per tab row when navigating into deeper folders.
+    $sql_all_credential_folders = mysqli_query($mysqli, "SELECT folder_id, folder_name, parent_folder FROM folders WHERE folder_client_id = $client_id AND folder_location = 2 ORDER BY folder_name ASC");
+    while ($row = mysqli_fetch_assoc($sql_all_credential_folders)) {
+        $fid = intval($row['folder_id']);
+        $pid = intval($row['parent_folder']);
+        $credential_folders[$fid] = [
+            'folder_id'     => $fid,
+            'folder_name'   => nullable_htmlentities($row['folder_name']),
+            'parent_folder' => $pid
+        ];
+        $credential_folder_children[$pid][] = $fid;
+    }
+
+    // Credential counts per folder in one grouped query (respects the current archive filter)
+    $sql_folder_counts = mysqli_query($mysqli, "SELECT credential_folder_id, COUNT(*) AS num FROM credentials WHERE credential_client_id = $client_id AND $archive_query GROUP BY credential_folder_id");
+    while ($row = mysqli_fetch_assoc($sql_folder_counts)) {
+        $credential_folder_counts[intval($row['credential_folder_id'])] = intval($row['num']);
+    }
+
+    // Unfiltered counts (active + archived) so we don't offer to delete a folder that still has archived credentials in it
+    if ($session_user_role == 3) {
+        $sql_folder_total_counts = mysqli_query($mysqli, "SELECT credential_folder_id, COUNT(*) AS num FROM credentials WHERE credential_client_id = $client_id GROUP BY credential_folder_id");
+        while ($row = mysqli_fetch_assoc($sql_folder_total_counts)) {
+            $credential_folder_total_counts[intval($row['credential_folder_id'])] = intval($row['num']);
+        }
+    }
+
+    // Breadcrumbs: walk the in-memory folder map, no extra queries
+    $breadcrumb_folder_id = $folder_id;
+    while ($breadcrumb_folder_id > 0 && isset($credential_folders[$breadcrumb_folder_id])) {
+        array_unshift($folder_path, $credential_folders[$breadcrumb_folder_id]);
+        $breadcrumb_folder_id = $credential_folders[$breadcrumb_folder_id]['parent_folder'];
+    }
+}
+$get_folder_id = $folder_id;
+
+// Direct child folders of a given credential folder, with item counts (used to render one row of folder tabs)
+function get_credential_subfolders($parent_folder_id) {
+    global $credential_folders, $credential_folder_children, $credential_folder_counts;
+
+    $subfolders = [];
+    foreach ($credential_folder_children[$parent_folder_id] ?? [] as $child_id) {
+        $subfolders[] = [
+            'folder_id'   => $child_id,
+            'folder_name' => $credential_folders[$child_id]['folder_name'],
+            'count'       => $credential_folder_counts[$child_id] ?? 0
+        ];
+    }
+
+    return $subfolders;
+}
+
 // Tags Filter
 if (isset($_GET['tags']) && is_array($_GET['tags']) && !empty($_GET['tags'])) {
     // Sanitize each element of the tags array
@@ -76,6 +142,18 @@ if ($client_url && isset($_GET['location']) && !empty($_GET['location'])) {
     $location_filter = '';
 }
 
+// Folder filter (client view only)
+if ($client_url) {
+    if ($get_folder_id == 0 && !empty($q)) {
+        // Searching from root - search across all folders
+        $folder_query = '';
+    } else {
+        $folder_query = "AND c.credential_folder_id = $get_folder_id";
+    }
+} else {
+    $folder_query = '';
+}
+
 $sql = mysqli_query(
     $mysqli,
     "SELECT SQL_CALC_FOUND_ROWS c.credential_id AS c_credential_id, c.*, credential_tags.*, tags.*, clients.*, contacts.*, assets.*
@@ -90,6 +168,7 @@ $sql = mysqli_query(
     $tag_query
     AND (c.credential_name LIKE '%$q%' OR c.credential_description LIKE '%$q%' OR c.credential_uri LIKE '%$q%' OR tag_name LIKE '%$q%' OR client_name LIKE '%$q%')
     $location_query
+    $folder_query
     $access_permission_query
     $client_query
     GROUP BY c.credential_id
@@ -106,12 +185,17 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
         <div class="card-tools">
             <?php if (lookupUserPermission("module_credential") >= 2) { ?>
                 <div class="btn-group">
-                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/credential/credential_add.php?<?= $client_url ?>" <?php if (!isset($_COOKIE['user_encryption_session_key'])) { echo 'disabled title="Credential encryption is not set up for your account. Ask an administrator to reset your password under Admin > Users to enable this."'; } ?>>
+                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/credential/credential_add.php?<?= $client_url ?>folder_id=<?= $get_folder_id ?>" <?php if (!isset($_COOKIE['user_encryption_session_key'])) { echo 'disabled title="Credential encryption is not set up for your account. Ask an administrator to reset your password under Admin > Users to enable this."'; } ?>>
                     <i class="fas fa-plus mr-2"></i>New Credential
                 </button>
                 <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
                 <div class="dropdown-menu">
                     <?php if ($client_url) { ?>
+                    <a class="dropdown-item text-dark ajax-modal" href="#"
+                        data-modal-url="modals/folder/folder_add.php?client_id=<?= $client_id ?>&current_folder_id=<?= $get_folder_id ?>&folder_location=2">
+                        <i class="fa fa-fw fa-folder-plus mr-2"></i>New Folder
+                    </a>
+                    <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                         data-modal-url="modals/credential/credential_import.php?<?= $client_url ?>">
                         <i class="fa fa-fw fa-upload mr-2"></i>Import
@@ -138,6 +222,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
         <form autocomplete="off">
             <?php if ($client_url) { ?>
             <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">
+            <input type="hidden" name="folder_id" value="<?php echo $get_folder_id; ?>">
             <?php } ?>
             <input type="hidden" name="archived" value="<?php echo $archived; ?>">
             <div class="row">
@@ -228,7 +313,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                 <div class="col-md-3">
                     <div class="btn-group float-right">
-                        <a href="?<?php echo $client_url; ?>&archived=<?php if($archived == 1){ echo 0; } else { echo 1; } ?>"
+                        <a href="?<?php echo $client_url; ?>folder_id=<?= $get_folder_id ?>&archived=<?php if($archived == 1){ echo 0; } else { echo 1; } ?>"
                             class="btn btn-<?php if($archived == 1){ echo "primary"; } else { echo "default"; } ?>">
                             <i class="fa fa-fw fa-archive mr-2"></i>Archived
                         </a>
@@ -237,6 +322,14 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                             </button>
                             <div class="dropdown-menu">
+                                <?php if ($client_url) { ?>
+                                <a class="dropdown-item ajax-modal" href="#"
+                                    data-modal-url="modals/credential/credential_bulk_move.php?client_id=<?= $client_id ?>&current_folder_id=<?= $get_folder_id ?>"
+                                    data-bulk="true">
+                                    <i class="fas fa-fw fa-exchange-alt mr-2"></i>Move
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <?php } ?>
                                 <button class="dropdown-item"
                                     type="submit" form="bulkActions" name="bulk_favorite_credentials">
                                     <i class="fas fa-fw fa-star text-warning mr-2"></i>Favorite
@@ -277,7 +370,70 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
             </div>
         </form>
-        <hr>
+
+        <?php if ($client_url) { ?>
+        <?php
+        // One tab row per folder depth: row 0 = top-level folders (plus "Root" itself),
+        // each subsequent row = children of the folder active in the row above.
+        $tab_row_parent_ids = [0];
+        foreach ($folder_path as $folder) {
+            $tab_row_parent_ids[] = $folder['folder_id'];
+        }
+        ?>
+        <?php foreach ($tab_row_parent_ids as $row_index => $row_parent_id) {
+            $active_child_id = $folder_path[$row_index]['folder_id'] ?? null; // which tab in this row is active, if any
+            $subfolders = get_credential_subfolders($row_parent_id);
+
+            if ($row_index > 0 && empty($subfolders)) {
+                continue; // nothing to navigate to at this depth
+            }
+        ?>
+            <ul class="nav nav-tabs <?= $row_index == 0 ? 'mt-3' : '' ?>">
+
+                <?php if ($row_index == 0) { ?>
+                <li class="nav-item">
+                    <a class="nav-link <?= $get_folder_id == 0 ? 'active' : '' ?>" href="?client_id=<?= $client_id ?>&folder_id=0&archived=<?= $archived ?>">
+                        <i class="fas fa-fw fa-folder mr-1"></i>Root
+                        <?php if (($credential_folder_counts[0] ?? 0) > 0) { ?><span class="badge badge-pill badge-dark ml-1"><?= $credential_folder_counts[0] ?></span><?php } ?>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php foreach ($subfolders as $subfolder) { ?>
+                <li class="nav-item">
+                    <a class="nav-link <?= $active_child_id == $subfolder['folder_id'] ? 'active' : '' ?>" href="?client_id=<?= $client_id ?>&folder_id=<?= $subfolder['folder_id'] ?>&archived=<?= $archived ?>">
+                        <i class="fas fa-fw fa-folder mr-1"></i><?= $subfolder['folder_name'] ?>
+                        <?php if ($subfolder['count'] > 0) { ?><span class="badge badge-pill badge-dark ml-1"><?= $subfolder['count'] ?></span><?php } ?>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if (lookupUserPermission("module_credential") >= 2 && $active_child_id) { ?>
+                <li class="nav-item ml-auto">
+                    <div class="dropdown">
+                        <a class="nav-link" href="#" data-toggle="dropdown"><i class="fas fa-ellipsis-v text-secondary"></i></a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a class="dropdown-item ajax-modal" href="#"
+                               data-modal-url="modals/folder/folder_rename.php?id=<?= $active_child_id ?>">
+                                <i class="fas fa-fw fa-edit mr-2"></i>Rename Folder
+                            </a>
+                            <?php
+                            $folder_is_empty = ($session_user_role == 3)
+                                && (($credential_folder_total_counts[$active_child_id] ?? 0) == 0)
+                                && empty($credential_folder_children[$active_child_id]);
+                            if ($folder_is_empty) { ?>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_folder=<?php echo $active_child_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete Folder
+                                </a>
+                            <?php } ?>
+                        </div>
+                    </div>
+                </li>
+                <?php } ?>
+            </ul>
+        <?php } ?>
+        <?php } ?>
+
+        <hr class="mt-3">
         <form id="bulkActions" action="post.php" method="post">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
 
@@ -449,7 +605,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 </td>
                                 <td class="text-nowrap"><?php echo $credential_username_display; ?></td>
                                 <td class="text-nowrap">
-                                    <button class="btn p-0" type="button" data-toggle="popover" data-trigger="focus" data-placement="top" data-content="<?php echo $credential_password; ?>"><i class="fas fa-2x fa-ellipsis-h text-secondary"></i><i class="fas fa-2x fa-ellipsis-h text-secondary"></i></button><button class="btn btn-sm clipboardjs" type="button" data-clipboard-text="<?php echo $credential_password; ?>"><i class="far fa-copy text-secondary"></i></button>
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn p-0" type="button" data-toggle="popover" data-trigger="focus" data-placement="top" data-content="<?php echo $credential_password; ?>"><i class="fas fa-2x fa-ellipsis-h text-secondary"></i><i class="fas fa-2x fa-ellipsis-h text-secondary"></i></button><button class="btn btn-sm clipboardjs" type="button" data-clipboard-text="<?php echo $credential_password; ?>"><i class="far fa-copy text-secondary"></i></button>
+                                    </div>
                                 </td>
                                 <td class="text-nowrap"><?php echo $otp_display; ?></td>
                                 <td><?php echo $credential_uri_display; ?></td>
@@ -471,8 +629,8 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 <td class="text-center">
                                     <div class="btn-group">
                                         <?php if ( !empty($credential_uri) || !empty($credential_uri_2) ) { ?>
-                                        <div class="dropdown dropleft text-center">
-                                            <button class="btn btn-default btn-sm" type="button" data-toggle="dropdown">
+                                        <div class="dropdown text-center">
+                                            <button class="btn btn-default btn-sm" type="button" data-toggle="dropdown" data-display="static">
                                                 <i class="fa fa-fw fa-external-link-alt"></i>
                                             </button>
                                             <div class="dropdown-menu">
@@ -490,8 +648,8 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                             </div>
                                         </div>
                                         <?php } ?>
-                                        <div class="dropdown dropleft text-center">
-                                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                        <div class="dropdown text-center">
+                                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown" data-display="static">
                                                 <i class="fas fa-ellipsis-h"></i>
                                             </button>
                                             <div class="dropdown-menu">
@@ -499,6 +657,12 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                                     data-modal-url="modals/credential/credential_edit.php?id=<?= $credential_id ?>">
                                                     <i class="fas fa-fw fa-edit mr-2"></i>Edit
                                                 </a>
+                                                <?php if (lookupUserPermission("module_credential") >= 2) { ?>
+                                                <a class="dropdown-item ajax-modal" href="#"
+                                                    data-modal-url="modals/credential/credential_move.php?id=<?= $credential_id ?>">
+                                                    <i class="fas fa-fw fa-exchange-alt mr-2"></i>Move
+                                                </a>
+                                                <?php } ?>
                                                 <div class="dropdown-divider"></div>
                                                 <?php if ($client_url) { ?>
                                                 <a class="dropdown-item" href="#" data-toggle="modal" data-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'Credential', $credential_id"; ?>)">
