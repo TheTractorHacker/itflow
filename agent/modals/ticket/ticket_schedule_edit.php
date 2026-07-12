@@ -2,9 +2,11 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support', 2);
+
 $schedule_id = intval($_GET['schedule_id']);
 
-$sql = mysqli_query($mysqli, "SELECT ts.*, t.ticket_prefix, t.ticket_number, t.ticket_assigned_to
+$sql = mysqli_query($mysqli, "SELECT ts.*, t.ticket_prefix, t.ticket_number, t.ticket_assigned_to, t.ticket_client_id
     FROM ticket_schedules ts
     LEFT JOIN tickets t ON t.ticket_id = ts.schedule_ticket_id
     WHERE ts.schedule_id = $schedule_id AND ts.schedule_archived_at IS NULL
@@ -16,6 +18,9 @@ if (!$row) {
     require_once '../../../includes/modal_footer.php';
     exit;
 }
+
+$client_id = intval($row['ticket_client_id']);
+if ($client_id) enforceClientAccess();
 
 $ticket_id      = intval($row['schedule_ticket_id']);
 $ticket_prefix  = nullable_htmlentities($row['ticket_prefix']);

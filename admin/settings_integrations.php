@@ -204,7 +204,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                                     "api_url"         => $intg['api_url'],
                                     "web_url"         => $intg['web_url'] ?? '',
                                     "enabled"         => intval($intg['enabled']),
-                                ]) ?>)'>
+                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                             <i class="fas fa-edit"></i>
                         </button>
                         <form action="post.php" method="post" class="d-inline"
@@ -603,7 +603,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                                     "web_url"          => $intg['web_url'] ?? '',
                                     "default_client_id"=> intval($intg['default_client_id'] ?? 0),
                                     "enabled"          => intval($intg['enabled']),
-                                ]) ?>)'>
+                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                             <i class="fas fa-edit"></i>
                         </button>
                         <form action="post.php" method="post" class="d-inline"
@@ -903,7 +903,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                         <button class="btn btn-xs btn-success" onclick="unifiSyncNow(<?= $intg_id ?>)">
                             <i class="fas fa-sync mr-1"></i>Sync Now
                         </button>
-                        <button class="btn btn-xs btn-primary" onclick='unifiOpenSiteMappings(<?= $intg_id ?>, <?= json_encode($intg['name']) ?>)'>
+                        <button class="btn btn-xs btn-primary" onclick='unifiOpenSiteMappings(<?= $intg_id ?>, <?= json_encode($intg['name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                             <i class="fas fa-sitemap mr-1"></i>Sites
                         </button>
                         <?php if ($intg_type === 'cloud'): ?>
@@ -923,7 +923,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                                     "port"       => intval($intg['port']),
                                     "verify_ssl" => intval($intg['verify_ssl']),
                                     "enabled"    => intval($intg['enabled']),
-                                ]) ?>)'>
+                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                             <i class="fas fa-edit"></i>
                         </button>
                         <form action="post.php" method="post" class="d-inline"

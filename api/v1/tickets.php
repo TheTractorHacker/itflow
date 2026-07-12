@@ -83,7 +83,13 @@ if ($method === 'GET' && $id === null && $resource === 'tickets') {
     $contact_id = isset($_GET['contact_id']) ? intval($_GET['contact_id']) : 0;
     $client_id  = isset($_GET['client_id']) ? intval($_GET['client_id']) : 0;
 
-    $where = ['t.ticket_archived_at IS NULL'];
+    // Same client-scope restriction as the per-ticket path above: agents with
+    // user_client_permissions rows may only list tickets for permitted clients.
+    $where = [
+        't.ticket_archived_at IS NULL',
+        "(NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid LIMIT 1)
+          OR EXISTS (SELECT 1 FROM user_client_permissions ucp WHERE ucp.user_id = $uid AND ucp.client_id = t.ticket_client_id LIMIT 1))",
+    ];
     if ($status === 'open')   $where[] = 't.ticket_resolved_at IS NULL';
     if ($status === 'closed') $where[] = 't.ticket_resolved_at IS NOT NULL';
     if ($mine)                $where[] = "t.ticket_assigned_to = $uid";
@@ -232,13 +238,17 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     if (!$reply) api_error(400, 'reply is required');
 
     // Normalize type: Customer/Client/Portal/Website all mean a client-side reply.
-    // "note" stays as note. Everything else (reply/agent/blank) is an agent reply.
+    // "note" is stored as 'Internal' to match the web app's own convention — the customer
+    // portal/guest ticket views filter out replies with the literal type 'Internal'; storing
+    // it as lowercase 'note' (as this endpoint used to) meant mobile-created notes were never
+    // actually excluded from the customer-visible views. Everything else (reply/agent/blank)
+    // is an agent reply.
     $raw_type = strtolower(trim($body['type'] ?? 'reply'));
     $is_customer = in_array($raw_type, ['client', 'customer', 'portal', 'website']);
     if ($is_customer) {
         $type = 'Client';
-    } elseif ($raw_type === 'note') {
-        $type = 'note';
+    } elseif ($raw_type === 'note' || $raw_type === 'internal') {
+        $type = 'Internal';
     } else {
         $type = 'reply';
     }
@@ -368,7 +378,7 @@ if ($method === 'POST' && $id !== null && $sub === 'time') {
 
     mysqli_query($mysqli,
         "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_time_worked, ticket_reply_by, ticket_reply_ticket_id, ticket_reply_created_at)
-         VALUES ('$note', 'note', '$time_worked', $uid, $id, NOW())"
+         VALUES ('$note', 'Internal', '$time_worked', $uid, $id, NOW())"
     );
 
     api_response(201, ['ok' => true]);

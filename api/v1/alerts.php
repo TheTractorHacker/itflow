@@ -26,10 +26,19 @@ if ($method === 'GET') {
     $filter_source   = $_GET['source'] ?? 'all';
     $filter_client   = intval($_GET['client_id'] ?? 0);
 
+    // Client-restricted API users (rows in user_client_permissions) should only
+    // ever see alerts for clients they're permitted to access - unrestricted
+    // users (no rows) see everything, matching enforceClientAccess()'s model.
+    // Alerts with no client_id at all aren't tied to any specific client, so
+    // they stay visible to everyone rather than being hidden by the scoping.
+    $client_scope = "(NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id=$api_user_id)
+        OR %s IS NULL
+        OR %s IN (SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id))";
+
     $alerts = [];
 
     if ($filter_source === 'all' || $filter_source === 'rmm') {
-        $where = "1=1";
+        $where = "1=1 AND " . sprintf($client_scope, 'a.client_id', 'a.client_id');
         if ($filter_status && $filter_status !== 'all') {
             $where .= " AND a.status='" . mysqli_real_escape_string($mysqli, $filter_status) . "'";
         }
@@ -64,7 +73,7 @@ if ($method === 'GET') {
     }
 
     if ($filter_source === 'all' || $filter_source === 'backup') {
-        $where = "1=1";
+        $where = "1=1 AND " . sprintf($client_scope, 'a.alert_client_id', 'a.alert_client_id');
         if ($filter_status && $filter_status !== 'all') {
             $where .= " AND a.alert_status='" . mysqli_real_escape_string($mysqli, $filter_status) . "'";
         }

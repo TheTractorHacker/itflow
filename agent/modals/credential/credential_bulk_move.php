@@ -2,8 +2,12 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_credential');
+
 $client_id = intval($_GET['client_id'] ?? 0);
 $current_folder_id = intval($_GET['current_folder_id'] ?? 0);
+
+enforceClientAccess();
 
 // Selected IDs from JS (may be empty array)
 $credential_ids = array_map('intval', $_GET['credential_ids'] ?? []);

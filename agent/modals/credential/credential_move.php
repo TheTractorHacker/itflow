@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_credential');
+
 $credential_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT credential_name, credential_folder_id, credential_client_id FROM credentials WHERE credential_id = $credential_id LIMIT 1");
@@ -10,6 +12,8 @@ $row = mysqli_fetch_assoc($sql);
 $client_id = intval($row['credential_client_id']);
 $credential_folder_id = intval($row['credential_folder_id']);
 $credential_name = nullable_htmlentities($row['credential_name']);
+
+enforceClientAccess();
 
 // Generate the HTML form content using output buffering.
 ob_start();
