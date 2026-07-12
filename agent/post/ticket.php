@@ -3603,7 +3603,7 @@ if (isset($_POST['edit_ticket_schedule_entry'])) {
         schedule_onsite  = $onsite,
         schedule_tech_id = $tech_id,
         schedule_notes   = '$notes'
-        WHERE schedule_id = $schedule_id");
+        WHERE schedule_id = $schedule_id AND schedule_ticket_id = $ticket_id");
 
     syncScheduleEntryToOutlook($schedule_id);
 
@@ -3623,7 +3623,7 @@ if (isset($_GET['delete_ticket_schedule'])) {
     $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
     if ($client_id) enforceClientAccess();
 
-    mysqli_query($mysqli, "UPDATE ticket_schedules SET schedule_archived_at = NOW() WHERE schedule_id = $schedule_id");
+    mysqli_query($mysqli, "UPDATE ticket_schedules SET schedule_archived_at = NOW() WHERE schedule_id = $schedule_id AND schedule_ticket_id = $ticket_id");
 
     logAction("Ticket", "Edit", "Removed schedule entry #$schedule_id from ticket #$ticket_id", $client_id, $ticket_id);
     flash_alert("Schedule entry removed", 'error');

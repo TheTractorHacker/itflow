@@ -53,12 +53,18 @@ if (isset($_POST['save_outtake_notes'])) {
     enforceUserPermission('module_support', 2);
 
     $outtake_id = intval($_POST['outtake_id']);
-    $ticket_id  = intval($_POST['ticket_id']);
     $notes      = sanitizeInput($_POST['outtake_tech_notes']);
 
-    // Derive client from the ticket itself, not the (client-supplied) form field
-    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
-    enforceClientAccess();
+    // Derive client from the outtake form's own ticket join - a separately
+    // supplied ticket_id must never be trusted for authorization, since it
+    // could reference a ticket the caller has access to while outtake_id
+    // references a different one.
+    $td = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ot.outtake_ticket_id, t.ticket_client_id FROM ticket_outtake_forms ot JOIN tickets t ON ot.outtake_ticket_id = t.ticket_id WHERE ot.outtake_id = $outtake_id LIMIT 1"));
+    if (!$td) { flash_alert("Outtake form not found.", "error"); redirect(); }
+
+    $ticket_id = intval($td['outtake_ticket_id']);
+    $client_id = intval($td['ticket_client_id']);
+    if ($client_id) { enforceClientAccess($client_id); }
 
     mysqli_query($mysqli, "UPDATE ticket_outtake_forms SET outtake_tech_notes = '$notes' WHERE outtake_id = $outtake_id");
     flash_alert("Outtake form notes saved.");
@@ -70,14 +76,14 @@ if (isset($_POST['send_outtake_email'])) {
     enforceUserPermission('module_support', 2);
 
     $outtake_id = intval($_POST['outtake_id']);
-    $ticket_id  = intval($_POST['ticket_id']);
 
-    // Derive client from the ticket itself, not the (client-supplied) form field
-    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
-    enforceClientAccess();
-
+    // Fetch by outtake_id (the resource actually being acted on) and derive
+    // client_id from its own ticket join - a separately POSTed ticket_id must
+    // never be trusted for authorization, since it could reference a ticket
+    // the caller has access to while outtake_id references a different one.
     $row = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT ot.outtake_sign_token, t.ticket_prefix, t.ticket_number, t.ticket_subject,
+        "SELECT ot.outtake_sign_token, ot.outtake_ticket_id, t.ticket_client_id,
+                t.ticket_prefix, t.ticket_number, t.ticket_subject,
                 co.contact_email, co.contact_name, c.client_name
          FROM ticket_outtake_forms ot
          JOIN tickets t ON ot.outtake_ticket_id = t.ticket_id
@@ -85,7 +91,16 @@ if (isset($_POST['send_outtake_email'])) {
          LEFT JOIN clients c ON t.ticket_client_id = c.client_id
          WHERE ot.outtake_id = $outtake_id LIMIT 1"));
 
-    if (!$row || empty($row['contact_email'])) {
+    if (!$row) {
+        flash_alert("Outtake form not found.", "error");
+        redirect();
+    }
+
+    $ticket_id = intval($row['outtake_ticket_id']);
+    $client_id = intval($row['ticket_client_id']);
+    if ($client_id) { enforceClientAccess($client_id); }
+
+    if (empty($row['contact_email'])) {
         flash_alert("No contact email found for this ticket.", "error");
         redirect();
     }
@@ -126,11 +141,17 @@ if (isset($_GET['delete_outtake'])) {
     enforceUserPermission('module_support', 2);
 
     $outtake_id = intval($_GET['delete_outtake']);
-    $ticket_id  = intval($_GET['ticket_id']);
 
-    // Derive client from the ticket itself, not the (client-supplied) URL param
-    $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
-    enforceClientAccess();
+    // Derive client from the outtake form's own ticket join - a separately
+    // supplied ticket_id must never be trusted for authorization, since it
+    // could reference a ticket the caller has access to while outtake_id
+    // references a different one.
+    $td = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ot.outtake_ticket_id, t.ticket_client_id FROM ticket_outtake_forms ot JOIN tickets t ON ot.outtake_ticket_id = t.ticket_id WHERE ot.outtake_id = $outtake_id LIMIT 1"));
+    if (!$td) { flash_alert("Outtake form not found.", "error"); redirect(); }
+
+    $ticket_id = intval($td['outtake_ticket_id']);
+    $client_id = intval($td['ticket_client_id']);
+    if ($client_id) { enforceClientAccess($client_id); }
 
     mysqli_query($mysqli, "DELETE FROM ticket_outtake_forms WHERE outtake_id = $outtake_id");
     logAction("Outtake", "Delete", "Deleted outtake form #$outtake_id", $client_id, $ticket_id);
