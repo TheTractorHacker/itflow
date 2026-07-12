@@ -18,17 +18,26 @@ class UnifiSyncMapper {
     private int $integration_id;
     private int $triggered_by;
 
-    // UniFi device type prefix -> ITFlow asset_type
+    // UniFi device type prefix -> ITFlow asset_type. Must be 'Firewall/Router'
+    // (not 'Firewall') to match the string agent/network.php and every other
+    // Firewalls-list consumer actually filters assets.asset_type on.
     private const TYPE_MAP = [
         'UAP' => 'Access Point',
         'USW' => 'Switch',
-        'UGW' => 'Firewall',
-        'UDM' => 'Firewall',
-        'UXG' => 'Firewall',
+        'UGW' => 'Firewall/Router', // USG (older "UniFi Security Gateway")
+        'UDM' => 'Firewall/Router', // Dream Machine / Dream Machine Pro / SE
+        'UXG' => 'Firewall/Router', // Next-Gen Gateway (Lite/Pro/Fiber)
+        'UDR' => 'Firewall/Router', // Dream Router
+        'UCG' => 'Firewall/Router', // Cloud Gateway (Ultra/Fiber/Max)
     ];
 
-    // Device types this sync imports as assets
-    private const SYNC_DEVICE_TYPES = ['UAP', 'USW'];
+    // Device types this sync imports as assets. Gateways are included so a
+    // local-controller-connected UDM/USG/UXG/UDR/UCG (e.g. a Dream Machine
+    // acting as the site's own controller) shows up as a Firewall/Router
+    // asset - previously only UAP/USW synced locally, so a gateway on a
+    // local integration was silently skipped even though the same device
+    // synced fine via a cloud integration.
+    private const SYNC_DEVICE_TYPES = ['UAP', 'USW', 'UGW', 'UDM', 'UXG', 'UDR', 'UCG'];
 
     public function __construct($mysqli, int $integration_id, int $triggered_by = 0) {
         $this->mysqli         = $mysqli;
