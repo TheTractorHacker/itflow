@@ -38,8 +38,19 @@ $path     = preg_replace('#^' . preg_quote($base, '#') . '#', '', $uri);
 $segments = array_values(array_filter(explode('/', $path)));
 $method   = $_SERVER['REQUEST_METHOD'];
 $resource = $segments[0] ?? '';
-$id       = isset($segments[1]) && is_numeric($segments[1]) ? intval($segments[1]) : null;
-$sub      = $id !== null ? ($segments[2] ?? null) : ($segments[1] ?? null);
+if (isset($segments[1]) && is_numeric($segments[1])) {
+    // resource/{id} or resource/{id}/{sub}, e.g. tickets/5/chat
+    $id  = intval($segments[1]);
+    $sub = $segments[2] ?? null;
+} elseif (isset($segments[1]) && isset($segments[2]) && is_numeric($segments[2])) {
+    // resource/{sub}/{id}, e.g. kb/articles/57
+    $id  = intval($segments[2]);
+    $sub = $segments[1];
+} else {
+    // resource or resource/{sub}, e.g. kb/categories
+    $id  = null;
+    $sub = $segments[1] ?? null;
+}
 
 // Normalize legacy-style URLs (e.g. /clients/read.php → resource=clients, sub=null)
 $resource = preg_replace('/\.php$/', '', $resource);

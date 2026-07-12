@@ -147,6 +147,23 @@ if ($resource === 'worksheets' && $id !== null && $sub === 'sign' && $method ===
     api_response(200, ['ok' => true]);
 }
 
+// Check a worksheet complete/incomplete without a signature
+if ($resource === 'worksheets' && $id !== null && $sub === 'complete' && $method === 'POST') {
+    $body      = json_decode(file_get_contents('php://input'), true) ?? [];
+    $completed = !empty($body['completed']);
+
+    $ws = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT worksheet_signed_at FROM ticket_worksheets WHERE worksheet_id = $id"));
+    if (!$ws) api_error(404, 'Worksheet not found');
+
+    if ($completed) {
+        mysqli_query($mysqli, "UPDATE ticket_worksheets SET worksheet_completed_at = NOW() WHERE worksheet_id = $id AND worksheet_completed_at IS NULL");
+    } else {
+        if (!empty($ws['worksheet_signed_at'])) api_error(400, 'Cannot uncheck a signed worksheet');
+        mysqli_query($mysqli, "UPDATE ticket_worksheets SET worksheet_completed_at = NULL WHERE worksheet_id = $id");
+    }
+    api_response(200, ['ok' => true]);
+}
+
 // List worksheet templates
 if ($resource === 'worksheet-templates' && $method === 'GET') {
     $templates = [];

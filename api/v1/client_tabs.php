@@ -4,6 +4,7 @@
 // GET /api/v1/clients/{id}/locations
 // GET /api/v1/clients/{id}/credentials
 // GET /api/v1/clients/{id}/contracts
+// GET /api/v1/clients/{id}/files
 defined('FROM_API') || die();
 if ($method !== 'GET') api_error(405, 'Method not allowed');
 
@@ -68,6 +69,28 @@ switch ($sub) {
         while ($r = mysqli_fetch_assoc($sql)) {
             $rows[] = ['id'=>intval($r['contract_id']),'name'=>$r['contract_name'],
                 'status'=>$r['contract_status'],'type'=>$r['contract_type']];
+        }
+        api_response(200, $rows);
+
+    case 'files':
+        // Signed outtake (device pickup) forms — outtakes have no client_id column of their
+        // own, so join through the ticket they belong to.
+        $rows = []; $sql = mysqli_query($mysqli,
+            "SELECT ot.outtake_id, ot.outtake_signed_name, ot.outtake_signed_at,
+                    t.ticket_id, t.ticket_number, t.ticket_subject
+             FROM ticket_outtake_forms ot
+             JOIN tickets t ON t.ticket_id = ot.outtake_ticket_id
+             WHERE t.ticket_client_id = $id AND ot.outtake_signed_at IS NOT NULL
+             ORDER BY ot.outtake_signed_at DESC LIMIT 100");
+        while ($r = mysqli_fetch_assoc($sql)) {
+            $rows[] = [
+                'id'            => intval($r['outtake_id']),
+                'ticket_id'     => intval($r['ticket_id']),
+                'ticket_number' => intval($r['ticket_number']),
+                'ticket_subject'=> $r['ticket_subject'],
+                'signed_name'   => $r['outtake_signed_name'],
+                'signed_at'     => $r['outtake_signed_at'],
+            ];
         }
         api_response(200, $rows);
 

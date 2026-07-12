@@ -4,16 +4,31 @@
 defined('FROM_API') || die();
 if ($method !== 'GET') api_error(405, 'Method not allowed');
 
-if ($id === null) {
+if ($id === null && $sub === 'types') {
+    $types = [];
+    $sql = mysqli_query($mysqli,
+        "SELECT DISTINCT asset_type FROM assets
+         WHERE asset_archived_at IS NULL AND asset_type IS NOT NULL AND asset_type != ''
+         ORDER BY asset_type ASC"
+    );
+    while ($row = mysqli_fetch_assoc($sql)) {
+        $types[] = $row['asset_type'];
+    }
+    api_response(200, $types);
+}
+
+if ($id === null && $sub === null) {
     $page      = max(1, intval($_GET['page'] ?? 1));
     $limit     = min(50, max(1, intval($_GET['limit'] ?? 20)));
     $offset    = ($page - 1) * $limit;
     $search    = mysqli_real_escape_string($mysqli, $_GET['search'] ?? '');
     $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
+    $type      = mysqli_real_escape_string($mysqli, trim($_GET['type'] ?? ''));
 
     $where = ['a.asset_archived_at IS NULL'];
     if ($client_id) $where[] = "a.asset_client_id = $client_id";
     if ($search)    $where[] = "(a.asset_name LIKE '%$search%' OR a.asset_serial LIKE '%$search%' OR a.asset_make LIKE '%$search%' OR a.asset_model LIKE '%$search%')";
+    if ($type)      $where[] = "a.asset_type = '$type'";
     $w = implode(' AND ', $where);
 
     $total  = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS c FROM assets a WHERE $w"))['c']);
@@ -41,6 +56,7 @@ if ($id === null) {
 }
 
 // Detail
+if ($id === null) api_error(404, 'Not found');
 $row = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT a.*, c.client_name, l.location_name, l.location_address,
             l.location_city, l.location_state,

@@ -1,48 +1,49 @@
 <?php
-// GET /api/v1/reports/time?period=week|month|all&mine=1
+// Dispatches GET /api/v1/reports/{report} to the matching file in reports/.
+// $sub is parsed by index.php's router from the path segment after "reports/".
 defined('FROM_API') || die();
 if ($method !== 'GET') api_error(405, 'Method not allowed');
 
-$uid    = $api_user_id;
-$period = $_GET['period'] ?? 'week';
-$mine   = intval($_GET['mine'] ?? 0);
+require_once __DIR__ . '/includes/api_permissions.php';
 
-$date_filter = match($period) {
-    'week'  => "AND DATE(r.ticket_reply_created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)",
-    'month' => "AND DATE(r.ticket_reply_created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)",
-    default => "",
-};
-$mine_filter = $mine ? "AND r.ticket_reply_by = $uid" : "";
-
-$sql = mysqli_query($mysqli,
-    "SELECT c.client_name, c.client_id,
-            SUM(
-                TIME_TO_SEC(IFNULL(r.ticket_reply_time_worked, '0:0:0')) / 3600
-            ) AS total_hours,
-            COUNT(DISTINCT t.ticket_id) AS ticket_count
-     FROM ticket_replies r
-     JOIN tickets t ON r.ticket_reply_ticket_id = t.ticket_id
-     LEFT JOIN clients c ON t.ticket_client_id = c.client_id
-     WHERE r.ticket_reply_time_worked IS NOT NULL
-       AND r.ticket_reply_time_worked != ''
-       AND r.ticket_reply_archived_at IS NULL
-       $date_filter $mine_filter
-     GROUP BY c.client_id, c.client_name
-     ORDER BY total_hours DESC
-     LIMIT 50"
-);
-
-$entries = [];
-$total   = 0;
-while ($row = mysqli_fetch_assoc($sql)) {
-    $h = round(floatval($row['total_hours']), 2);
-    $entries[] = [
-        'client'       => $row['client_name'] ?? 'No Client',
-        'client_id'    => intval($row['client_id'] ?? 0),
-        'hours'        => $h,
-        'ticket_count' => intval($row['ticket_count']),
-    ];
-    $total += $h;
+switch ($sub) {
+    case 'time':
+    case null:
+        require __DIR__ . '/reports/time.php';
+        break;
+    case 'tickets':
+        require __DIR__ . '/reports/tickets.php';
+        break;
+    case 'tickets-by-client':
+        require __DIR__ . '/reports/tickets_by_client.php';
+        break;
+    case 'time-by-tech':
+        require __DIR__ . '/reports/time_by_tech.php';
+        break;
+    case 'tech-performance':
+        require __DIR__ . '/reports/tech_performance.php';
+        break;
+    case 'unbilled-tickets':
+        require __DIR__ . '/reports/unbilled_tickets.php';
+        break;
+    case 'clients-with-balance':
+        require __DIR__ . '/reports/clients_with_balance.php';
+        break;
+    case 'income-summary':
+        require __DIR__ . '/reports/income_summary.php';
+        break;
+    case 'expense-summary':
+        require __DIR__ . '/reports/expense_summary.php';
+        break;
+    case 'profit-loss':
+        require __DIR__ . '/reports/profit_loss.php';
+        break;
+    case 'expiring':
+        require __DIR__ . '/reports/expiring.php';
+        break;
+    case 'overview':
+        require __DIR__ . '/reports/overview.php';
+        break;
+    default:
+        api_error(404, 'Unknown report');
 }
-
-api_response(200, ['period' => $period, 'total_hours' => round($total, 2), 'entries' => $entries]);
