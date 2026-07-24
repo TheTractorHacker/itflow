@@ -5,6 +5,9 @@
     // $time_start = microtime(true);
 
 header("X-Frame-Options: DENY");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com");
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: strict-origin-when-cross-origin");
 
 ?>
 

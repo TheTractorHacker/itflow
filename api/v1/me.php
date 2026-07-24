@@ -17,6 +17,33 @@ if ($method === 'GET') {
     ]);
 }
 
+if ($method === 'PUT' && isset(json_decode(file_get_contents('php://input'), true)['device_public_key_pem'])) {
+    // Registers/replaces this device's biometric-gate public key, used by
+    // api/v1/credentials.php to verify a signed step-up challenge instead of
+    // trusting a client-supplied "biometric happened" claim. One key per
+    // user (single-device model, matching how api_tokens are already
+    // per-login rather than per-device) - re-registering (e.g. reinstall,
+    // new device, or a biometric-enrollment-invalidated key regenerating)
+    // simply overwrites the previous key.
+    $body = json_decode(file_get_contents('php://input'), true) ?? [];
+    $pem  = trim($body['device_public_key_pem'] ?? '');
+
+    if (!preg_match('/^-----BEGIN PUBLIC KEY-----.+-----END PUBLIC KEY-----\s*$/s', $pem)) {
+        api_error(400, 'Invalid public key format');
+    }
+    if (!openssl_pkey_get_public($pem)) {
+        api_error(400, 'Invalid public key');
+    }
+
+    $esc_pem = mysqli_real_escape_string($mysqli, $pem);
+    mysqli_query($mysqli,
+        "INSERT INTO api_biometric_keys (user_id, device_public_key_pem)
+         VALUES ($api_user_id, '$esc_pem')
+         ON DUPLICATE KEY UPDATE device_public_key_pem = '$esc_pem'"
+    );
+    api_response(200, ['ok' => true]);
+}
+
 if ($method === 'PUT' && isset(json_decode(file_get_contents('php://input'), true)['fcm_token'])) {
     $body      = json_decode(file_get_contents('php://input'), true) ?? [];
     $fcm_token = mysqli_real_escape_string($mysqli, trim($body['fcm_token'] ?? ''));

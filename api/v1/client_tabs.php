@@ -6,12 +6,20 @@
 // GET /api/v1/clients/{id}/contracts
 // GET /api/v1/clients/{id}/files
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 if ($method !== 'GET') api_error(405, 'Method not allowed');
 
 if (!$id) api_error(400, 'client_id required');
 
+$uid = $api_user_id;
+
+// Client-scope restriction, mirroring tickets.php/appointments.php: agents with rows in
+// user_client_permissions may only access clients in their permitted set.
+if (!api_client_scope_ok($id)) api_error(403, 'Access denied');
+
 switch ($sub) {
     case 'tickets':
+        api_require_module_permission($mysqli, $uid, 'module_support');
         $rows = []; $sql = mysqli_query($mysqli,
             "SELECT t.ticket_id, t.ticket_number, t.ticket_subject, t.ticket_priority,
                     t.ticket_created_at, t.ticket_resolved_at,
@@ -31,6 +39,7 @@ switch ($sub) {
         api_response(200, $rows);
 
     case 'assets':
+        api_require_module_permission($mysqli, $uid, 'module_support');
         $rows = []; $sql = mysqli_query($mysqli,
             "SELECT asset_id, asset_name, asset_type, asset_make, asset_model, asset_serial, asset_status
              FROM assets WHERE asset_client_id = $id AND asset_archived_at IS NULL ORDER BY asset_name ASC");
@@ -41,6 +50,7 @@ switch ($sub) {
         api_response(200, $rows);
 
     case 'locations':
+        api_require_module_permission($mysqli, $uid, 'module_client');
         $rows = []; $sql = mysqli_query($mysqli,
             "SELECT location_id, location_name, location_address, location_city, location_state,
                     location_zip, location_phone, location_primary
@@ -53,6 +63,8 @@ switch ($sub) {
         api_response(200, $rows);
 
     case 'credentials':
+        if ($legacy_api_key_auth) { api_error(403, 'Credentials endpoint requires a user API token'); }
+        api_require_module_permission($mysqli, $uid, 'module_credential');
         $rows = []; $sql = mysqli_query($mysqli,
             "SELECT credential_id, credential_name, credential_username, credential_uri
              FROM credentials WHERE credential_client_id = $id AND credential_archived_at IS NULL ORDER BY credential_name ASC");
@@ -63,6 +75,7 @@ switch ($sub) {
         api_response(200, $rows);
 
     case 'contracts':
+        api_require_module_permission($mysqli, $uid, 'module_client');
         $rows = []; $sql = mysqli_query($mysqli,
             "SELECT contract_id, contract_name, contract_status, contract_type
              FROM contracts WHERE contract_client_id = $id AND contract_archived_at IS NULL ORDER BY contract_name ASC");
@@ -73,6 +86,7 @@ switch ($sub) {
         api_response(200, $rows);
 
     case 'files':
+        api_require_module_permission($mysqli, $uid, 'module_support');
         // Signed outtake (device pickup) forms — outtakes have no client_id column of their
         // own, so join through the ticket they belong to.
         $rows = []; $sql = mysqli_query($mysqli,

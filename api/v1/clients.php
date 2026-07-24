@@ -2,7 +2,15 @@
 // GET /api/v1/clients       list
 // GET /api/v1/clients/{id}  detail + contacts + primary location
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 if ($method !== 'GET') api_error(405, 'Method not allowed');
+
+$uid = $api_user_id;
+api_require_module_permission($mysqli, $uid, 'module_client');
+
+// Client-scope restriction, mirroring tickets.php/appointments.php: agents with rows in
+// user_client_permissions may only see/access clients in their permitted set.
+$client_scope_clause = api_client_scope_sql('c.client_id');
 
 if ($id === null) {
     $page   = max(1, intval($_GET['page'] ?? 1));
@@ -10,7 +18,7 @@ if ($id === null) {
     $offset = ($page - 1) * $limit;
     $search = mysqli_real_escape_string($mysqli, $_GET['search'] ?? '');
 
-    $where = ['c.client_archived_at IS NULL'];
+    $where = ['c.client_archived_at IS NULL', $client_scope_clause];
     if ($search) $where[] = "c.client_name LIKE '%$search%'";
     $w = implode(' AND ', $where);
 
@@ -43,7 +51,7 @@ $row = mysqli_fetch_assoc(mysqli_query($mysqli,
              l.location_zip, l.location_phone
      FROM clients c
      LEFT JOIN locations l ON l.location_client_id = c.client_id AND l.location_primary = 1
-     WHERE c.client_id = $id AND c.client_archived_at IS NULL LIMIT 1"
+     WHERE c.client_id = $id AND c.client_archived_at IS NULL AND $client_scope_clause LIMIT 1"
 ));
 if (!$row) api_error(404, 'Client not found');
 

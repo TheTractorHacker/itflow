@@ -56,7 +56,15 @@ if (isset($segments[1]) && is_numeric($segments[1])) {
 $resource = preg_replace('/\.php$/', '', $resource);
 if (is_string($sub)) {
     $sub = preg_replace('/\.php$/', '', $sub);
-    if ($sub === 'read' || $sub === '') $sub = null;
+    if ($sub === '') {
+        $sub = null;
+    } elseif ($sub === 'read' && $id === null) {
+        // Only the legacy resource/read.php shape (no numeric id) means "no
+        // sub-resource" — resource/{id}/read is a distinct action route (e.g.
+        // notifications/{id}/read) and must keep 'read' as a real sub-value,
+        // or that route becomes permanently unreachable.
+        $sub = null;
+    }
 }
 
 // Public endpoint: auth
@@ -119,12 +127,19 @@ if (!empty($_SERVER['HTTP_X_API_KEY'])) {
         $legacy_key_raw = $json_body['api_key'];
     }
 }
+// api_key_client_id, when non-zero, is the "Client Access" restriction an admin
+// picked when creating this legacy key (0/NULL = "ALL CLIENTS"). This used to be
+// stored but never actually read/enforced anywhere - every legacy key granted
+// full instance-wide access regardless of this setting. api_client_scope_sql()/
+// api_client_scope_ok() in includes/api_permissions.php now fold this in.
+$api_key_client_id = null;
 if (!$api_user_id && $legacy_key_raw !== null) {
     $legacy_key = mysqli_real_escape_string($mysqli, hash('sha256', $legacy_key_raw));
     $legacy_sql = mysqli_query($mysqli,
         "SELECT * FROM api_keys WHERE api_key_secret = '$legacy_key' AND api_key_expire > NOW() LIMIT 1"
     );
-    if (mysqli_num_rows($legacy_sql) === 1) {
+    $legacy_key_row = mysqli_fetch_assoc($legacy_sql);
+    if ($legacy_key_row) {
         $admin = mysqli_fetch_assoc(mysqli_query($mysqli,
             "SELECT user_id, user_name FROM users
              WHERE user_type = 1 AND user_status = 1 AND user_archived_at IS NULL
@@ -136,6 +151,7 @@ if (!$api_user_id && $legacy_key_raw !== null) {
             $session_name       = $admin['user_name'];
             $session_company_id = 1;
             $legacy_api_key_auth = true;
+            $api_key_client_id  = intval($legacy_key_row['api_key_client_id'] ?? 0) ?: null;
         }
     }
 }

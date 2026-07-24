@@ -4,6 +4,7 @@
 // POST   /api/v1/tickets/{id}/reply   add reply
 // POST   /api/v1/tickets/{id}/time    log time
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 
 $uid = $api_user_id;
 
@@ -14,10 +15,7 @@ if ($id !== null) {
     $ticket_access_check = mysqli_fetch_assoc(mysqli_query($mysqli,
         "SELECT t.ticket_id FROM tickets t
          WHERE t.ticket_id = $id
-           AND (
-               NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid LIMIT 1)
-               OR EXISTS (SELECT 1 FROM user_client_permissions ucp WHERE ucp.user_id = $uid AND ucp.client_id = t.ticket_client_id LIMIT 1)
-           )
+           AND " . api_client_scope_sql('t.ticket_client_id') . "
          LIMIT 1"
     ));
     if (!$ticket_access_check) api_error(403, 'Access denied');
@@ -87,8 +85,7 @@ if ($method === 'GET' && $id === null && $resource === 'tickets') {
     // user_client_permissions rows may only list tickets for permitted clients.
     $where = [
         't.ticket_archived_at IS NULL',
-        "(NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid LIMIT 1)
-          OR EXISTS (SELECT 1 FROM user_client_permissions ucp WHERE ucp.user_id = $uid AND ucp.client_id = t.ticket_client_id LIMIT 1))",
+        api_client_scope_sql('t.ticket_client_id'),
     ];
     if ($status === 'open')   $where[] = 't.ticket_resolved_at IS NULL';
     if ($status === 'closed') $where[] = 't.ticket_resolved_at IS NOT NULL';

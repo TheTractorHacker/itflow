@@ -5,6 +5,10 @@ require_once "includes/inc_all_client.php";
 // Perms
 enforceUserPermission('module_sales');
 
+// This page embeds Stripe Elements — override the shared agent/admin CSP
+// (set by includes/header.php) with a Stripe-inclusive policy for this page only.
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://js.stripe.com https://static.cloudflareinsights.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://cloudflareinsights.com");
+
 // Initialize stripe
 require_once 'plugins/stripe-php/init.php';
 

@@ -48,7 +48,7 @@ if ($method === 'POST') {
     if ($id !== null && $sub === 'read') {
         mysqli_query($mysqli,
             "UPDATE notifications SET notification_dismissed_at = NOW(), notification_dismissed_by = $uid
-             WHERE notification_id = $id"
+             WHERE notification_id = $id AND (notification_user_id = $uid OR notification_user_id = 0)"
         );
         api_response(200, ['ok' => true]);
     }

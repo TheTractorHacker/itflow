@@ -1,7 +1,11 @@
 <?php
 // GET /api/v1/contacts?client_id=&search=
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 if ($method !== 'GET') api_error(405, 'Method not allowed');
+
+$uid = $api_user_id;
+api_require_module_permission($mysqli, $uid, 'module_client');
 
 $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
 $search    = mysqli_real_escape_string($mysqli, $_GET['search'] ?? '');
@@ -9,7 +13,11 @@ $page      = max(1, intval($_GET['page'] ?? 1));
 $limit     = min(100, max(1, intval($_GET['limit'] ?? 30)));
 $offset    = ($page - 1) * $limit;
 
-$where = ['contact_archived_at IS NULL'];
+// Client-scope restriction, mirroring tickets.php/client_tabs.php.
+$where = [
+    'contact_archived_at IS NULL',
+    api_client_scope_sql('contact_client_id'),
+];
 if ($client_id) $where[] = "contact_client_id = $client_id";
 if ($search)    $where[] = "(contact_name LIKE '%$search%' OR contact_email LIKE '%$search%')";
 $w = implode(' AND ', $where);

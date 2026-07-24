@@ -29,7 +29,7 @@ $co_logo    = nullable_htmlentities($co['company_logo']);
 // Load worksheet + ticket
 $sql = mysqli_query($mysqli, "SELECT tw.*, wt.worksheet_template_name, wt.worksheet_template_id,
     t.ticket_prefix, t.ticket_number, t.ticket_subject, t.ticket_details, t.ticket_created_at,
-    c.client_name, c.client_address, c.client_city, c.client_state, c.client_zip,
+    c.client_name,
     co2.contact_name, co2.contact_email, co2.contact_phone
     FROM ticket_worksheets tw
     JOIN worksheet_templates wt ON tw.worksheet_template_id = wt.worksheet_template_id

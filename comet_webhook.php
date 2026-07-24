@@ -21,14 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Verify secret header (if configured)
-if (!empty($config_comet_webhook_secret)) {
-    $received = $_SERVER['HTTP_X_COMET_SECRET'] ?? '';
-    if (!hash_equals($config_comet_webhook_secret, $received)) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized']);
-        exit;
-    }
+// Verify secret header. Fail closed: an unconfigured secret must reject every
+// request rather than treat "no secret set" as "no auth required" - this is a
+// public, unauthenticated-by-default endpoint otherwise.
+$received = $_SERVER['HTTP_X_COMET_SECRET'] ?? '';
+if (empty($config_comet_webhook_secret) || !hash_equals($config_comet_webhook_secret, $received)) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
 }
 
 $body = json_decode(file_get_contents('php://input'), true);

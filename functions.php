@@ -800,7 +800,10 @@ function strtoAZaz09($string)
 // Validates the CSRF token provided matches the one in the users session
 function validateCSRFToken($token)
 {
-    if (hash_equals($token, $_SESSION['csrf_token'])) {
+    // A missing token (rather than a wrong one) previously reached hash_equals()
+    // as null, which throws a TypeError (HTTP 500) instead of the intended
+    // graceful rejection below — treat it the same as any other invalid token.
+    if (is_string($token) && hash_equals($token, $_SESSION['csrf_token'])) {
         return true;
     } else {
         $_SESSION['alert_type'] = "warning";

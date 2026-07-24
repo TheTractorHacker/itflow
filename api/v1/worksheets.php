@@ -5,8 +5,38 @@
 // POST   /api/v1/worksheets/{id}/sign        - sign a worksheet
 // GET    /api/v1/worksheet-templates         - list available templates
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 
 $uid = $api_user_id;
+
+api_require_module_permission($mysqli, $uid, 'module_support', $method === 'GET' ? 1 : 2);
+
+// Client-scope restriction, mirroring tickets.php: agents with rows in
+// user_client_permissions may only access tickets/worksheets whose client is
+// in their permitted set.
+function _api_worksheets_ticket_scope_ok($mysqli, int $uid, int $ticket_id): bool {
+    return (bool) mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT t.ticket_id FROM tickets t
+         WHERE t.ticket_id = $ticket_id
+           AND " . api_client_scope_sql('t.ticket_client_id') . "
+         LIMIT 1"
+    ));
+}
+
+// tickets/{id}/charges and tickets/{id}/worksheets: $id is the ticket_id directly.
+if ($resource === 'tickets' && $id !== null) {
+    if (!_api_worksheets_ticket_scope_ok($mysqli, $uid, $id)) api_error(403, 'Access denied');
+}
+
+// worksheets/{id}/*: $id is the worksheet_id — resolve to its ticket to check scope.
+if ($resource === 'worksheets' && $id !== null) {
+    $ws_ticket = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT worksheet_ticket_id FROM ticket_worksheets WHERE worksheet_id = $id LIMIT 1"));
+    if (!$ws_ticket) api_error(404, 'Worksheet not found');
+    if (!_api_worksheets_ticket_scope_ok($mysqli, $uid, intval($ws_ticket['worksheet_ticket_id']))) {
+        api_error(403, 'Access denied');
+    }
+}
 
 // Charges for a ticket
 if ($resource === 'tickets' && $sub === 'charges' && $method === 'GET') {

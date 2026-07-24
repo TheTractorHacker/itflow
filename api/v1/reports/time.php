@@ -2,6 +2,8 @@
 // GET /api/v1/reports/time?period=week|month|all&mine=1
 defined('FROM_API') || die();
 
+api_require_module_permission($mysqli, $api_user_id, 'module_support');
+
 $uid    = $api_user_id;
 $period = $_GET['period'] ?? 'week';
 $mine   = intval($_GET['mine'] ?? 0);

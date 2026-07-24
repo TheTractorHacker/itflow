@@ -5,8 +5,38 @@
 // POST   /api/v1/outtakes/{id}/sign     - sign an outtake
 // DELETE /api/v1/outtakes/{id}          - delete an outtake
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 
 $uid = $api_user_id;
+
+api_require_module_permission($mysqli, $uid, 'module_support', $method === 'GET' ? 1 : 2);
+
+// Client-scope restriction, mirroring tickets.php/worksheets.php: agents with rows in
+// user_client_permissions may only access tickets/outtakes whose client is in their
+// permitted set.
+function _api_outtakes_ticket_scope_ok($mysqli, int $uid, int $ticket_id): bool {
+    return (bool) mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT t.ticket_id FROM tickets t
+         WHERE t.ticket_id = $ticket_id
+           AND " . api_client_scope_sql('t.ticket_client_id') . "
+         LIMIT 1"
+    ));
+}
+
+// tickets/{id}/outtakes and tickets/{id}/outtake: $id is the ticket_id directly.
+if ($resource === 'tickets' && $id !== null) {
+    if (!_api_outtakes_ticket_scope_ok($mysqli, $uid, $id)) api_error(403, 'Access denied');
+}
+
+// outtakes/{id}/*: $id is the outtake_id — resolve to its ticket to check scope.
+if ($resource === 'outtakes' && $id !== null) {
+    $ot_ticket = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT outtake_ticket_id FROM ticket_outtake_forms WHERE outtake_id = $id LIMIT 1"));
+    if (!$ot_ticket) api_error(404, 'Outtake not found');
+    if (!_api_outtakes_ticket_scope_ok($mysqli, $uid, intval($ot_ticket['outtake_ticket_id']))) {
+        api_error(403, 'Access denied');
+    }
+}
 
 // List outtakes for a ticket
 if ($resource === 'tickets' && $sub === 'outtakes' && $method === 'GET') {

@@ -20,8 +20,7 @@ if ($method === 'GET') {
     if (isset($_GET['client_id'])) $where[] = "t.ticket_client_id = " . intval($_GET['client_id']);
     // Client-scope restriction, mirroring tickets.php's access check: agents with rows in
     // user_client_permissions may only see appointments for their permitted clients.
-    $where[] = "(NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid LIMIT 1)
-                 OR EXISTS (SELECT 1 FROM user_client_permissions ucp WHERE ucp.user_id = $uid AND ucp.client_id = t.ticket_client_id LIMIT 1))";
+    $where[] = api_client_scope_sql('t.ticket_client_id');
 
     switch ($when) {
         case 'past':
@@ -89,12 +88,7 @@ if ($method === 'POST') {
     if (!$ticket) api_error(404, 'Ticket not found');
 
     $client_id = intval($ticket['ticket_client_id']);
-    $access_ok = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT 1 AS ok WHERE
-            NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid LIMIT 1)
-            OR EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid AND client_id = $client_id LIMIT 1)"
-    ));
-    if (!$access_ok) api_error(403, 'Access denied');
+    if (!api_client_scope_ok($client_id)) api_error(403, 'Access denied');
 
     $start_esc = mysqli_real_escape_string($mysqli, $start);
     $end_sql   = $end_raw ? "'" . mysqli_real_escape_string($mysqli, $end_raw) . "'" : 'NULL';

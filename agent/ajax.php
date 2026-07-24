@@ -780,6 +780,8 @@ if (isset($_GET['contact_email_check'])) {
 
 if (isset($_GET['ai_reword'])) {
 
+    enforceUserPermission('module_support');
+
     header('Content-Type: application/json');
 
     $sql = mysqli_query($mysqli, "SELECT * FROM ai_models LEFT JOIN ai_providers ON ai_model_ai_provider_id = ai_provider_id WHERE ai_model_use_case = 'General' LIMIT 1");

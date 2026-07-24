@@ -6,6 +6,13 @@ if ($method !== 'GET') api_error(405, 'Method not allowed');
 
 require_once __DIR__ . '/includes/api_permissions.php';
 
+// Mirrors the classic web app's agent/reports/includes/inc_all_reports.php: every report
+// requires the blanket "module_reporting" grant in addition to its own domain-specific
+// module check below. module_reporting is intentionally company-wide ("Access to all
+// reports") and is not subject to per-client user_client_permissions scoping — same as
+// the classic web reports pages.
+api_require_module_permission($mysqli, $api_user_id, 'module_reporting');
+
 switch ($sub) {
     case 'time':
     case null:

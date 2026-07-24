@@ -120,6 +120,8 @@ if (isset($_POST['code']) && $_POST['state'] == session_id()) {
 
             if ($user_auth_method == 'azure') {
 
+                session_regenerate_id(true);
+
                 $_SESSION['client_logged_in'] = true;
                 $_SESSION['client_id'] = $client_id;
                 $_SESSION['user_id'] = $user_id;

@@ -1,10 +1,15 @@
 <?php
 // GET /api/v1/search?q=   global search across tickets, clients, assets
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 if ($method !== 'GET') api_error(405, 'Method not allowed');
 
+$uid = $api_user_id;
 $q = mysqli_real_escape_string($mysqli, trim($_GET['q'] ?? ''));
 if (strlen($q) < 2) api_error(400, 'Query must be at least 2 characters');
+
+// Client-scope restriction, mirroring tickets.php/appointments.php, applied per-table below.
+$scope_clause_for = fn(string $client_id_col) => api_client_scope_sql($client_id_col);
 
 // Tickets
 $tickets = [];
@@ -16,6 +21,7 @@ $sql = mysqli_query($mysqli,
      LEFT JOIN clients c ON t.ticket_client_id = c.client_id
      WHERE t.ticket_archived_at IS NULL
        AND (t.ticket_subject LIKE '%$q%' OR t.ticket_number LIKE '%$q%')
+       AND " . $scope_clause_for('t.ticket_client_id') . "
      ORDER BY t.ticket_created_at DESC LIMIT 8"
 );
 while ($row = mysqli_fetch_assoc($sql)) {
@@ -36,6 +42,7 @@ $sql = mysqli_query($mysqli,
      FROM clients c
      LEFT JOIN locations l ON l.location_client_id = c.client_id AND l.location_primary = 1
      WHERE c.client_archived_at IS NULL AND c.client_name LIKE '%$q%'
+       AND " . $scope_clause_for('c.client_id') . "
      ORDER BY c.client_name ASC LIMIT 5"
 );
 while ($row = mysqli_fetch_assoc($sql)) {
@@ -54,6 +61,7 @@ $sql = mysqli_query($mysqli,
      WHERE a.asset_archived_at IS NULL
        AND (a.asset_name LIKE '%$q%' OR a.asset_serial LIKE '%$q%'
             OR a.asset_make LIKE '%$q%' OR a.asset_model LIKE '%$q%')
+       AND " . $scope_clause_for('a.asset_client_id') . "
      ORDER BY a.asset_name ASC LIMIT 5"
 );
 while ($row = mysqli_fetch_assoc($sql)) {

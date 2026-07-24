@@ -5093,3 +5093,200 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.18'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.18') {
+
+        // Distinguishes a "Public" reply that was actually emailed to the
+        // client (a real reply) from one that wasn't (a public-visible note).
+        // Both were previously stored identically as ticket_reply_type =
+        // 'Public', so the reply list couldn't tell them apart and always
+        // labeled them "Client Reply".
+        mysqli_query($mysqli, "ALTER TABLE `ticket_replies`
+            ADD COLUMN IF NOT EXISTS `ticket_reply_emailed` TINYINT(1) NOT NULL DEFAULT 0");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.19'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.19') {
+
+        // TEXT (64KB) is too small for a real-world signature pasted from Outlook —
+        // those commonly include a table-based layout with embedded base64 images
+        // and easily exceed that limit, which throws a "Data too long for column"
+        // error (mysqli exceptions are on by default as of PHP 8.1) and 500s the
+        // whole "Save" request. Match the LONGTEXT used for every other rich-HTML
+        // column (ticket_replies.ticket_reply, tickets.ticket_details, etc.).
+        mysqli_query($mysqli, "ALTER TABLE `user_settings` MODIFY `user_config_signature` LONGTEXT DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.20'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.20') {
+
+        // Multiple independent mailboxes (e.g. support@, sales@, billing@ — typically
+        // Microsoft 365 shared mailboxes), each independently IMAP-polled to create
+        // tickets and each usable as its own "From" identity when replying. Replaces
+        // the single global config_imap_*/config_mail_oauth_* mailbox.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `mailboxes` (
+            `mailbox_id` int(11) NOT NULL AUTO_INCREMENT,
+            `mailbox_name` varchar(200) NOT NULL,
+            `mailbox_email` varchar(200) NOT NULL,
+            `mailbox_from_name` varchar(200) DEFAULT NULL,
+            `mailbox_type` varchar(20) NOT NULL DEFAULT 'standard_imap',
+            `mailbox_imap_host` varchar(200) DEFAULT NULL,
+            `mailbox_imap_port` int(5) DEFAULT NULL,
+            `mailbox_imap_encryption` varchar(20) DEFAULT NULL,
+            `mailbox_imap_username` varchar(200) DEFAULT NULL,
+            `mailbox_imap_password_enc` text DEFAULT NULL,
+            `mailbox_oauth_refresh_token_enc` text DEFAULT NULL,
+            `mailbox_oauth_access_token_enc` text DEFAULT NULL,
+            `mailbox_oauth_access_token_expires_at` datetime DEFAULT NULL,
+            `mailbox_parse_unknown_senders` tinyint(1) NOT NULL DEFAULT 0,
+            `mailbox_default_client_id` int(11) DEFAULT NULL,
+            `mailbox_active` tinyint(1) NOT NULL DEFAULT 1,
+            `mailbox_last_polled_at` datetime DEFAULT NULL,
+            `mailbox_order` int(11) NOT NULL DEFAULT 0,
+            `mailbox_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `mailbox_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`mailbox_id`),
+            KEY `idx_mailbox_active` (`mailbox_active`, `mailbox_archived_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "ALTER TABLE `tickets`
+            ADD COLUMN IF NOT EXISTS `ticket_mailbox_id` int(11) DEFAULT NULL AFTER `ticket_source`");
+
+        // Auto-migrate today's single global mailbox (if configured) into one row,
+        // so existing installs keep polling/sending exactly as before. Ciphertext
+        // columns are copied verbatim (both use encryptSetting() with the same
+        // per-installation key) — no decrypt/re-encrypt needed.
+        //
+        // Exception: microsoft_oauth tokens are NOT copied. At the time this legacy
+        // config was created, Microsoft mailboxes were polled over raw IMAP using an
+        // Office 365 Exchange Online-scoped token (IMAP.AccessAsUser.All/SMTP.Send).
+        // Mailbox polling now reads via Microsoft Graph (Mail.ReadWrite scope) instead
+        // - see cron/ticket_email_parser.php - and a token consented for one resource
+        // cannot be used to call the other, so copying it here would silently produce
+        // a mailbox row that *looks* Connected but fails on every poll. Leaving the
+        // token columns NULL means it correctly shows "Needs reconnect" and the admin
+        // clicks Connect once to get a real Graph-scoped token.
+        mysqli_query($mysqli, "INSERT INTO mailboxes
+            (mailbox_name, mailbox_email, mailbox_from_name, mailbox_type, mailbox_imap_host, mailbox_imap_port,
+             mailbox_imap_encryption, mailbox_imap_username, mailbox_imap_password_enc, mailbox_oauth_refresh_token_enc,
+             mailbox_oauth_access_token_enc, mailbox_oauth_access_token_expires_at, mailbox_parse_unknown_senders, mailbox_active)
+            SELECT 'Tickets (migrated)', COALESCE(NULLIF(config_imap_username,''), config_ticket_from_email), config_ticket_from_name,
+                   COALESCE(NULLIF(config_imap_provider,''), 'standard_imap'), config_imap_host, config_imap_port, config_imap_encryption,
+                   config_imap_username, config_imap_password,
+                   CASE WHEN config_imap_provider = 'microsoft_oauth' THEN NULL ELSE config_mail_oauth_refresh_token END,
+                   CASE WHEN config_imap_provider = 'microsoft_oauth' THEN NULL ELSE config_mail_oauth_access_token END,
+                   CASE WHEN config_imap_provider = 'microsoft_oauth' THEN NULL ELSE config_mail_oauth_access_token_expires_at END,
+                   config_ticket_email_parse_unknown_senders, config_ticket_email_parse
+            FROM settings
+            WHERE company_id = 1 AND config_imap_provider IS NOT NULL AND config_imap_provider <> ''
+              AND NOT EXISTS (SELECT 1 FROM mailboxes WHERE mailbox_name = 'Tickets (migrated)')");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.21'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.21') {
+
+        // Fixes installs that already ran the 2.6.20 migration above before this
+        // exception existed: any auto-migrated "Tickets (migrated)" mailbox row of
+        // type microsoft_oauth is carrying a stale Office 365 Exchange Online-scoped
+        // token that Microsoft Graph will reject on every poll (wrong resource/audience
+        // - see the 2.6.20 block's comment above). Clear those columns so the mailbox
+        // correctly shows "Needs reconnect" instead of silently failing forever.
+        mysqli_query($mysqli, "UPDATE `mailboxes` SET
+            `mailbox_oauth_refresh_token_enc` = NULL,
+            `mailbox_oauth_access_token_enc` = NULL,
+            `mailbox_oauth_access_token_expires_at` = NULL
+            WHERE `mailbox_name` = 'Tickets (migrated)' AND `mailbox_type` = 'microsoft_oauth'");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.22'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.22') {
+
+        // Unknown-sender emails (mailbox_parse_unknown_senders) no longer create a
+        // ticket immediately - they land here for an admin to review, then either
+        // convert into a ticket (picking the client) or dismiss. See admin/mail_requests.php.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `mail_requests` (
+            `mail_request_id` int(11) NOT NULL AUTO_INCREMENT,
+            `mail_request_mailbox_id` int(11) NOT NULL,
+            `mail_request_from_email` varchar(200) NOT NULL,
+            `mail_request_from_name` varchar(200) DEFAULT NULL,
+            `mail_request_subject` varchar(500) NOT NULL DEFAULT '',
+            `mail_request_body` longtext DEFAULT NULL,
+            `mail_request_ccs` text DEFAULT NULL,
+            `mail_request_received_at` datetime NOT NULL,
+            `mail_request_eml_reference_name` varchar(255) DEFAULT NULL,
+            `mail_request_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `mail_request_converted_ticket_id` int(11) DEFAULT NULL,
+            `mail_request_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`mail_request_id`),
+            KEY `idx_mail_request_pending` (`mail_request_archived_at`, `mail_request_mailbox_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `mail_request_attachments` (
+            `mail_request_attachment_id` int(11) NOT NULL AUTO_INCREMENT,
+            `mail_request_attachment_name` varchar(255) NOT NULL,
+            `mail_request_attachment_reference_name` varchar(255) NOT NULL,
+            `mail_request_attachment_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `mail_request_attachment_mail_request_id` int(11) NOT NULL,
+            PRIMARY KEY (`mail_request_attachment_id`),
+            KEY `idx_mail_request_attachment_request` (`mail_request_attachment_mail_request_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.23'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.23') {
+
+        // One row per inbound email the mailbox poller touches - reply matched, ticket
+        // created, queued as a Request, NDR/bounce, or left alone (unmatched / queueing
+        // disabled). See logMailEvent() and admin/email_log.php.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `mail_log` (
+            `mail_log_id` int(11) NOT NULL AUTO_INCREMENT,
+            `mail_log_mailbox_id` int(11) DEFAULT NULL,
+            `mail_log_from_email` varchar(200) DEFAULT NULL,
+            `mail_log_from_name` varchar(200) DEFAULT NULL,
+            `mail_log_subject` varchar(500) DEFAULT NULL,
+            `mail_log_outcome` varchar(30) NOT NULL,
+            `mail_log_detail` varchar(500) DEFAULT NULL,
+            `mail_log_ticket_id` int(11) DEFAULT NULL,
+            `mail_log_mail_request_id` int(11) DEFAULT NULL,
+            `mail_log_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            PRIMARY KEY (`mail_log_id`),
+            KEY `idx_mail_log_created` (`mail_log_created_at`),
+            KEY `idx_mail_log_mailbox` (`mail_log_mailbox_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.24'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.24') {
+
+        // Job title and direct phone, used to build a proper email signature template
+        // (Admin/Agent > My Settings > Email Signature > Use Template).
+        mysqli_query($mysqli, "ALTER TABLE `users`
+            ADD COLUMN IF NOT EXISTS `user_title` varchar(200) DEFAULT NULL AFTER `user_name`,
+            ADD COLUMN IF NOT EXISTS `user_phone` varchar(50) DEFAULT NULL AFTER `user_title`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.25'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.25') {
+
+        // One row per user's mobile-app device: an Ed25519/EC public key backing
+        // the credential-viewing step-up biometric check (api/v1/credentials.php).
+        // Replaces the old hardcoded "X-Biometric: 1" header, which the server
+        // had no way to verify - the key here requires a real device-side
+        // biometric unlock to sign a fresh, single-use server challenge with.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `api_biometric_keys` (
+            `user_id` int(11) NOT NULL,
+            `device_public_key_pem` text NOT NULL,
+            `key_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `key_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+            PRIMARY KEY (`user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.26'");
+    }

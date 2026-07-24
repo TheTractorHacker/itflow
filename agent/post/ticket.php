@@ -3678,8 +3678,15 @@ if (isset($_POST['toggle_reply_onsite'])) {
 
     $reply_id  = intval($_POST['ticket_reply_id']);
     $onsite    = intval($_POST['onsite']);
-    $ticket_id = intval($_POST['ticket_id']);
+
+    // Derive client_id from the reply's ticket (not from POST) to prevent IDOR bypass
+    $reply_ticket_id = intval(getFieldById('ticket_replies', $reply_id, 'ticket_reply_ticket_id'));
+    $client_id = intval(getFieldById('tickets', $reply_ticket_id, 'ticket_client_id'));
+
+    if ($client_id) {
+        enforceClientAccess();
+    }
 
     mysqli_query($mysqli, "UPDATE ticket_replies SET ticket_reply_onsite = $onsite WHERE ticket_reply_id = $reply_id");
-    redirect("ticket.php?ticket_id=$ticket_id");
+    redirect("ticket.php?ticket_id=$reply_ticket_id");
 }

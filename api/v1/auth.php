@@ -211,17 +211,25 @@ if ($user) {
 
 // ── Password verification (constant-time to prevent user enumeration) ─────────
 // Always call password_verify — even for non-existent users — so timing is
-// indistinguishable between "wrong username" and "wrong password".
-$dummy_hash = '$2y$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
+// indistinguishable between "wrong username" and "wrong password". This must run
+// unconditionally, BEFORE the `!$user ||` check below — PHP's `||` short-circuits,
+// so folding the call into that condition would skip password_verify() entirely
+// for a nonexistent user and reintroduce the exact timing oracle this comment
+// describes preventing.
+// Cost must match real user hashes (this install's PASSWORD_DEFAULT resolves to bcrypt
+// cost 12, not the commonly-assumed 10) or the dummy comparison itself becomes a smaller
+// but still measurable timing oracle between valid and invalid usernames.
+$dummy_hash = '$2y$12$mCEDSkd7cWaDz5Quq.mMlOg6GgQ1yX6yubN/yr07IPX0tMnq8X0tC';
 $hash_to_check = $user ? $user['user_password'] : $dummy_hash;
+$password_ok = password_verify($password, $hash_to_check);
 
-if (!$user || !password_verify($password, $hash_to_check)) {
+if (!$user || !$password_ok) {
     if ($user) {
         $uid_fail = intval($user['user_id']);
         mysqli_query($mysqli,
             "UPDATE users SET
                 user_failed_login_count = user_failed_login_count + 1,
-                user_failed_login_at = NOW()
+                user_failed_login_at = UTC_TIMESTAMP()
              WHERE user_id = $uid_fail"
         );
     }

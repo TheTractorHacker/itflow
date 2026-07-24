@@ -2,7 +2,14 @@
 // GET /api/v1/assets         list
 // GET /api/v1/assets/{id}    detail
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 if ($method !== 'GET') api_error(405, 'Method not allowed');
+
+$uid = $api_user_id;
+api_require_module_permission($mysqli, $uid, 'module_support');
+
+// Client-scope restriction, mirroring tickets.php/client_tabs.php.
+$asset_client_scope_clause = api_client_scope_sql('a.asset_client_id');
 
 if ($id === null && $sub === 'types') {
     $types = [];
@@ -25,7 +32,7 @@ if ($id === null && $sub === null) {
     $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
     $type      = mysqli_real_escape_string($mysqli, trim($_GET['type'] ?? ''));
 
-    $where = ['a.asset_archived_at IS NULL'];
+    $where = ['a.asset_archived_at IS NULL', $asset_client_scope_clause];
     if ($client_id) $where[] = "a.asset_client_id = $client_id";
     if ($search)    $where[] = "(a.asset_name LIKE '%$search%' OR a.asset_serial LIKE '%$search%' OR a.asset_make LIKE '%$search%' OR a.asset_model LIKE '%$search%')";
     if ($type)      $where[] = "a.asset_type = '$type'";
@@ -65,7 +72,7 @@ $row = mysqli_fetch_assoc(mysqli_query($mysqli,
      LEFT JOIN clients c ON a.asset_client_id = c.client_id
      LEFT JOIN locations l ON a.asset_location_id = l.location_id
      LEFT JOIN contacts ct ON a.asset_contact_id = ct.contact_id
-     WHERE a.asset_id = $id AND a.asset_archived_at IS NULL LIMIT 1"
+     WHERE a.asset_id = $id AND a.asset_archived_at IS NULL AND $asset_client_scope_clause LIMIT 1"
 ));
 if (!$row) api_error(404, 'Asset not found');
 

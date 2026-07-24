@@ -67,6 +67,22 @@ if (!empty($_SERVER['HTTP_X_API_KEY'])) {
     $api_key = sanitizeInput($_POST['api_key']);
 }
 
+// Rate limiting: this legacy endpoint is reachable directly (nginx serves it as a
+// standalone script via try_files, bypassing api/v1/index.php's router entirely)
+// and had no throttling at all against a 64-char sha256-hashed-key guessing surface.
+// Mirrors login.php's IP-based lockout: 15 failures in 10 minutes -> 429.
+$rl_ip = mysqli_real_escape_string($mysqli, $ip);
+$rl_failed = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT COUNT(log_id) AS c FROM logs
+     WHERE log_type = 'API' AND log_action = 'Failed' AND log_ip = '$rl_ip'
+       AND log_created_at > (NOW() - INTERVAL 10 MINUTE)"
+));
+if (intval($rl_failed['c'] ?? 0) >= 15) {
+    header("HTTP/1.1 429 Too Many Requests");
+    echo json_encode(['success' => 'False', 'message' => 'Too many failed attempts. Please try again later.']);
+    exit();
+}
+
 // Validate API key
 if (isset($api_key)) {
     $api_key = sanitizeInput($api_key);

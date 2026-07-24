@@ -2,8 +2,13 @@
 // GET  /api/v1/expenses   list
 // POST /api/v1/expenses   create (multipart with optional receipt)
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 
 $uid = $api_user_id;
+api_require_module_permission($mysqli, $uid, 'module_financial');
+
+// Client-scope restriction, mirroring tickets.php/client_tabs.php.
+$expense_client_scope_clause = api_client_scope_sql('e.expense_client_id');
 
 if ($method === 'GET') {
     $page   = max(1, intval($_GET['page'] ?? 1));
@@ -11,14 +16,14 @@ if ($method === 'GET') {
     $offset = ($page - 1) * $limit;
 
     $total    = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT COUNT(*) AS c FROM expenses WHERE expense_archived_at IS NULL"))['c']);
+        "SELECT COUNT(*) AS c FROM expenses e WHERE e.expense_archived_at IS NULL AND $expense_client_scope_clause"))['c']);
     $expenses = [];
     $sql      = mysqli_query($mysqli,
         "SELECT e.expense_id, e.expense_description, e.expense_amount, e.expense_currency_code,
                 e.expense_date, e.expense_reference, e.expense_payment_method, e.expense_receipt,
                 c.client_name
          FROM expenses e LEFT JOIN clients c ON e.expense_client_id = c.client_id
-         WHERE e.expense_archived_at IS NULL
+         WHERE e.expense_archived_at IS NULL AND $expense_client_scope_clause
          ORDER BY e.expense_date DESC LIMIT $limit OFFSET $offset"
     );
     while ($row = mysqli_fetch_assoc($sql)) {
@@ -47,6 +52,10 @@ if ($method === 'POST') {
     $currency       = mysqli_real_escape_string($mysqli, trim($_POST['currency'] ?? 'USD'));
 
     if (!$description || $amount <= 0) api_error(400, 'description and amount required');
+
+    if ($client_id && !api_client_scope_ok($client_id)) {
+        api_error(403, 'Access denied');
+    }
 
     $receipt_name = 'NULL';
     if (!empty($_FILES['receipt']['tmp_name'])) {

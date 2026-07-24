@@ -3,8 +3,17 @@
 // GET /api/v1/kb/articles            - list KB articles (category_id, client_id, search, page, limit)
 // GET /api/v1/kb/articles/{id}       - KB article detail (content + attachments)
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 
 if ($method !== 'GET') api_error(405, 'Method not allowed');
+
+$uid = $api_user_id;
+api_require_module_permission($mysqli, $uid, 'module_kb');
+
+// Client-scope restriction: kb_article_client_id = 0 means a company-wide article
+// (visible to everyone, matching the existing client_id filter's "IN (0, ...)" pattern
+// below), otherwise it must be in the caller's permitted client set.
+$kb_client_scope_clause = "(kb_articles.kb_article_client_id = 0 OR " . api_client_scope_sql('kb_articles.kb_article_client_id') . ")";
 
 if ($sub === 'categories') {
     $categories = [];
@@ -32,7 +41,7 @@ if ($sub === 'articles') {
              FROM kb_articles
              LEFT JOIN clients ON clients.client_id = kb_articles.kb_article_client_id
              LEFT JOIN kb_categories ON kb_categories.kb_category_id = kb_articles.kb_article_category_id
-             WHERE kb_articles.kb_article_id = $id AND kb_article_archived_at IS NULL LIMIT 1"
+             WHERE kb_articles.kb_article_id = $id AND kb_article_archived_at IS NULL AND $kb_client_scope_clause LIMIT 1"
         ));
         if (!$row) api_error(404, 'Article not found');
 
@@ -70,7 +79,7 @@ if ($sub === 'articles') {
     $offset = ($page - 1) * $limit;
     $search = mysqli_real_escape_string($mysqli, $_GET['search'] ?? '');
 
-    $where = ['kb_article_archived_at IS NULL'];
+    $where = ['kb_article_archived_at IS NULL', $kb_client_scope_clause];
     if (isset($_GET['category_id'])) {
         $where[] = 'kb_article_category_id = ' . intval($_GET['category_id']);
     }

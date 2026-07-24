@@ -141,7 +141,7 @@ function wa_rp_id(): string {
 function wa_origin(): string {
     global $config_base_url, $config_https_only;
     if (!empty($config_base_url)) {
-        $scheme = (!empty($config_https_only)) ? 'https' : 'https'; // default https
+        $scheme = (!empty($config_https_only)) ? 'https' : 'http';
         return $scheme . '://' . ltrim($config_base_url, '/');
     }
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';

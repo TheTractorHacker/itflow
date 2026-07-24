@@ -3,6 +3,9 @@
 // Unified login (Agent + Client) using one email & password
 
 header("Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com");
+header("X-Frame-Options: DENY");
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: strict-origin-when-cross-origin");
 
 if (!file_exists('config.php')) {
     header("Location: /setup");

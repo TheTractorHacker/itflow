@@ -29,3 +29,51 @@ function api_require_module_permission(mysqli $mysqli, int $api_user_id, string 
         api_error(403, 'Insufficient permissions');
     }
 }
+
+/**
+ * Builds the client-scope SQL boolean expression for the current API caller,
+ * for use in a list query's WHERE clause. Combines two independent
+ * restrictions:
+ *  - the resolved user's own user_client_permissions rows (fail-open to "all
+ *    clients" when the user has none, matching enforceClientAccess()'s
+ *    behavior for the classic web app)
+ *  - if authenticated via a legacy API key scoped to one client
+ *    ($api_key_client_id, set in index.php), that key's own restriction -
+ *    previously never enforced by any endpoint regardless of what an admin
+ *    picked in the key's "Client Access" setting.
+ *
+ * $client_id_column must be a trusted SQL column reference (e.g.
+ * 't.ticket_client_id'), never raw user input.
+ */
+function api_client_scope_sql(string $client_id_column): string {
+    global $mysqli, $api_user_id, $api_key_client_id;
+    $uid = intval($api_user_id);
+    $sql = "(
+        NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid LIMIT 1)
+        OR EXISTS (SELECT 1 FROM user_client_permissions ucp WHERE ucp.user_id = $uid AND ucp.client_id = $client_id_column LIMIT 1)
+    )";
+    if (!empty($api_key_client_id)) {
+        $restrict = intval($api_key_client_id);
+        $sql = "($sql AND $client_id_column = $restrict)";
+    }
+    return $sql;
+}
+
+/**
+ * Same restriction as api_client_scope_sql(), but for a single already-known
+ * client_id value rather than a SQL column reference - used by per-record
+ * ownership checks (e.g. a ticket/worksheet/outtake resolved to one client_id)
+ * rather than list-query WHERE clauses.
+ */
+function api_client_scope_ok(int $client_id): bool {
+    global $mysqli, $api_user_id, $api_key_client_id;
+    $uid = intval($api_user_id);
+    if (!empty($api_key_client_id) && intval($api_key_client_id) !== $client_id) {
+        return false;
+    }
+    return (bool) mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT 1 AS ok WHERE
+            NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid LIMIT 1)
+            OR EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id = $uid AND client_id = $client_id LIMIT 1)"
+    ));
+}

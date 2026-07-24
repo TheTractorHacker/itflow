@@ -29,6 +29,16 @@ if (!isset($_SESSION['logged']) || !$_SESSION['logged']) {
             $_SESSION['logged']     = true;
             $_SESSION['csrf_token'] = randomString(32);
             session_regenerate_id(true);
+
+            // Rotate the remember-me token on every use so a stolen cookie is a
+            // single-use secret rather than a durable bearer credential valid for
+            // the whole expiry window. The original issuance time is preserved
+            // (only the token value changes), so this doesn't extend the absolute
+            // expiry just because the cookie is actively used.
+            $new_raw_token = bin2hex(random_bytes(64));
+            $new_hash      = hash('sha256', $new_raw_token);
+            mysqli_query($mysqli, "UPDATE remember_tokens SET remember_token_token = '$new_hash' WHERE remember_token_token = '$escaped_hash'");
+            setcookie('rememberme', $new_raw_token, time() + 86400 * $rm_expire, '/', null, true, true);
         } else {
             setcookie('rememberme', '', time() - 3600, '/', null, true, true);
         }

@@ -2,6 +2,7 @@
 // GET  /api/v1/alerts   - list RMM + backup alerts (combined)
 // POST /api/v1/alerts   - body: {source: 'rmm'|'backup', id: <int>, action: 'acknowledge'|'resolve'}
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 
 // Require module_rmm_alerts permission (mirrors enforceUserPermission on the web page)
 $_api_role = mysqli_fetch_assoc(mysqli_query($mysqli,
@@ -31,14 +32,12 @@ if ($method === 'GET') {
     // users (no rows) see everything, matching enforceClientAccess()'s model.
     // Alerts with no client_id at all aren't tied to any specific client, so
     // they stay visible to everyone rather than being hidden by the scoping.
-    $client_scope = "(NOT EXISTS (SELECT 1 FROM user_client_permissions WHERE user_id=$api_user_id)
-        OR %s IS NULL
-        OR %s IN (SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id))";
+    $client_scope_for = fn(string $col) => "($col IS NULL OR " . api_client_scope_sql($col) . ")";
 
     $alerts = [];
 
     if ($filter_source === 'all' || $filter_source === 'rmm') {
-        $where = "1=1 AND " . sprintf($client_scope, 'a.client_id', 'a.client_id');
+        $where = "1=1 AND " . $client_scope_for('a.client_id');
         if ($filter_status && $filter_status !== 'all') {
             $where .= " AND a.status='" . mysqli_real_escape_string($mysqli, $filter_status) . "'";
         }
@@ -73,7 +72,7 @@ if ($method === 'GET') {
     }
 
     if ($filter_source === 'all' || $filter_source === 'backup') {
-        $where = "1=1 AND " . sprintf($client_scope, 'a.alert_client_id', 'a.alert_client_id');
+        $where = "1=1 AND " . $client_scope_for('a.alert_client_id');
         if ($filter_status && $filter_status !== 'all') {
             $where .= " AND a.alert_status='" . mysqli_real_escape_string($mysqli, $filter_status) . "'";
         }
@@ -134,17 +133,10 @@ if ($method === 'POST') {
         $alert = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id, client_id, asset_id FROM rmm_alerts WHERE id=$alert_id"));
         if (!$alert) api_error(404, 'Alert not found');
 
-        // Enforce per-client access: if this user has explicit client restrictions, check them
+        // Enforce per-client access
         $alert_client = intval($alert['client_id']);
-        if ($alert_client) {
-            $has_restriction = mysqli_num_rows(mysqli_query($mysqli,
-                "SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id LIMIT 1"
-            )) > 0;
-            if ($has_restriction && !mysqli_fetch_assoc(mysqli_query($mysqli,
-                "SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id AND client_id=$alert_client LIMIT 1"
-            ))) {
-                api_error(403, 'Access denied');
-            }
+        if ($alert_client && !api_client_scope_ok($alert_client)) {
+            api_error(403, 'Access denied');
         }
 
         if ($action === 'acknowledge') {
@@ -159,15 +151,8 @@ if ($method === 'POST') {
 
         // Enforce per-client access
         $alert_client = intval($alert['alert_client_id']);
-        if ($alert_client) {
-            $has_restriction = mysqli_num_rows(mysqli_query($mysqli,
-                "SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id LIMIT 1"
-            )) > 0;
-            if ($has_restriction && !mysqli_fetch_assoc(mysqli_query($mysqli,
-                "SELECT client_id FROM user_client_permissions WHERE user_id=$api_user_id AND client_id=$alert_client LIMIT 1"
-            ))) {
-                api_error(403, 'Access denied');
-            }
+        if ($alert_client && !api_client_scope_ok($alert_client)) {
+            api_error(403, 'Access denied');
         }
 
         if ($action === 'acknowledge') {

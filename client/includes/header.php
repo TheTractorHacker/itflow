@@ -5,6 +5,8 @@
  */
 
 header("X-Frame-Options: DENY"); // Legacy
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: strict-origin-when-cross-origin");
 ?>
 
 <!DOCTYPE html>
