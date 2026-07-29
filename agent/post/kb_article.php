@@ -8,10 +8,16 @@ if (isset($_POST['add_kb_article'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
+    enforceUserPermission('module_kb');
+
     $title = sanitizeInput($_POST['title']);
     $kb_article_client_id = intval($_POST['client_id'] ?? 0);
     $kb_article_category_id = intval($_POST['category_id'] ?? 0);
     $client_visible = intval($_POST['client_visible'] ?? 1);
+
+    if ($kb_article_client_id) {
+        enforceClientAccess($kb_article_client_id);
+    }
 
     $content = mysqli_real_escape_string($mysqli, $_POST['content']);
     $content_raw = sanitizeInput($_POST['title'] . " " . str_replace("<", " <", $_POST['content']));
@@ -43,11 +49,25 @@ if (isset($_POST['edit_kb_article'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
+    enforceUserPermission('module_kb');
+
     $kb_article_id = intval($_POST['kb_article_id']);
+
+    // Confirm access to the article's current client before allowing any edit
+    // - the client_id must be looked up from the DB, not trusted from POST.
+    $existing_client_id = intval(getFieldById('kb_articles', $kb_article_id, 'kb_article_client_id'));
+    if ($existing_client_id) {
+        enforceClientAccess($existing_client_id);
+    }
+
     $title = sanitizeInput($_POST['title']);
     $kb_article_client_id = intval($_POST['client_id'] ?? 0);
     $kb_article_category_id = intval($_POST['category_id'] ?? 0);
     $client_visible = intval($_POST['client_visible'] ?? 1);
+
+    if ($kb_article_client_id) {
+        enforceClientAccess($kb_article_client_id);
+    }
 
     $content = mysqli_real_escape_string($mysqli, $_POST['content']);
     $content_raw = sanitizeInput($_POST['title'] . " " . str_replace("<", " <", $_POST['content']));
@@ -77,7 +97,14 @@ if (isset($_POST['upload_kb_article_attachment'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
+    enforceUserPermission('module_kb');
+
     $kb_article_id = intval($_POST['kb_article_id']);
+
+    $kb_article_client_id = intval(getFieldById('kb_articles', $kb_article_id, 'kb_article_client_id'));
+    if ($kb_article_client_id) {
+        enforceClientAccess($kb_article_client_id);
+    }
 
     $allowed = ['jpg','jpeg','gif','png','webp','pdf','txt','md','doc','docx','odt','csv','xls','xlsx','ods','pptx','odp','zip','tar','gz','xml','msg','json','wav','mp3','ogg','mov','mp4','av1','ovpn'];
 
@@ -118,8 +145,15 @@ if (isset($_GET['delete_kb_article_attachment'])) {
 
     validateCSRFToken($_GET['csrf_token']);
 
+    enforceUserPermission('module_kb');
+
     $attachment_id = intval($_GET['delete_kb_article_attachment']);
     $kb_article_id = intval($_GET['kb_article_id']);
+
+    $kb_article_client_id = intval(getFieldById('kb_articles', $kb_article_id, 'kb_article_client_id'));
+    if ($kb_article_client_id) {
+        enforceClientAccess($kb_article_client_id);
+    }
 
     $att = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM kb_article_attachments WHERE kb_article_attachment_id = $attachment_id AND kb_article_attachment_kb_article_id = $kb_article_id LIMIT 1"));
 
@@ -144,7 +178,14 @@ if (isset($_GET['delete_kb_article'])) {
 
     validateCSRFToken($_GET['csrf_token']);
 
+    enforceUserPermission('module_kb');
+
     $kb_article_id = intval($_GET['delete_kb_article']);
+
+    $kb_article_client_id = intval(getFieldById('kb_articles', $kb_article_id, 'kb_article_client_id'));
+    if ($kb_article_client_id) {
+        enforceClientAccess($kb_article_client_id);
+    }
 
     $kb_article_title = sanitizeInput(getFieldById('kb_articles', $kb_article_id, 'kb_article_title'));
 

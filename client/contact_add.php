@@ -53,17 +53,17 @@ if ($session_contact_primary == 0 && !$session_contact_is_technical_contact) {
             <div class="form-row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="contactBillingCheckbox" name="contact_billing" value="1">
-                            <label class="custom-control-label" for="contactBillingCheckbox">Billing</label>
+                        <div class="form-check form-check">
+                            <input type="checkbox" class="form-check-input" id="contactBillingCheckbox" name="contact_billing" value="1">
+                            <label class="form-check-label" for="contactBillingCheckbox">Billing</label>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="contactTechnicalCheckbox" name="contact_technical" value="1">
-                            <label class="custom-control-label" for="contactTechnicalCheckbox">Technical</label>
+                        <div class="form-check form-check">
+                            <input type="checkbox" class="form-check-input" id="contactTechnicalCheckbox" name="contact_technical" value="1">
+                            <label class="form-check-label" for="contactTechnicalCheckbox">Technical</label>
                         </div>
                     </div>
                 </div>

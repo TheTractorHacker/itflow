@@ -340,10 +340,21 @@ function comet_process_job(array $job): array {
 
         // Get next ticket number
         $settings = mysqli_fetch_assoc(mysqli_query($mysqli,
-            "SELECT config_ticket_prefix, config_ticket_next_number FROM settings WHERE company_id = 1"
+            "SELECT config_ticket_prefix FROM settings WHERE company_id = 1"
         ));
-        $prefix        = sanitizeInput($settings['config_ticket_prefix']);
-        $ticket_number = intval($settings['config_ticket_next_number']);
+        $prefix = sanitizeInput($settings['config_ticket_prefix']);
+
+        // Atomically increment-and-fetch via LAST_INSERT_ID(), same pattern used by
+        // every other ticket-creation path - a plain SELECT-then-UPDATE here raced
+        // against those paths and produced duplicate ticket_number values.
+        mysqli_query($mysqli, "
+            UPDATE settings
+            SET
+                config_ticket_next_number = LAST_INSERT_ID(config_ticket_next_number),
+                config_ticket_next_number = config_ticket_next_number + 1
+            WHERE company_id = 1
+        ");
+        $ticket_number = mysqli_insert_id($mysqli);
 
         $status_label = comet_status_label($status);
         $severity     = ($status === COMET_JOB_FAILED_WARNING) ? 'warning' : 'critical';
@@ -370,7 +381,6 @@ function comet_process_job(array $job): array {
             ticket_url_key = '$url_key'
         ");
         $ticket_id = mysqli_insert_id($mysqli);
-        mysqli_query($mysqli, "UPDATE settings SET config_ticket_next_number = " . ($ticket_number + 1) . " WHERE company_id = 1");
 
         $msg_esc = mysqli_real_escape_string($mysqli, $message);
         mysqli_query($mysqli, "INSERT INTO comet_backup_alerts SET
@@ -468,10 +478,22 @@ function comet_check_missed_backups(int $threshold_hours = 48): array {
             $hours_ago = intval(round((time() - $reference) / 3600));
 
             $settings = mysqli_fetch_assoc(mysqli_query($mysqli,
-                "SELECT config_ticket_prefix, config_ticket_next_number FROM settings WHERE company_id = 1"
+                "SELECT config_ticket_prefix FROM settings WHERE company_id = 1"
             ));
-            $prefix        = sanitizeInput($settings['config_ticket_prefix']);
-            $ticket_number = intval($settings['config_ticket_next_number']);
+            $prefix = sanitizeInput($settings['config_ticket_prefix']);
+
+            // Atomically increment-and-fetch via LAST_INSERT_ID(), same pattern used by
+            // every other ticket-creation path - a plain SELECT-then-UPDATE here raced
+            // against those paths (and against other iterations of this same loop
+            // running back to back) and produced duplicate ticket_number values.
+            mysqli_query($mysqli, "
+                UPDATE settings
+                SET
+                    config_ticket_next_number = LAST_INSERT_ID(config_ticket_next_number),
+                    config_ticket_next_number = config_ticket_next_number + 1
+                WHERE company_id = 1
+            ");
+            $ticket_number = mysqli_insert_id($mysqli);
 
             $subject_safe = sanitizeInput("Backup Missed — $dev_name");
             $message      = "No backup job reported for device $dev_name (user: $username) in over $hours_ago hours.";
@@ -493,7 +515,6 @@ function comet_check_missed_backups(int $threshold_hours = 48): array {
                 ticket_url_key = '$url_key'
             ");
             $ticket_id = mysqli_insert_id($mysqli);
-            mysqli_query($mysqli, "UPDATE settings SET config_ticket_next_number = " . ($ticket_number + 1) . " WHERE company_id = 1");
 
             $msg_esc = mysqli_real_escape_string($mysqli, $message);
             mysqli_query($mysqli, "INSERT INTO comet_backup_alerts SET

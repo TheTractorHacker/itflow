@@ -18,9 +18,9 @@ ob_start();
 ?>
 <div class="modal-header bg-dark">
     <h5 class="modal-title">
-        <i class="fa fa-fw fa-calendar-plus mr-2"></i>Add Schedule: <strong><?= $ticket_prefix . $ticket_number ?></strong>
+        <i class="fa fa-fw fa-calendar-plus me-2"></i>Add Schedule: <strong><?= $ticket_prefix . $ticket_number ?></strong>
     </h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -33,10 +33,10 @@ ob_start();
             <label class="d-block">Appointment Type</label>
             <div class="btn-group btn-group-sm w-100" role="group">
                 <button type="button" class="btn btn-primary onsite-opt" data-val="0">
-                    <i class="fas fa-laptop mr-1"></i>Remote
+                    <i class="fas fa-laptop me-1"></i>Remote
                 </button>
                 <button type="button" class="btn btn-outline-primary onsite-opt" data-val="1">
-                    <i class="fas fa-map-marker-alt mr-1"></i>Onsite
+                    <i class="fas fa-map-marker-alt me-1"></i>Onsite
                 </button>
             </div>
             <input type="hidden" name="schedule_onsite" id="schedule_onsite" value="0">
@@ -85,9 +85,9 @@ ob_start();
                     $uid   = intval($u['user_id']);
                     $uname = nullable_htmlentities($u['user_name']);
                     $chk   = ($uid === $primary_tech) ? ' checked' : '';
-                    echo "<div class=\"custom-control custom-checkbox\">"
-                       . "<input type=\"checkbox\" class=\"custom-control-input\" id=\"sched_tech_$uid\" name=\"schedule_tech_ids[]\" value=\"$uid\"$chk>"
-                       . "<label class=\"custom-control-label\" for=\"sched_tech_$uid\">$uname</label>"
+                    echo "<div class=\"form-check form-check\">"
+                       . "<input type=\"checkbox\" class=\"form-check-input\" id=\"sched_tech_$uid\" name=\"schedule_tech_ids[]\" value=\"$uid\"$chk>"
+                       . "<label class=\"form-check-label\" for=\"sched_tech_$uid\">$uname</label>"
                        . "</div>";
                 } ?>
             </div>
@@ -101,18 +101,18 @@ ob_start();
 
         <!-- Preview -->
         <div id="appt_preview" class="alert alert-info py-2 mt-3 mb-0" style="font-size:.875rem;display:none;">
-            <i class="fa fa-clock mr-1"></i><span id="appt_preview_text"></span>
+            <i class="fa fa-clock me-1"></i><span id="appt_preview_text"></span>
         </div>
 
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="add_ticket_schedule" class="btn btn-primary"><i class="fa fa-check mr-1"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-1"></i>Cancel</button>
+        <button type="submit" name="add_ticket_schedule" class="btn btn-primary"><i class="fa fa-check me-1"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i>Cancel</button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(function () {
     var useCustomEnd = false;
 

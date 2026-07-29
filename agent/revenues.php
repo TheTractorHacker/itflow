@@ -24,10 +24,10 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-hand-holding-usd mr-2"></i>Revenues</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-hand-holding-usd me-2"></i>Revenues</h3>
         <?php if (lookupUserPermission("module_sales") >= 2) { ?>
         <div class="card-tools">
-            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/revenue/revenue_add.php" data-modal-size="lg"><i class="fas fa-plus mr-2"></i>New Revenue</button>
+            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/revenue/revenue_add.php" data-modal-size="lg"><i class="fas fa-plus me-2"></i>New Revenue</button>
         </div>
         <?php } ?>
     </div>
@@ -39,7 +39,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     <div class="input-group">
                         <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search Revenues">
                         <div class="input-group-append">
-                            <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
+                            <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilter"><i class="fas fa-filter"></i></button>
                             <button class="btn btn-primary"><i class="fa fa-search"></i></button>
                         </div>
                     </div>
@@ -74,7 +74,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             Category <?php if ($sort == 'category_name') { echo $order_icon; } ?>
                         </a>
                     </th>
-                    <th class="text-right">
+                    <th class="text-end">
                         <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=revenue_amount&order=<?php echo $disp; ?>">
                             Amount <?php if ($sort == 'revenue_amount') { echo $order_icon; } ?>
                         </a>
@@ -130,13 +130,13 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             </a>
                         </td>
                         <td><?php echo $category_name; ?></td>
-                        <td class="text-bold text-right"><?php echo numfmt_format_currency($currency_format, $revenue_amount, $revenue_currency_code); ?></td>
+                        <td class="text-bold text-end"><?php echo numfmt_format_currency($currency_format, $revenue_amount, $revenue_currency_code); ?></td>
                         <td><?php echo $revenue_payment_method; ?></td>
                         <td><?php echo $revenue_reference_display; ?></td>
                         <td><?php echo $account_name; ?></td>
                         <td>
                             <div class="dropdown dropleft text-center">
-                                <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-h"></i>
                                 </button>
                                 <div class="dropdown-menu">
@@ -144,11 +144,11 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                         data-modal-size = "lg"
                                         data-modal-url = "modals/revenue/revenue_edit.php?id=<?= $revenue_id ?>"
                                         >
-                                        <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                        <i class="fas fa-fw fa-edit me-2"></i>Edit
                                     </a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_revenue=<?= $revenue_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                                     </a>
                                 </div>
                             </div>

@@ -236,13 +236,14 @@ if (isset($_POST['export_software_csv'])) {
         $client_query = "WHERE software_client_id = $client_id";
         $client_name = getFieldById('clients', $client_id, 'client_name');
         $file_name_prepend = "$client_name-";
+        enforceClientAccess();
     } else {
         $client_query = '';
         $client_id = 0; //Logging
         $file_name_prepend = "$session_company_name-";
     }
 
-    $sql = mysqli_query($mysqli,"SELECT * FROM software LEFT JOIN client ON client_id = software_client_id WHERE software_archived_at IS NULL $client_query $access_permission_query ORDER BY software_name ASC");
+    $sql = mysqli_query($mysqli,"SELECT * FROM software LEFT JOIN clients ON client_id = software_client_id WHERE software_archived_at IS NULL $client_query $access_permission_query ORDER BY software_name ASC");
 
     $num_rows = mysqli_num_rows($sql);
 

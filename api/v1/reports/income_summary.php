@@ -12,6 +12,12 @@ for ($m = 1; $m <= 12; $m++) {
 }
 $month_cols_sql = implode(",\n        ", $month_cols);
 
+// A legacy API key deliberately restricted to one client ($api_key_client_id) must never
+// see another client's (or the whole company's) income totals - an unrestricted key keeps
+// the same company-wide behavior as the classic web report.
+$invoices_client_where = !empty($api_key_client_id) ? " WHERE invoices.invoice_client_id = " . intval($api_key_client_id) : '';
+$revenues_client_where = !empty($api_key_client_id) ? " WHERE revenue_client_id = " . intval($api_key_client_id) : '';
+
 $sql = mysqli_query($mysqli,
     "SELECT c.category_id, c.category_name,
         $month_cols_sql,
@@ -19,9 +25,9 @@ $sql = mysqli_query($mysqli,
      FROM categories c
      LEFT JOIN (
         SELECT invoices.invoice_category_id AS category_id, payments.payment_date AS dt, payments.payment_amount AS amt
-        FROM payments JOIN invoices ON payments.payment_invoice_id = invoices.invoice_id
+        FROM payments JOIN invoices ON payments.payment_invoice_id = invoices.invoice_id$invoices_client_where
         UNION ALL
-        SELECT revenue_category_id AS category_id, revenue_date AS dt, revenue_amount AS amt FROM revenues
+        SELECT revenue_category_id AS category_id, revenue_date AS dt, revenue_amount AS amt FROM revenues$revenues_client_where
      ) x ON x.category_id = c.category_id AND YEAR(x.dt) = $year
      WHERE c.category_type = 'Income'
      GROUP BY c.category_id, c.category_name

@@ -25,13 +25,15 @@ $expense_client_id = intval($row['expense_client_id']);
 $vendor_name = nullable_htmlentities($row['vendor_name']);
 $category_name = nullable_htmlentities($row['category_name']);
 
+if ($expense_client_id) enforceClientAccess($expense_client_id);
+
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class='fas fa-fw fa-shopping-cart mr-2'></i>Editing expense</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class='fas fa-fw fa-shopping-cart me-2'></i>Editing expense</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -186,7 +188,7 @@ ob_start();
             </div>
 
             <?php if (isset($_GET['client_id'])) { ?>
-                <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">
+                <input type="hidden" name="client_id" value="<?php echo $expense_client_id; ?>">
             <?php } else { ?>
 
                 <div class="form-group col-md">
@@ -232,8 +234,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_expense" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_expense" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

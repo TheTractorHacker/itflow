@@ -64,21 +64,21 @@ $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-life-ring mr-2"></i>Tickets By Client</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-life-ring me-2"></i>Tickets By Client</h3>
             <div class="card-tools">
-                <button type="button" class="btn btn-primary d-print-none" onclick="window.print();"><i class="fas fa-fw fa-print mr-2"></i>Print</button>
+                <button type="button" class="btn btn-primary d-print-none js-print-page"><i class="fas fa-fw fa-print me-2"></i>Print</button>
             </div>
         </div>
         <div class="card-body">
             <form class="mb-3">
-                <select onchange="this.form.submit()" class="form-control" name="year">
+                <select class="form-control auto-submit-select" name="year">
                     <?php
                     while ($row = mysqli_fetch_assoc($sql_ticket_years)) {
                         $ticket_year = intval($row['ticket_year']); ?>
                         <option <?php if ($year == $ticket_year) { ?> selected <?php } ?> > <?php echo $ticket_year; ?></option>
                     <?php } ?>
                 </select>
-                <select onchange="this.form.submit()" class="form-control" name="month">
+                <select class="form-control auto-submit-select" name="month">
                     <option <?php if ($month == 1) { echo 'selected'; } ?> value="1">January</option>
                     <option <?php if ($month == 2) { echo 'selected'; } ?> value="2">February</option>
                     <option <?php if ($month == 3) { echo 'selected'; } ?> value="3">March</option>
@@ -96,7 +96,7 @@ $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients
 
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-area mr-2"></i>Yearly (<?php echo $year; ?>)</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-area me-2"></i>Yearly (<?php echo $year; ?>)</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive-sm">
@@ -104,14 +104,14 @@ $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients
                             <thead>
                             <tr>
                                 <th>Client</th>
-                                <th class="text-right">Raised</th>
-                                <th class="text-right">Priority: Low</th>
-                                <th class="text-right">Priority: Med</th>
-                                <th class="text-right">Priority: High</th>
-                                <th class="text-right">Resolved</th>
-                                <th class="text-right">Total Time worked <i>(H:M:S)</i></th>
-                                <th class="text-right">Avg time to respond</th>
-                                <th class="text-right">Avg time to resolve</th>
+                                <th class="text-end">Raised</th>
+                                <th class="text-end">Priority: Low</th>
+                                <th class="text-end">Priority: Med</th>
+                                <th class="text-end">Priority: High</th>
+                                <th class="text-end">Resolved</th>
+                                <th class="text-end">Total Time worked <i>(H:M:S)</i></th>
+                                <th class="text-end">Avg time to respond</th>
+                                <th class="text-end">Avg time to resolve</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -194,14 +194,14 @@ $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients
 
                                     <tr>
                                         <td><?php echo $client_name; ?></td>
-                                        <td class="text-right"><?php echo $ticket_raised_count; ?></td>
-                                        <td class="text-right"><?php echo $low_ticket_count; ?></td>
-                                        <td class="text-right"><?php echo $med_ticket_count; ?></td>
-                                        <td class="text-right"><?php echo $high_ticket_count; ?></td>
-                                        <td class="text-right"><?php echo $ticket_resolved_count; ?></td>
-                                        <td class="text-right"><?php echo $ticket_total_time_worked; ?></td>
-                                        <td class="text-right"><?php echo $avg_time_to_respond; ?></td>
-                                        <td class="text-right"><?php echo $avg_time_to_resolve; ?></td>
+                                        <td class="text-end"><?php echo $ticket_raised_count; ?></td>
+                                        <td class="text-end"><?php echo $low_ticket_count; ?></td>
+                                        <td class="text-end"><?php echo $med_ticket_count; ?></td>
+                                        <td class="text-end"><?php echo $high_ticket_count; ?></td>
+                                        <td class="text-end"><?php echo $ticket_resolved_count; ?></td>
+                                        <td class="text-end"><?php echo $ticket_total_time_worked; ?></td>
+                                        <td class="text-end"><?php echo $avg_time_to_respond; ?></td>
+                                        <td class="text-end"><?php echo $avg_time_to_resolve; ?></td>
                                     </tr>
                                     <?php
                                 }
@@ -217,7 +217,7 @@ $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients
 
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-area mr-2"></i>Monthly (<?php echo date("F", mktime(1, 1, 1, $month, 1)) . ' ' . $year; ?>)</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-area me-2"></i>Monthly (<?php echo date("F", mktime(1, 1, 1, $month, 1)) . ' ' . $year; ?>)</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive-sm">
@@ -225,14 +225,14 @@ $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients
                             <thead>
                             <tr>
                                 <th>Client</th>
-                                <th class="text-right">Raised</th>
-                                <th class="text-right">Priority: Low</th>
-                                <th class="text-right">Priority: Med</th>
-                                <th class="text-right">Priority: High</th>
-                                <th class="text-right">Resolved</th>
-                                <th class="text-right">Total Time worked <i>(H:M:S)</i></th>
-                                <th class="text-right">Avg time to respond</th>
-                                <th class="text-right">Avg time to resolve</th>
+                                <th class="text-end">Raised</th>
+                                <th class="text-end">Priority: Low</th>
+                                <th class="text-end">Priority: Med</th>
+                                <th class="text-end">Priority: High</th>
+                                <th class="text-end">Resolved</th>
+                                <th class="text-end">Total Time worked <i>(H:M:S)</i></th>
+                                <th class="text-end">Avg time to respond</th>
+                                <th class="text-end">Avg time to resolve</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -315,14 +315,14 @@ $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients
 
                                     <tr>
                                         <td><?php echo $client_name; ?></td>
-                                        <td class="text-right"><?php echo $ticket_raised_count; ?></td>
-                                        <td class="text-right"><?php echo $low_ticket_count; ?></td>
-                                        <td class="text-right"><?php echo $med_ticket_count; ?></td>
-                                        <td class="text-right"><?php echo $high_ticket_count; ?></td>
-                                        <td class="text-right"><?php echo $ticket_resolved_count; ?></td>
-                                        <td class="text-right"><?php echo $ticket_total_time_worked; ?></td>
-                                        <td class="text-right"><?php echo $avg_time_to_respond; ?></td>
-                                        <td class="text-right"><?php echo $avg_time_to_resolve; ?></td>
+                                        <td class="text-end"><?php echo $ticket_raised_count; ?></td>
+                                        <td class="text-end"><?php echo $low_ticket_count; ?></td>
+                                        <td class="text-end"><?php echo $med_ticket_count; ?></td>
+                                        <td class="text-end"><?php echo $high_ticket_count; ?></td>
+                                        <td class="text-end"><?php echo $ticket_resolved_count; ?></td>
+                                        <td class="text-end"><?php echo $ticket_total_time_worked; ?></td>
+                                        <td class="text-end"><?php echo $avg_time_to_respond; ?></td>
+                                        <td class="text-end"><?php echo $avg_time_to_resolve; ?></td>
                                     </tr>
                                     <?php
                                 }

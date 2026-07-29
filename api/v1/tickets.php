@@ -8,6 +8,12 @@ require_once __DIR__ . '/includes/api_permissions.php';
 
 $uid = $api_user_id;
 
+// Gate on the support module permission, mirroring every sibling endpoint
+// (assets.php, contacts.php, clients.php, credentials.php, invoices.php, etc.) -
+// without this, any authenticated API caller could read/write all ticket data
+// regardless of their role's module_support permission level.
+api_require_module_permission($mysqli, $uid, 'module_support', $method === 'GET' ? 1 : 2);
+
 // For per-ticket operations, enforce client-scope restrictions.
 // Agents with no user_client_permissions rows have unrestricted access.
 // Agents with rows may only access tickets whose client is in their permitted set.
@@ -227,8 +233,10 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     } else {
         $body = json_decode(file_get_contents('php://input'), true) ?? [];
     }
-    $reply      = mysqli_real_escape_string($mysqli, trim($body['reply'] ?? ''));
-    $time_w     = mysqli_real_escape_string($mysqli, trim($body['time_worked'] ?? ''));
+    $reply_raw  = trim($body['reply'] ?? '');
+    $time_w_raw = trim($body['time_worked'] ?? '');
+    $reply      = mysqli_real_escape_string($mysqli, $reply_raw);
+    $time_w     = mysqli_real_escape_string($mysqli, $time_w_raw);
     $onsite     = isset($body['onsite']) ? intval($body['onsite']) : 0;
     $contact_id = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
 
@@ -283,13 +291,21 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
         }
     }
 
-    $time_sql = $time_w ? "'$time_w'" : 'NULL';
-    mysqli_query($mysqli,
+    // Prepared statement: $reply is user-supplied free text. Bind the raw
+    // (unescaped) values so the stored bytes match the previous escaped-then-
+    // interpolated INSERT exactly. Empty time_worked binds as SQL NULL.
+    $time_param = $time_w_raw !== '' ? $time_w_raw : null;
+    $reply_id = api_exec(
         "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_time_worked, ticket_reply_onsite, ticket_reply_by, ticket_reply_ticket_id, ticket_reply_created_at)
-         VALUES ('$reply', '$type', $time_sql, $onsite, $reply_by, $id, NOW())"
+         VALUES (?, ?, ?, ?, ?, ?, NOW())",
+        'sssiii',
+        [$reply_raw, $type, $time_param, $onsite, $reply_by, $id]
     );
-    $reply_id = mysqli_insert_id($mysqli);
     mysqli_query($mysqli, "UPDATE tickets SET ticket_updated_at = NOW() WHERE ticket_id = $id");
+
+    // New reply invalidates any cached AI summary for this ticket
+    require_once $DOCUMENT_ROOT . '/includes/ai_functions.php';
+    markTicketSummaryStale($mysqli, $id);
 
     // Status auto-update
     $new_status_id = null;
@@ -336,6 +352,10 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
         $new_status_info = getTicketStatusInfo($mysqli, $new_status_id);
         publishTicketEvent($id, 'status', ['status_id' => $new_status_info['id'], 'status_name' => $new_status_info['name'], 'status_color' => $new_status_info['color'], 'by' => $type === 'Client' ? 'Customer' : ($session_name ?? 'API')]);
     }
+
+    // Fire the outbound webhook (mirrors agent/post/ticket.php's reply handler).
+    // queueWebhookEvent() gates on webhook_enabled internally.
+    queueWebhookEvent('ticket.replied', getWebhookTicketPayload($id));
 
     $response = ['id' => $reply_id, 'type' => $type];
     if ($new_status_id) {
@@ -514,8 +534,10 @@ if ($method === 'POST' && $id === null) {
     } else {
         $body = json_decode(file_get_contents('php://input'), true) ?? [];
     }
-    $subject  = mysqli_real_escape_string($mysqli, trim($body['subject'] ?? ''));
-    $details  = mysqli_real_escape_string($mysqli, trim($body['details'] ?? ''));
+    $subject_raw = trim($body['subject'] ?? '');
+    $details_raw = trim($body['details'] ?? '');
+    $subject  = mysqli_real_escape_string($mysqli, $subject_raw);
+    $details  = mysqli_real_escape_string($mysqli, $details_raw);
     $client   = isset($body['client_id']) ? intval($body['client_id']) : 0;
     $priority_in = strtolower(trim($body['priority'] ?? ''));
     $priority = in_array($priority_in, ['low','medium','high','critical'])
@@ -526,6 +548,12 @@ if ($method === 'POST' && $id === null) {
     $hostname = mysqli_real_escape_string($mysqli, trim($body['hostname'] ?? ''));
 
     if (!$subject) api_error(400, 'subject required');
+
+    // Unlike every other write path in this file, ticket creation has no existing
+    // ticket_id to run the client-scope check (lines 14-22) against - check the
+    // submitted client_id directly so a client-scoped key/user can't create a
+    // ticket for a client outside their permitted set.
+    if (!api_client_scope_ok($client)) api_error(403, 'Access denied');
 
     // Validate category against ticket categories
     if ($category) {
@@ -543,8 +571,19 @@ if ($method === 'POST' && $id === null) {
         if ($asset_row) $asset_id = intval($asset_row['asset_id']);
     }
 
-    $next_num = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT COALESCE(MAX(ticket_number), 0) + 1 AS n FROM tickets"))['n']);
+    // Atomically increment-and-fetch via LAST_INSERT_ID(), same pattern used by
+    // every other ticket-creation path (functions.php's addTicket(),
+    // agent/post/ticket.php, etc.) - a plain MAX(ticket_number)+1 here raced
+    // against those paths (and against itself under concurrent requests) and
+    // produced duplicate ticket_number values.
+    mysqli_query($mysqli, "
+        UPDATE settings
+        SET
+            config_ticket_next_number = LAST_INSERT_ID(config_ticket_next_number),
+            config_ticket_next_number = config_ticket_next_number + 1
+        WHERE company_id = 1
+    ");
+    $next_num = mysqli_insert_id($mysqli);
     $status_row = mysqli_fetch_assoc(mysqli_query($mysqli,
         "SELECT ticket_status_id FROM ticket_statuses WHERE ticket_status_name = 'New' AND ticket_status_active = 1 LIMIT 1"));
     if (!$status_row) {
@@ -554,12 +593,27 @@ if ($method === 'POST' && $id === null) {
     $status = intval($status_row['ticket_status_id']);
 
     $prefix_esc = mysqli_real_escape_string($mysqli, $config_ticket_prefix ?? '');
-    mysqli_query($mysqli,
+
+    // Attributing ticket_created_by to $uid is only meaningful for a real per-user
+    // API token (a technician deliberately creating a ticket via the API). A legacy
+    // API key resolves $uid to "the first active admin" - not the actual person
+    // submitting the ticket (e.g. ITPanel Pro/client portal with no contact_id
+    // configured) - so crediting that admin by name here would be misleading, the
+    // same reasoning already applied to legacy-key chat/reply attribution below.
+    $created_by_sql = $legacy_api_key_auth ? 0 : $uid;
+
+    // Prepared statement: ticket_subject/ticket_details are user-supplied free
+    // text and are bound. The remaining columns are ints or already-validated
+    // values ($prefix_esc = escaped config, $priority = whitelisted enum), left
+    // interpolated to keep the diff minimal. Bound raw values store the same
+    // bytes the previous escaped-then-interpolated INSERT did.
+    $new_id = api_exec(
         "INSERT INTO tickets (ticket_prefix, ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
          ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_created_at, ticket_updated_at)
-         VALUES ('$prefix_esc', '$subject', '$details', $client, $contact, '$priority', $status, $assigned, $uid, 'API', $next_num, $category, $asset_id, NOW(), NOW())"
+         VALUES ('$prefix_esc', ?, ?, $client, $contact, '$priority', $status, $assigned, $created_by_sql, 'API', $next_num, $category, $asset_id, NOW(), NOW())",
+        'ss',
+        [$subject_raw, $details_raw]
     );
-    $new_id = mysqli_insert_id($mysqli);
 
     // Notify the assigned agent of the new ticket, or broadcast to active
     // agents if it wasn't auto-assigned (e.g. ITPanel Pro quick-ticket
@@ -571,6 +625,14 @@ if ($method === 'POST' && $id === null) {
     } elseif ($assigned == 0) {
         appNotify('Ticket', "New ticket {$config_ticket_prefix}$next_num - $subject has been created via API", "/agent/ticket.php?ticket_id=$new_id$client_uri", $client, $new_id);
     }
+
+    // Fire the outbound webhook (mirrors agent/post/ticket.php's create handler).
+    // queueWebhookEvent() gates on webhook_enabled internally.
+    queueWebhookEvent('ticket.created', getWebhookTicketPayload($new_id));
+
+    // Run ticket_created automation rules (fire-and-forget; never blocks/fails insert)
+    require_once $DOCUMENT_ROOT . '/includes/ticket_automation_dispatch.php';
+    runTicketCreatedAutomation($mysqli, $new_id);
 
     $response = ['id' => $new_id, 'number' => $next_num];
     $attachments = api_save_ticket_attachments($mysqli, $new_id, null, $DOCUMENT_ROOT);
@@ -616,6 +678,14 @@ if ($method === 'POST' && $id !== null && $sub === 'status') {
 
     $api_status_info = getTicketStatusInfo($mysqli, $status);
     publishTicketEvent($id, 'status', ['status_id' => $api_status_info['id'], 'status_name' => $api_status_info['name'], 'status_color' => $api_status_info['color'], 'by' => $session_name ?? 'API']);
+
+    // Fire outbound webhooks. queueWebhookEvent() gates on webhook_enabled.
+    // The 'Closed' branch above is the only one that sets ticket_resolved_at, so
+    // it also emits ticket.resolved (mirroring the web app's resolve handler).
+    queueWebhookEvent('ticket.status_changed', getWebhookTicketPayload($id));
+    if ($status_name_row['ticket_status_name'] === 'Closed') {
+        queueWebhookEvent('ticket.resolved', getWebhookTicketPayload($id));
+    }
 
     api_response(200, ['ok' => true]);
 }

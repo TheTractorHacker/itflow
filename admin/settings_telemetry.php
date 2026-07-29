@@ -4,7 +4,7 @@ require_once "includes/inc_all_admin.php";
 
     <div class="card card-dark">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-satellite-dish mr-2"></i>Telemetry</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-satellite-dish me-2"></i>Telemetry</h3>
         </div>
         <div class="card-body">
 
@@ -31,7 +31,7 @@ require_once "includes/inc_all_admin.php";
 
                 <hr>
 
-                <button type="submit" name="edit_telemetry_settings" class="btn btn-primary text-bold float-right"><i class="fas fa-check mr-2"></i>Save</button>
+                <button type="submit" name="edit_telemetry_settings" class="btn btn-primary text-bold float-end"><i class="fas fa-check me-2"></i>Save</button>
 
             </form>
         </div>

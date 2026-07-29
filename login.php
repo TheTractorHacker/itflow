@@ -2,7 +2,8 @@
 
 // Unified login (Agent + Client) using one email & password
 
-header("Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com");
+$csp_nonce = base64_encode(random_bytes(16));
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-$csp_nonce' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.foleyit.com; connect-src 'self' https://cloudflareinsights.com");
 header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
 header("Referrer-Policy: strict-origin-when-cross-origin");
@@ -22,6 +23,8 @@ if (session_status() === PHP_SESSION_NONE) {
     if ($config_https_only || !isset($config_https_only)) {
         ini_set("session.cookie_secure", true);
     }
+
+    session_set_cookie_params(['samesite' => 'Lax']);
 
     session_start();
 }
@@ -54,7 +57,7 @@ $row = mysqli_fetch_assoc(mysqli_query(
      FROM logs
      WHERE log_ip = '$session_ip'
        AND log_type = 'Login'
-       AND log_action = 'Failed'
+       AND log_action IN ('Failed', 'MFA Failed')
        AND log_created_at > (NOW() - INTERVAL 10 MINUTE)"
 ));
 $failed_login_count = intval($row['failed_login_count']);
@@ -346,7 +349,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
                 if ($selectedType === 1) {
 
                     if ($config_login_key_required) {
-                        if (!isset($_GET['key']) || $_GET['key'] !== $config_login_key_secret) {
+                        if (!isset($_GET['key']) || !hash_equals((string) $config_login_key_secret, (string) $_GET['key'])) {
                             redirect();
                         }
                     }
@@ -719,6 +722,7 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
 
     <link rel="stylesheet" href="plugins/adminlte/css/adminlte.min.css">
     <link rel="stylesheet" href="css/itflow_custom.css">
+    <link rel="stylesheet" href="/css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
     <style>
         body.login-page {
             background-color: #343A40;
@@ -822,7 +826,7 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
                     <!-- STEP 1: Email + Password -->
                     <div class="input-group mb-3">
                         <input type="email" class="form-control"
-                            placeholder="<?php if ($config_login_key_required) { if (!isset($_GET['key']) || $_GET['key'] !== $config_login_key_secret) { echo "Client "; } } echo "Email"; ?>"
+                            placeholder="<?php if ($config_login_key_required) { if (!isset($_GET['key']) || !hash_equals((string) $config_login_key_secret, (string) $_GET['key'])) { echo "Client "; } } echo "Email"; ?>"
                             name="email"
                             value="<?php echo htmlspecialchars($email ?? '', ENT_QUOTES); ?>"
                             required autofocus

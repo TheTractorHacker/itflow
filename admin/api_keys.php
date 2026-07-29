@@ -20,9 +20,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-key mr-2"></i>API Keys</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-key me-2"></i>API Keys</h3>
         <div class="card-tools">
-            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/api/api_key_add.php"><i class="fas fa-plus mr-2"></i>New API Key</button>
+            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/api/api_key_add.php"><i class="fas fa-plus me-2"></i>New API Key</button>
         </div>
     </div>
 
@@ -41,15 +41,15 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 </div>
 
                 <div class="col-md-8">
-                    <div class="btn-group float-right">
-                        <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                            <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
+                    <div class="btn-group float-end">
+                        <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                             </button>
                             <div class="dropdown-menu">
                                 <button class="dropdown-item text-danger text-bold"
                                         type="submit" form="bulkActions" name="bulk_delete_api_keys">
-                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                 </button>
                             </div>
                         </div>
@@ -69,9 +69,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 <table class="table table-striped table-borderless table-hover">
                     <thead class="text-dark <?php if ($num_rows[0] == 0) { echo "d-none"; } ?>">
                     <tr>
-                        <td class="pr-0">
+                        <td class="pe-0">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" onclick="checkAll(this)">
+                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox">
                             </div>
                         </td>
                         <th>
@@ -123,7 +123,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                         ?>
                         <tr>
-                            <td class="pr-0">
+                            <td class="pe-0">
                                 <div class="form-check">
                                     <input class="form-check-input bulk-select" type="checkbox" name="api_key_ids[]" value="<?php echo $api_key_id ?>">
                                 </div>
@@ -135,18 +135,18 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td><?php echo $api_key_expire; ?></td>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <?php if ($api_key_expire > date("Y-m-d H:i:s")) { ?>
                                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?revoke_api_key=<?php echo $api_key_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-times mr-2"></i>Revoke
+                                                <i class="fas fa-fw fa-times me-2"></i>Revoke
                                             </a>
                                         <?php } ?>
                                         <?php if ($api_key_expire < date("Y-m-d H:i:s")) { ?>
                                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_api_key=<?php echo $api_key_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-times mr-2"></i>Delete
+                                                <i class="fas fa-fw fa-times me-2"></i>Delete
                                             </a>
                                         <?php } ?>
                                     </div>

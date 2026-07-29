@@ -548,6 +548,23 @@ body:not(.dark-mode) .text-muted,
 body:not(.dark-mode) small.text-muted {
     color: var(--color-text-muted) !important;
 }
+/* Dark-mode content text — mirrors the light rules via theme variables so header.php
+   no longer needs an inline !important block to keep content legible. */
+body.dark-mode .content-wrapper,
+body.dark-mode .content-wrapper .card-body,
+body.dark-mode .content-wrapper p {
+    color: var(--color-text) !important;
+}
+body.dark-mode .content-wrapper .table td,
+body.dark-mode .content-wrapper .table th,
+body.dark-mode .content-wrapper table.dataTable td,
+body.dark-mode .content-wrapper table.dataTable th {
+    color: var(--color-text) !important;
+}
+body.dark-mode .content-wrapper .text-muted,
+body.dark-mode .content-wrapper small.text-muted {
+    color: var(--color-text-muted) !important;
+}
 
 /* ===== Design-kit token additions ===== */
 :root {
@@ -707,6 +724,13 @@ body:not(.dark-mode) small.text-muted {
 }
 .modal-header {
     border-radius: var(--card-radius) var(--card-radius) 0 0;
+}
+/* Dark modal headers (modal-header.bg-dark, used app-wide for a "console/emphasis"
+   convention) never got their title color set, so it fell back to the default
+   dark body-text color on a dark background (~1.16:1 contrast, effectively
+   invisible). Only the close button was reliably given text-white/text-light. */
+.modal-header.bg-dark .modal-title {
+    color: #fff;
 }
 
 /* ===== Table row hover accent ===== */

@@ -25,10 +25,10 @@ ob_start();
 ?>
 <div class="modal-header bg-dark text-white">
     <div>
-        <h5 class="modal-title mb-0"><i class="fas fa-fw fa-file-pdf mr-2"></i>Documents</h5>
+        <h5 class="modal-title mb-0"><i class="fas fa-fw fa-file-pdf me-2"></i>Documents</h5>
         <small class="text-muted"><?= $contract_name ?></small>
     </div>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 
 <div class="modal-body p-0">
@@ -47,7 +47,7 @@ ob_start();
                 </div>
                 <div class="input-group-append">
                     <button class="btn btn-primary" type="submit" name="upload_contract_document">
-                        <i class="fas fa-upload mr-1"></i>Upload
+                        <i class="fas fa-upload me-1"></i>Upload
                     </button>
                 </div>
             </div>
@@ -67,7 +67,7 @@ ob_start();
     <table class="table table-sm table-borderless table-hover mb-0">
         <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
             <tr>
-                <th class="pl-3" style="width:32px;"></th>
+                <th class="ps-3" style="width:32px;"></th>
                 <th>File</th>
                 <th>Size</th>
                 <th>Uploaded by</th>
@@ -92,20 +92,20 @@ ob_start();
                 : 'file-alt text-secondary'));
         ?>
             <tr>
-                <td class="pl-3 text-center"><i class="fas fa-<?= $icon ?>"></i></td>
-                <td class="small font-weight-bold"><?= $fname ?></td>
+                <td class="ps-3 text-center"><i class="fas fa-<?= $icon ?>"></i></td>
+                <td class="small fw-bold"><?= $fname ?></td>
                 <td class="text-muted small"><?= $size ?></td>
                 <td class="text-muted small"><?= $uploader ?></td>
                 <td class="text-muted small" title="<?= $date ?>"><?= $ago ?></td>
-                <td class="pr-3 text-right text-nowrap">
+                <td class="pe-3 text-end text-nowrap">
                     <a href="post.php?serve_contract_document=<?= $doc_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                        class="btn btn-xs btn-outline-primary" title="Download" target="_blank">
                         <i class="fas fa-download"></i>
                     </a>
                     <?php if (lookupUserPermission('module_contracts') >= 2): ?>
                     <a href="post.php?delete_contract_document=<?= $doc_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                       class="btn btn-xs btn-outline-danger ml-1" title="Delete"
-                       onclick="return confirm('Delete <?= htmlspecialchars($fname, ENT_QUOTES) ?>?')">
+                       class="btn btn-xs btn-outline-danger ms-1 js-confirm-native" title="Delete"
+                       data-confirm-message="Delete <?= htmlspecialchars($fname, ENT_QUOTES) ?>?">
                         <i class="fas fa-trash"></i>
                     </a>
                     <?php endif; ?>
@@ -121,7 +121,7 @@ ob_start();
     <?= $count ?> document<?= $count !== 1 ? 's' : '' ?>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 // Show filename in the custom file input label
 document.getElementById('doc_upload')?.addEventListener('change', function() {
     var label = this.nextElementSibling;

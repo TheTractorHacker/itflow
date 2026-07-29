@@ -12,9 +12,14 @@ $purifier = new HTMLPurifier($purifier_config);
 
 $document_version_id = intval($_GET['id']);
 
-$sql = mysqli_query($mysqli, "SELECT * FROM document_versions WHERE document_version_id = $document_version_id LIMIT 1");
+$sql = mysqli_query($mysqli, "SELECT document_versions.*, documents.document_client_id
+    FROM document_versions
+    LEFT JOIN documents ON document_versions.document_version_document_id = documents.document_id
+    WHERE document_version_id = $document_version_id LIMIT 1");
 
 $row = mysqli_fetch_assoc($sql);
+$client_id = intval($row['document_client_id']);
+enforceClientAccess($client_id);
 $document_version_name = nullable_htmlentities($row['document_version_name']);
 $document_version_content = $purifier->purify($row['document_version_content']);
 
@@ -24,8 +29,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title text-white"><i class="fa fa-fw fa-file-alt mr-2"></i><?php echo $document_version_name; ?></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title text-white"><i class="fa fa-fw fa-file-alt me-2"></i><?php echo $document_version_name; ?></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>

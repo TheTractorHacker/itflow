@@ -15,6 +15,9 @@ if (isset($_GET['client_id'])) {
     $client_url = '';
 }
 
+// Perms
+enforceUserPermission('module_financial');
+
 $sql = mysqli_query(
     $mysqli,
     "SELECT SQL_CALC_FOUND_ROWS * FROM trips
@@ -24,6 +27,7 @@ $sql = mysqli_query(
     AND DATE(trip_date) BETWEEN '$dtf' AND '$dtt'
     AND trip_archived_at IS NULL
     $client_query
+    $access_permission_query
     ORDER BY $sort $order LIMIT $record_from, $record_to"
 );
 
@@ -33,16 +37,16 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fa fa-route mr-2"></i>Trips</h3>
+            <h3 class="card-title mt-2"><i class="fa fa-route me-2"></i>Trips</h3>
             <div class="card-tools">
                 <div class="btn-group">
-                    <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/trip/trip_add.php?<?= $client_url ?>"><i class="fas fa-plus mr-2"></i>New Trip</button>
+                    <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/trip/trip_add.php?<?= $client_url ?>"><i class="fas fa-plus me-2"></i>New Trip</button>
                     <?php if ($num_rows[0] > 0) { ?>
-                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                     <div class="dropdown-menu">
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/trip/trip_export.php?<?= $client_url ?>">
-                            <i class="fa fa-fw fa-download mr-2"></i>Export
+                            <i class="fa fa-fw fa-download me-2"></i>Export
                         </a>
                     </div>
                     <?php } ?>
@@ -60,13 +64,13 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="input-group">
                             <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search Trips">
                             <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
+                                <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilter"><i class="fas fa-filter"></i></button>
                                 <button class="btn btn-primary"><i class="fa fa-search"></i></button>
                             </div>
                         </div>
                     </div>
                     <div class="col-sm-8">
-                        <div class="float-right">
+                        <div class="float-end">
                         </div>
                     </div>
                 </div>
@@ -180,25 +184,25 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <?php } ?>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item" href="//maps.google.com?q=<?php echo $trip_source; ?> to <?php echo $trip_destination; ?>" target="_blank">
-                                            <i class="fa fa-fw fa-map-marker-alt mr-2"></i>Map it<i class="fa fa-fw fa-external-link-alt ml-2"></i>
+                                            <i class="fa fa-fw fa-map-marker-alt me-2"></i>Map it<i class="fa fa-fw fa-external-link-alt ms-2"></i>
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/trip/trip_edit.php?<?= $client_url ?>&id=<?= $trip_id ?>">
-                                            <i class="fa fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fa fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/trip/trip_copy.php?<?= $client_url ?>&id=<?= $trip_id ?>">
-                                            <i class="fa fa-fw fa-copy mr-2"></i>Copy
+                                            <i class="fa fa-fw fa-copy me-2"></i>Copy
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_trip=<?= $trip_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fa fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fa fa-fw fa-trash me-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>

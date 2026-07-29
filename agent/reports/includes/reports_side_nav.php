@@ -2,7 +2,7 @@
 <aside class="main-sidebar sidebar-dark-primary d-print-none">
 
     <a class="pb-1 mt-1 brand-link" href="/agent/<?php echo $config_start_page ?>">
-        <p class="h5"><i class="nav-icon fas fa-arrow-left ml-3 mr-2"></i>
+        <p class="h5"><i class="nav-icon fas fa-arrow-left ms-3 me-2"></i>
             <span class="brand-text ">Back | <strong>Reports</strong>
         </p>
     </a>
@@ -33,6 +33,12 @@
                         <a href="/agent/reports/recurring_by_client.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "recurring_by_client.php") { echo "active"; } ?>">
                             <i class="fa fa-sync nav-icon"></i>
                             <p>Recurring Income By Client</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/agent/reports/mrr.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "mrr.php") { echo "active"; } ?>">
+                            <i class="fas fa-sync-alt nav-icon"></i>
+                            <p>MRR &amp; Forecast</p>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -84,6 +90,12 @@
                 <li class="nav-header">TECHNICAL</li>
                 <?php  if ($config_module_enable_ticketing && lookupUserPermission("module_support") >= 1) { ?>
                     <li class="nav-item">
+                        <a href="/agent/reports/service_desk.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "service_desk.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-headset"></i>
+                            <p>Service Desk &amp; SLA</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="/agent/reports/ticket_summary.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "ticket_summary.php") { echo "active"; } ?>">
                             <i class="nav-icon fas fa-life-ring"></i>
                             <p>Tickets</p>
@@ -111,6 +123,18 @@
                             <p>Time by Technician</p>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="/agent/reports/technician_performance.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "technician_performance.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-user-clock"></i>
+                            <p>Technician Performance</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/agent/reports/rmm_health.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "rmm_health.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-heartbeat"></i>
+                            <p>RMM Health</p>
+                        </a>
+                    </li>
                 <?php } ?>
                 <?php if (lookupUserPermission("module_credential") >= 1) { ?>
                     <li class="nav-item">
@@ -120,6 +144,14 @@
                         </a>
                     </li>
                 <?php } ?>
+
+                <li class="nav-header">DELIVERY</li>
+                <li class="nav-item">
+                    <a href="/agent/reports/schedules.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "schedules.php") { echo "active"; } ?>">
+                        <i class="nav-icon fas fa-paper-plane"></i>
+                        <p>Scheduled Reports</p>
+                    </a>
+                </li>
 
                 <?php
                 $sql_custom_links = mysqli_query($mysqli, "SELECT * FROM custom_links
@@ -144,7 +176,7 @@
                     <a href="<?php echo $custom_link_uri; ?>" <?php echo $target; ?> class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == basename($custom_link_uri)) { echo "active"; } ?>">
                         <i class="fas fa-<?php echo $custom_link_icon; ?> nav-icon"></i>
                         <p><?php echo $custom_link_name; ?></p>
-                        <i class="fas fa-angle-right nav-icon float-right"></i>
+                        <i class="fas fa-angle-right nav-icon float-end"></i>
                     </a>
                 </li>
 

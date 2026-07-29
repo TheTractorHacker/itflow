@@ -4,8 +4,10 @@ require_once '../../../includes/modal_header.php';
 
 $item_id = intval($_GET['id']);
 
-$sql = mysqli_query($mysqli, "SELECT * FROM recurring_invoice_items WHERE item_id = $item_id LIMIT 1");
+$sql = mysqli_query($mysqli, "SELECT recurring_invoice_items.*, recurring_invoice_client_id FROM recurring_invoice_items LEFT JOIN recurring_invoices ON recurring_invoice_id = item_recurring_invoice_id WHERE item_id = $item_id LIMIT 1");
 $row = mysqli_fetch_assoc($sql);
+$client_id = intval($row['recurring_invoice_client_id']);
+enforceClientAccess($client_id);
 $item_name = nullable_htmlentities($row['item_name']);
 $item_description = nullable_htmlentities($row['item_description']);
 $item_quantity = floatval($row['item_quantity']);
@@ -19,8 +21,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-edit mr-2"></i>Editing Line Item: <strong><?php echo $item_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-edit me-2"></i>Editing Line Item: <strong><?php echo $item_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -98,8 +100,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="edit_recurring_invoice_item" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_recurring_invoice_item" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

@@ -51,7 +51,7 @@ if (isset($kb_groups['Uncategorized'])) {
 
 <div class="row">
     <div class="col">
-        <h3><i class="fas fa-book mr-2"></i>Knowledge Base</h3>
+        <h3><i class="fas fa-book me-2"></i>Knowledge Base</h3>
     </div>
 </div>
 
@@ -71,7 +71,7 @@ if (isset($kb_groups['Uncategorized'])) {
         <?php } ?>
 
         <?php foreach ($kb_groups as $group_name => $articles) { ?>
-            <h5 class="mt-3 mb-3"><i class="fas fa-fw fa-folder text-secondary mr-2"></i><?= nullable_htmlentities($group_name) ?></h5>
+            <h5 class="mt-3 mb-3"><i class="fas fa-fw fa-folder text-secondary me-2"></i><?= nullable_htmlentities($group_name) ?></h5>
             <div class="row">
                 <?php foreach ($articles as $row) {
                     $kb_article_id = intval($row['kb_article_id']);
@@ -91,7 +91,7 @@ if (isset($kb_groups['Uncategorized'])) {
                                 <h5 class="card-title">
                                     <a href="kb_article.php?id=<?= $kb_article_id ?>"><?= $kb_article_title ?></a>
                                     <?php if ($kb_article_client_id == 0) { ?>
-                                        <span class="badge badge-info ml-2">Central</span>
+                                        <span class="badge text-bg-info ms-2">Central</span>
                                     <?php } ?>
                                 </h5>
                                 <p class="card-text text-muted small"><?= nullable_htmlentities($kb_article_preview) ?></p>

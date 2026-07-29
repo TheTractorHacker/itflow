@@ -17,7 +17,7 @@ if (isset($_GET['type']) & !empty($_GET['type'])) {
 }
 
 // Log Category Filter
-if (isset($_GET['category']) & !empty($_GET['catergory'])) {
+if (isset($_GET['category']) & !empty($_GET['category'])) {
     $log_category_query = "AND (app_log_category  = '" . sanitizeInput($_GET['category']) . "')";
     $category_filter = nullable_htmlentities($_GET['category']);
 } else {
@@ -42,7 +42,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>App Logs</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-history me-2"></i>App Logs</h3>
         </div>
         <div class="card-body">
             <form autocomplete="off">
@@ -52,7 +52,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <div class="input-group">
                                 <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search app logs">
                                 <div class="input-group-append">
-                                    <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
+                                    <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilter"><i class="fas fa-filter"></i></button>
                                     <button class="btn btn-primary"><i class="fa fa-search"></i></button>
                                 </div>
                             </div>
@@ -61,7 +61,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                     <div class="col-sm-2">
                         <div class="form-group">
-                            <select class="form-control select2" name="type" onchange="this.form.submit()">
+                            <select class="form-control select2 auto-submit-select" name="type">
                                 <option value="">- All Types -</option>
 
                                 <?php
@@ -80,7 +80,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                     <div class="col-sm-2">
                         <div class="form-group">
-                            <select class="form-control select2" name="category" onchange="this.form.submit()">
+                            <select class="form-control select2 auto-submit-select" name="category">
                                 <option value="">- All Categories -</option>
 
                                 <?php

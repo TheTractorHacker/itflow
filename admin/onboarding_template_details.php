@@ -55,9 +55,9 @@ if (isset($_GET['project_template_id'])) {
     <div class="row">
         <div class="col-sm-7">
             <div class="media">
-                <i class="fa fa-fw fa-2x fa-user-plus text-secondary mr-3"></i>
+                <i class="fa fa-fw fa-2x fa-user-plus text-secondary me-3"></i>
                 <div class="media-body">
-                    <h3 class="mb-0"><?php echo $project_template_name; ?><span class='badge badge-pill badge-info ml-2'>Onboarding Template</span></h3>
+                    <h3 class="mb-0"><?php echo $project_template_name; ?><span class='badge rounded-pill text-bg-info ms-2'>Onboarding Template</span></h3>
                     <div><small class="text-secondary"><?php echo $project_template_description; ?></small></div>
                 </div>
             </div>
@@ -65,7 +65,7 @@ if (isset($_GET['project_template_id'])) {
 
         <div class="col-sm-3">
             <div class="media">
-                <i class="fa fa-fw fa-2x fa-file-contract text-secondary mr-3"></i>
+                <i class="fa fa-fw fa-2x fa-file-contract text-secondary me-3"></i>
                 <div class="media-body">
                     <div>Default Contract</div>
                     <h6 class="mb-0"><?php echo $project_template_default_contract_template_name ?: '-'; ?></h6>
@@ -74,19 +74,19 @@ if (isset($_GET['project_template_id'])) {
         </div>
 
         <div class="col-sm-2">
-            <div class="btn-group float-right">
+            <div class="btn-group float-end">
                 <div class="dropdown dropleft text-center">
-                    <button class="btn btn-secondary btn-sm" type="button" id="dropdownMenuButton" data-toggle="dropdown">
+                    <button class="btn btn-secondary btn-sm" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" data-boundary="window">
                         <i class="fas fa-fw fa-ellipsis-v"></i>
                     </button>
                     <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                         <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/onboarding_template/onboarding_template_edit.php?project_template_id=<?= $project_template_id ?>">
-                            <i class="fas fa-fw fa-edit mr-2"></i>Edit Template
+                            <i class="fas fa-fw fa-edit me-2"></i>Edit Template
                         </a>
                         <?php if ($session_user_role == 3) { ?>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item text-danger confirm-link" href="post.php?delete_onboarding_template=<?php echo $project_template_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                             </a>
                         <?php } ?>
                     </div>
@@ -100,8 +100,8 @@ if (isset($_GET['project_template_id'])) {
     <div class="col-md-6">
 
         <!-- Checklist Card -->
-        <div class="card card-body card-outline card-dark">
-            <h5 class="text-secondary"><i class="fas fa-fw fa-tasks mr-2"></i>Onboarding Checklist</h5>
+        <div class="card card-body">
+            <h5 class="text-secondary"><i class="fas fa-fw fa-tasks me-2"></i>Onboarding Checklist</h5>
 
             <form action="post.php" method="post" autocomplete="off">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -125,23 +125,23 @@ if (isset($_GET['project_template_id'])) {
                 ?>
                     <tr data-task-id="<?php echo $task_template_id; ?>">
                         <td>
-                            <a href="#" class="drag-handle"><i class="fas fa-bars text-muted mr-2"></i></a>
+                            <a href="#" class="drag-handle"><i class="fas fa-bars text-muted me-2"></i></a>
                             <span class="text-dark"><?php echo $task_template_name; ?></span>
                         </td>
-                        <td class="text-right">
-                            <div class="float-right">
+                        <td class="text-end">
+                            <div class="float-end">
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-light text-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-light text-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window">
                                         <i class="fas fa-ellipsis-v"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket_template/ticket_template_task_edit.php?id=<?= $task_template_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger confirm-link" href="post.php?delete_task_template=<?php echo $task_template_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-trash-alt mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash-alt me-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>
@@ -162,7 +162,7 @@ if (isset($_GET['project_template_id'])) {
 </div>
 
 <script src="../plugins/SortableJS/Sortable.min.js"></script>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 new Sortable(document.querySelector('table#checklist_tasks tbody'), {
     handle: '.drag-handle',
     animation: 150,

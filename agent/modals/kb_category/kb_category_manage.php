@@ -8,15 +8,15 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-folder mr-2"></i>Manage Knowledge Base Categories</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-folder me-2"></i>Manage Knowledge Base Categories</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
 <div class="modal-body">
 
     <button type="button" class="btn btn-primary btn-sm mb-3 ajax-modal" data-modal-url="modals/kb_category/kb_category_add.php">
-        <i class="fas fa-plus mr-2"></i>New Category
+        <i class="fas fa-plus me-2"></i>New Category
     </button>
 
     <?php if (mysqli_num_rows($sql_categories) == 0) { ?>
@@ -30,20 +30,20 @@ ob_start();
         ?>
         <li class="list-group-item d-flex align-items-center justify-content-between">
             <span>
-                <?php if ($kb_category_parent_id) { ?><i class="fas fa-fw fa-level-up-alt fa-rotate-90 text-muted mr-1"></i><?php } ?>
-                <i class="fas fa-fw fa-folder text-secondary mr-1"></i><?= $kb_category_name ?>
+                <?php if ($kb_category_parent_id) { ?><i class="fas fa-fw fa-level-up-alt fa-rotate-90 text-muted me-1"></i><?php } ?>
+                <i class="fas fa-fw fa-folder text-secondary me-1"></i><?= $kb_category_name ?>
             </span>
             <div class="dropdown dropleft text-center">
-                <button class="btn btn-secondary btn-sm" data-toggle="dropdown">
+                <button class="btn btn-secondary btn-sm" data-bs-toggle="dropdown" data-boundary="window">
                     <i class="fas fa-ellipsis-h"></i>
                 </button>
                 <div class="dropdown-menu">
                     <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/kb_category/kb_category_edit.php?id=<?= $kb_category_id ?>">
-                        <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                        <i class="fas fa-fw fa-edit me-2"></i>Edit
                     </a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_kb_category=<?= $kb_category_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                     </a>
                 </div>
             </div>
@@ -54,7 +54,7 @@ ob_start();
 
 </div>
 <div class="modal-footer">
-    <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Close</button>
+    <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Close</button>
 </div>
 
 <?php

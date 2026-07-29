@@ -205,14 +205,14 @@ if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
 }
 
 ?>
-<div class="row">
+<div class="row mb-3">
     <div class="col-md-3">
-        <a href="ticket_add.php" class="btn btn-primary btn-block mb-3"><i class="fas fa-fw fa-plus mr-1"></i>New Ticket</a>
+        <a href="ticket_add.php" class="btn btn-primary btn-block mb-3"><i class="fas fa-fw fa-plus me-1"></i>New Ticket</a>
     </div>
 </div>
 
 <!-- Stat boxes -->
-<div class="row">
+<div class="row mb-3">
 
     <div class="col-lg-3 col-md-6 col-sm-12">
         <a class="small-box <?php echo $open_tickets_count > 0 ? 'bg-info' : 'bg-secondary'; ?>" href="tickets.php">
@@ -284,13 +284,13 @@ if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
 
 </div>
 
-<div class="row">
+<div class="row mb-3">
 
     <!-- Recent Tickets -->
     <div class="col-lg-7 col-md-12">
         <div class="card card-outline card-primary">
             <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-fw fa-ticket-alt mr-2"></i>Recent Tickets</h3>
+                <h3 class="card-title"><i class="fas fa-fw fa-ticket-alt me-2"></i>Recent Tickets</h3>
                 <div class="card-tools">
                     <a href="tickets.php" class="btn btn-sm btn-outline-primary">View All</a>
                 </div>
@@ -324,7 +324,7 @@ if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
                                 <tr>
                                     <td class="text-nowrap"><a href="ticket.php?id=<?php echo $ticket_id; ?>">#<?php echo "$ticket_prefix$ticket_number"; ?></a></td>
                                     <td><a href="ticket.php?id=<?php echo $ticket_id; ?>"><?php echo $ticket_subject; ?></a></td>
-                                    <td><span class="badge badge-secondary"><?php echo $ticket_status; ?></span></td>
+                                    <td><span class="badge text-bg-secondary"><?php echo $ticket_status; ?></span></td>
                                     <td class="text-secondary"><?php echo $ticket_updated_at; ?></td>
                                 </tr>
                             <?php } ?>
@@ -339,7 +339,7 @@ if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
     <div class="col-lg-5 col-md-12">
         <div class="card card-outline card-primary">
             <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-fw fa-desktop mr-2"></i>Your Assigned Assets</h3>
+                <h3 class="card-title"><i class="fas fa-fw fa-desktop me-2"></i>Your Assigned Assets</h3>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -358,8 +358,8 @@ if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
 
                             ?>
                             <tr>
-                                <td><i class="fas fa-fw fa-desktop text-secondary mr-2"></i><?php echo $asset_name; ?> <span class="text-secondary">(<?php echo $asset_type; ?>)</span></td>
-                                <td class="text-right">
+                                <td><i class="fas fa-fw fa-desktop text-secondary me-2"></i><?php echo $asset_name; ?> <span class="text-secondary">(<?php echo $asset_type; ?>)</span></td>
+                                <td class="text-end">
                                     <?php if ($asset_uri_client) { ?>
                                         <a href="<?= $asset_uri_client ?>" target="_blank" rel="noopener noreferrer"><i class="fas fa-external-link-alt"></i></a>
                                     <?php } ?>
@@ -379,11 +379,11 @@ if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
 
 <?php if ($session_contact_primary == 1 || $session_contact_is_technical_contact) { ?>
 <!-- Needs Attention -->
-<div class="row" id="tech-alerts">
+<div class="row mb-3" id="tech-alerts">
     <div class="col-md-12">
         <div class="card card-outline card-warning">
             <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-fw fa-exclamation-triangle mr-2"></i>Needs Attention</h3>
+                <h3 class="card-title"><i class="fas fa-fw fa-exclamation-triangle me-2"></i>Needs Attention</h3>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -400,20 +400,20 @@ if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
                             <?php
                             if (count($tech_alerts) == 0) { ?>
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-4"><i class="fas fa-check-circle text-success mr-1"></i>Nothing needs your attention right now.</td>
+                                    <td colspan="4" class="text-center text-muted py-4"><i class="fas fa-check-circle text-success me-1"></i>Nothing needs your attention right now.</td>
                                 </tr>
                             <?php }
                             foreach ($tech_alerts as $alert) {
                                 ?>
                                 <tr>
-                                    <td><i class="fas fa-fw <?php echo $alert['icon']; ?> text-secondary mr-2"></i><?php echo $alert['label']; ?></td>
+                                    <td><i class="fas fa-fw <?php echo $alert['icon']; ?> text-secondary me-2"></i><?php echo $alert['label']; ?></td>
                                     <td><?php if ($alert['link'] != '#') { ?><a href="<?php echo $alert['link']; ?>"><?php echo $alert['name']; ?></a><?php } else { echo $alert['name']; } ?></td>
                                     <td><?php echo $alert['date']; ?></td>
                                     <td>
                                         <?php if ($alert['expired']) { ?>
-                                            <span class="badge badge-danger">Expired</span>
+                                            <span class="badge text-bg-danger">Expired</span>
                                         <?php } else { ?>
-                                            <span class="badge badge-warning text-white">Expiring Soon</span>
+                                            <span class="badge text-bg-warning text-white">Expiring Soon</span>
                                         <?php } ?>
                                     </td>
                                 </tr>
@@ -432,7 +432,7 @@ if ($session_contact_primary == 1 || $session_contact_is_technical_contact) {
     <div class="col-md-12">
         <div class="card card-outline card-secondary">
             <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-fw fa-th-large mr-2"></i>Quick Links</h3>
+                <h3 class="card-title"><i class="fas fa-fw fa-th-large me-2"></i>Quick Links</h3>
             </div>
             <div class="card-body">
                 <div class="row text-center">

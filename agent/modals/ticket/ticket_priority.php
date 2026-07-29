@@ -16,6 +16,7 @@ $ticket_number = intval($row['ticket_number']);
 $ticket_priority = nullable_htmlentities($row['ticket_priority']);
 $client_id = intval($row['ticket_client_id']);
 $client_name = nullable_htmlentities($row['client_name']);
+enforceClientAccess($client_id);
 
 // Generate the HTML form content using output buffering.
 ob_start();
@@ -23,8 +24,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-thermometer-half mr-2"></i>Editing priority: <strong><?php echo "$ticket_prefix$ticket_number"; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-thermometer-half me-2"></i>Editing priority: <strong><?php echo "$ticket_prefix$ticket_number"; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -52,8 +53,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="edit_ticket_priority" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_ticket_priority" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 
 </form>

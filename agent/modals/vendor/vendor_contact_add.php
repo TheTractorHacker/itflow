@@ -2,8 +2,8 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-dark">
-                <h5 class="modal-title"><i class="fa fa-fw fa-user-plus mr-2"></i>New Vendor Contact</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fa fa-fw fa-user-plus me-2"></i>New Vendor Contact</h5>
+                <button type="button" class="close text-white" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -86,8 +86,8 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" name="add_vendor_contact" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Create</button>
-                    <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+                    <button type="submit" name="add_vendor_contact" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Create</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
                 </div>
             </form>
         </div>

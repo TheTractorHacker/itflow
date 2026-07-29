@@ -16,14 +16,16 @@ $recurring_invoice_created_at = date('Y-m-d', strtotime($row['recurring_invoice_
 $recurring_invoice_next_date = nullable_htmlentities($row['recurring_invoice_next_date']);
 $recurring_invoice_discount = floatval($row['recurring_invoice_discount_amount']);
 $category_id = intval($row['recurring_invoice_category_id']);
+$client_id = intval($row['recurring_invoice_client_id']);
+enforceClientAccess($client_id);
 
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-redo-alt mr-2"></i>Editing Recur Invoice: <strong><?php echo "$recurring_invoice_prefix$recurring_invoice_number"; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-redo-alt me-2"></i>Editing Recur Invoice: <strong><?php echo "$recurring_invoice_prefix$recurring_invoice_number"; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -126,8 +128,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_recurring_invoice" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_recurring_invoice" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

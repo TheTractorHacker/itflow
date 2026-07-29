@@ -16,9 +16,9 @@ if ($session_contact_primary == 0 && !$session_contact_is_technical_contact) {
 $domains_sql = mysqli_query($mysqli, "SELECT domain_id, domain_name, domain_expire FROM domains WHERE domain_client_id = $session_client_id AND domain_archived_at IS NULL ORDER BY domain_expire ASC");
 ?>
 
-    <div class="row">
+    <div class="row mb-4">
         <div class="col">
-            <h3><i class="fas fa-fw fa-globe mr-2"></i>Domains</h3>
+            <h3><i class="fas fa-fw fa-globe me-2"></i>Domains</h3>
         </div>
     </div>
     <div class="row">
@@ -49,12 +49,12 @@ $domains_sql = mysqli_query($mysqli, "SELECT domain_id, domain_name, domain_expi
 
                     $expire_class = "";
                     if ($domain_expire && strtotime($domain_expire) < strtotime('+30 days')) {
-                        $expire_class = "text-danger font-weight-bold";
+                        $expire_class = "text-danger fw-bold";
                     }
                     ?>
 
                     <tr>
-                        <td><i class="fas fa-fw fa-globe text-secondary mr-2"></i><?php echo $domain_name; ?></td>
+                        <td><i class="fas fa-fw fa-globe text-secondary me-2"></i><?php echo $domain_name; ?></td>
                         <td class="<?php echo $expire_class; ?>"><?php echo $domain_expire; ?></td>
                     </tr>
 

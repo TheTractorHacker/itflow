@@ -13,6 +13,8 @@ if (isset($_POST['add_credit'])) {
     enforceUserPermission('module_sales', 2);
 
     $client_id = intval($_POST['client']);
+    enforceClientAccess($client_id);
+
     $amount = floatval($_POST['amount']);
     $type = sanitizeInput($_POST['type']);
     $expire = sanitizeInput($_POST['expire']);

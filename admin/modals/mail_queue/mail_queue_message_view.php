@@ -44,8 +44,8 @@ if ($email_status == 0) {
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class='fas fa-fw fa-envelope-open mr-2'></i><strong><?php echo $email_subject; ?></strong></h5>
-    <button type="button" class="close text-light" data-dismiss="modal">
+    <h5 class="modal-title"><i class='fas fa-fw fa-envelope-open me-2'></i><strong><?php echo $email_subject; ?></strong></h5>
+    <button type="button" class="close text-light" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>

@@ -88,9 +88,9 @@ if ($comet_users) {
 <!-- Device table -->
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Device Backup Status</h3>
+        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-cloud-upload-alt me-2"></i>Device Backup Status</h3>
         <a href="settings_comet.php" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-cog mr-1"></i>Settings
+            <i class="fas fa-cog me-1"></i>Settings
         </a>
     </div>
     <div class="card-body p-0">
@@ -105,7 +105,7 @@ if ($comet_users) {
         <table class="table table-sm table-borderless table-hover mb-0">
             <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;" class="text-muted border-bottom">
                 <tr>
-                    <th class="pl-3" style="width:36px;"></th>
+                    <th class="ps-3" style="width:36px;"></th>
                     <th>Device</th>
                     <th>Comet User</th>
                     <th>Client</th>
@@ -126,10 +126,10 @@ if ($comet_users) {
                 $err = $dr['error'] ? htmlspecialchars(mb_strimwidth($dr['error'], 0, 80, '…')) : '';
             ?>
                 <tr>
-                    <td class="pl-3 text-center">
+                    <td class="ps-3 text-center">
                         <i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i>
                     </td>
-                    <td class="font-weight-bold small"><?= htmlspecialchars($dr['dev_name']) ?></td>
+                    <td class="fw-bold small"><?= htmlspecialchars($dr['dev_name']) ?></td>
                     <td class="text-muted small"><?= htmlspecialchars($dr['username']) ?></td>
                     <td class="small">
                         <?php if ($dr['client']): ?>

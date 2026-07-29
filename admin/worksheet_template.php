@@ -12,9 +12,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clipboard-list mr-2"></i>Worksheet Templates</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clipboard-list me-2"></i>Worksheet Templates</h3>
         <div class="card-tools">
-            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/worksheet_template/worksheet_template_add.php" data-modal-size="lg"><i class="fas fa-plus mr-2"></i>New Template</button>
+            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/worksheet_template/worksheet_template_add.php" data-modal-size="lg"><i class="fas fa-plus me-2"></i>New Template</button>
         </div>
     </div>
     <div class="card-body">
@@ -54,7 +54,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <td><?= $tmpl_desc ?></td>
                         <td class="text-center"><?= $field_count ?></td>
                         <td class="text-center">
-                            <a href="worksheet_template_details.php?id=<?= $tmpl_id ?>" class="btn btn-sm btn-secondary"><i class="fas fa-edit mr-1"></i>Edit</a>
+                            <a href="worksheet_template_details.php?id=<?= $tmpl_id ?>" class="btn btn-sm btn-secondary"><i class="fas fa-edit me-1"></i>Edit</a>
                             <a href="post.php?delete_worksheet_template=<?= $tmpl_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-sm btn-danger confirm-link"><i class="fas fa-trash"></i></a>
                         </td>
                     </tr>

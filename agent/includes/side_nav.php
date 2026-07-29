@@ -1,21 +1,23 @@
-<!-- Main Sidebar Container -->
-<aside class="main-sidebar sidebar-dark-<?php echo nullable_htmlentities($config_theme); ?> d-print-none">
+<!-- Main Sidebar Container (AdminLTE 4). data-bs-theme="dark" keeps the sidebar dark in both app themes. -->
+<aside class="app-sidebar shadow d-print-none" data-bs-theme="dark">
 
-    <a class="brand-link" href="/agent/dashboard.php">
-        <?php if (!empty($session_company_logo)) { ?>
-            <img src="/uploads/settings/<?php echo nullable_htmlentities($session_company_logo); ?>" class="brand-image" style="max-height:33px;width:auto;object-fit:contain;" alt="">
-        <?php } else { ?>
-            <div class="brand-image"><i class="fas fa-building fa-2x"></i></div>
-        <?php } ?>
-        <span class="brand-text h4"><?php echo nullable_htmlentities($session_company_name); ?></span>
-    </a>
+    <div class="sidebar-brand">
+        <a class="brand-link" href="/agent/dashboard.php">
+            <?php if (!empty($session_company_logo)) { ?>
+                <img src="/uploads/settings/<?php echo nullable_htmlentities($session_company_logo); ?>" class="brand-image" style="max-height:33px;width:auto;object-fit:contain;" alt="">
+            <?php } else { ?>
+                <div class="brand-image"><i class="fas fa-building fa-2x"></i></div>
+            <?php } ?>
+            <span class="brand-text"><?php echo nullable_htmlentities($session_company_name); ?></span>
+        </a>
+    </div>
 
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar-wrapper">
 
         <!-- Sidebar Menu -->
-        <nav>
-            <ul class="nav nav-pills nav-sidebar flex-column mt-3" data-widget="treeview" data-accordion="false">
+        <nav class="mt-2">
+            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" role="menu">
                 <li class="nav-item">
                     <a href="/agent/dashboard.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "dashboard.php") { echo "active"; } ?>">
                         <i class="nav-icon fas fa-tachometer-alt"></i>
@@ -33,7 +35,7 @@
                                 (SELECT COUNT(*) FROM rmm_alerts WHERE status='new') +
                                 (SELECT COUNT(*) FROM comet_backup_alerts WHERE alert_status='new') AS c"))['c'] ?? 0);
                             if ($num_central_alerts) { ?>
-                                <span class="right badge badge-danger" data-toggle="tooltip" title="Open Alerts"><?php echo $num_central_alerts; ?></span>
+                                <span class="right badge text-bg-danger" data-bs-toggle="tooltip" title="Open Alerts"><?php echo $num_central_alerts; ?></span>
                             <?php } ?>
                         </p>
                     </a>
@@ -46,9 +48,45 @@
                             <p>
                                 Clients
                                 <?php if ($num_active_clients) { ?>
-                                    <span class="right badge text-light" data-toggle="tooltip" title="Active Clients"><?php echo $num_active_clients; ?></span>
+                                    <span class="right badge text-light" data-bs-toggle="tooltip" title="Active Clients"><?php echo $num_active_clients; ?></span>
                                 <?php } ?>
                             </p>
+                        </a>
+                    </li>
+                <?php } ?>
+
+                <?php if (lookupUserPermission("module_sales") >= 1) { ?>
+                    <li class="nav-header mt-3">CRM</li>
+                    <li class="nav-item">
+                        <a href="/agent/pipeline.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "pipeline.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-stream"></i>
+                            <p>Pipeline</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/agent/opportunities.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "opportunities.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-funnel-dollar"></i>
+                            <p>Opportunities</p>
+                        </a>
+                    </li>
+                    <?php if (lookupUserPermission("module_client") >= 1) { ?>
+                    <li class="nav-item">
+                        <a href="/agent/clients.php?leads=1" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "clients.php" && isset($_GET['leads']) && $_GET['leads'] == 1) { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-bullhorn"></i>
+                            <p>Leads</p>
+                        </a>
+                    </li>
+                    <?php } ?>
+                    <li class="nav-item">
+                        <a href="/agent/campaigns.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "campaigns.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-paper-plane"></i>
+                            <p>Campaigns</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/agent/segments.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "segments.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-layer-group"></i>
+                            <p>Segments</p>
                         </a>
                     </li>
                 <?php } ?>
@@ -62,7 +100,7 @@
                                 <p>
                                     Tickets
                                     <?php if ($num_active_tickets) { ?>
-                                        <span class="right badge text-light" data-toggle="tooltip" title="Open Tickets"><?php echo $num_active_tickets; ?></span>
+                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Open Tickets"><?php echo $num_active_tickets; ?></span>
                                     <?php } ?>
                                 </p>
                             </a>
@@ -73,7 +111,18 @@
                                 <p>
                                     Recurring Tickets
                                     <?php if ($num_recurring_tickets) { ?>
-                                        <span class="right badge text-light" data-toggle="tooltip" title="Active Recurring Tickets"><?php echo $num_recurring_tickets; ?></span>
+                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Active Recurring Tickets"><?php echo $num_recurring_tickets; ?></span>
+                                    <?php } ?>
+                                </p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/agent/mail_requests.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "mail_requests.php") { echo "active"; } ?>">
+                                <i class="nav-icon fas fa-envelope-open-text"></i>
+                                <p>
+                                    Requests
+                                    <?php if ($num_mail_requests) { ?>
+                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Unknown-sender emails awaiting review"><?php echo $num_mail_requests; ?></span>
                                     <?php } ?>
                                 </p>
                             </a>
@@ -84,7 +133,7 @@
                                 <p>
                                     Projects
                                     <?php if ($num_active_projects) { ?>
-                                        <span class="right badge text-light" data-toggle="tooltip" title="Open Projects"><?php echo $num_active_projects; ?></span>
+                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Open Projects"><?php echo $num_active_projects; ?></span>
                                     <?php } ?>
                                 </p>
                             </a>
@@ -116,7 +165,7 @@
                             <p>
                                 Quotes
                                 <?php if ($num_open_quotes) { ?>
-                                    <span class="right badge text-light" data-toggle="tooltip" title="Active Quotes"><?php echo $num_open_quotes; ?></span>
+                                    <span class="right badge text-light" data-bs-toggle="tooltip" title="Active Quotes"><?php echo $num_open_quotes; ?></span>
                                 <?php } ?>
                             </p>
                         </a>
@@ -127,7 +176,7 @@
                             <p>
                                 Invoices
                                 <?php if ($num_open_invoices) { ?>
-                                    <span class="right badge text-light" data-toggle="tooltip" title="Open Invoices"><?php echo $num_open_invoices; ?></span>
+                                    <span class="right badge text-light" data-bs-toggle="tooltip" title="Open Invoices"><?php echo $num_open_invoices; ?></span>
                                 <?php } ?>
                             </p>
                         </a>
@@ -138,7 +187,7 @@
                             <p>
                                 Recurring Invoices
                                 <?php if ($num_recurring_invoices) { ?>
-                                    <span class="right badge text-light" data-toggle="tooltip" title="Active Recurring Invoices"><?php echo $num_recurring_invoices; ?></span>
+                                    <span class="right badge text-light" data-bs-toggle="tooltip" title="Active Recurring Invoices"><?php echo $num_recurring_invoices; ?></span>
                                 <?php } ?>
                             </p>
                         </a>
@@ -190,7 +239,7 @@
                                 <p>
                                     Recurring Expenses
                                     <?php if ($num_recurring_expenses) { ?>
-                                        <span class="right badge text-light" data-toggle="tooltip" title="Recurring Expenses"><?php echo $num_recurring_expenses; ?></span>
+                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Recurring Expenses"><?php echo $num_recurring_expenses; ?></span>
                                     <?php } ?>
                                 </p>
                             </a>
@@ -207,6 +256,14 @@
                                 <p>Transfers</p>
                             </a>
                         </li>
+                        <?php if ($config_module_enable_payroll && $session_is_admin) { ?>
+                        <li class="nav-item">
+                            <a href="/admin/payroll_periods.php" class="nav-link">
+                                <i class="nav-icon fas fa-money-check"></i>
+                                <p>Payroll</p>
+                            </a>
+                        </li>
+                        <?php } ?>
                     <?php } ?>
                     <li class="nav-item">
                         <a href="/agent/trips.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "trips.php") { echo "active"; } ?>">
@@ -271,7 +328,7 @@
                     <a href="/agent/contacts.php" class="nav-link">
                         <i class="fas fa-users nav-icon"></i>
                         <p>Client Overview</p>
-                        <i class="fas fa-angle-right nav-icon float-right"></i>
+                        <i class="fas fa-angle-right nav-icon float-end"></i>
                     </a>
                 </li>
                 <?php } ?>
@@ -281,7 +338,7 @@
                         <a href="/agent/reports/" class="nav-link">
                             <i class="fas fa-chart-line nav-icon"></i>
                             <p>Reports</p>
-                            <i class="fas fa-angle-right nav-icon float-right"></i>
+                            <i class="fas fa-angle-right nav-icon float-end"></i>
                         </a>
                     </li>
                 <?php } ?>
@@ -308,7 +365,7 @@
                     <a href="<?php echo $custom_link_uri; ?>" <?php echo $target; ?> class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == basename($custom_link_uri)) { echo "active"; } ?>">
                         <i class="fas fa-<?php echo $custom_link_icon; ?> nav-icon"></i>
                         <p><?php echo $custom_link_name; ?></p>
-                        <i class="fas fa-angle-right nav-icon float-right"></i>
+                        <i class="fas fa-angle-right nav-icon float-end"></i>
                     </a>
                 </li>
 
@@ -321,6 +378,6 @@
         <div class="mb-3"></div>
 
     </div>
-    <!-- /.sidebar -->
+    <!-- /.sidebar-wrapper -->
 
 </aside>

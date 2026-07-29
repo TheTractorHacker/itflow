@@ -75,6 +75,18 @@ if (isset($_POST['add_client'])) {
     mysqli_stmt_execute($query);
     $client_id = mysqli_insert_id($mysqli);
 
+    // CRM lead qualification fields (supplementary update keeps the core prepared statement intact)
+    $lead_source_sql = $lead_source !== '' ? "'" . mysqli_real_escape_string($mysqli, $lead_source) . "'" : "NULL";
+    $lead_status_sql = $lead_status !== '' ? "'" . mysqli_real_escape_string($mysqli, $lead_status) . "'" : "NULL";
+    $lead_owner_sql  = $lead_owner > 0 ? intval($lead_owner) : "NULL";
+    $lead_score_sql  = $lead_score > 0 ? intval($lead_score) : "NULL";
+    mysqli_query($mysqli, "UPDATE clients SET
+        client_lead_source = $lead_source_sql,
+        client_lead_status = $lead_status_sql,
+        client_lead_owner = $lead_owner_sql,
+        client_lead_score = $lead_score_sql
+        WHERE client_id = $client_id");
+
     // Create client folder
     $client_folder = $_SERVER['DOCUMENT_ROOT'] . "/uploads/clients/$client_id";
     if (!file_exists($client_folder)) {
@@ -262,6 +274,8 @@ if (isset($_POST['edit_client'])) {
 
     $client_id = intval($_POST['client_id']);
 
+    enforceClientAccess($client_id);
+
     // Update client using prepared statement
     $query = mysqli_prepare(
         $mysqli,
@@ -294,6 +308,18 @@ if (isset($_POST['edit_client'])) {
         $client_id
     );
     mysqli_stmt_execute($query);
+
+    // CRM lead qualification fields (supplementary update keeps the core prepared statement intact)
+    $lead_source_sql = $lead_source !== '' ? "'" . mysqli_real_escape_string($mysqli, $lead_source) . "'" : "NULL";
+    $lead_status_sql = $lead_status !== '' ? "'" . mysqli_real_escape_string($mysqli, $lead_status) . "'" : "NULL";
+    $lead_owner_sql  = $lead_owner > 0 ? intval($lead_owner) : "NULL";
+    $lead_score_sql  = $lead_score > 0 ? intval($lead_score) : "NULL";
+    mysqli_query($mysqli, "UPDATE clients SET
+        client_lead_source = $lead_source_sql,
+        client_lead_status = $lead_status_sql,
+        client_lead_owner = $lead_owner_sql,
+        client_lead_score = $lead_score_sql
+        WHERE client_id = $client_id");
 
     // Create referral category if it doesn't exist
     $query = mysqli_prepare($mysqli, "SELECT category_name FROM categories WHERE category_type = 'Referral' AND category_archived_at IS NULL AND category_name = ?");
@@ -328,6 +354,29 @@ if (isset($_POST['edit_client'])) {
 
     redirect();
 
+}
+
+// CRM - one-click convert a lead into a full client
+if (isset($_GET['convert_lead'])) {
+
+    validateCSRFToken($_GET['csrf_token']);
+
+    enforceUserPermission('module_client', 2);
+
+    $client_id = intval($_GET['convert_lead']);
+
+    enforceClientAccess();
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT client_name FROM clients WHERE client_id = $client_id"));
+    $client_name = sanitizeInput($row['client_name'] ?? '');
+
+    mysqli_query($mysqli, "UPDATE clients SET client_lead = 0, client_lead_status = 'Converted' WHERE client_id = $client_id");
+
+    logAction("Client", "Convert", "$session_name converted lead $client_name to a client", $client_id, $client_id);
+
+    flash_alert("Lead <strong>$client_name</strong> converted to a client");
+
+    redirect("clients.php");
 }
 
 if (isset($_GET['archive_client'])) {
@@ -817,6 +866,8 @@ if (isset($_POST['bulk_add_client_ticket'])) {
         foreach ($_POST['client_ids'] as $client_id) {
             $client_id = intval($client_id);
 
+            enforceClientAccess($client_id);
+
             $sql = mysqli_query($mysqli, "SELECT * FROM clients WHERE client_id = $client_id");
             $row = mysqli_fetch_assoc($sql);
 
@@ -898,6 +949,8 @@ if (isset($_POST['bulk_edit_client_industry'])) {
         foreach($_POST['client_ids'] as $client_id) {
             $client_id = intval($client_id);
 
+            enforceClientAccess($client_id);
+
             $sql = mysqli_query($mysqli,"SELECT client_name FROM clients WHERE client_id = $client_id");
             $row = mysqli_fetch_assoc($sql);
             $client_name = sanitizeInput($row['client_name']);
@@ -931,6 +984,8 @@ if (isset($_POST['bulk_edit_client_referral'])) {
 
         foreach($_POST['client_ids'] as $client_id) {
             $client_id = intval($client_id);
+
+            enforceClientAccess($client_id);
 
             $sql = mysqli_query($mysqli,"SELECT client_name FROM clients WHERE client_id = $client_id");
             $row = mysqli_fetch_assoc($sql);
@@ -966,6 +1021,8 @@ if (isset($_POST['bulk_edit_client_hourly_rate'])) {
         foreach($_POST['client_ids'] as $client_id) {
             $client_id = intval($client_id);
 
+            enforceClientAccess($client_id);
+
             $sql = mysqli_query($mysqli,"SELECT client_name FROM clients WHERE client_id = $client_id");
             $row = mysqli_fetch_assoc($sql);
             $client_name = sanitizeInput($row['client_name']);
@@ -1000,6 +1057,8 @@ if (isset($_POST['bulk_edit_client_net_terms'])) {
         foreach($_POST['client_ids'] as $client_id) {
             $client_id = intval($client_id);
 
+            enforceClientAccess($client_id);
+
             $sql = mysqli_query($mysqli,"SELECT client_name FROM clients WHERE client_id = $client_id");
             $row = mysqli_fetch_assoc($sql);
             $client_name = sanitizeInput($row['client_name']);
@@ -1031,6 +1090,8 @@ if (isset($_POST['bulk_assign_client_tags'])) {
 
         foreach($_POST['client_ids'] as $client_id) {
             $client_id = intval($client_id);
+
+            enforceClientAccess($client_id);
 
             $sql = mysqli_query($mysqli,"SELECT client_name FROM clients WHERE client_id = $client_id");
             $row = mysqli_fetch_assoc($sql);
@@ -1072,6 +1133,10 @@ if (isset($_POST['bulk_send_client_email']) && isset($_POST['client_ids'])) {
 
     $client_ids = array_map('intval', $_POST['client_ids']);
     $count = count($client_ids);
+
+    foreach ($client_ids as $bulk_email_client_id) {
+        enforceClientAccess($bulk_email_client_id);
+    }
 
     // Email metadata
     $mail_from = sanitizeInput($_POST['mail_from']);
@@ -1167,6 +1232,8 @@ if (isset($_POST['bulk_archive_clients'])) {
 
             $client_id = intval($client_id);
 
+            enforceClientAccess($client_id);
+
             $sql = mysqli_query($mysqli,"SELECT client_name FROM clients WHERE client_id = $client_id");
             $row = mysqli_fetch_assoc($sql);
             $client_name = sanitizeInput($row['client_name']);
@@ -1202,6 +1269,8 @@ if (isset($_POST['bulk_unarchive_clients'])) {
         foreach ($_POST['client_ids'] as $client_id) {
 
             $client_id = intval($client_id);
+
+            enforceClientAccess($client_id);
 
             $sql = mysqli_query($mysqli,"SELECT client_name FROM clients WHERE client_id = $client_id");
             $row = mysqli_fetch_assoc($sql);
@@ -1243,6 +1312,9 @@ if (isset($_POST["export_client_pdf"])) {
     $company_logo = nullable_htmlentities($row['company_logo']);
 
     $client_id = intval($_POST["client_id"]);
+
+    enforceClientAccess($client_id);
+
     $export_contacts = intval($_POST["export_contacts"]);
     $export_locations = intval($_POST["export_locations"]);
     $export_assets = intval($_POST["export_assets"]);

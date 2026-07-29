@@ -20,10 +20,10 @@
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fa fa-fw fa-file-alt mr-2"></i>Document Templates</h3>
+        <h3 class="card-title mt-2"><i class="fa fa-fw fa-file-alt me-2"></i>Document Templates</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/document_template/document_template_add.php" data-modal-size="xl">
-                <i class="fas fa-plus mr-2"></i>New Template
+                <i class="fas fa-plus me-2"></i>New Template
             </button>
         </div>
     </div>
@@ -83,7 +83,7 @@
                                 data-modal-size="xl"
                                 data-modal-url="modals/document_template/document_template_edit.php?id=<?= $document_template_id ?>">
                                 <div class="media">
-                                    <i class="fas fa-fw fa-2x fa-file-alt mr-2"></i>
+                                    <i class="fas fa-fw fa-2x fa-file-alt me-2"></i>
                                     <div class="media-body">
                                         <div><?= $document_template_name ?></div>
                                         <div><small class="text-secondary"><?= $document_template_description ?></small></div>
@@ -98,22 +98,22 @@
                         <td><?php echo $document_template_updated_at; ?></td>
                         <td>
                             <div class="dropdown dropleft text-center">
-                                <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-h"></i>
                                 </button>
                                 <div class="dropdown-menu">
                                     <a class="dropdown-item" href="document_template_details.php?document_template_id=<?= $document_template_id ?>">
-                                        <i class="fas fa-fw fa-eye mr-2"></i>View
+                                        <i class="fas fa-fw fa-eye me-2"></i>View
                                     </a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item ajax-modal" href="#"
                                         data-modal-size="xl"
                                         data-modal-url="modals/document_template/document_template_edit.php?id=<?= $document_template_id ?>">
-                                        <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                        <i class="fas fa-fw fa-edit me-2"></i>Edit
                                     </a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item text-danger text-bold" href="post.php?delete_document_template=<?php echo $document_template_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                                     </a>
                                 </div>
                             </div>

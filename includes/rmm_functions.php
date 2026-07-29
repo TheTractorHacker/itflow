@@ -75,11 +75,20 @@ function createTicketFromRmmAlert($mysqli, array $alert, int $created_by, string
     $source_esc  = mysqli_real_escape_string($mysqli, $source);
     $priority_esc = mysqli_real_escape_string($mysqli, $priority);
 
-    // Get next ticket number
-    $settings = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_ticket_prefix, config_ticket_next_number FROM settings WHERE company_id=1"));
+    // Get next ticket number. Atomically increment-and-fetch via LAST_INSERT_ID(),
+    // same pattern used by every other ticket-creation path (e.g. functions.php's
+    // addTicket(), agent/post/ticket.php) - a plain SELECT-then-UPDATE here raced
+    // against those paths and produced duplicate ticket_number values.
+    $settings = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_ticket_prefix FROM settings WHERE company_id=1"));
     $prefix   = mysqli_real_escape_string($mysqli, $settings['config_ticket_prefix']);
-    $number   = intval($settings['config_ticket_next_number']);
-    mysqli_query($mysqli, "UPDATE settings SET config_ticket_next_number=config_ticket_next_number+1 WHERE company_id=1");
+    mysqli_query($mysqli, "
+        UPDATE settings
+        SET
+            config_ticket_next_number = LAST_INSERT_ID(config_ticket_next_number),
+            config_ticket_next_number = config_ticket_next_number + 1
+        WHERE company_id = 1
+    ");
+    $number   = mysqli_insert_id($mysqli);
     $url_key  = randomString(32);
 
     mysqli_query($mysqli,
@@ -106,6 +115,10 @@ function createTicketFromRmmAlert($mysqli, array $alert, int $created_by, string
     );
 
     logAction('RMM', 'Alert Ticket Created', "Ticket $prefix$number created from RMM alert ID $alert_id", $client_id, $asset_id);
+
+    // Run ticket_created automation rules (fire-and-forget; never blocks/fails insert)
+    require_once __DIR__ . '/ticket_automation_dispatch.php';
+    runTicketCreatedAutomation($mysqli, $ticket_id);
 
     return [
         'existing'  => false,

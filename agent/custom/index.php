@@ -67,6 +67,6 @@ $date_time = date('Y-m-d H:i:s');
 echo "Current Date and Time: <strong>$date_time</strong>";
 ?>
 
-<script>toastr.success('Have Fun Wozz!!')</script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">toastr.success('Have Fun Wozz!!')</script>
 
 <?php require_once "../../includes/footer.php";

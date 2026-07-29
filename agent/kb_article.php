@@ -43,6 +43,10 @@ $kb_article_client_visible = intval($row['kb_article_client_visible']);
 $kb_article_updated_at = $row['kb_article_updated_at'] ?? $row['kb_article_created_at'];
 $kb_article_archived_at = $row['kb_article_archived_at'];
 
+if ($kb_article_client_id > 0) {
+    enforceClientAccess($kb_article_client_id);
+}
+
 $kb_articles_url = "kb_articles.php";
 if (isset($client_id)) {
     $kb_articles_url .= "?client_id=$client_id";
@@ -59,12 +63,12 @@ $sql_attachments = mysqli_query(
 
     <ol class="breadcrumb d-print-none">
         <li class="breadcrumb-item">
-            <a href="<?php echo $kb_articles_url; ?>"><i class="fas fa-fw fa-book mr-1"></i>Knowledge Base</a>
+            <a href="<?php echo $kb_articles_url; ?>"><i class="fas fa-fw fa-book me-1"></i>Knowledge Base</a>
         </li>
         <li class="breadcrumb-item active">
             <?php echo $kb_article_title; ?>
             <?php if (!empty($kb_article_archived_at)) { ?>
-                <span class="text-danger ml-2">(Archived)</span>
+                <span class="text-danger ms-2">(Archived)</span>
             <?php } ?>
         </li>
     </ol>
@@ -85,13 +89,13 @@ $sql_attachments = mysqli_query(
         <div class="col-md-3 d-print-none">
             <div class="card card-sidebar">
                 <div class="card-header">
-                    <h5 class="card-title mb-0"><i class="fas fa-fw fa-info-circle mr-2"></i>Details</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-fw fa-info-circle me-2"></i>Details</h5>
                 </div>
                 <div class="card-body">
                     <p class="mb-2">
                         <strong>Scope</strong><br>
                         <?php if ($kb_article_client_id == 0) { ?>
-                            <span class="badge badge-info">Central (Company-wide)</span>
+                            <span class="badge text-bg-info">Central (Company-wide)</span>
                         <?php } else { ?>
                             <a href="client_overview.php?client_id=<?php echo $kb_article_client_id; ?>"><?php echo $kb_article_client_name; ?></a>
                         <?php } ?>
@@ -99,9 +103,9 @@ $sql_attachments = mysqli_query(
                     <p class="mb-2">
                         <strong>Client Portal</strong><br>
                         <?php if ($kb_article_client_visible == 1) { ?>
-                            <span class="badge badge-success">Visible</span>
+                            <span class="badge text-bg-success">Visible</span>
                         <?php } else { ?>
-                            <span class="badge badge-secondary">Hidden</span>
+                            <span class="badge text-bg-secondary">Hidden</span>
                         <?php } ?>
                     </p>
                     <p class="mb-0">
@@ -111,17 +115,17 @@ $sql_attachments = mysqli_query(
                 </div>
                 <div class="card-footer">
                     <button type="button" class="btn btn-primary btn-block ajax-modal mb-2" data-modal-size="lg" data-modal-url="modals/kb_article/kb_article_edit.php?id=<?php echo $kb_article_id; ?>">
-                        <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                        <i class="fas fa-fw fa-edit me-2"></i>Edit
                     </button>
                     <a class="btn btn-danger btn-block confirm-link" href="post.php?delete_kb_article=<?php echo $kb_article_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>">
-                        <i class="fas fa-fw fa-trash-alt mr-2"></i>Delete
+                        <i class="fas fa-fw fa-trash-alt me-2"></i>Delete
                     </a>
                 </div>
             </div>
 
             <div class="card card-sidebar mt-3 d-print-none">
                 <div class="card-header">
-                    <h5 class="card-title mb-0"><i class="fas fa-fw fa-paperclip mr-2"></i>Attachments</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-fw fa-paperclip me-2"></i>Attachments</h5>
                 </div>
                 <?php if (mysqli_num_rows($sql_attachments) > 0) { ?>
                 <ul class="list-group list-group-flush">
@@ -131,21 +135,21 @@ $sql_attachments = mysqli_query(
                         $att_ref = $att['kb_article_attachment_reference_name'];
                     ?>
                     <li class="list-group-item d-flex align-items-center justify-content-between">
-                        <span class="text-truncate mr-2"><i class="fas fa-fw fa-file mr-1"></i><?php echo $att_name; ?></span>
+                        <span class="text-truncate me-2"><i class="fas fa-fw fa-file me-1"></i><?php echo $att_name; ?></span>
                         <div class="dropdown dropleft text-center">
-                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                            <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window">
                                 <i class="fas fa-fw fa-ellipsis-v"></i>
                             </button>
                             <div class="dropdown-menu">
                                 <a target="_blank" class="dropdown-item" href="../uploads/kb/<?php echo $kb_article_id; ?>/<?php echo $att_ref; ?>">
-                                    <i class="fas fa-fw fa-eye mr-2"></i>View
+                                    <i class="fas fa-fw fa-eye me-2"></i>View
                                 </a>
                                 <a class="dropdown-item" download="<?php echo $att_name; ?>" href="../uploads/kb/<?php echo $kb_article_id; ?>/<?php echo $att_ref; ?>">
-                                    <i class="fas fa-fw fa-download mr-2"></i>Download
+                                    <i class="fas fa-fw fa-download me-2"></i>Download
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item text-danger confirm-link" href="post.php?delete_kb_article_attachment=<?php echo $att_id; ?>&kb_article_id=<?php echo $kb_article_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>">
-                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                 </a>
                             </div>
                         </div>
@@ -155,7 +159,7 @@ $sql_attachments = mysqli_query(
                 <?php } ?>
                 <div class="card-footer">
                     <button type="button" class="btn btn-secondary btn-block ajax-modal" data-modal-url="modals/kb_article/kb_article_attachment_add.php?kb_article_id=<?php echo $kb_article_id; ?>">
-                        <i class="fas fa-fw fa-upload mr-2"></i>Upload Attachment
+                        <i class="fas fa-fw fa-upload me-2"></i>Upload Attachment
                     </button>
                 </div>
             </div>

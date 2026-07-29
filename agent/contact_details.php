@@ -31,6 +31,12 @@ if (isset($_GET['contact_id'])) {
 
     $row = mysqli_fetch_assoc($sql);
     $client_id = intval($row['client_id']);
+    // The no-client_id branch above (inc_client_overview_all.php) applies no
+    // per-client filtering at all, so re-verify against the client this specific
+    // contact actually belongs to before rendering anything - closes the gap for both
+    // branches uniformly and is a harmless no-op when client_id was already in the URL.
+    // (mirrors agent/asset_details.php's fix for the identical pattern)
+    enforceClientAccess($client_id);
     $client_name = nullable_htmlentities($row['client_name']);
     $contact_name = nullable_htmlentities($row['contact_name']);
     $contact_title = nullable_htmlentities($row['contact_title']);
@@ -134,7 +140,7 @@ if (isset($_GET['contact_id'])) {
         }
 
         $contact_tag_id_array[] = $contact_tag_id;
-        $contact_tag_name_display_array[] = "<a href='client_contacts.php?client_id=$client_id&q=$contact_tag_name'><span class='badge " . tagTextClass($contact_tag_color) . " p-1 mr-1' style='background-color: $contact_tag_color;'><i class='fa fa-fw fa-$contact_tag_icon mr-2'></i>$contact_tag_name</span></a>";
+        $contact_tag_name_display_array[] = "<a href='client_contacts.php?client_id=$client_id&q=$contact_tag_name'><span class='badge " . tagTextClass($contact_tag_color) . " p-1 me-1' style='background-color: $contact_tag_color;'><i class='fa fa-fw fa-$contact_tag_icon me-2'></i>$contact_tag_name</span></a>";
     }
     $contact_tags_display = implode('', $contact_tag_name_display_array);
 
@@ -175,6 +181,18 @@ if (isset($_GET['contact_id'])) {
 
     $linked_files = array();
 
+    // CRM Engagement - activity timeline (this contact + its client)
+    require_once __DIR__ . '/modals/crm/crm_helpers.php';
+    $crm_activity_types = crmActivityTypes();
+
+    $sql_activities = mysqli_query($mysqli, "SELECT crm_activities.*, user_name
+        FROM crm_activities
+        LEFT JOIN users ON activity_owner = user_id
+        WHERE (activity_related_type = 'contact' AND activity_related_id = $contact_id)
+           OR (activity_related_type = 'client' AND activity_related_id = $client_id)
+        ORDER BY COALESCE(activity_at, activity_created_at) DESC, activity_id DESC");
+    $activity_count = mysqli_num_rows($sql_activities);
+
     ?>
 
     <div class="row">
@@ -183,7 +201,7 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark">
                 <div class="card-body">
-                    <button type="button" class="btn btn-default float-right ajax-modal"
+                    <button type="button" class="btn btn-default float-end ajax-modal"
                         data-modal-url="modals/contact/contact_edit.php?id=<?= $contact_id ?>">
                         <i class="fas fa-fw fa-user-edit"></i>
                     </button>
@@ -210,36 +228,36 @@ if (isset($_GET['contact_id'])) {
                     <?php } ?>
                     <hr>
                     <?php if ($location_name) { ?>
-                        <div><i class="fa fa-fw fa-map-marker-alt text-secondary mr-2"></i><?php echo $location_name; ?></div>
+                        <div><i class="fa fa-fw fa-map-marker-alt text-secondary me-2"></i><?php echo $location_name; ?></div>
                     <?php }
                     if ($contact_email) { ?>
-                        <div class="mt-2"><i class="fa fa-fw fa-envelope text-secondary mr-2"></i><a href='mailto:<?php echo $contact_email; ?>'><?php echo $contact_email; ?></a><button class='btn btn-sm clipboardjs' data-clipboard-text='<?php echo $contact_email; ?>'><i class='far fa-copy text-secondary'></i></button></div>
+                        <div class="mt-2"><i class="fa fa-fw fa-envelope text-secondary me-2"></i><a href='mailto:<?php echo $contact_email; ?>'><?php echo $contact_email; ?></a><button class='btn btn-sm clipboardjs' data-clipboard-text='<?php echo $contact_email; ?>'><i class='far fa-copy text-secondary'></i></button></div>
                     <?php }
                     if ($contact_phone) { ?>
-                        <div class="mt-2"><i class="fa fa-fw fa-phone text-secondary mr-2"></i><a href="tel:<?php echo "$contact_phone"?>"><?php echo $contact_phone; ?></a></div>
+                        <div class="mt-2"><i class="fa fa-fw fa-phone text-secondary me-2"></i><a href="tel:<?php echo "$contact_phone"?>"><?php echo $contact_phone; ?></a></div>
                     <?php }
                     if ($contact_extension) { ?>
-                        <div class="ml-4">x<?php echo $contact_extension; ?></div>
+                        <div class="ms-4">x<?php echo $contact_extension; ?></div>
                     <?php }
                     if ($contact_mobile) { ?>
-                        <div class="mt-l"><i class="fa fa-fw fa-mobile-alt text-secondary mr-2"></i><a href="tel:<?php echo $contact_mobile; ?>"><?php echo $contact_mobile; ?></a></div>
+                        <div class="mt-l"><i class="fa fa-fw fa-mobile-alt text-secondary me-2"></i><a href="tel:<?php echo $contact_mobile; ?>"><?php echo $contact_mobile; ?></a></div>
                     <?php }
                     if ($contact_pin) { ?>
-                        <div class="mt-2"><i class="fa fa-fw fa-key text-secondary mr-2"></i><?php echo $contact_pin; ?></div>
+                        <div class="mt-2"><i class="fa fa-fw fa-key text-secondary me-2"></i><?php echo $contact_pin; ?></div>
                     <?php }
                     if ($contact_primary) { ?>
-                        <div class="mt-2 text-success"><i class="fa fa-fw fa-check mr-2"></i>Primary Contact</div>
+                        <div class="mt-2 text-success"><i class="fa fa-fw fa-check me-2"></i>Primary Contact</div>
                     <?php }
                     if ($contact_important) { ?>
-                        <div class="mt-2 text-dark text-bold"><i class="fa fa-fw fa-check mr-2"></i>Important</div>
+                        <div class="mt-2 text-dark text-bold"><i class="fa fa-fw fa-check me-2"></i>Important</div>
                     <?php }
                     if ($contact_technical) { ?>
-                        <div class="mt-2"><i class="fa fa-fw fa-check text-secondary mr-2"></i>Technical</div>
+                        <div class="mt-2"><i class="fa fa-fw fa-check text-secondary me-2"></i>Technical</div>
                     <?php }
                     if ($contact_billing) { ?>
-                        <div class="mt-2"><i class="fa fa-fw fa-check text-secondary mr-2"></i>Billing</div>
+                        <div class="mt-2"><i class="fa fa-fw fa-check text-secondary me-2"></i>Billing</div>
                     <?php } ?>
-                    <div class="mt-2"><i class="fa fa-fw fa-clock text-secondary mr-2"></i><?php echo date('Y-m-d', strtotime($contact_created_at)); ?></div>
+                    <div class="mt-2"><i class="fa fa-fw fa-clock text-secondary me-2"></i><?php echo date('Y-m-d', strtotime($contact_created_at)); ?></div>
 
                 </div>
             </div>
@@ -248,7 +266,7 @@ if (isset($_GET['contact_id'])) {
                 <div class="card-header">
                     <h5 class="card-title">Notes</h5>
                 </div>
-                <textarea class="form-control" rows=6 id="contactNotes" placeholder="Notes, eg Personal tidbits to spark convo, temperment, etc" onblur="updateContactNotes(<?php echo $contact_id ?>)"><?php echo $contact_notes ?></textarea>
+                <textarea class="form-control" rows=6 id="contactNotes" placeholder="Notes, eg Personal tidbits to spark convo, temperment, etc" data-contact-id="<?php echo $contact_id ?>"><?php echo $contact_notes ?></textarea>
             </div>
 
         </div>
@@ -266,83 +284,147 @@ if (isset($_GET['contact_id'])) {
             </ol>
 
             <div class="btn-group mb-3">
-                <div class="dropdown dropleft mr-2">
-                    <button type="button" class="btn btn-primary" data-toggle="dropdown"><i class="fas fa-plus mr-2"></i>New</button>
+                <div class="dropdown dropleft me-2">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="dropdown" data-boundary="window"><i class="fas fa-plus me-2"></i>New</button>
                     <div class="dropdown-menu">
                         <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/ticket/ticket_add.php?<?= $client_url ?>&contact_id=<?= $contact_id ?>" data-modal-size="lg">
-                            <i class="fa fa-fw fa-life-ring mr-2"></i>New Ticket
+                            <i class="fa fa-fw fa-life-ring me-2"></i>New Ticket
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/recurring_ticket/recurring_ticket_add.php?<?= $client_url ?>&contact_id=<?= $contact_id ?>" data-modal-size="lg">
-                            <i class="fa fa-fw fa-recycle mr-2"></i>New Recurring Ticket
+                            <i class="fa fa-fw fa-recycle me-2"></i>New Recurring Ticket
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/asset/asset_add.php?<?= $client_url ?>&contact_id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-desktop mr-2"></i>New Asset
+                            <i class="fa fa-fw fa-desktop me-2"></i>New Asset
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/credential/credential_add.php?<?= $client_url ?>&contact_id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-key mr-2"></i>New Credential
+                            <i class="fa fa-fw fa-key me-2"></i>New Credential
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/document/document_add.php?<?= $client_url ?>&contact_id=<?= $contact_id ?>" data-modal-size="lg">
-                            <i class="fa fa-fw fa-file-alt mr-2"></i>New Document
+                            <i class="fa fa-fw fa-file-alt me-2"></i>New Document
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/file/file_upload.php?<?= $client_url ?>&contact_id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-upload mr-2"></i>Upload file(s)
+                            <i class="fa fa-fw fa-upload me-2"></i>Upload file(s)
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/contact/contact_note_add.php?id=<?= $contact_id ?>">
-                            <i class="fas fa-fw fa-sticky-note mr-2"></i>New Note
+                            <i class="fas fa-fw fa-sticky-note me-2"></i>New Note
                         </a>
                     </div>
                 </div>
 
                 <div class="dropdown dropleft">
-                    <button type="button" class="btn btn-outline-primary" data-toggle="dropdown"><i class="fas fa-link mr-2"></i>Link</button>
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="dropdown" data-boundary="window"><i class="fas fa-link me-2"></i>Link</button>
                     <div class="dropdown-menu">
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/contact/contact_link_asset.php?id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-desktop mr-2"></i>Asset
+                            <i class="fa fa-fw fa-desktop me-2"></i>Asset
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/contact/contact_link_software.php?id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-cube mr-2"></i>License
+                            <i class="fa fa-fw fa-cube me-2"></i>License
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/contact/contact_link_credential.php?id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-key mr-2"></i>Credential
+                            <i class="fa fa-fw fa-key me-2"></i>Credential
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/contact/contact_link_service.php?id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-stream mr-2"></i>Service
+                            <i class="fa fa-fw fa-stream me-2"></i>Service
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/contact/contact_link_document.php?id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-folder mr-2"></i>Document
+                            <i class="fa fa-fw fa-folder me-2"></i>Document
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/contact/contact_link_file.php?id=<?= $contact_id ?>">
-                            <i class="fa fa-fw fa-paperclip mr-2"></i>File
+                            <i class="fa fa-fw fa-paperclip me-2"></i>File
                         </a>
                     </div>
                 </div>
             </div>
 
+            <div class="card card-dark">
+                <div class="card-header py-2">
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-stream me-2"></i>Activity Timeline</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#logActivityModal">
+                            <i class="fas fa-plus me-2"></i>Log Activity
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <?php if ($activity_count == 0) { ?>
+                        <p class="text-secondary mb-0">No activity logged yet. Use <strong>Log Activity</strong> to record a call, email, meeting or note.</p>
+                    <?php } else {
+                        while ($row = mysqli_fetch_assoc($sql_activities)) {
+                            $a_id = intval($row['activity_id']);
+                            $a_type = strtolower($row['activity_type']);
+                            $a_meta = $crm_activity_types[$a_type] ?? ['label' => ucfirst($a_type), 'icon' => 'fa-sticky-note'];
+                            $a_subject = nullable_htmlentities($row['activity_subject']);
+                            $a_body = nl2br(nullable_htmlentities($row['activity_body']));
+                            $a_owner = nullable_htmlentities($row['user_name']);
+                            $a_at = nullable_htmlentities($row['activity_at']);
+                            $a_due = nullable_htmlentities($row['activity_due_at']);
+                            $a_reminder = nullable_htmlentities($row['activity_reminder_at']);
+                            $a_completed = intval($row['activity_completed']);
+                            $a_related_type = nullable_htmlentities($row['activity_related_type']);
+                            ?>
+                            <div class="media pb-3 mb-3 border-bottom">
+                                <span class="fa-stack me-3">
+                                    <i class="fas fa-circle fa-stack-2x text-secondary"></i>
+                                    <i class="fas <?= $a_meta['icon'] ?> fa-stack-1x fa-inverse"></i>
+                                </span>
+                                <div class="media-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <span class="badge text-bg-secondary"><?= $a_meta['label'] ?></span>
+                                            <?php if ($a_related_type == 'client') { ?>
+                                                <span class="badge text-bg-info" title="Logged against the client">Client</span>
+                                            <?php } ?>
+                                            <?php if ($a_subject) { ?><strong class="ms-1"><?= $a_subject ?></strong><?php } ?>
+                                        </div>
+                                        <small class="text-muted text-nowrap ms-2"><?= $a_at ?></small>
+                                    </div>
+                                    <?php if ($a_body) { ?><div class="mt-1"><?= $a_body ?></div><?php } ?>
+                                    <div class="mt-1 small text-muted">
+                                        <?php if ($a_owner) { ?><i class="fa fa-fw fa-user me-1"></i><?= $a_owner ?><?php } ?>
+                                        <?php if ($a_due) { ?><span class="ms-2"><i class="fa fa-fw fa-flag-checkered me-1"></i>Due <?= $a_due ?></span><?php } ?>
+                                        <?php if ($a_reminder) { ?><span class="ms-2"><i class="fa fa-fw fa-bell me-1"></i>Reminder <?= $a_reminder ?></span><?php } ?>
+                                    </div>
+                                    <?php if ($a_due || $a_reminder) {
+                                        if ($a_completed) { ?>
+                                            <span class="badge text-bg-success mt-1"><i class="fa fa-fw fa-check me-1"></i>Completed</span>
+                                        <?php } else { ?>
+                                            <button type="button" class="btn btn-outline-success btn-sm mt-1 crm-complete-activity" data-activity-id="<?= $a_id ?>">
+                                                <i class="fa fa-fw fa-check me-1"></i>Mark Complete
+                                            </button>
+                                        <?php }
+                                    } ?>
+                                </div>
+                            </div>
+                        <?php }
+                    } ?>
+                </div>
+            </div>
+
             <div class="card card-dark <?php if ($asset_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header py-2">
-                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-desktop mr-2"></i>Related Assets</h3>
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-desktop me-2"></i>Related Assets</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary ajax-modal"
                             data-modal-url="modals/contact/contact_link_asset.php?id=<?= $contact_id ?>">
-                            <i class="fas fa-link mr-2"></i>Link Asset
+                            <i class="fas fa-link me-2"></i>Link Asset
                         </button>
                     </div>
                 </div>
@@ -427,14 +509,14 @@ if (isset($_GET['contact_id'])) {
                                     }
 
                                     $asset_tag_id_array[] = $asset_tag_id;
-                                    $asset_tag_name_display_array[] = "<a href='assets.php?$client_url tags[]=$asset_tag_id'><span class='badge " . tagTextClass($asset_tag_color) . " p-1 mr-1' style='background-color: $asset_tag_color;'><i class='fa fa-fw fa-$asset_tag_icon mr-2'></i>$asset_tag_name</span></a>";
+                                    $asset_tag_name_display_array[] = "<a href='assets.php?$client_url tags[]=$asset_tag_id'><span class='badge " . tagTextClass($asset_tag_color) . " p-1 me-1' style='background-color: $asset_tag_color;'><i class='fa fa-fw fa-$asset_tag_icon me-2'></i>$asset_tag_name</span></a>";
                                 }
                                 $asset_tags_display = implode('', $asset_tag_name_display_array);
 
                                 ?>
                                 <tr>
                                     <th>
-                                        <i class="fa fa-fw text-secondary fa-<?= $device_icon ?> mr-1"></i>
+                                        <i class="fa fa-fw text-secondary fa-<?= $device_icon ?> me-1"></i>
                                         <a class="text-secondary ajax-modal" href="#"
                                             data-modal-size="lg"
                                             data-modal-url="modals/asset/asset_details.php?id=<?= $asset_id ?>">
@@ -464,29 +546,29 @@ if (isset($_GET['contact_id'])) {
                                     <td><?= $asset_status ?></td>
                                     <td>
                                         <div class="dropdown dropleft text-center">
-                                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown"><i class="fas fa-ellipsis-h"></i></button>
+                                            <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window"><i class="fas fa-ellipsis-h"></i></button>
                                             <div class="dropdown-menu">
                                                 <a class="dropdown-item ajax-modal" href="#"
                                                     data-modal-url="modals/asset/asset_edit.php?id=<?= $asset_id ?>">
-                                                    <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                                    <i class="fas fa-fw fa-edit me-2"></i>Edit
                                                 </a>
                                                 <a class="dropdown-item ajax-modal" href="#"
                                                     data-modal-url="modals/asset/asset_copy.php?id=<?= $asset_id ?>">
-                                                    <i class="fas fa-fw fa-copy mr-2"></i>Copy
+                                                    <i class="fas fa-fw fa-copy me-2"></i>Copy
                                                 </a>
                                                 <div class="dropdown-divider"></div>
                                                 <a class="dropdown-item"
                                                     href="post.php?unlink_asset_from_contact&contact_id=<?= $contact_id ?>&asset_id=<?= $asset_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                                                     class="btn btn-secondary btn-sm" title="Unlink">
-                                                    <i class="fas fa-fw fa-unlink mr-2"></i>Unlink
+                                                    <i class="fas fa-fw fa-unlink me-2"></i>Unlink
                                                 </a>
                                                 <?php if ($session_user_role == 3) { ?>
                                                     <div class="dropdown-divider"></div>
                                                     <a class="dropdown-item text-danger" href="post.php?archive_asset=<?= $asset_id ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                        <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                        <i class="fas fa-fw fa-archive me-2"></i>Archive
                                                     </a>
                                                     <a class="dropdown-item text-danger text-bold" href="post.php?delete_asset=<?=  $asset_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                     </a>
                                                 <?php } ?>
                                             </div>
@@ -511,10 +593,10 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark <?php if ($credential_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header py-2">
-                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-key mr-2"></i>Credentials</h3>
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-key me-2"></i>Credentials</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/contact/contact_link_credential.php?id=<?= $contact_id ?>">
-                            <i class="fas fa-link mr-2"></i>Link Credential
+                            <i class="fas fa-link me-2"></i>Link Credential
                         </button>
                     </div>
                 </div>
@@ -583,7 +665,7 @@ if (isset($_GET['contact_id'])) {
                                     }
 
                                     $credential_tag_id_array[] = $credential_tag_id;
-                                    $credential_tag_name_display_array[] = "<a href='credentials.php?client_id=$client_id&tags[]=$credential_tag_id'><span class='badge " . tagTextClass($credential_tag_color) . " p-1 mr-1' style='background-color: $credential_tag_color;'><i class='fa fa-fw fa-$credential_tag_icon mr-2'></i>$credential_tag_name</span></a>";
+                                    $credential_tag_name_display_array[] = "<a href='credentials.php?client_id=$client_id&tags[]=$credential_tag_id'><span class='badge " . tagTextClass($credential_tag_color) . " p-1 me-1' style='background-color: $credential_tag_color;'><i class='fa fa-fw fa-$credential_tag_icon me-2'></i>$credential_tag_name</span></a>";
                                 }
                                 $credential_tags_display = implode('', $credential_tag_name_display_array);
 
@@ -599,33 +681,33 @@ if (isset($_GET['contact_id'])) {
                                     <td><?php echo $credential_description; ?></td>
                                     <td><?php echo $credential_username_display; ?></td>
                                     <td>
-                                        <button class="btn p-0" type="button" data-toggle="popover" data-trigger="focus" data-placement="top" data-content="<?php echo $credential_password; ?>"><i class="fas fa-2x fa-ellipsis-h text-secondary"></i><i class="fas fa-2x fa-ellipsis-h text-secondary"></i></button><button class="btn btn-sm clipboardjs" data-clipboard-text="<?php echo $credential_password; ?>"><i class="far fa-copy text-secondary"></i></button>
+                                        <button class="btn p-0" type="button" data-bs-toggle="popover" data-trigger="focus" data-placement="top" data-content="<?php echo $credential_password; ?>"><i class="fas fa-2x fa-ellipsis-h text-secondary"></i><i class="fas fa-2x fa-ellipsis-h text-secondary"></i></button><button class="btn btn-sm clipboardjs" data-clipboard-text="<?php echo $credential_password; ?>"><i class="far fa-copy text-secondary"></i></button>
                                     </td>
                                     <td><?php echo $otp_display; ?></td>
                                     <td><?php echo $credential_uri_display; ?></td>
                                     <td>
                                         <div class="dropdown dropleft text-center">
-                                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                            <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window">
                                                 <i class="fas fa-ellipsis-h"></i>
                                             </button>
                                             <div class="dropdown-menu">
                                                 <a class="dropdown-item ajax-modal" href="#"
                                                     data-modal-url="modals/credential/credential_edit.php?id=<?= $credential_id ?>">
-                                                    <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                                    <i class="fas fa-fw fa-edit me-2"></i>Edit
                                                 </a>
-                                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'Credential', $credential_id"; ?>)">
-                                                    <i class="fas fa-fw fa-share-alt mr-2"></i>Share
+                                                <a class="dropdown-item share-link-trigger" href="#" data-bs-toggle="modal" data-bs-target="#shareModal" data-client-id="<?php echo $client_id; ?>" data-item-type="Credential" data-item-ref-id="<?php echo $credential_id; ?>">
+                                                    <i class="fas fa-fw fa-share-alt me-2"></i>Share
                                                 </a>
                                                 <div class="dropdown-divider"></div>
                                                 <a class="dropdown-item"
                                                     href="post.php?unlink_credential_from_contact&contact_id=<?php echo $contact_id; ?>&credential_id=<?php echo $credential_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                                                     class="btn btn-secondary btn-sm" title="Unlink">
-                                                    <i class="fas fa-fw fa-unlink mr-2"></i>Unlink
+                                                    <i class="fas fa-fw fa-unlink me-2"></i>Unlink
                                                 </a>
                                                 <?php if ($session_user_role == 3) { ?>
                                                     <div class="dropdown-divider"></div>
                                                     <a class="dropdown-item text-danger text-bold" href="post.php?delete_credential=<?php echo $credential_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                     </a>
                                                 <?php } ?>
                                             </div>
@@ -650,10 +732,10 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark <?php if ($software_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header py-2">
-                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-cube mr-2"></i>Related Licenses</h3>
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-cube me-2"></i>Related Licenses</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/contact/contact_link_software.php?id=<?= $contact_id ?>">
-                            <i class="fas fa-link mr-2"></i>Link License
+                            <i class="fas fa-link me-2"></i>Link License
                         </button>
                     </div>
                 </div>
@@ -731,7 +813,7 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark <?php if ($recurring_ticket_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fa fa-fw fa-recycle mr-2"></i>Recurring Tickets</h3>
+                    <h3 class="card-title"><i class="fa fa-fw fa-recycle me-2"></i>Recurring Tickets</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive-sm">
@@ -767,23 +849,23 @@ if (isset($_GET['contact_id'])) {
                                     <td><?php echo $recurring_ticket_next_run ?></td>
                                     <td>
                                         <div class="dropdown dropleft text-center">
-                                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                            <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window">
                                                 <i class="fas fa-ellipsis-h"></i>
                                             </button>
                                             <div class="dropdown-menu">
                                                 <a class="dropdown-item ajax-modal" href="#"
                                                     data-modal-url="modals/recurring_ticket/recurring_ticket_edit.php?id=<?= $recurring_ticket_id ?>">
-                                                    <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                                    <i class="fas fa-fw fa-edit me-2"></i>Edit
                                                 </a>
                                                 <div class="dropdown-divider"></div>
                                                 <a class="dropdown-item" href="post.php?force_recurring_ticket=<?php echo $recurring_ticket_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                    <i class="fa fa-fw fa-paper-plane text-secondary mr-2"></i>Force Reoccur
+                                                    <i class="fa fa-fw fa-paper-plane text-secondary me-2"></i>Force Reoccur
                                                 </a>
                                                 <?php
                                                 if ($session_user_role == 3) { ?>
                                                 <div class="dropdown-divider"></div>
                                                 <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_recurring_ticket=<?php echo $recurring_ticket_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                 </a>
                                             </div>
                                             <?php } ?>
@@ -801,12 +883,12 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark <?php if ($ticket_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header py-2">
-                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-life-ring mr-2"></i>Related Tickets</h3>
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-life-ring me-2"></i>Related Tickets</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary ajax-modal"
                             data-modal-url="modals/ticket/ticket_add.php?<?= $client_url ?>&contact_id=<?= $contact_id ?>"
                             data-modal-size="lg">
-                            <i class="fas fa-plus mr-2"></i>New Ticket
+                            <i class="fas fa-plus me-2"></i>New Ticket
                         </button>
                     </div>
                 </div>
@@ -850,11 +932,11 @@ if (isset($_GET['contact_id'])) {
                                 $ticket_closed_at = nullable_htmlentities($row['ticket_closed_at']);
 
                                 if ($ticket_priority == "High") {
-                                    $ticket_priority_display = "<span class='p-2 badge badge-danger'>$ticket_priority</span>";
+                                    $ticket_priority_display = "<span class='p-2 badge text-bg-danger'>$ticket_priority</span>";
                                 } elseif ($ticket_priority == "Medium") {
-                                    $ticket_priority_display = "<span class='p-2 badge badge-warning'>$ticket_priority</span>";
+                                    $ticket_priority_display = "<span class='p-2 badge text-bg-warning'>$ticket_priority</span>";
                                 } elseif ($ticket_priority == "Low") {
-                                    $ticket_priority_display = "<span class='p-2 badge badge-info'>$ticket_priority</span>";
+                                    $ticket_priority_display = "<span class='p-2 badge text-bg-info'>$ticket_priority</span>";
                                 } else {
                                     $ticket_priority_display = "-";
                                 }
@@ -872,10 +954,10 @@ if (isset($_GET['contact_id'])) {
                                 ?>
 
                                 <tr>
-                                    <td><a href="ticket.php?client_id=<?php echo $client_id; ?>&ticket_id=<?php echo $ticket_id; ?>"><span class="badge badge-pill badge-secondary p-3"><?php echo "$ticket_prefix$ticket_number"; ?></span></a></td>
+                                    <td><a href="ticket.php?client_id=<?php echo $client_id; ?>&ticket_id=<?php echo $ticket_id; ?>"><span class="badge rounded-pill text-bg-secondary p-3"><?php echo "$ticket_prefix$ticket_number"; ?></span></a></td>
                                     <td><a href="ticket.php?client_id=<?php echo $client_id; ?>&ticket_id=<?php echo $ticket_id; ?>"><?php echo $ticket_subject; ?></a></td>
                                     <td><?php echo $ticket_priority_display; ?></td>
-                                    <td><span class='badge badge-pill text-light p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span></td>
+                                    <td><span class='badge rounded-pill <?php echo tagTextClass($ticket_status_color); ?> p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span></td>
                                     <td><?php echo $ticket_assigned_to_display; ?></td>
                                     <td><?php echo $ticket_updated_at_display; ?></td>
                                     <td><?php echo $ticket_created_at; ?></td>
@@ -895,10 +977,10 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark <?php if ($service_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header py-2">
-                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-stream mr-2"></i>Linked Services</h3>
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-stream me-2"></i>Linked Services</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/contact/contact_link_service.php?id=<?= $contact_id ?>">
-                            <i class="fas fa-link mr-2"></i>Link Service
+                            <i class="fas fa-link me-2"></i>Link Service
                         </button>
                     </div>
                 </div>
@@ -953,10 +1035,10 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark <?php if ($document_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header py-2">
-                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-folder mr-2"></i>Linked Documents</h3>
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-folder me-2"></i>Linked Documents</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/contact/contact_link_document.php?id=<?= $contact_id ?>">
-                            <i class="fas fa-link mr-2"></i>Link Document
+                            <i class="fas fa-link me-2"></i>Link Document
                         </button>
                     </div>
                 </div>
@@ -1019,10 +1101,10 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark <?php if ($file_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header py-2">
-                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-folder mr-2"></i>Linked Files</h3>
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-folder me-2"></i>Linked Files</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/contact/contact_link_file.php?id=<?= $contact_id ?>">
-                            <i class="fas fa-link mr-2"></i>Link File
+                            <i class="fas fa-link me-2"></i>Link File
                         </button>
                     </div>
                 </div>
@@ -1082,11 +1164,11 @@ if (isset($_GET['contact_id'])) {
 
             <div class="card card-dark <?php if ($note_count == 0) { echo "d-none"; } ?>">
                 <div class="card-header py-2">
-                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-sticky-note mr-2"></i>Notes</h3>
+                    <h3 class="card-title mt-2"><i class="fa fa-fw fa-sticky-note me-2"></i>Notes</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary ajax-modal"
                             data-modal-url="modals/contact/contact_note_add.php?id=<?= $contact_id ?>">
-                            <i class="fas fa-plus mr-2"></i>New Note
+                            <i class="fas fa-plus me-2"></i>New Note
                         </button>
                     </div>
                 </div>
@@ -1126,23 +1208,23 @@ if (isset($_GET['contact_id'])) {
                                 ?>
 
                                 <tr>
-                                    <td><i class="fa fa-fw <?php echo $note_type_icon; ?> mr-2"></i><?php echo $contact_note_type; ?></td>
+                                    <td><i class="fa fa-fw <?php echo $note_type_icon; ?> me-2"></i><?php echo $contact_note_type; ?></td>
                                     <td><?php echo $contact_note; ?></td>
                                     <td><?php echo $note_by; ?></td>
                                     <td><?php echo $contact_note_created_at; ?></td>
                                     <td>
                                         <div class="dropdown dropleft text-center">
-                                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                            <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window">
                                                 <i class="fas fa-ellipsis-h"></i>
                                             </button>
                                             <div class="dropdown-menu">
                                                 <a class="dropdown-item text-danger" href="post.php?archive_contact_note=<?php echo $contact_note_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                    <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                    <i class="fas fa-fw fa-archive me-2"></i>Archive
                                                 </a>
                                                 <?php if ($session_user_role == 3) { ?>
                                                     <div class="dropdown-divider"></div>
                                                     <a class="dropdown-item text-danger text-bold" href="post.php?delete_contact_note=<?php echo $contact_note_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                     </a>
                                                 <?php } ?>
                                             </div>
@@ -1172,9 +1254,96 @@ if (isset($_GET['contact_id'])) {
 
     ?>
 
+    <!-- CRM Engagement - Log Activity modal -->
+    <div class="modal fade" id="logActivityModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-dark">
+                    <h5 class="modal-title"><i class="fas fa-fw fa-stream me-2"></i>Log Activity</h5>
+                    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <form id="logActivityForm" autocomplete="off">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Type <strong class="text-danger">*</strong></label>
+                            <select class="form-control" name="activity_type" required>
+                                <?php foreach ($crm_activity_types as $ct_key => $ct_meta) { ?>
+                                    <option value="<?= $ct_key ?>"><?= $ct_meta['label'] ?></option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" class="form-control" name="subject" maxlength="255" placeholder="Short summary">
+                        </div>
+                        <div class="form-group">
+                            <label>Details</label>
+                            <textarea class="form-control" name="body" rows="4" placeholder="What happened / next steps"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Follow-up Due <small class="text-secondary">(optional)</small></label>
+                                <input type="datetime-local" class="form-control" name="due_at">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Reminder <small class="text-secondary">(optional)</small></label>
+                                <input type="datetime-local" class="form-control" name="reminder_at">
+                            </div>
+                        </div>
+                        <small class="text-muted">A reminder creates an in-app notification for you at the chosen time.</small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Log Activity</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+        function completeActivity(activity_id) {
+            jQuery.post("crm_ajax.php?complete_activity", {
+                csrf_token: '<?= $_SESSION['csrf_token'] ?>',
+                activity_id: activity_id
+            }, function () {
+                location.reload();
+            });
+        }
+
+        // Strict-CSP-safe: bind Mark Complete buttons via listeners (no inline onclick)
+        document.querySelectorAll('.crm-complete-activity').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                completeActivity(btn.getAttribute('data-activity-id'));
+            });
+        });
+
+        document.getElementById('logActivityForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            var f = e.target;
+            jQuery.post("crm_ajax.php?log_activity", {
+                csrf_token: '<?= $_SESSION['csrf_token'] ?>',
+                related_type: 'contact',
+                related_id: <?= $contact_id ?>,
+                activity_type: f.activity_type.value,
+                subject: f.subject.value,
+                body: f.body.value,
+                due_at: f.due_at.value,
+                reminder_at: f.reminder_at.value
+            }, function (data) {
+                var res = (typeof data === 'string') ? JSON.parse(data) : data;
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert(res.message || 'Error logging activity');
+                }
+            });
+        });
+    </script>
+
 <?php } ?>
 
-    <script>
+    <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
         function updateContactNotes(contact_id) {
             var notes = document.getElementById("contactNotes").value;
 
@@ -1189,10 +1358,16 @@ if (isset($_GET['contact_id'])) {
                 }
             )
         }
+        // The textarea used to call this via an inline onblur=, silently
+        // blocked by this app's CSP - quick notes never actually saved.
+        document.addEventListener('blur', function (e) {
+            var el = e.target.closest && e.target.closest('#contactNotes');
+            if (el) { updateContactNotes(el.dataset.contactId); }
+        }, true);
     </script>
 
     <!-- JavaScript to Show/Hide Password Form Group -->
-    <script>
+    <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 
         function generatePassword(type, id) {
             // Send a GET request to ajax.php as ajax.php?get_readable_pass=true

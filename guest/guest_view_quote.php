@@ -117,10 +117,10 @@ if ($quote_status == "Draft" || $quote_status == "Sent" || $quote_status == "Vie
 
     <div class="card-header d-print-none">
 
-        <div class="float-right">
-            <a class="btn btn-primary" href="#" onclick="window.print();"><i class="fas fa-fw fa-print mr-2"></i>Print</a>
+        <div class="float-end">
+            <a class="btn btn-primary js-print-page" href="#"><i class="fas fa-fw fa-print me-2"></i>Print</a>
             <a class="btn btn-primary" href="guest_post.php?export_quote_pdf=<?php echo $quote_id; ?>&url_key=<?php echo $url_key; ?>">
-                <i class="fa fa-fw fa-download mr-2"></i>Download
+                <i class="fa fa-fw fa-download me-2"></i>Download
             </a>
         </div>
     </div>
@@ -143,22 +143,22 @@ if ($quote_status == "Draft" || $quote_status == "Sent" || $quote_status == "Vie
             </div>
 
             <div class="col-sm-4">
-                <h3 class="text-right"><strong>QUOTE</strong></h3>
-                <h5 class="badge badge-<?php echo $quote_badge_color; ?> p-2 float-right">
+                <h3 class="text-end"><strong>QUOTE</strong></h3>
+                <h5 class="badge badge-<?php echo $quote_badge_color; ?> p-2 float-end">
                     <?php echo "$quote_status"; ?>
                 </h5>
                 <table class="table table-sm table-borderless">
                     <tr>
                         <th>Quote #:</th>
-                        <td class="text-right"><?php echo "$quote_prefix$quote_number"; ?></td>
+                        <td class="text-end"><?php echo "$quote_prefix$quote_number"; ?></td>
                     </tr>
                     <tr>
                         <th>Date:</th>
-                        <td class="text-right"><?php echo $quote_date; ?></td>
+                        <td class="text-end"><?php echo $quote_date; ?></td>
                     </tr>
                     <tr>
                         <th>Expires:</th>
-                        <td class="text-right"><?php echo $quote_expire; ?></td>
+                        <td class="text-end"><?php echo $quote_expire; ?></td>
                     </tr>
                 </table>
             </div>
@@ -188,9 +188,9 @@ if ($quote_status == "Draft" || $quote_status == "Sent" || $quote_status == "Vie
                                 <th>Item</th>
                                 <th>Description</th>
                                 <th class="text-center">Qty</th>
-                                <th class="text-right">Unit Price</th>
-                                <th class="text-right">Tax</th>
-                                <th class="text-right">Amount</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Tax</th>
+                                <th class="text-end">Amount</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -215,9 +215,9 @@ if ($quote_status == "Draft" || $quote_status == "Sent" || $quote_status == "Vie
                                     <td><?php echo $item_name; ?></td>
                                     <td><?php echo nl2br($item_description); ?></td>
                                     <td class="text-center"><?php echo $item_quantity; ?></td>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $item_price, $quote_currency_code); ?></td>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $item_tax, $quote_currency_code); ?></td>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $item_total, $quote_currency_code); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $item_price, $quote_currency_code); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $item_tax, $quote_currency_code); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $item_total, $quote_currency_code); ?></td>
                                 </tr>
 
                                 <?php
@@ -249,23 +249,23 @@ if ($quote_status == "Draft" || $quote_status == "Sent" || $quote_status == "Vie
                     <tbody>
                     <tr>
                         <td>Subtotal:</td>
-                        <td class="text-right"><?php echo numfmt_format_currency($currency_format, $sub_total, $quote_currency_code); ?></td>
+                        <td class="text-end"><?php echo numfmt_format_currency($currency_format, $sub_total, $quote_currency_code); ?></td>
                     </tr>
                     <?php if ($quote_discount > 0) { ?>
                         <tr>
                             <td>Discount:</td>
-                            <td class="text-right"><?php echo numfmt_format_currency($currency_format, -$quote_discount, $quote_currency_code); ?></td>
+                            <td class="text-end"><?php echo numfmt_format_currency($currency_format, -$quote_discount, $quote_currency_code); ?></td>
                         </tr>
                     <?php } ?>
                     <?php if ($total_tax > 0) { ?>
                         <tr>
                             <td>Tax:</td>
-                            <td class="text-right"><?php echo numfmt_format_currency($currency_format, $total_tax, $quote_currency_code); ?></td>
+                            <td class="text-end"><?php echo numfmt_format_currency($currency_format, $total_tax, $quote_currency_code); ?></td>
                         </tr>
                     <?php } ?>
                     <tr class="border-top h5 text-bold">
                         <td><strong>Total:</strong></td>
-                        <td class="text-right"><strong><?php echo numfmt_format_currency($currency_format, $quote_amount, $quote_currency_code); ?></strong></td>
+                        <td class="text-end"><strong><?php echo numfmt_format_currency($currency_format, $quote_amount, $quote_currency_code); ?></strong></td>
                     </tr>
                     </tbody>
                 </table>
@@ -278,16 +278,24 @@ if ($quote_status == "Draft" || $quote_status == "Sent" || $quote_status == "Vie
         <div class="">
             <?php
                 if ($quote_status == "Sent" || $quote_status == "Viewed" && strtotime($quote_expire) > strtotime("now")) { ?>
-                    <a class="btn btn-success confirm-link" href="guest_post.php?accept_quote=<?php echo $quote_id; ?>&url_key=<?php echo $url_key; ?>">
-                        <i class="fas fa-fw fa-thumbs-up mr-2"></i>Accept
-                    </a>
-                    <a class="btn btn-danger confirm-link" href="guest_post.php?decline_quote=<?php echo $quote_id; ?>&url_key=<?php echo $url_key; ?>">
-                        <i class="fas fa-fw fa-thumbs-down mr-2"></i>Decline
-                    </a>
+                    <form method="post" action="guest_post.php" class="d-inline">
+                        <input type="hidden" name="accept_quote" value="<?php echo $quote_id; ?>">
+                        <input type="hidden" name="url_key" value="<?php echo $url_key; ?>">
+                        <button type="submit" class="btn btn-success confirm-link">
+                            <i class="fas fa-fw fa-thumbs-up me-2"></i>Accept
+                        </button>
+                    </form>
+                    <form method="post" action="guest_post.php" class="d-inline">
+                        <input type="hidden" name="decline_quote" value="<?php echo $quote_id; ?>">
+                        <input type="hidden" name="url_key" value="<?php echo $url_key; ?>">
+                        <button type="submit" class="btn btn-danger confirm-link">
+                            <i class="fas fa-fw fa-thumbs-down me-2"></i>Decline
+                        </button>
+                    </form>
                 <?php } ?>
                 <?php if ($quote_status == "Accepted") { ?>
-                    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#uploadFileModal">
-                        <i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Upload File
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadFileModal">
+                        <i class="fas fa-fw fa-cloud-upload-alt me-2"></i>Upload File
                     </button>
                 <?php } ?>
         </div>

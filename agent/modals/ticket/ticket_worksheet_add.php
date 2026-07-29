@@ -4,8 +4,8 @@ $ticket_id = intval($_GET['ticket_id']);
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-clipboard-list mr-2"></i>Add Worksheet to Ticket</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fa fa-fw fa-clipboard-list me-2"></i>Add Worksheet to Ticket</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -27,15 +27,15 @@ ob_start();
             </select>
         </div>
         <div class="form-group">
-            <div class="custom-control custom-switch">
-                <input type="checkbox" class="custom-control-input" id="isOuttake" name="is_outtake" value="1">
-                <label class="custom-control-label" for="isOuttake"><strong>Is Required</strong> <small class="text-secondary">(ticket cannot close until finalized)</small></label>
+            <div class="form-check form-check form-switch">
+                <input type="checkbox" class="form-check-input" id="isOuttake" name="is_outtake" value="1">
+                <label class="form-check-label" for="isOuttake"><strong>Is Required</strong> <small class="text-secondary">(ticket cannot close until finalized)</small></label>
             </div>
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_ticket_worksheet" class="btn btn-primary"><i class="fa fa-check mr-2"></i>Add Worksheet</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_ticket_worksheet" class="btn btn-primary"><i class="fa fa-check me-2"></i>Add Worksheet</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 <?php require_once '../../../includes/modal_footer.php'; ?>

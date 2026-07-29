@@ -47,7 +47,7 @@ $sql_task_templates = mysqli_query($mysqli, "SELECT * FROM task_templates WHERE 
     <li class="breadcrumb-item">
         <a href="ticket_template.php">Ticket Templates</a>
     </li>
-    <li class="breadcrumb-item active"><i class="fas fa-life-ring mr-2"></i><?php echo $ticket_template_name; ?></li>
+    <li class="breadcrumb-item active"><i class="fas fa-life-ring me-2"></i><?php echo $ticket_template_name; ?></li>
 </ol>
 
 <div class="row">
@@ -57,7 +57,7 @@ $sql_task_templates = mysqli_query($mysqli, "SELECT * FROM task_templates WHERE 
             <div class="card-header">
                 <h3 class="card-title mt-1"><?php echo $ticket_template_name; ?></h3>
                 <div class="card-tools">
-                    <button type="button" class="btn btn-tool btn-sm" data-toggle="modal" data-target="#editTicketTemplateModal">
+                    <button type="button" class="btn btn-tool btn-sm" data-bs-toggle="modal" data-bs-target="#editTicketTemplateModal">
                         <i class="fas fa-edit"></i>
                     </button>
                 </div>
@@ -73,7 +73,7 @@ $sql_task_templates = mysqli_query($mysqli, "SELECT * FROM task_templates WHERE 
 
         <div class="card card-dark">
             <div class="card-header">
-                <h5 class="card-title"><i class="fa fa-fw fa-tasks mr-2"></i>Tasks</h5>
+                <h5 class="card-title"><i class="fa fa-fw fa-tasks me-2"></i>Tasks</h5>
             </div>
             <div class="card-body">
                 <form action="post.php" method="post" autocomplete="off">
@@ -98,23 +98,23 @@ $sql_task_templates = mysqli_query($mysqli, "SELECT * FROM task_templates WHERE 
                         ?>
                         <tr data-task-id="<?php echo $task_id; ?>">
                             <td>
-                                <a href="#" class="drag-handle"><i class="fas fa-bars text-muted mr-2"></i></a>
+                                <a href="#" class="drag-handle"><i class="fas fa-bars text-muted me-2"></i></a>
                                 <span class="text-dark"><?php echo $task_name; ?></span>
                             </td>
-                            <td class="text-right">
-                                <div class="float-right">
+                            <td class="text-end">
+                                <div class="float-end">
                                     <div class="dropdown dropleft text-center">
-                                        <button class="btn btn-light text-secondary btn-sm" type="button" data-toggle="dropdown">
+                                        <button class="btn btn-light text-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window">
                                             <i class="fas fa-ellipsis-v"></i>
                                         </button>
                                         <div class="dropdown-menu">
                                             <a class="dropdown-item ajax-modal" href="#"
                                                 data-modal-url="modals/ticket_template/ticket_template_task_edit.php?id=<?= $task_id ?>">
-                                                <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                                <i class="fas fa-fw fa-edit me-2"></i>Edit
                                             </a>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-danger confirm-link" href="post.php?delete_task_template=<?php echo $task_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-trash-alt mr-2"></i>Delete
+                                                <i class="fas fa-fw fa-trash-alt me-2"></i>Delete
                                             </a>
                                         </div>
                                     </div>
@@ -135,7 +135,7 @@ $sql_task_templates = mysqli_query($mysqli, "SELECT * FROM task_templates WHERE 
 <script src="../js/pretty_content.js"></script>
 
 <script src="../plugins/SortableJS/Sortable.min.js"></script>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 new Sortable(document.querySelector('table#tasks tbody'), {
     handle: '.drag-handle',
     animation: 150,

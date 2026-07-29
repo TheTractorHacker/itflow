@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support', 2);
+
 $location_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM locations WHERE location_id = $location_id LIMIT 1");
@@ -16,7 +18,7 @@ $location_state = nullable_htmlentities($row['location_state']);
 $location_zip = nullable_htmlentities($row['location_zip']);
 $location_phone_country_code = nullable_htmlentities($row['location_phone_country_code']);
 $location_phone = nullable_htmlentities(formatPhoneNumber($row['location_phone'], $location_phone_country_code));
-//$location_extension = intval($row['location_extension']);
+$location_extension = nullable_htmlentities($row['location_extension']);
 $location_fax_country_code = nullable_htmlentities($row['location_fax_country_code']);
 $location_fax = nullable_htmlentities(formatPhoneNumber($row['location_fax'], $location_fax_country_code));
 $location_hours = nullable_htmlentities($row['location_hours']);
@@ -27,6 +29,7 @@ $location_archived_at = nullable_htmlentities($row['location_archived_at']);
 $location_contact_id = intval($row['location_contact_id']);
 $client_id = intval($row['location_client_id']);
 $location_primary = intval($row['location_primary']);
+enforceClientAccess($client_id);
 
 // Tags
 $location_tag_id_array = array();
@@ -41,8 +44,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-map-marker-alt mr-2"></i>Editing location: <strong><?php echo $location_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-map-marker-alt me-2"></i>Editing location: <strong><?php echo $location_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -54,16 +57,16 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-details<?php echo $location_id; ?>">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-details<?php echo $location_id; ?>">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-address<?php echo $location_id; ?>">Address</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-address<?php echo $location_id; ?>">Address</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-contact<?php echo $location_id; ?>">Contact</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-contact<?php echo $location_id; ?>">Contact</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-notes<?php echo $location_id; ?>">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-notes<?php echo $location_id; ?>">Notes</a>
             </li>
         </ul>
 
@@ -281,7 +284,7 @@ ob_start();
                     </div>
                 </div>
 
-                <p class="text-muted text-right">Location ID: <?= $location_id ?></p>
+                <p class="text-muted text-end">Location ID: <?= $location_id ?></p>
 
             </div>
 
@@ -289,8 +292,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_location" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_location" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

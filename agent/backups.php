@@ -39,6 +39,10 @@ $open_alert_count = count($open_alert_for);
 $filter_client_id = intval($_GET['client_id'] ?? 0);
 $filter_search     = trim((string) ($_GET['q'] ?? ''));
 
+// Client-scope restriction, matching agent/alerts.php's pattern: a tech restricted via
+// user_client_permissions must only see backup devices for their permitted clients.
+$access_client_ids = ($client_access_string && !$session_is_admin) ? array_map('intval', explode(',', $client_access_string)) : null;
+
 // Counts for summary bar
 $total_devices = 0; $ok = 0; $warn = 0; $fail = 0; $unknown = 0;
 $device_rows   = []; // flat list for the table
@@ -51,6 +55,12 @@ if ($comet_users) {
 
         // Client filter applies before counting, so the summary boxes match what's shown
         if ($filter_client_id && (!$client || $client['id'] !== $filter_client_id)) {
+            continue;
+        }
+
+        // Client-scope restriction (see $access_client_ids above) - applied before
+        // counting for the same reason as the explicit filter above.
+        if ($access_client_ids !== null && (!$client || !in_array($client['id'], $access_client_ids, true))) {
             continue;
         }
 
@@ -100,10 +110,10 @@ $sql_clients = mysqli_query($mysqli, "SELECT DISTINCT client_id, client_name FRO
 ?>
 
 <div class="d-flex align-items-center mb-3">
-    <h4 class="mb-0 mr-auto"><i class="fas fa-cloud-upload-alt mr-2"></i>Backup Dashboard</h4>
+    <h4 class="mb-0 mr-auto"><i class="fas fa-cloud-upload-alt me-2"></i>Backup Dashboard</h4>
     <?php if ($open_alert_count > 0) { ?>
     <a href="/agent/alerts.php?source=backup&status=new" class="btn btn-sm btn-outline-danger">
-        <i class="fas fa-bell mr-1"></i><?= $open_alert_count ?> Open Alert<?= $open_alert_count !== 1 ? 's' : '' ?>
+        <i class="fas fa-bell me-1"></i><?= $open_alert_count ?> Open Alert<?= $open_alert_count !== 1 ? 's' : '' ?>
     </a>
     <?php } ?>
 </div>
@@ -136,7 +146,7 @@ $sql_clients = mysqli_query($mysqli, "SELECT DISTINCT client_id, client_name FRO
     <div class="card-body py-2">
         <form method="get" class="d-flex flex-wrap align-items-center" style="gap:6px">
             <?php if (mysqli_num_rows($sql_clients) > 0) { ?>
-            <select name="client_id" class="form-control form-control-sm mr-2" style="max-width:200px" onchange="this.form.submit()">
+            <select name="client_id" class="form-control form-control-sm me-2 auto-submit-select" style="max-width:200px">
                 <option value="">All Clients</option>
                 <?php while ($cl = mysqli_fetch_assoc($sql_clients)) { ?>
                 <option value="<?= $cl['client_id'] ?>" <?= $filter_client_id == $cl['client_id'] ? 'selected' : '' ?>>
@@ -145,10 +155,10 @@ $sql_clients = mysqli_query($mysqli, "SELECT DISTINCT client_id, client_name FRO
                 <?php } ?>
             </select>
             <?php } ?>
-            <input type="text" name="q" value="<?= htmlspecialchars($filter_search) ?>" class="form-control form-control-sm mr-2" placeholder="Search device, user, client…" style="max-width:220px">
-            <button type="submit" class="btn btn-sm btn-secondary mr-2"><i class="fas fa-search"></i></button>
+            <input type="text" name="q" value="<?= htmlspecialchars($filter_search) ?>" class="form-control form-control-sm me-2" placeholder="Search device, user, client…" style="max-width:220px">
+            <button type="submit" class="btn btn-sm btn-secondary me-2"><i class="fas fa-search"></i></button>
             <?php if ($filter_client_id || $filter_search !== '') { ?>
-            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times mr-1"></i>Clear</a>
+            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times me-1"></i>Clear</a>
             <?php } ?>
         </form>
     </div>
@@ -157,7 +167,7 @@ $sql_clients = mysqli_query($mysqli, "SELECT DISTINCT client_id, client_name FRO
 <!-- Device table -->
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Device Backup Status</h3>
+        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-cloud-upload-alt me-2"></i>Device Backup Status</h3>
     </div>
     <div class="card-body p-0">
         <?php if (!$comet_users): ?>
@@ -171,7 +181,7 @@ $sql_clients = mysqli_query($mysqli, "SELECT DISTINCT client_id, client_name FRO
         <table class="table table-sm table-borderless table-hover mb-0">
             <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;" class="text-muted border-bottom">
                 <tr>
-                    <th class="pl-3" style="width:36px;"></th>
+                    <th class="ps-3" style="width:36px;"></th>
                     <th>Device</th>
                     <th>Comet User</th>
                     <th>Client</th>
@@ -192,14 +202,14 @@ $sql_clients = mysqli_query($mysqli, "SELECT DISTINCT client_id, client_name FRO
                 $err = $dr['error'] ? htmlspecialchars(mb_strimwidth($dr['error'], 0, 80, '…')) : '';
             ?>
                 <tr>
-                    <td class="pl-3 text-center">
+                    <td class="ps-3 text-center">
                         <i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i>
                     </td>
-                    <td class="font-weight-bold small">
+                    <td class="fw-bold small">
                         <?= htmlspecialchars($dr['dev_name']) ?>
                         <?php if ($dr['open_alert']) { ?>
                         <a href="/agent/ticket.php?ticket_id=<?= intval($dr['open_alert']['alert_ticket_id']) ?>"
-                           class="badge badge-danger ml-1" title="Open <?= $dr['open_alert']['alert_type'] === 'missed' ? 'missed-backup' : 'failed-backup' ?> alert — click to view ticket">
+                           class="badge text-bg-danger ms-1" title="Open <?= $dr['open_alert']['alert_type'] === 'missed' ? 'missed-backup' : 'failed-backup' ?> alert — click to view ticket">
                             <i class="fas fa-bell"></i>
                         </a>
                         <?php } ?>

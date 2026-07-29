@@ -68,9 +68,9 @@ require_once "includes/inc_all_admin.php";
 }
 </style>
 
-<div class="card card-dark">
+<div class="card">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-bell mr-2"></i>Notification Settings</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-bell me-2"></i>Notification Settings</h3>
     </div>
     <div class="card-body">
         <form action="post.php" method="post" autocomplete="off">
@@ -89,9 +89,9 @@ require_once "includes/inc_all_admin.php";
                             <div class="notif-desc">Required for email reminders, expiration alerts, and other scheduled tasks. Several cron entries must also be configured on your server — <a href="https://docs.itflow.org/cron" target="_blank">see docs</a>.</div>
                         </div>
                         <div class="notif-row-control">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" name="config_enable_cron" <?php if ($config_enable_cron) echo "checked"; ?> value="1" id="enableCronSwitch">
-                                <label class="custom-control-label" for="enableCronSwitch"></label>
+                            <div class="form-check form-check form-switch">
+                                <input type="checkbox" class="form-check-input" name="config_enable_cron" <?php if ($config_enable_cron) echo "checked"; ?> value="1" id="enableCronSwitch">
+                                <label class="form-check-label" for="enableCronSwitch"></label>
                             </div>
                         </div>
                     </div>
@@ -125,10 +125,10 @@ require_once "includes/inc_all_admin.php";
                             <div class="notif-desc">Email clients automatically when their tickets are opened or closed.</div>
                         </div>
                         <div class="notif-row-control">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" name="config_ticket_client_general_notifications"
+                            <div class="form-check form-check form-switch">
+                                <input type="checkbox" class="form-check-input" name="config_ticket_client_general_notifications"
                                        <?php if ($config_ticket_client_general_notifications) echo "checked"; ?> value="1" id="clientNotifSwitch">
-                                <label class="custom-control-label" for="clientNotifSwitch"></label>
+                                <label class="form-check-label" for="clientNotifSwitch"></label>
                             </div>
                         </div>
                     </div>
@@ -148,10 +148,10 @@ require_once "includes/inc_all_admin.php";
                             <div class="notif-desc">Automatically email clients about overdue invoices every 30 days.</div>
                         </div>
                         <div class="notif-row-control">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" name="config_send_invoice_reminders"
+                            <div class="form-check form-check form-switch">
+                                <input type="checkbox" class="form-check-input" name="config_send_invoice_reminders"
                                        <?php if ($config_send_invoice_reminders) echo "checked"; ?> value="1" id="sendRemindersSwitch">
-                                <label class="custom-control-label" for="sendRemindersSwitch"></label>
+                                <label class="form-check-label" for="sendRemindersSwitch"></label>
                             </div>
                         </div>
                     </div>
@@ -161,10 +161,10 @@ require_once "includes/inc_all_admin.php";
                             <div class="notif-desc">Notify staff when invoices become overdue.</div>
                         </div>
                         <div class="notif-row-control">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" name="config_invoice_overdue_reminders"
+                            <div class="form-check form-check form-switch">
+                                <input type="checkbox" class="form-check-input" name="config_invoice_overdue_reminders"
                                        <?php if (!empty($config_invoice_overdue_reminders)) echo "checked"; ?> value="1" id="overdueSwitch">
-                                <label class="custom-control-label" for="overdueSwitch"></label>
+                                <label class="form-check-label" for="overdueSwitch"></label>
                             </div>
                         </div>
                     </div>
@@ -188,10 +188,10 @@ require_once "includes/inc_all_admin.php";
                             <div class="notif-desc">Email clients when their recurring invoices are automatically generated.</div>
                         </div>
                         <div class="notif-row-control">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" name="config_recurring_auto_send_invoice"
+                            <div class="form-check form-check form-switch">
+                                <input type="checkbox" class="form-check-input" name="config_recurring_auto_send_invoice"
                                        <?php if ($config_recurring_auto_send_invoice) echo "checked"; ?> value="1" id="sendRecurringSwitch">
-                                <label class="custom-control-label" for="sendRecurringSwitch"></label>
+                                <label class="form-check-label" for="sendRecurringSwitch"></label>
                             </div>
                         </div>
                     </div>
@@ -235,10 +235,10 @@ require_once "includes/inc_all_admin.php";
                             <div class="notif-desc">Show in-app alerts at 1, 7, and 45 days before domain and SSL certificate expiration.</div>
                         </div>
                         <div class="notif-row-control">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" name="config_enable_alert_domain_expire"
+                            <div class="form-check form-check form-switch">
+                                <input type="checkbox" class="form-check-input" name="config_enable_alert_domain_expire"
                                        <?php if ($config_enable_alert_domain_expire) echo "checked"; ?> value="1" id="domainExpireSwitch">
-                                <label class="custom-control-label" for="domainExpireSwitch"></label>
+                                <label class="form-check-label" for="domainExpireSwitch"></label>
                             </div>
                         </div>
                     </div>
@@ -246,7 +246,7 @@ require_once "includes/inc_all_admin.php";
             </div>
 
             <button type="submit" name="edit_notification_settings" class="btn btn-primary">
-                <i class="fa fa-check mr-2"></i>Save Settings
+                <i class="fa fa-check me-2"></i>Save Settings
             </button>
 
         </form>
@@ -294,16 +294,16 @@ require_once "includes/inc_all_admin.php";
                      style="background:rgba(40,167,69,.08);border:1px solid rgba(40,167,69,.25);gap:.75rem;">
                     <div>
                         <div class="font-weight-semibold text-success mb-1">
-                            <i class="fas fa-check-circle mr-1"></i>Firebase Connected
+                            <i class="fas fa-check-circle me-1"></i>Firebase Connected
                         </div>
                         <?php if ($firebase_project_id) { ?>
                         <div class="small text-muted">
-                            <i class="fas fa-cube mr-1"></i>Project: <code><?= nullable_htmlentities($firebase_project_id) ?></code>
+                            <i class="fas fa-cube me-1"></i>Project: <code><?= nullable_htmlentities($firebase_project_id) ?></code>
                         </div>
                         <?php } ?>
                         <?php if ($firebase_client_email) { ?>
                         <div class="small text-muted mt-1" style="word-break:break-all;">
-                            <i class="fas fa-key mr-1"></i><?= nullable_htmlentities($firebase_client_email) ?>
+                            <i class="fas fa-key me-1"></i><?= nullable_htmlentities($firebase_client_email) ?>
                         </div>
                         <?php } ?>
                     </div>
@@ -312,22 +312,21 @@ require_once "includes/inc_all_admin.php";
                         <form method="post" action="post.php">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                             <button type="submit" name="test_push_notification" class="btn btn-sm btn-primary" title="Sends to your own registered device(s) only">
-                                <i class="fas fa-paper-plane mr-1"></i>Send Test Push (mine)
+                                <i class="fas fa-paper-plane me-1"></i>Send Test Push (mine)
                             </button>
                         </form>
                         <?php } else if ($push_total_devices > 0) { ?>
                         <span class="small text-muted" title="Other staff have registered devices, but your account doesn't">
-                            <i class="fas fa-info-circle mr-1"></i>No device registered to your account
+                            <i class="fas fa-info-circle me-1"></i>No device registered to your account
                         </span>
                         <?php } ?>
                         <button class="btn btn-sm btn-outline-secondary" type="button"
-                                data-toggle="collapse" data-target="#firebaseJsonEditor">
-                            <i class="fas fa-edit mr-1"></i>Update Key
+                                data-bs-toggle="collapse" data-bs-target="#firebaseJsonEditor">
+                            <i class="fas fa-edit me-1"></i>Update Key
                         </button>
                         <form method="post" action="post.php">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                            <button type="submit" name="remove_firebase_config" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Remove Firebase configuration? Push notifications will stop working.')">
+                            <button type="submit" name="remove_firebase_config" class="btn btn-sm btn-outline-danger confirm-link">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </form>
@@ -337,7 +336,7 @@ require_once "includes/inc_all_admin.php";
                 <!-- Update key collapse -->
                 <div class="collapse mb-3" id="firebaseJsonEditor">
                     <div class="p-3 rounded" style="background:rgba(0,0,0,.03);border:1px solid var(--color-border,#dee2e6);">
-                        <div class="small font-weight-bold mb-2"><i class="fas fa-file-code mr-1"></i>Paste new service account JSON</div>
+                        <div class="small fw-bold mb-2"><i class="fas fa-file-code me-1"></i>Paste new service account JSON</div>
                         <form method="post" action="post.php" autocomplete="off">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                             <textarea name="firebase_service_account_json" rows="8"
@@ -345,7 +344,7 @@ require_once "includes/inc_all_admin.php";
                                 style="font-family:monospace;font-size:.75rem;resize:vertical;"
                                 placeholder='{ "type": "service_account", "project_id": "…", … }'></textarea>
                             <button type="submit" name="save_firebase_config" class="btn btn-sm btn-primary">
-                                <i class="fas fa-save mr-1"></i>Update Configuration
+                                <i class="fas fa-save me-1"></i>Update Configuration
                             </button>
                         </form>
                     </div>
@@ -365,8 +364,8 @@ require_once "includes/inc_all_admin.php";
 
                 <!-- Device management table -->
                 <div class="mb-1">
-                    <div class="small text-muted font-weight-bold mb-2 text-uppercase" style="letter-spacing:.05em;font-size:.7rem;">
-                        <i class="fas fa-tablet-alt mr-1"></i>Manage devices
+                    <div class="small text-muted fw-bold mb-2 text-uppercase" style="letter-spacing:.05em;font-size:.7rem;">
+                        <i class="fas fa-tablet-alt me-1"></i>Manage devices
                     </div>
                     <?php if (mysqli_num_rows($sql_push_devices) > 0) { ?>
                     <div class="table-responsive" style="border:1px solid var(--color-border,#eee);border-radius:.4rem;">
@@ -388,10 +387,10 @@ require_once "includes/inc_all_admin.php";
                                 ?>
                                 <tr id="push-dev-<?= $dev['token_id'] ?>">
                                     <td>
-                                        <i class="fas fa-fw fa-mobile-alt text-secondary mr-1"></i>
+                                        <i class="fas fa-fw fa-mobile-alt text-secondary me-1"></i>
                                         <?= nullable_htmlentities($dev['token_name']) ?>
                                     </td>
-                                    <td><i class="fas fa-fw fa-user text-muted mr-1"></i><?= nullable_htmlentities($dev['user_name']) ?></td>
+                                    <td><i class="fas fa-fw fa-user text-muted me-1"></i><?= nullable_htmlentities($dev['user_name']) ?></td>
                                     <td>
                                         <?php if ($has_push) { ?>
                                         <i class="fas fa-bell text-success" title="Push notifications active"></i>
@@ -401,19 +400,19 @@ require_once "includes/inc_all_admin.php";
                                     </td>
                                     <td>
                                         <?php if ($last_used) { ?>
-                                        <span class="badge <?= $is_active ? 'badge-success' : 'badge-secondary' ?>" style="font-size:.7rem;">
+                                        <span class="badge <?= $is_active ? 'text-bg-success' : 'text-bg-secondary' ?>" style="font-size:.7rem;">
                                             <?= $is_active ? 'Active' : 'Idle' ?>
                                         </span>
-                                        <span class="text-muted small ml-1"><?= $last_used ?></span>
+                                        <span class="text-muted small ms-1"><?= $last_used ?></span>
                                         <?php } else { ?>
-                                        <span class="badge badge-light border" style="font-size:.7rem;">Never used</span>
+                                        <span class="badge text-bg-light border" style="font-size:.7rem;">Never used</span>
                                         <?php } ?>
                                     </td>
-                                    <td class="text-right">
-                                        <button class="btn btn-xs btn-outline-danger"
-                                                onclick="revokePushDevice(<?= $dev['token_id'] ?>, this)"
+                                    <td class="text-end">
+                                        <button class="btn btn-xs btn-outline-danger js-revoke-push-device"
+                                                data-token-id="<?= $dev['token_id'] ?>"
                                                 data-csrf="<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-times mr-1"></i>Revoke
+                                            <i class="fas fa-times me-1"></i>Revoke
                                         </button>
                                     </td>
                                 </tr>
@@ -429,7 +428,7 @@ require_once "includes/inc_all_admin.php";
                     <?php } ?>
                 </div>
 
-                <script>
+                <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
                 async function revokePushDevice(id, btn) {
                     if (!confirm('Revoke this device? It will be logged out of the mobile app.')) return;
                     btn.disabled = true;
@@ -451,12 +450,17 @@ require_once "includes/inc_all_admin.php";
                         btn.disabled = false;
                     }
                 }
+                // Was a bare onclick=; silently blocked by this app's CSP.
+                document.addEventListener('click', function (e) {
+                    var btn = e.target.closest('.js-revoke-push-device');
+                    if (btn) { revokePushDevice(btn.dataset.tokenId, btn); }
+                });
                 </script>
 
                 <!-- Globally allowed push categories -->
                 <div class="mt-3 pt-3" style="border-top:1px solid var(--color-border,#eee);">
-                    <div class="small text-muted font-weight-bold mb-1 text-uppercase" style="letter-spacing:.05em;font-size:.7rem;">
-                        <i class="fas fa-list-check mr-1"></i>Notification categories allowed to push
+                    <div class="small text-muted fw-bold mb-1 text-uppercase" style="letter-spacing:.05em;font-size:.7rem;">
+                        <i class="fas fa-list-check me-1"></i>Notification categories allowed to push
                     </div>
                     <div class="small text-muted mb-2">Staff can only enable push for categories switched on here. Turning one off disables it for everyone.</div>
                     <form method="post" action="post.php">
@@ -471,18 +475,18 @@ require_once "includes/inc_all_admin.php";
                             ?>
                             <div class="d-flex align-items-center justify-content-between p-2 px-3"
                                  style="<?= $cat_i < $cat_total ? 'border-bottom:1px solid var(--color-border,#eee);' : '' ?>">
-                                <span><i class="<?= $cat['icon'] ?> mr-2 text-muted" style="width:1.1rem;text-align:center;"></i><?= nullable_htmlentities($cat['label']) ?></span>
-                                <div class="custom-control custom-switch mb-0">
-                                    <input type="checkbox" class="custom-control-input" id="push_cat_<?= $cat_key ?>"
+                                <span><i class="<?= $cat['icon'] ?> me-2 text-muted" style="width:1.1rem;text-align:center;"></i><?= nullable_htmlentities($cat['label']) ?></span>
+                                <div class="form-check form-check form-switch mb-0">
+                                    <input type="checkbox" class="form-check-input" id="push_cat_<?= $cat_key ?>"
                                            name="push_categories[]" value="<?= $cat_key ?>"
                                            <?= in_array($cat_key, $push_global_categories, true) ? 'checked' : '' ?>>
-                                    <label class="custom-control-label" for="push_cat_<?= $cat_key ?>"></label>
+                                    <label class="form-check-label" for="push_cat_<?= $cat_key ?>"></label>
                                 </div>
                             </div>
                             <?php } ?>
                         </div>
                         <button type="submit" name="save_push_categories" class="btn btn-sm btn-primary mt-3">
-                            <i class="fas fa-save mr-1"></i>Save Categories
+                            <i class="fas fa-save me-1"></i>Save Categories
                         </button>
                     </form>
                 </div>
@@ -506,8 +510,8 @@ require_once "includes/inc_all_admin.php";
 
                 <!-- Inline setup guide -->
                 <div class="mb-3">
-                    <div class="small font-weight-bold text-uppercase text-muted mb-2" style="letter-spacing:.05em;font-size:.7rem;">
-                        <i class="fas fa-list-ol mr-1"></i>Setup Steps
+                    <div class="small fw-bold text-uppercase text-muted mb-2" style="letter-spacing:.05em;font-size:.7rem;">
+                        <i class="fas fa-list-ol me-1"></i>Setup Steps
                     </div>
                     <div class="push-steps">
                         <div class="push-step">
@@ -557,7 +561,7 @@ require_once "includes/inc_all_admin.php";
 
                 <!-- JSON paste form -->
                 <div class="p-3 rounded" style="background:rgba(0,0,0,.03);border:1px solid var(--color-border,#dee2e6);">
-                    <div class="small font-weight-bold mb-2"><i class="fas fa-file-code mr-1"></i>Paste service account JSON</div>
+                    <div class="small fw-bold mb-2"><i class="fas fa-file-code me-1"></i>Paste service account JSON</div>
                     <form method="post" action="post.php" autocomplete="off">
                         <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                         <textarea name="firebase_service_account_json" rows="9"
@@ -565,7 +569,7 @@ require_once "includes/inc_all_admin.php";
                             style="font-family:monospace;font-size:.75rem;resize:vertical;"
                             placeholder='{ "type": "service_account", "project_id": "…", … }'></textarea>
                         <button type="submit" name="save_firebase_config" class="btn btn-sm btn-primary">
-                            <i class="fas fa-save mr-1"></i>Save Configuration
+                            <i class="fas fa-save me-1"></i>Save Configuration
                         </button>
                     </form>
                 </div>

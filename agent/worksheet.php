@@ -32,6 +32,13 @@ $ticket_number = intval($row['ticket_number']);
 $ticket_subject = nullable_htmlentities($row['ticket_subject']);
 $ticket_id = intval($row['worksheet_ticket_id']);
 $client_id = intval($row['ticket_client_id']);
+
+// Confirm the requesting agent has access to the client that actually owns
+// this worksheet's ticket, regardless of any client_id passed in the URL.
+if ($client_id) {
+    enforceClientAccess($client_id);
+}
+
 $is_outtake = intval($row['worksheet_is_outtake']);
 $completed_at = $row['worksheet_completed_at'];
 $signed_name = nullable_htmlentities($row['worksheet_signed_name']);
@@ -52,17 +59,17 @@ $is_completed = !empty($completed_at);
 <div class="card card-dark">
     <div class="card-header py-2">
         <h3 class="card-title mt-2">
-            <i class="fas fa-fw fa-clipboard-list mr-2"></i><?= $tmpl_name ?>
-            <small class="ml-2 text-secondary">Ticket: <a href="ticket.php?ticket_id=<?= $ticket_id ?><?= $client_id ? "&client_id=$client_id" : '' ?>"><?= "$ticket_prefix$ticket_number — $ticket_subject" ?></a></small>
+            <i class="fas fa-fw fa-clipboard-list me-2"></i><?= $tmpl_name ?>
+            <small class="ms-2 text-secondary">Ticket: <a href="ticket.php?ticket_id=<?= $ticket_id ?><?= $client_id ? "&client_id=$client_id" : '' ?>"><?= "$ticket_prefix$ticket_number — $ticket_subject" ?></a></small>
         </h3>
         <div class="card-tools">
             <?php if ($is_outtake && $sign_token && !$signed_at) { ?>
-            <a href="<?= "https://$config_base_url/guest/worksheet_sign.php?token=$sign_token" ?>" target="_blank" class="btn btn-warning btn-sm mr-2">
-                <i class="fas fa-external-link-alt mr-1"></i>Customer Sign Link
+            <a href="<?= "https://$config_base_url/guest/worksheet_sign.php?token=$sign_token" ?>" target="_blank" class="btn btn-warning btn-sm me-2">
+                <i class="fas fa-external-link-alt me-1"></i>Customer Sign Link
             </a>
             <?php } ?>
             <a href="ticket.php?ticket_id=<?= $ticket_id ?><?= $client_id ? "&client_id=$client_id" : '' ?>" class="btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left mr-1"></i>Back to Ticket
+                <i class="fas fa-arrow-left me-1"></i>Back to Ticket
             </a>
         </div>
     </div>
@@ -70,15 +77,15 @@ $is_completed = !empty($completed_at);
 
         <?php if ($signed_at) { ?>
         <div class="alert alert-success">
-            <i class="fas fa-check-circle mr-2"></i>Signed by <strong><?= $signed_name ?></strong> on <?= date('M j, Y g:i A', strtotime($signed_at)) ?>
+            <i class="fas fa-check-circle me-2"></i>Signed by <strong><?= $signed_name ?></strong> on <?= date('M j, Y g:i A', strtotime($signed_at)) ?>
             <?php if ($signature_data) { ?>
-            <br><img src="<?= $signature_data ?>" style="max-height:80px; background:#fff; border:1px solid #ccc; border-radius:4px; display:block; margin-top:8px;">
+            <br><img src="<?= htmlspecialchars($signature_data, ENT_QUOTES) ?>" style="max-height:80px; background:#fff; border:1px solid #ccc; border-radius:4px; display:block; margin-top:8px;">
             <?php } ?>
         </div>
         <?php } ?>
 
         <?php if ($is_completed && !$is_outtake) { ?>
-        <div class="alert alert-info"><i class="fas fa-lock mr-2"></i>This worksheet was completed on <?= date('M j, Y', strtotime($completed_at)) ?>.</div>
+        <div class="alert alert-info"><i class="fas fa-lock me-2"></i>This worksheet was completed on <?= date('M j, Y', strtotime($completed_at)) ?>.</div>
         <?php } ?>
 
         <form action="post.php" method="post" autocomplete="off" id="worksheetForm">
@@ -101,9 +108,9 @@ $is_completed = !empty($completed_at);
                 <h5 class="mt-4 border-bottom pb-2"><?= $fname ?></h5>
             <?php } elseif ($ftype === 'checkbox') { ?>
                 <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="field_<?= $fid ?>" name="field_<?= $fid ?>" value="1" <?= $fval == '1' ? 'checked' : '' ?> <?= $disabled ?>>
-                        <label class="custom-control-label" for="field_<?= $fid ?>"><?= $fname ?> <?= $freq ? '<strong class="text-danger">*</strong>' : '' ?></label>
+                    <div class="form-check form-check">
+                        <input type="checkbox" class="form-check-input" id="field_<?= $fid ?>" name="field_<?= $fid ?>" value="1" <?= $fval == '1' ? 'checked' : '' ?> <?= $disabled ?>>
+                        <label class="form-check-label" for="field_<?= $fid ?>"><?= $fname ?> <?= $freq ? '<strong class="text-danger">*</strong>' : '' ?></label>
                     </div>
                 </div>
             <?php } elseif ($ftype === 'textarea') { ?>
@@ -127,13 +134,13 @@ $is_completed = !empty($completed_at);
                     <label><?= $fname ?> <?= $freq ? '<strong class="text-danger">*</strong>' : '' ?></label>
                     <?php if ($fval) { ?>
                         <div><img src="<?= $fval ?>" style="max-height:100px; border:1px solid #ccc; border-radius:4px; background:#fff;"></div>
-                        <?php if (!$disabled) { ?><button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="clearSig(<?= $fid ?>)">Clear & Re-sign</button><?php } ?>
+                        <?php if (!$disabled) { ?><button type="button" class="btn btn-sm btn-outline-secondary mt-1 js-clear-worksheet-sig" data-field-id="<?= $fid ?>">Clear & Re-sign</button><?php } ?>
                         <input type="hidden" name="field_<?= $fid ?>" id="sig_data_<?= $fid ?>" value="<?= htmlspecialchars($fval) ?>">
                     <?php } else { ?>
                         <canvas id="sig_canvas_<?= $fid ?>" width="500" height="150" style="border:1px solid #ccc; border-radius:4px; background:#fff; touch-action:none; display:block;"></canvas>
                         <input type="hidden" name="field_<?= $fid ?>" id="sig_data_<?= $fid ?>">
                         <div class="mt-1">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearCanvas(<?= $fid ?>)">Clear</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-clear-worksheet-canvas" data-field-id="<?= $fid ?>">Clear</button>
                         </div>
                     <?php } ?>
                 </div>
@@ -148,8 +155,8 @@ $is_completed = !empty($completed_at);
 
             <?php if (!$is_completed || $is_outtake) { ?>
             <div class="mt-4">
-                <button type="submit" name="save_worksheet" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Save Worksheet</button>
-                <button type="submit" name="complete_worksheet" class="btn btn-success ml-2"><i class="fas fa-check mr-2"></i>Save & Mark Complete</button>
+                <button type="submit" name="save_worksheet" class="btn btn-primary"><i class="fas fa-save me-2"></i>Save Worksheet</button>
+                <button type="submit" name="complete_worksheet" class="btn btn-success ms-2"><i class="fas fa-check me-2"></i>Save & Mark Complete</button>
             </div>
             <?php } ?>
 
@@ -157,7 +164,7 @@ $is_completed = !empty($completed_at);
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 var sigPads = {};
 
 function initSig(fieldId) {
@@ -214,6 +221,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var id = c.id.replace('sig_canvas_', '');
         initSig(id);
     });
+});
+document.addEventListener('click', function (e) {
+    var el;
+    if ((el = e.target.closest('.js-clear-worksheet-sig'))) { clearSig(el.dataset.fieldId); return; }
+    if ((el = e.target.closest('.js-clear-worksheet-canvas'))) { clearCanvas(el.dataset.fieldId); }
 });
 </script>
 

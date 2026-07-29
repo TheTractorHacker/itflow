@@ -11,8 +11,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-paper-plane mr-2"></i>Update & Reply <strong><?= $count ?></strong> Tickets</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-paper-plane me-2"></i>Update & Reply <strong><?= $count ?></strong> Tickets</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -55,17 +55,17 @@ ob_start();
         </div>
 
         <div class="form-group">
-            <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" id="bulkPrivateReplyCheckbox" name="bulk_private_reply" value="1">
-                <label class="custom-control-label" for="bulkPrivateReplyCheckbox">Mark as internal</label>
+            <div class="form-check form-check">
+                <input type="checkbox" class="form-check-input" id="bulkPrivateReplyCheckbox" name="bulk_private_reply" value="1">
+                <label class="form-check-label" for="bulkPrivateReplyCheckbox">Mark as internal</label>
                 <small class="form-text text-muted">If checked this note will only be visible to agents.</small>
             </div>
         </div>
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="bulk_ticket_reply" class="btn btn-primary text-bold"><i class="fas fa-paper-plane mr-2"></i>Update & Reply</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="bulk_ticket_reply" class="btn btn-primary text-bold"><i class="fas fa-paper-plane me-2"></i>Update & Reply</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

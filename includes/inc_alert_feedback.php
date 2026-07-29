@@ -7,7 +7,7 @@ if (!empty($_SESSION['alert_message'])) {
     }
     ?>
 
-    <script type="text/javascript">
+    <script type="text/javascript" nonce="<?php echo htmlspecialchars($csp_nonce ?? '', ENT_QUOTES); ?>">
 
         toastr.options = {
             "closeButton": false,

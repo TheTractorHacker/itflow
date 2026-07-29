@@ -62,15 +62,15 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-shopping-cart mr-2"></i>Expenses</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-shopping-cart me-2"></i>Expenses</h3>
             <div class="card-tools">
                 <div class="btn-group">
-                    <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/expense/expense_add.php" data-modal-size="lg"><i class="fas fa-plus mr-2"></i>New Expense</button>
-                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                    <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/expense/expense_add.php" data-modal-size="lg"><i class="fas fa-plus me-2"></i>New Expense</button>
+                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                     <div class="dropdown-menu">
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/expense/expense_export.php">
-                            <i class="fa fa-fw fa-download mr-2"></i>Export
+                            <i class="fa fa-fw fa-download me-2"></i>Export
                         </a>
                     </div>
                 </div>
@@ -84,41 +84,41 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="input-group">
                             <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search Expenses">
                             <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
+                                <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilter"><i class="fas fa-filter"></i></button>
                                 <button class="btn btn-primary"><i class="fa fa-search"></i></button>
                             </div>
                         </div>
                     </div>
                     <div class="col-sm-8">
-                        <div class="btn-group float-right">
-                            <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                                <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                    <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
+                        <div class="btn-group float-end">
+                            <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                                <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                                 </button>
                                 <div class="dropdown-menu">
                                     <a class="dropdown-item ajax-modal" href="#"
                                         data-modal-url="modals/expense/expense_bulk_edit_category.php"
                                         data-bulk="true">
-                                        <i class="fas fa-fw fa-list mr-2"></i>Set Category
+                                        <i class="fas fa-fw fa-list me-2"></i>Set Category
                                     </a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item ajax-modal" href="#"
                                         data-modal-url="modals/expense/expense_bulk_edit_account.php"
                                         data-bulk="true">
-                                        <i class="fas fa-fw fa-piggy-bank mr-2"></i>Set Account
+                                        <i class="fas fa-fw fa-piggy-bank me-2"></i>Set Account
                                     </a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item ajax-modal" href="#"
                                         data-modal-url="modals/expense/expense_bulk_edit_client.php"
                                         data-bulk="true">
-                                        <i class="fas fa-fw fa-user mr-2"></i>Set Client
+                                        <i class="fas fa-fw fa-user me-2"></i>Set Client
                                     </a>
                                     <?php if ($session_user_role == 3) { ?>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item text-danger text-bold ajax-modal" href="#"
                                         data-modal-url="modals/expense/expense_bulk_delete.php"
                                         data-bulk="true">
-                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                                     </a>
                                     <?php } ?>
                                 </div>
@@ -140,7 +140,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="col-sm-2">
                             <div class="form-group">
                                 <label>Vendor</label>
-                                <select class="form-control select2" name="vendor" onchange="this.form.submit()">
+                                <select class="form-control select2 auto-submit-select" name="vendor">
                                     <option value="">- All Vendors -</option>
 
                                     <?php
@@ -161,7 +161,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="col-sm-2">
                             <div class="form-group">
                                 <label>Category</label>
-                                <select class="form-control select2" name="category" onchange="this.form.submit()">
+                                <select class="form-control select2 auto-submit-select" name="category">
                                     <option value="">- All Categories -</option>
 
                                     <?php
@@ -181,7 +181,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="col-sm-2">
                             <div class="form-group">
                                 <label>Account</label>
-                                <select class="form-control select2" name="account" onchange="this.form.submit()">
+                                <select class="form-control select2 auto-submit-select" name="account">
                                     <option value="">- All Accounts -</option>
 
                                     <?php
@@ -209,7 +209,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     <tr>
                         <td class="bg-light checkbox-column">
                             <div class="form-check">
-                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox" onclick="checkAll(this)">
+                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox">
                             </div>
                         </td>
                         <th>
@@ -231,7 +231,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 Vendor <?php if ($sort == 'vendor_name') { echo $order_icon; } ?>
                             </a>
                         </th>
-                        <th class="text-right">
+                        <th class="text-end">
                             <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=expense_amount&order=<?php echo $disp; ?>">
                                 Amount <?php if ($sort == 'expense_amount') { echo $order_icon; } ?>
                             </a>
@@ -280,7 +280,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         } else {
                             $path_info = pathinfo($expense_receipt);
                             $ext = $path_info['extension'];
-                            $receipt_attached = "<a class='text-secondary mr-2' target='_blank' href='../uploads/expenses/$expense_receipt' download='$expense_date-$vendor_name-$category_name-$expense_id.$ext'><i class='fa fa-file'></i></a>";
+                            $receipt_attached = "<a class='text-secondary me-2' target='_blank' href='../uploads/expenses/$expense_receipt' download='$expense_date-$vendor_name-$category_name-$expense_id.$ext'><i class='fa fa-file'></i></a>";
                         }
 
                         ?>
@@ -304,41 +304,41 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 <div class="text-secondary"><small><?php echo truncate($expense_description, 60); ?></small></div>
                             </td>
                             <td><?php echo $vendor_name; ?></td>
-                            <td class="text-bold text-right"><?php echo numfmt_format_currency($currency_format, $expense_amount, $expense_currency_code); ?></td>
+                            <td class="text-bold text-end"><?php echo numfmt_format_currency($currency_format, $expense_amount, $expense_currency_code); ?></td>
                             <td><?php echo $account_name; ?></td>
                             <td><?php echo $client_name_display; ?></td>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <?php
                                         if (!empty($expense_receipt)) { ?>
                                             <a class="dropdown-item" href="<?php echo "../uploads/expenses/$expense_receipt"; ?>" download="<?php echo "$expense_date-$vendor_name-$category_name-$expense_id.pdf"; ?>">
-                                                <i class="fas fa-fw fa-download mr-2"></i>Download
+                                                <i class="fas fa-fw fa-download me-2"></i>Download
                                             </a>
                                             <div class="dropdown-divider"></div>
                                         <?php } ?>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-size="lg"
                                             data-modal-url="modals/expense/expense_edit.php?id=<?= $expense_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-size="lg"
                                             data-modal-url="modals/expense/expense_copy.php?id=<?= $expense_id ?>">
-                                            <i class="fas fa-fw fa-copy mr-2"></i>Copy
+                                            <i class="fas fa-fw fa-copy me-2"></i>Copy
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-size="lg"
                                             data-modal-url="modals/expense/expense_refund.php?id=<?= $expense_id ?>">
-                                            <i class="fas fa-fw fa-undo-alt mr-2"></i>Refund
+                                            <i class="fas fa-fw fa-undo-alt me-2"></i>Refund
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_expense=<?= $expense_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash me-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>

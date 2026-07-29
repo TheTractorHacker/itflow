@@ -5,21 +5,21 @@ require_once 'includes/inc_all_guest.php';
 // This page embeds Stripe Elements (script + iframe + XHR to Stripe's domains),
 // which the shared guest CSP doesn't allow — override with a Stripe-inclusive
 // policy for this page only. header() replaces the prior same-name header.
-header("Content-Security-Policy: default-src 'self'; script-src 'self' https://js.stripe.com https://static.cloudflareinsights.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://cloudflareinsights.com");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-$csp_nonce' https://js.stripe.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://cloudflareinsights.com");
 
 DEFINE("WORDING_PAYMENT_FAILED", "<br><h2>There was an error verifying your payment. Please contact us for more information before attempting payment again.</h2>");
 
-// --- Get Stripe config from payment_providers table ---
+// --- Get payment provider (Stripe) config from payment_providers table ---
 $stripe_provider = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM payment_providers"));
 
-
-$stripe_publishable      = nullable_htmlentities($stripe_provider['payment_provider_public_key']);
-$stripe_secret           = nullable_htmlentities($stripe_provider['payment_provider_private_key']);
-$stripe_account          = intval($stripe_provider['payment_provider_account']);
-$stripe_expense_vendor   = intval($stripe_provider['payment_provider_expense_vendor']);
-$stripe_expense_category = intval($stripe_provider['payment_provider_expense_category']);
-$stripe_percentage_fee   = floatval($stripe_provider['payment_provider_expense_percentage_fee']);
-$stripe_flat_fee         = floatval($stripe_provider['payment_provider_expense_flat_fee']);
+$stripe_provider_id      = intval($stripe_provider['payment_provider_id'] ?? 0);
+$stripe_publishable      = nullable_htmlentities($stripe_provider['payment_provider_public_key'] ?? '');
+$stripe_secret           = nullable_htmlentities($stripe_provider['payment_provider_private_key'] ?? '');
+$stripe_account          = intval($stripe_provider['payment_provider_account'] ?? 0);
+$stripe_expense_vendor   = intval($stripe_provider['payment_provider_expense_vendor'] ?? 0);
+$stripe_expense_category = intval($stripe_provider['payment_provider_expense_category'] ?? 0);
+$stripe_percentage_fee   = floatval($stripe_provider['payment_provider_expense_percentage_fee'] ?? 0);
+$stripe_flat_fee         = floatval($stripe_provider['payment_provider_expense_flat_fee'] ?? 0);
 
 
 // Show payment form
@@ -42,7 +42,7 @@ if (isset($_GET['invoice_id'], $_GET['url_key']) && !isset($_GET['payment_intent
     // Ensure valid invoice
     if (!$sql || mysqli_num_rows($sql) !== 1) {
         echo "<br><h2>Oops, something went wrong! Please ensure you have the correct URL and have not already paid this invoice.</h2>";
-        require_once 'includes/guest_footer.php';
+        require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/footer.php';
         error_log("Stripe payment error - Invoice with ID $invoice_id not found or not eligible.");
         exit();
     }
@@ -95,7 +95,7 @@ if (isset($_GET['invoice_id'], $_GET['url_key']) && !isset($_GET['payment_intent
                         <tr>
                             <th>Product</th>
                             <th class="text-center">Qty</th>
-                            <th class="text-right">Total</th>
+                            <th class="text-end">Total</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -108,11 +108,11 @@ if (isset($_GET['invoice_id'], $_GET['url_key']) && !isset($_GET['payment_intent
                             <tr>
                                 <td><?php echo $item_name; ?></td>
                                 <td class="text-center"><?php echo $item_quantity; ?></td>
-                                <td class="text-right"><?php echo numfmt_format_currency($currency_format, $item_total, $invoice_currency_code); ?></td>
+                                <td class="text-end"><?php echo numfmt_format_currency($currency_format, $item_total, $invoice_currency_code); ?></td>
                             </tr>
                         <?php } ?>
                         <?php if ($invoice_discount > 0) { ?>
-                            <tr class="text-right">
+                            <tr class="text-end">
                                 <td colspan="2">Discount</td>
                                 <td>
                                     <?php echo numfmt_format_currency($currency_format, $invoice_discount, $invoice_currency_code); ?>
@@ -120,7 +120,7 @@ if (isset($_GET['invoice_id'], $_GET['url_key']) && !isset($_GET['payment_intent
                             </tr>
                         <?php } ?>
                         <?php if (intval($amount_paid) > 0) { ?>
-                            <tr class="text-right">
+                            <tr class="text-end">
                                 <td colspan="2">Paid</td>
                                 <td>
                                     <?php echo numfmt_format_currency($currency_format, $amount_paid, $invoice_currency_code); ?>
@@ -147,7 +147,7 @@ if (isset($_GET['invoice_id'], $_GET['url_key']) && !isset($_GET['payment_intent
                         <br>
                         <button type="submit" id="submit" class="btn btn-primary btn-lg btn-block text-bold" hidden="hidden">
                             <div class="spinner hidden" id="spinner"></div>
-                            <span id="button-text"><i class="fas fa-check mr-2"></i>Pay Invoice</span>
+                            <span id="button-text"><i class="fas fa-check me-2"></i>Pay Invoice</span>
                         </button>
                         <div id="payment-message" class="hidden"></div>
                     </form>
@@ -166,10 +166,15 @@ if (isset($_GET['invoice_id'], $_GET['url_key']) && !isset($_GET['payment_intent
     $pi_id = sanitizeInput($_GET['payment_intent']);
     $pi_cs = $_GET['payment_intent_client_secret'];
 
-    require_once '../plugins/stripe-php/init.php';
-    \Stripe\Stripe::setApiKey($stripe_secret);
+    if (!$stripe_provider_id) {
+        error_log("Stripe payment error - no payment provider configured for PI $pi_id");
+        exit(WORDING_PAYMENT_FAILED);
+    }
 
-    $pi_obj = \Stripe\PaymentIntent::retrieve($pi_id);
+    require_once '../includes/payment_provider_factory.php';
+    $provider = getPaymentProvider($stripe_provider_id);
+
+    $pi_obj = $provider->verifyCheckoutResult($pi_id);
 
     if ($pi_obj->client_secret !== $pi_cs) {
         error_log("Stripe payment error - Payment intent ID/Secret mismatch for $pi_id");

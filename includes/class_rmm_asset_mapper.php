@@ -75,12 +75,18 @@ class RmmAssetMapper {
         $resolved = !empty($alert['resolved']) || strtolower((string) ($alert['status'] ?? '')) === 'resolved';
 
         $existing = mysqli_fetch_assoc(mysqli_query($m,
-            "SELECT id, status FROM rmm_alerts WHERE integration_id=$intg_id AND tactical_alert_id='$tactical_id_esc' LIMIT 1"
+            "SELECT id, status, ticket_id FROM rmm_alerts WHERE integration_id=$intg_id AND tactical_alert_id='$tactical_id_esc' LIMIT 1"
         ));
 
         if ($existing) {
             if ($resolved && $existing['status'] !== 'resolved') {
-                mysqli_query($m, "UPDATE rmm_alerts SET status='resolved', resolved_at=NOW() WHERE id=" . intval($existing['id']));
+                $existing_id = intval($existing['id']);
+                mysqli_query($m, "UPDATE rmm_alerts SET status='resolved', resolved_at=NOW() WHERE id=$existing_id");
+                // Vendor cleared the alert — auto-close the linked ticket (gated
+                // by config, and only when the ticket has no human activity).
+                if (!empty($existing['ticket_id'])) {
+                    $this->autoCloseAlertTicket(intval($existing['ticket_id']), $existing_id);
+                }
                 return 'resolved';
             }
             return 'skipped';
@@ -147,6 +153,89 @@ class RmmAssetMapper {
         return 'created';
     }
 
+    /**
+     * When an RMM alert clears at the vendor, close the ITFlow ticket that was
+     * auto-created from it — but conservatively:
+     *   - honours the config_rmm_auto_close_on_clear toggle (default on);
+     *   - only touches a ticket that is still open;
+     *   - if a human has worked the ticket (any non-System reply exists), it is
+     *     LEFT OPEN and only a note is added; otherwise it is closed (status 5)
+     *     with a system-attributed note "Auto-closed: RMM alert cleared".
+     */
+    private function autoCloseAlertTicket(int $ticket_id, int $alert_id): void {
+        $m = $this->mysqli;
+        if ($ticket_id <= 0) {
+            return;
+        }
+
+        // Config gate (default on when the column/row is missing).
+        $cfg = mysqli_fetch_assoc(mysqli_query($m,
+            "SELECT config_rmm_auto_close_on_clear FROM settings WHERE company_id=1 LIMIT 1"
+        ));
+        if ($cfg && array_key_exists('config_rmm_auto_close_on_clear', $cfg)
+            && intval($cfg['config_rmm_auto_close_on_clear']) === 0) {
+            return;
+        }
+
+        // Only act on a ticket that is still open.
+        $ticket = mysqli_fetch_assoc(mysqli_query($m,
+            "SELECT ticket_id, ticket_prefix, ticket_number, ticket_client_id, ticket_asset_id
+             FROM tickets
+             WHERE ticket_id=$ticket_id AND ticket_resolved_at IS NULL AND ticket_closed_at IS NULL
+             LIMIT 1"
+        ));
+        if (!$ticket) {
+            return; // already resolved/closed, merged, or deleted
+        }
+
+        $client_id = intval($ticket['ticket_client_id']);
+        $asset_id  = intval($ticket['ticket_asset_id']);
+        $tref      = $ticket['ticket_prefix'] . $ticket['ticket_number'];
+
+        // Conservative guard: has anyone actually worked this ticket? Any reply
+        // that isn't a System note counts as human activity.
+        $non_system = intval(mysqli_fetch_assoc(mysqli_query($m,
+            "SELECT COUNT(*) AS c FROM ticket_replies
+             WHERE ticket_reply_ticket_id=$ticket_id
+               AND ticket_reply_type <> 'System'
+               AND ticket_reply_archived_at IS NULL"
+        ))['c']);
+
+        if ($non_system > 0) {
+            // Leave it open — just record that the underlying alert cleared.
+            mysqli_query($m,
+                "INSERT INTO ticket_replies SET
+                 ticket_reply = 'RMM alert cleared at the vendor. Ticket left open because it has other activity.',
+                 ticket_reply_type = 'System',
+                 ticket_reply_time_worked = '00:00:00',
+                 ticket_reply_by = 0,
+                 ticket_reply_ticket_id = $ticket_id"
+            );
+            logAction('RMM', 'Alert Cleared', "RMM alert ID $alert_id cleared; ticket $tref left open (has activity)", $client_id, $asset_id);
+            return;
+        }
+
+        // No human activity → auto-close (status 5 = Closed), system-attributed.
+        mysqli_query($m,
+            "UPDATE tickets SET
+             ticket_status = 5,
+             ticket_resolved_at = NOW(),
+             ticket_closed_at = NOW(),
+             ticket_closed_by = 0
+             WHERE ticket_id = $ticket_id
+               AND ticket_resolved_at IS NULL AND ticket_closed_at IS NULL"
+        );
+        mysqli_query($m,
+            "INSERT INTO ticket_replies SET
+             ticket_reply = 'Auto-closed: RMM alert cleared',
+             ticket_reply_type = 'System',
+             ticket_reply_time_worked = '00:00:00',
+             ticket_reply_by = 0,
+             ticket_reply_ticket_id = $ticket_id"
+        );
+        logAction('RMM', 'Ticket Auto-Closed', "Ticket $tref auto-closed: RMM alert ID $alert_id cleared", $client_id, $asset_id);
+    }
+
     private function syncAgent(array $agent): string {
         $m       = $this->mysqli;
         $intg_id = $this->integration_id;
@@ -192,6 +281,13 @@ class RmmAssetMapper {
             if ($ts) { $last_seen_val = "'" . date('Y-m-d H:i:s', $ts) . "'"; }
         }
 
+        // Resolve the vendor detail once — the wmi_detail feeds interface sync,
+        // and the live-health snapshot (cpu/ram/disk %, needs_reboot, boot time,
+        // maintenance mode, pending patches) is persisted onto the link row.
+        $detail_bundle = $this->resolveDetailBundle($agent, $agent_id);
+        $wmi_detail    = $detail_bundle['wmi_detail'];
+        $health_sql    = $this->healthSetSql($detail_bundle['health']);
+
         // ----- Step 1: Check existing link -----
         $existing = mysqli_fetch_assoc(mysqli_query($m,
             "SELECT arl.id, arl.asset_id, arl.rmm_status, a.asset_client_id FROM asset_rmm_links arl
@@ -201,8 +297,8 @@ class RmmAssetMapper {
 
         if ($existing) {
             $this->updateLink($existing['id'], $existing['rmm_status'], $status, $last_seen_val, $os_name, $os_version,
-                $manufacturer, $model, $cpu, $ram_gb, $logged_user, $mesh_node_id, $raw_json);
-            $this->syncInterfaces(intval($existing['asset_id']), $this->resolveWmiDetail($agent, $agent_id));
+                $manufacturer, $model, $cpu, $ram_gb, $logged_user, $mesh_node_id, $raw_json, $health_sql);
+            $this->syncInterfaces(intval($existing['asset_id']), $wmi_detail);
             $this->backfillClientId(intval($existing['asset_id']), intval($existing['asset_client_id']), $resolved_client_id);
             return 'updated';
         }
@@ -301,6 +397,7 @@ class RmmAssetMapper {
                  hostname='$hostname',
                  mesh_node_id='$mesh_node_id',
                  rmm_status='$status',
+                 $health_sql
                  last_seen=$last_seen_val,
                  os_name='$os_name',
                  os_version='$os_version',
@@ -322,6 +419,7 @@ class RmmAssetMapper {
                  hostname='$hostname',
                  mesh_node_id='$mesh_node_id',
                  rmm_status='$status',
+                 $health_sql
                  last_seen=$last_seen_val,
                  os_name='$os_name',
                  os_version='$os_version',
@@ -335,14 +433,15 @@ class RmmAssetMapper {
             );
         }
 
-        $this->syncInterfaces($asset_id, $this->resolveWmiDetail($agent, $agent_id));
+        $this->syncInterfaces($asset_id, $wmi_detail);
 
         return $outcome;
     }
 
     private function updateLink(int $link_id, ?string $old_status, string $status, string $last_seen_val,
         string $os_name, string $os_version, string $manufacturer, string $model,
-        string $cpu, string $ram_gb, string $logged_user, string $mesh_node_id, string $raw_json): void
+        string $cpu, string $ram_gb, string $logged_user, string $mesh_node_id, string $raw_json,
+        string $health_sql = ''): void
     {
         $m = $this->mysqli;
         $status_changed_sql = ($old_status !== null && $old_status !== $status)
@@ -352,6 +451,7 @@ class RmmAssetMapper {
             "UPDATE asset_rmm_links SET
              rmm_status='$status',
              $status_changed_sql
+             $health_sql
              last_seen=$last_seen_val,
              os_name='$os_name',
              os_version='$os_version',
@@ -381,6 +481,134 @@ class RmmAssetMapper {
             }
         }
         return [];
+    }
+
+    /**
+     * Fetch the vendor detail once and return both the wmi_detail (for
+     * interface sync) and a normalized live-health snapshot (for the link row).
+     * For Tactical, the /agents/ list payload lacks wmi_detail and usage %, so
+     * we pull the full agent detail; for Level the normalized device already
+     * carries what the API exposes and no extra call is made.
+     *
+     * @return array{wmi_detail: array, health: array}
+     */
+    private function resolveDetailBundle(array $agent, string $agent_id): array {
+        $wmi    = is_array($agent['wmi_detail'] ?? null) ? $agent['wmi_detail'] : [];
+        $detail = null;
+
+        // Only Tactical exposes a richer per-agent detail worth a second fetch.
+        if (empty($wmi) && $this->rmmClient
+            && $this->rmmClient instanceof TacticalRmmClient) {
+            try {
+                $detail = $this->rmmClient->getAgent($agent_id);
+            } catch (\Throwable $e) {
+                $detail = null;
+            }
+            if (is_array($detail) && !empty($detail['wmi_detail']) && is_array($detail['wmi_detail'])) {
+                $wmi = $detail['wmi_detail'];
+            }
+        }
+
+        // Merge so the detail wins for shared keys but list-only fields (e.g.
+        // has_patches_pending) from the original payload survive.
+        $src = is_array($detail) ? array_merge($agent, $detail) : $agent;
+
+        return ['wmi_detail' => $wmi, 'health' => $this->computeHealth($src, $wmi)];
+    }
+
+    /**
+     * Extract a live-health snapshot from a vendor agent payload. Values that
+     * aren't exposed by the vendor stay null (rendered as "—" in the UI).
+     */
+    private function computeHealth(array $agent, array $wmi): array {
+        $h = [
+            'cpu_percent'      => null,
+            'ram_percent'      => null,
+            'disk_percent'     => null,
+            'needs_reboot'     => 0,
+            'last_boot'        => null,
+            'maintenance_mode' => 0,
+            'patches_pending'  => null,
+        ];
+
+        if (array_key_exists('needs_reboot', $agent))        $h['needs_reboot']     = !empty($agent['needs_reboot']) ? 1 : 0;
+        if (array_key_exists('maintenance_mode', $agent))    $h['maintenance_mode'] = !empty($agent['maintenance_mode']) ? 1 : 0;
+        if (array_key_exists('has_patches_pending', $agent)) $h['patches_pending']  = !empty($agent['has_patches_pending']) ? 1 : 0;
+
+        // Boot time: Tactical exposes a unix ts (boot_time); Level an ISO string.
+        $bt = $agent['boot_time'] ?? $agent['last_reboot_time'] ?? null;
+        if (!empty($bt)) {
+            if (is_numeric($bt)) {
+                $h['last_boot'] = date('Y-m-d H:i:s', intval($bt));
+            } elseif (($ts = strtotime((string) $bt))) {
+                $h['last_boot'] = date('Y-m-d H:i:s', $ts);
+            }
+        }
+
+        // Direct usage percentages when a vendor supplies them.
+        if (isset($agent['cpu_load']) && is_numeric($agent['cpu_load'])) $h['cpu_percent'] = max(0, min(100, intval(round((float) $agent['cpu_load']))));
+        if (isset($agent['mem'])      && is_numeric($agent['mem']))      $h['ram_percent'] = max(0, min(100, intval(round((float) $agent['mem']))));
+
+        // Disk %: worst (highest used %) fixed volume from the disks array.
+        if (!empty($agent['disks']) && is_array($agent['disks'])) {
+            $maxpct = null;
+            foreach ($agent['disks'] as $dk) {
+                if (is_array($dk) && isset($dk['percent']) && is_numeric($dk['percent'])) {
+                    $maxpct = max($maxpct ?? 0, intval($dk['percent']));
+                }
+            }
+            if ($maxpct !== null) $h['disk_percent'] = max(0, min(100, $maxpct));
+        }
+
+        // Tactical fallback: derive CPU/RAM % from WMI when not given directly.
+        if ($h['cpu_percent'] === null) $h['cpu_percent'] = $this->wmiCpuPercent($wmi);
+        if ($h['ram_percent'] === null) $h['ram_percent'] = $this->wmiRamPercent($wmi);
+
+        return $h;
+    }
+
+    // Average LoadPercentage across CPU packages in a Tactical wmi_detail.
+    private function wmiCpuPercent(array $wmi): ?int {
+        $cpus = $wmi['cpu'] ?? [];
+        if (!is_array($cpus)) return null;
+        $vals = [];
+        foreach ($cpus as $grp) {
+            $c = (is_array($grp) && isset($grp[0]) && is_array($grp[0])) ? $grp[0] : $grp;
+            if (is_array($c) && isset($c['LoadPercentage']) && is_numeric($c['LoadPercentage'])) {
+                $vals[] = (float) $c['LoadPercentage'];
+            }
+        }
+        if (!$vals) return null;
+        return max(0, min(100, intval(round(array_sum($vals) / count($vals)))));
+    }
+
+    // Used-memory % from a Tactical wmi_detail OS block (values in KB).
+    private function wmiRamPercent(array $wmi): ?int {
+        $o = $wmi['os'] ?? [];
+        while (is_array($o) && isset($o[0]) && is_array($o[0])) { $o = $o[0]; }
+        if (!is_array($o)) return null;
+        $total = $o['TotalVisibleMemorySize'] ?? null;
+        $free  = $o['FreePhysicalMemory'] ?? null;
+        if (!is_numeric($total) || !is_numeric($free) || $total <= 0) return null;
+        return max(0, min(100, intval(round((($total - $free) / $total) * 100))));
+    }
+
+    /**
+     * Build the SET fragment (trailing comma included) that persists a health
+     * snapshot onto asset_rmm_links. Safe to embed directly in an UPDATE/INSERT.
+     */
+    private function healthSetSql(array $h): string {
+        $m    = $this->mysqli;
+        $cpu  = $h['cpu_percent']  === null ? 'NULL' : intval($h['cpu_percent']);
+        $ram  = $h['ram_percent']  === null ? 'NULL' : intval($h['ram_percent']);
+        $disk = $h['disk_percent'] === null ? 'NULL' : intval($h['disk_percent']);
+        $reboot = !empty($h['needs_reboot']) ? 1 : 0;
+        $maint  = !empty($h['maintenance_mode']) ? 1 : 0;
+        $boot   = empty($h['last_boot']) ? 'NULL' : "'" . mysqli_real_escape_string($m, $h['last_boot']) . "'";
+        $patch  = $h['patches_pending'] === null ? 'NULL' : intval($h['patches_pending']);
+        return "rmm_cpu_percent=$cpu, rmm_ram_percent=$ram, rmm_disk_percent=$disk, "
+             . "rmm_needs_reboot=$reboot, rmm_maintenance_mode=$maint, rmm_last_boot=$boot, "
+             . "rmm_patches_pending=$patch, rmm_health_updated_at=NOW(),";
     }
 
     private function syncInterfaces(int $asset_id, array $wmiDetail): void {

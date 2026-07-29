@@ -9,7 +9,7 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
 <!-- Password -->
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title"><i class="fas fa-fw fa-lock mr-2"></i>Password</h3>
+        <h3 class="card-title"><i class="fas fa-fw fa-lock me-2"></i>Password</h3>
     </div>
     <div class="card-body">
         <form action="post.php" method="post" autocomplete="off">
@@ -43,7 +43,7 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
                 <small class="text-muted">Minimum 8 characters.</small>
             </div>
             <button type="submit" name="edit_your_user_password" class="btn btn-primary btn-sm">
-                <i class="fas fa-check mr-1"></i>Update Password
+                <i class="fas fa-check me-1"></i>Update Password
             </button>
         </form>
     </div>
@@ -52,17 +52,17 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
 <!-- Two-Factor Authentication -->
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-mobile-alt mr-2"></i>Two-Factor Authentication</h3>
+        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-mobile-alt me-2"></i>Two-Factor Authentication</h3>
         <?php if (empty($session_token)) { ?>
-            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#enableMFAModal">
-                <i class="fas fa-lock mr-1"></i>Enable MFA
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#enableMFAModal">
+                <i class="fas fa-lock me-1"></i>Enable MFA
             </button>
             <?php require_once "modals/user_mfa_modal.php"; ?>
         <?php } else { ?>
-            <span class="badge badge-success mr-2"><i class="fas fa-check mr-1"></i>Enabled</span>
+            <span class="badge text-bg-success me-2"><i class="fas fa-check me-1"></i>Enabled</span>
             <a href="post.php?disable_mfa&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                class="btn btn-outline-danger btn-sm confirm-link">
-                <i class="fas fa-unlock mr-1"></i>Disable
+                <i class="fas fa-unlock me-1"></i>Disable
             </a>
         <?php } ?>
     </div>
@@ -74,7 +74,7 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
 
     <?php if ($remember_token_count > 0) { ?>
     <div class="card-body border-top py-2">
-        <h6 class="text-muted mb-2"><i class="fas fa-fw fa-clock mr-1"></i>Remember-Me Tokens <span class="badge badge-secondary"><?= $remember_token_count ?></span></h6>
+        <h6 class="text-muted mb-2"><i class="fas fa-fw fa-clock me-1"></i>Remember-Me Tokens <span class="badge text-bg-secondary"><?= $remember_token_count ?></span></h6>
         <div class="table-responsive">
             <table class="table table-sm table-borderless mb-2">
                 <tbody>
@@ -90,7 +90,7 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
         <form action="post.php" method="post" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
             <button type="submit" name="revoke_your_2fa_remember_tokens" class="btn btn-outline-danger btn-sm">
-                <i class="fas fa-times mr-1"></i>Revoke All Tokens
+                <i class="fas fa-times me-1"></i>Revoke All Tokens
             </button>
         </form>
     </div>
@@ -100,16 +100,16 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
 <!-- Passkeys -->
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-fingerprint mr-2"></i>Passkeys</h3>
-        <button class="btn btn-primary btn-sm" id="addPasskeyBtn" onclick="passkeyRegister()">
-            <i class="fas fa-plus mr-1"></i>Add Passkey
+        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-fingerprint me-2"></i>Passkeys</h3>
+        <button class="btn btn-primary btn-sm js-passkey-register" id="addPasskeyBtn">
+            <i class="fas fa-plus me-1"></i>Add Passkey
         </button>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm table-borderless table-hover mb-0" id="passkey-table">
             <thead class="text-muted small">
                 <tr class="border-bottom">
-                    <th class="pl-3">Name</th>
+                    <th class="ps-3">Name</th>
                     <th>Added</th>
                     <th>Last used</th>
                     <th></th>
@@ -131,12 +131,12 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
                     $pklast   = $pk['passkey_last_used_at'] ? timeAgo($pk['passkey_last_used_at']) : '—';
                     ?>
                     <tr>
-                        <td class="pl-3"><i class="fas fa-fingerprint mr-2 text-primary"></i><?= $pkname ?></td>
+                        <td class="ps-3"><i class="fas fa-fingerprint me-2 text-primary"></i><?= $pkname ?></td>
                         <td class="text-muted small"><?= $pkcreated ?></td>
                         <td class="text-muted small"><?= $pklast ?></td>
-                        <td class="pr-3 text-right">
-                            <button class="btn btn-sm btn-outline-danger"
-                                    onclick="deletePasskey(<?= $pkid ?>, '<?= htmlspecialchars($pkname, ENT_QUOTES) ?>', this)">
+                        <td class="pe-3 text-end">
+                            <button class="btn btn-sm btn-outline-danger js-delete-passkey"
+                                    data-passkey-id="<?= $pkid ?>" data-passkey-name="<?= htmlspecialchars($pkname, ENT_QUOTES) ?>">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
@@ -153,8 +153,8 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title"><i class="fas fa-fingerprint mr-2"></i>Add Passkey</h5>
-                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                <h5 class="modal-title"><i class="fas fa-fingerprint me-2"></i>Add Passkey</h5>
+                <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
                 <div id="passkey-modal-idle">
@@ -172,14 +172,14 @@ $remember_token_count = mysqli_num_rows($sql_remember_tokens);
                 </div>
                 <div id="passkey-modal-error" class="alert alert-danger mt-2" style="display:none;"></div>
                 <div id="passkey-modal-success" class="alert alert-success mt-2" style="display:none;">
-                    <i class="fas fa-check-circle mr-2"></i>Passkey registered!
+                    <i class="fas fa-check-circle me-2"></i>Passkey registered!
                 </div>
             </div>
             <div class="modal-footer" id="passkey-modal-footer">
-                <button type="button" class="btn btn-primary" onclick="passkeyDoRegister()">
-                    <i class="fas fa-fingerprint mr-1"></i>Register Passkey
+                <button type="button" class="btn btn-primary js-passkey-do-register">
+                    <i class="fas fa-fingerprint me-1"></i>Register Passkey
                 </button>
-                <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
             </div>
         </div>
     </div>
@@ -194,12 +194,12 @@ if (!empty($_SESSION['alert_type']) && $_SESSION['alert_type'] == 'error') {
 }
 
 if (!empty($_SESSION['show_mfa_modal'])) {
-    echo "<script>document.addEventListener('DOMContentLoaded',function(){\$('#enableMFAModal').modal('show');});</script>";
+    echo "<script nonce=\"" . htmlspecialchars($csp_nonce ?? '') . "\">document.addEventListener('DOMContentLoaded',function(){\$('#enableMFAModal').modal('show');});</script>";
     unset($_SESSION['show_mfa_modal']);
 }
 ?>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 function passkeyRegister() {
     document.getElementById('passkey-modal-idle').style.display    = '';
     document.getElementById('passkey-modal-waiting').style.display = 'none';
@@ -288,13 +288,19 @@ function buf_to_b64u(buf) {
     bytes.forEach(b => s += String.fromCharCode(b));
     return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
+document.addEventListener('click', function (e) {
+    var el;
+    if ((el = e.target.closest('.js-passkey-register'))) { passkeyRegister(); return; }
+    if ((el = e.target.closest('.js-passkey-do-register'))) { passkeyDoRegister(); return; }
+    if ((el = e.target.closest('.js-delete-passkey'))) { deletePasskey(parseInt(el.dataset.passkeyId, 10), el.dataset.passkeyName, el); }
+});
 </script>
 
 <!-- API Tokens -->
 <div class="card card-dark mt-3">
     <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-mobile-alt mr-2"></i>Mobile App Tokens</h3>
-        <span class="badge badge-secondary"><?= mysqli_num_rows($sql_api_tokens) ?> active</span>
+        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-mobile-alt me-2"></i>Mobile App Tokens</h3>
+        <span class="badge text-bg-secondary"><?= mysqli_num_rows($sql_api_tokens) ?> active</span>
     </div>
     <div class="card-body p-0">
         <?php if (mysqli_num_rows($sql_api_tokens) > 0): ?>
@@ -311,17 +317,17 @@ function buf_to_b64u(buf) {
                 <?php while ($tok = mysqli_fetch_assoc($sql_api_tokens)): ?>
                 <tr id="api-tok-<?= $tok['token_id'] ?>">
                     <td>
-                        <i class="fas fa-fw fa-mobile-alt text-secondary mr-1"></i>
+                        <i class="fas fa-fw fa-mobile-alt text-secondary me-1"></i>
                         <?= nullable_htmlentities($tok['token_name']) ?>
                         <?php if ($tok['token_fcm_token']): ?>
-                            <i class="fas fa-bell text-success ml-1" title="Push notifications active"></i>
+                            <i class="fas fa-bell text-success ms-1" title="Push notifications active"></i>
                         <?php endif; ?>
                     </td>
                     <td class="text-muted small"><?= $tok['token_created_at'] ?></td>
                     <td class="text-muted small"><?= $tok['token_last_used_at'] ?? 'Never' ?></td>
-                    <td class="text-right">
-                        <button class="btn btn-xs btn-danger"
-                                onclick="revokeApiToken(<?= $tok['token_id'] ?>, this)"
+                    <td class="text-end">
+                        <button class="btn btn-xs btn-danger js-revoke-api-token"
+                                data-token-id="<?= $tok['token_id'] ?>"
                                 data-csrf="<?= $_SESSION['csrf_token'] ?>">
                             <i class="fas fa-times"></i> Revoke
                         </button>
@@ -339,7 +345,7 @@ function buf_to_b64u(buf) {
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 async function revokeApiToken(id, btn) {
     if (!confirm('Revoke this token? The device will be logged out.')) return;
     btn.disabled = true;
@@ -362,6 +368,10 @@ async function revokeApiToken(id, btn) {
         btn.disabled = false;
     }
 }
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-revoke-api-token');
+    if (btn) { revokeApiToken(parseInt(btn.dataset.tokenId, 10), btn); }
+});
 </script>
 
 <?php require_once "../../includes/footer.php"; ?>

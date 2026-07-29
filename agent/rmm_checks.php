@@ -35,9 +35,9 @@ $type_meta = [
 ?>
 
 <div class="d-flex align-items-center mb-3">
-    <h4 class="mb-0 mr-auto"><i class="fas fa-heartbeat mr-2"></i>Alert Check Policies</h4>
-    <button class="btn btn-primary btn-sm" onclick="openNewPolicy()">
-        <i class="fas fa-plus mr-1"></i>New Policy
+    <h4 class="mb-0 mr-auto"><i class="fas fa-heartbeat me-2"></i>Alert Check Policies</h4>
+    <button class="btn btn-primary btn-sm js-open-new-policy">
+        <i class="fas fa-plus me-1"></i>New Policy
     </button>
 </div>
 
@@ -46,8 +46,7 @@ $type_meta = [
 <div class="card card-dark mb-2">
     <div class="card-body py-2 d-flex align-items-center" style="gap:10px">
         <label class="mb-0 text-muted small">Push to integration:</label>
-        <select id="activeIntegration" class="form-control form-control-sm" style="max-width:250px"
-                onchange="selectedIntegration=this.value">
+        <select id="activeIntegration" class="form-control form-control-sm js-integration-select" style="max-width:250px">
             <?php foreach ($integrations as $intg): ?>
             <option value="<?= intval($intg['id']) ?>" <?= $intg['id'] == $default_intg ? 'selected' : '' ?>>
                 <?= nullable_htmlentities($intg['name']) ?>
@@ -77,18 +76,18 @@ foreach ($platform_order as $plat):
 <div class="card card-dark mb-3" id="platform-card-<?= $plat ?>">
     <div class="card-header py-2 d-flex align-items-center">
         <h6 class="mb-0 mr-auto">
-            <i class="<?= $pm['icon'] ?> mr-2 text-<?= $pm['color'] ?>"></i>
+            <i class="<?= $pm['icon'] ?> me-2 text-<?= $pm['color'] ?>"></i>
             <?= $pm['label'] ?> Checks
         </h6>
-        <button class="btn btn-xs btn-<?= $pm['color'] ?>" onclick="pushAll('<?= $plat ?>')">
-            <i class="fas fa-cloud-upload-alt mr-1"></i>Push All <?= $pm['label'] ?> to Agents
+        <button class="btn btn-xs btn-<?= $pm['color'] ?> js-push-all-policies" data-platform="<?= nullable_htmlentities($plat) ?>">
+            <i class="fas fa-cloud-upload-alt me-1"></i>Push All <?= $pm['label'] ?> to Agents
         </button>
     </div>
     <div class="card-body p-0">
     <table class="table table-sm table-hover mb-0" style="table-layout:fixed">
         <thead class="text-muted border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
             <tr>
-                <th class="pl-3" style="width:26%">Check Name</th>
+                <th class="ps-3" style="width:26%">Check Name</th>
                 <th class="text-center" style="width:16%;font-size:12px">Type</th>
                 <th class="text-center" style="width:14%;font-size:12px">Thresholds</th>
                 <th class="text-center" style="width:9%;font-size:12px">Interval</th>
@@ -104,28 +103,28 @@ foreach ($platform_order as $plat):
             $params = json_decode($pol['check_params'] ?? '{}', true) ?? [];
         ?>
         <tr id="pol-row-<?= $pid ?>">
-            <td class="pl-3">
-                <div class="font-weight-bold"><?= nullable_htmlentities($pol['name']) ?></div>
+            <td class="ps-3">
+                <div class="fw-bold"><?= nullable_htmlentities($pol['name']) ?></div>
                 <?php if ($pol['description']): ?>
                 <div class="text-muted small"><?= nullable_htmlentities($pol['description']) ?></div>
                 <?php endif; ?>
             </td>
             <td class="text-center">
-                <i class="<?= $tm['icon'] ?> mr-1 text-muted"></i><?= $tm['label'] ?>
+                <i class="<?= $tm['icon'] ?> me-1 text-muted"></i><?= $tm['label'] ?>
                 <?php if (!empty($params['disk'])): ?>
-                <code class="ml-1"><?= htmlspecialchars($params['disk']) ?>:</code>
+                <code class="ms-1"><?= htmlspecialchars($params['disk']) ?>:</code>
                 <?php elseif (!empty($params['svc_name'])): ?>
-                <code class="ml-1"><?= htmlspecialchars($params['svc_name']) ?></code>
+                <code class="ms-1"><?= htmlspecialchars($params['svc_name']) ?></code>
                 <?php elseif (!empty($params['ip'])): ?>
-                <code class="ml-1"><?= htmlspecialchars($params['ip']) ?></code>
+                <code class="ms-1"><?= htmlspecialchars($params['ip']) ?></code>
                 <?php endif; ?>
             </td>
             <td class="text-center">
                 <?php if ($pol['warning_threshold']): ?>
-                <span class="badge badge-warning" style="font-size:90%">Warn <?= intval($pol['warning_threshold']) ?>%</span>
+                <span class="badge text-bg-warning" style="font-size:90%">Warn <?= intval($pol['warning_threshold']) ?>%</span>
                 <?php endif; ?>
                 <?php if ($pol['critical_threshold']): ?>
-                <span class="badge badge-danger" style="font-size:90%">Crit <?= intval($pol['critical_threshold']) ?>%</span>
+                <span class="badge text-bg-danger" style="font-size:90%">Crit <?= intval($pol['critical_threshold']) ?>%</span>
                 <?php endif; ?>
                 <?php if (!$pol['warning_threshold'] && !$pol['critical_threshold']): ?>
                 <span class="text-muted">—</span>
@@ -134,28 +133,27 @@ foreach ($platform_order as $plat):
             <td class="text-center text-muted"><?= intval($pol['check_interval']) ?>s</td>
             <td class="text-center">
                 <?php if ($pol['deployed_count'] > 0): ?>
-                <span class="badge badge-success" style="font-size:90%"><?= intval($pol['deployed_count']) ?> agents</span>
+                <span class="badge text-bg-success" style="font-size:90%"><?= intval($pol['deployed_count']) ?> agents</span>
                 <?php else: ?>
                 <span class="text-muted">Not deployed</span>
                 <?php endif; ?>
             </td>
             <td class="text-center">
                 <?= $pol['enabled']
-                    ? '<span class="badge badge-success" style="font-size:90%">Active</span>'
-                    : '<span class="badge badge-secondary" style="font-size:90%">Disabled</span>' ?>
+                    ? '<span class="badge text-bg-success" style="font-size:90%">Active</span>'
+                    : '<span class="badge text-bg-secondary" style="font-size:90%">Disabled</span>' ?>
             </td>
-            <td class="text-right pr-2" style="white-space:nowrap">
-                <button class="btn btn-xs btn-success mr-1" title="Push to matching agents"
-                        data-policy-id="<?= $pid ?>" data-policy-name="<?= nullable_htmlentities($pol['name']) ?>"
-                        onclick="pushPolicy(<?= $pid ?>, '<?= nullable_htmlentities($pol['name']) ?>')">
+            <td class="text-end pe-2" style="white-space:nowrap">
+                <button class="btn btn-xs btn-success me-1 js-push-policy" title="Push to matching agents"
+                        data-policy-id="<?= $pid ?>" data-policy-name="<?= nullable_htmlentities($pol['name']) ?>">
                     <i class="fas fa-cloud-upload-alt"></i>
                 </button>
-                <button class="btn btn-xs btn-secondary mr-1" title="Edit"
-                        onclick='editPolicy(<?= json_encode($pol, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                <button class="btn btn-xs btn-secondary me-1 js-edit-policy" title="Edit"
+                        data-policy='<?= json_encode($pol, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>'>
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn btn-xs btn-danger" title="Delete"
-                        onclick="deletePolicy(<?= $pid ?>, '<?= addslashes($pol['name']) ?>')">
+                <button class="btn btn-xs btn-danger js-delete-policy" title="Delete"
+                        data-policy-id="<?= $pid ?>" data-policy-name="<?= nullable_htmlentities($pol['name']) ?>">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -179,16 +177,16 @@ foreach ($platform_order as $plat):
 <!-- Confirm Action Modal -->
 <div class="modal fade" id="confirmActionModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content bg-dark">
+        <div class="modal-content">
             <div class="modal-header py-2">
                 <h6 class="modal-title mb-0">Please Confirm</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body" id="confirmActionBody"></div>
             <div class="modal-footer py-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary btn-sm" id="confirmActionBtn">
-                    <i class="fas fa-check mr-1"></i>Confirm
+                    <i class="fas fa-check me-1"></i>Confirm
                 </button>
             </div>
         </div>
@@ -198,10 +196,10 @@ foreach ($platform_order as $plat):
 <!-- Add/Edit Modal -->
 <div class="modal fade" id="policyModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content bg-dark">
+        <div class="modal-content">
             <div class="modal-header py-2">
                 <h6 class="modal-title mb-0" id="policyModalTitle">New Check Policy</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="edit_id" value="">
@@ -213,7 +211,7 @@ foreach ($platform_order as $plat):
                     <div class="col-6">
                         <div class="form-group">
                             <label class="text-muted small">Platform</label>
-                            <select class="form-control form-control-sm" id="p_platform" onchange="updateParamsHint()">
+                            <select class="form-control form-control-sm js-update-params-hint" id="p_platform">
                                 <option value="any">All Platforms</option>
                                 <option value="windows">Windows</option>
                                 <option value="linux">Linux</option>
@@ -224,7 +222,7 @@ foreach ($platform_order as $plat):
                     <div class="col-6">
                         <div class="form-group">
                             <label class="text-muted small">Check Type</label>
-                            <select class="form-control form-control-sm" id="p_type" onchange="updateParamsHint()">
+                            <select class="form-control form-control-sm js-update-params-hint" id="p_type">
                                 <option value="diskspace">Disk Space</option>
                                 <option value="cpuload">CPU Load</option>
                                 <option value="memory">Memory</option>
@@ -263,24 +261,39 @@ foreach ($platform_order as $plat):
                     <label class="text-muted small">Description</label>
                     <input type="text" class="form-control form-control-sm" id="p_description">
                 </div>
-                <div class="custom-control custom-switch">
-                    <input type="checkbox" class="custom-control-input" id="p_enabled" checked>
-                    <label class="custom-control-label" for="p_enabled">Enabled</label>
+                <div class="form-check form-check form-switch">
+                    <input type="checkbox" class="form-check-input" id="p_enabled" checked>
+                    <label class="form-check-label" for="p_enabled">Enabled</label>
                 </div>
             </div>
             <div class="modal-footer py-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="savePolicy()">
-                    <i class="fas fa-check mr-1"></i>Save Policy
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm js-save-policy">
+                    <i class="fas fa-check me-1"></i>Save Policy
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 const CSRF   = '<?= $_SESSION['csrf_token'] ?>';
 let selectedIntegration = <?= intval($default_intg) ?>;
+
+// Delegated wiring (CSP forbids inline onclick=/onchange= attributes).
+document.addEventListener('click', function (e) {
+    var el;
+    if ((el = e.target.closest('.js-open-new-policy'))) { openNewPolicy(); return; }
+    if ((el = e.target.closest('.js-push-all-policies'))) { pushAll(el.dataset.platform); return; }
+    if ((el = e.target.closest('.js-push-policy'))) { pushPolicy(parseInt(el.dataset.policyId, 10), el.dataset.policyName); return; }
+    if ((el = e.target.closest('.js-edit-policy'))) { editPolicy(JSON.parse(el.dataset.policy)); return; }
+    if ((el = e.target.closest('.js-delete-policy'))) { deletePolicy(parseInt(el.dataset.policyId, 10), el.dataset.policyName); return; }
+    if ((el = e.target.closest('.js-save-policy'))) { savePolicy(); return; }
+});
+document.addEventListener('change', function (e) {
+    if (e.target.closest('.js-integration-select')) { selectedIntegration = e.target.value; return; }
+    if (e.target.closest('.js-update-params-hint')) { updateParamsHint(); }
+});
 
 function showMsg(text, type) {
     const el = document.getElementById('actionMsg');

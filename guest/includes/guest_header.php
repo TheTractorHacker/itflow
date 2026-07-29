@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,20 +18,25 @@
 
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="/plugins/fontawesome-free/css/all.min.css">
-    <!-- Theme style -->
-    <link rel="stylesheet" href="/plugins/adminlte/css/adminlte.min.css">
 
-    <!-- Custom Style Sheet -->
-    <link rel="stylesheet" href="/plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css">
-    <link rel="stylesheet" href="/plugins/select2/css/select2.min.css">
-    <link rel="stylesheet" href="/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css">
-    <link rel="stylesheet" href='/plugins/daterangepicker/daterangepicker.css'>
+    <!-- Core stack: Bootstrap 5.3 + AdminLTE 4 -->
+    <link rel="stylesheet" href="/plugins/bootstrap5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/plugins/adminlte4/css/adminlte.min.css">
+
+    <!-- Toastr (used by inc_alert_feedback) -->
+    <link rel="stylesheet" href="/plugins/toastr/toastr.min.css">
+
+    <!-- Theme: BS5 bridge (maps BS vars -> Alga tokens) THEN the custom theme -->
+    <link rel="stylesheet" href="/css/itflow_bs5_bridge.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_bs5_bridge.css') ?>">
     <link rel="stylesheet" href="/css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
+    <link rel="stylesheet" href="/css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
 
-    <!-- Scripts -->
+    <!-- Scripts: jQuery kept as a coexistence shim; toastr for alert feedback -->
     <script src="/plugins/jquery/jquery.min.js"></script>
     <script src="/plugins/toastr/toastr.min.js"></script>
 
 </head>
 <body class="layout-top-nav">
-    <div class="wrapper text-sm">
+    <!-- AdminLTE 4 layout wrapper (no sidebar on guest pages, so the sidebar
+         grid column simply collapses to 0 width) -->
+    <div class="app-wrapper text-sm">

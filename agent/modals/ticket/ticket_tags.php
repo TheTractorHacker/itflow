@@ -14,6 +14,7 @@ $row = mysqli_fetch_assoc($sql);
 $ticket_prefix = nullable_htmlentities($row['ticket_prefix']);
 $ticket_number = intval($row['ticket_number']);
 $client_id = intval($row['ticket_client_id']);
+enforceClientAccess($client_id);
 $client_name = nullable_htmlentities($row['client_name']);
 
 $ticket_tag_id_array = array();
@@ -28,8 +29,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-tags mr-2"></i>Tags: <strong><?php echo "$ticket_prefix$ticket_number"; ?></strong> - <?php echo $client_name; ?></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-tags me-2"></i>Tags: <strong><?php echo "$ticket_prefix$ticket_number"; ?></strong> - <?php echo $client_name; ?></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -63,8 +64,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="update_ticket_tags" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save Tags</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="update_ticket_tags" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save Tags</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

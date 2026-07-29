@@ -153,7 +153,7 @@ $account_amount_paid = floatval($row['amount_paid']);
 $account_balance = $account_balance - $account_amount_paid;
 //set Text color on balance
 if ($balance > 0) {
-    $balance_text_color = "text-danger font-weight-bold";
+    $balance_text_color = "text-danger fw-bold";
 } else {
     $balance_text_color = "";
 }
@@ -167,10 +167,10 @@ if ($balance > 0) {
                 <h4 class="mt-1">Account Balance: <b><?php echo numfmt_format_currency($currency_format, $account_balance, $invoice_currency_code); ?></b></h4>
             </div>
             <div class="col-6">
-                <div class="float-right">
-                    <a class="btn btn-default" href="#" onclick="window.print();"><i class="fas fa-fw fa-print mr-2"></i>Print</a>
+                <div class="float-end">
+                    <a class="btn btn-default js-print-page" href="#"><i class="fas fa-fw fa-print me-2"></i>Print</a>
                     <a class="btn btn-default" href="guest_post.php?export_invoice_pdf=<?php echo $invoice_id; ?>&url_key=<?php echo $url_key; ?>">
-                        <i class="fa fa-fw fa-download mr-2"></i>Download
+                        <i class="fa fa-fw fa-download me-2"></i>Download
                     </a>
                     <?php
                     if ($invoice_status !== "Paid" &&
@@ -182,7 +182,7 @@ if ($balance > 0) {
                             $payment_provider_threshold > $invoice_amount
                         )
                     ){ ?>
-                        <a class="btn btn-success" href="guest_pay_invoice_stripe.php?invoice_id=<?php echo $invoice_id; ?>&url_key=<?php echo $url_key; ?>"><i class="fa fa-fw fa-credit-card mr-2"></i>Pay Now </a>
+                        <a class="btn btn-success" href="guest_pay_invoice_stripe.php?invoice_id=<?php echo $invoice_id; ?>&url_key=<?php echo $url_key; ?>"><i class="fa fa-fw fa-credit-card me-2"></i>Pay Now </a>
                     <?php } ?>
                 </div>
             </div>
@@ -210,22 +210,22 @@ if ($balance > 0) {
             </div>
 
             <div class="col-sm-4">
-                <h3 class="text-right"><strong>INVOICE</strong></h3>
-                <h5 class="badge badge-<?php echo $invoice_badge_color; ?> p-2 float-right">
+                <h3 class="text-end"><strong>INVOICE</strong></h3>
+                <h5 class="badge badge-<?php echo $invoice_badge_color; ?> p-2 float-end">
                     <?php echo "$invoice_status"; ?>
                 </h5>
                 <table class="table table-sm table-borderless">
                     <tr>
                         <th>Invoice #:</th>
-                        <td class="text-right"><?php echo "$invoice_prefix$invoice_number"; ?></td>
+                        <td class="text-end"><?php echo "$invoice_prefix$invoice_number"; ?></td>
                     </tr>
                     <tr>
                         <th>Date:</th>
-                        <td class="text-right"><?php echo $invoice_date; ?></td>
+                        <td class="text-end"><?php echo $invoice_date; ?></td>
                     </tr>
                     <tr>
                         <th>Due:</th>
-                        <td class="text-right"><?php echo $invoice_due; ?></td>
+                        <td class="text-end"><?php echo $invoice_due; ?></td>
                     </tr>
                 </table>
             </div>
@@ -253,9 +253,9 @@ if ($balance > 0) {
                                 <th>Item</th>
                                 <th>Description</th>
                                 <th class="text-center">Qty</th>
-                                <th class="text-right">Unit Price</th>
-                                <th class="text-right">Tax</th>
-                                <th class="text-right">Amount</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Tax</th>
+                                <th class="text-end">Amount</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -281,9 +281,9 @@ if ($balance > 0) {
                                     <td><?php echo $item_name; ?></td>
                                     <td><?php echo nl2br($item_description); ?></td>
                                     <td class="text-center"><?php echo $item_quantity; ?></td>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $item_price, $invoice_currency_code); ?></td>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $item_tax, $invoice_currency_code); ?></td>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $item_total, $invoice_currency_code); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $item_price, $invoice_currency_code); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $item_tax, $invoice_currency_code); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $item_total, $invoice_currency_code); ?></td>
                                 </tr>
 
                             <?php } ?>
@@ -310,14 +310,14 @@ if ($balance > 0) {
                     <tbody>
                     <tr>
                         <td>Subtotal:</td>
-                        <td class="text-right"><?php echo numfmt_format_currency($currency_format, $sub_total, $invoice_currency_code); ?></td>
+                        <td class="text-end"><?php echo numfmt_format_currency($currency_format, $sub_total, $invoice_currency_code); ?></td>
                     </tr>
                     <?php
                     if ($invoice_discount > 0) {
                         ?>
                         <tr>
                             <td>Discount:</td>
-                            <td class="text-right">-<?php echo numfmt_format_currency($currency_format, $invoice_discount, $invoice_currency_code); ?></td>
+                            <td class="text-end">-<?php echo numfmt_format_currency($currency_format, $invoice_discount, $invoice_currency_code); ?></td>
                         </tr>
                     <?php
                     }
@@ -325,24 +325,24 @@ if ($balance > 0) {
                     <?php if ($total_tax > 0) { ?>
                         <tr>
                             <td>Tax:</td>
-                            <td class="text-right"><?php echo numfmt_format_currency($currency_format, $total_tax, $invoice_currency_code); ?></td>
+                            <td class="text-end"><?php echo numfmt_format_currency($currency_format, $total_tax, $invoice_currency_code); ?></td>
                         </tr>
                     <?php } ?>
                     <tr>
                         <td>Total:</td>
-                        <td class="text-right"><?php echo numfmt_format_currency($currency_format, $invoice_amount, $invoice_currency_code); ?></td>
+                        <td class="text-end"><?php echo numfmt_format_currency($currency_format, $invoice_amount, $invoice_currency_code); ?></td>
                     </tr>
                     <?php if ($amount_paid > 0) { ?>
                         <tr>
                             <td><div class="text-success">Paid:</div></td>
-                            <td class="text-right text-success"><?php echo numfmt_format_currency($currency_format, $amount_paid, $invoice_currency_code); ?></td>
+                            <td class="text-end text-success"><?php echo numfmt_format_currency($currency_format, $amount_paid, $invoice_currency_code); ?></td>
                         </tr>
                     <?php
                     }
                     ?>
                     <tr class="h5 text-bold">
                         <td>Balance:</td>
-                        <td class="text-right"><?php echo numfmt_format_currency($currency_format, $balance, $invoice_currency_code); ?></td>
+                        <td class="text-end"><?php echo numfmt_format_currency($currency_format, $balance, $invoice_currency_code); ?></td>
                     </tr>
 
                     </tbody>
@@ -366,18 +366,18 @@ $current_invoices_count = mysqli_num_rows($sql_current_invoices);
 
 if ($current_invoices_count > 0) { ?>
 
-<div class="card d-print-none card-dark">
+<div class="card d-print-none card-outline card-secondary">
     <div class="card-header">
-        <strong><i class="fas fa-fw fa-clock mr-2"></i><b><?php echo $current_invoices_count; ?></b> Current Invoices</strong>
+        <strong><i class="fas fa-fw fa-clock me-2"></i><b><?php echo $current_invoices_count; ?></b> Current Invoices</strong>
     </div>
-    <div card="card-body">
+    <div class="card-body">
         <table class="table table-sm">
             <thead>
             <tr>
                 <th class="text-center">Invoice</th>
                 <th>Date</th>
                 <th>Due</th>
-                <th class="text-right">Amount</th>
+                <th class="text-end">Amount</th>
             </tr>
             </thead>
             <tbody>
@@ -402,7 +402,7 @@ if ($current_invoices_count > 0) { ?>
                     <th class="text-center"><a href="guest_view_invoice.php?invoice_id=<?php echo $invoice_id; ?>&url_key=<?php echo $invoice_url_key; ?>"><?php echo "$invoice_prefix$invoice_number"; ?></a></th>
                     <td><?php echo $invoice_date; ?></td>
                     <td><?php echo $invoice_due; ?> (Due in <?php echo $days; ?> Days)</td>
-                    <td class="text-right text-bold"><?php echo numfmt_format_currency($currency_format, $invoice_amount, $invoice_currency_code); ?></td>
+                    <td class="text-end text-bold"><?php echo numfmt_format_currency($currency_format, $invoice_amount, $invoice_currency_code); ?></td>
                 </tr>
 
             <?php } ?>
@@ -428,18 +428,18 @@ $outstanding_invoices_count = mysqli_num_rows($sql_outstanding_invoices);
 
 if ($outstanding_invoices_count > 0) { ?>
 
-<div class="card d-print-none card-danger">
+<div class="card d-print-none card-outline card-danger">
     <div class="card-header">
-        <strong><i class="fa fa-fw fa-exclamation-triangle mr-2"></i><b><?php echo $outstanding_invoices_count; ?></b> Outstanding Invoices</strong>
+        <strong><i class="fa fa-fw fa-exclamation-triangle me-2"></i><b><?php echo $outstanding_invoices_count; ?></b> Outstanding Invoices</strong>
     </div>
-    <div card="card-body">
+    <div class="card-body">
         <table class="table table-sm">
             <thead>
             <tr>
                 <th class="text-center">Invoice</th>
                 <th>Date</th>
                 <th>Due</th>
-                <th class="text-right">Amount</th>
+                <th class="text-end">Amount</th>
             </tr>
             </thead>
             <tbody>
@@ -464,7 +464,7 @@ if ($outstanding_invoices_count > 0) { ?>
                     <th class="text-center"><a href="guest_view_invoice.php?invoice_id=<?php echo $invoice_id; ?>&url_key=<?php echo $invoice_url_key; ?>"><?php echo "$invoice_prefix$invoice_number"; ?></a></th>
                     <td><?php echo $invoice_date; ?></td>
                     <td class="text-danger"><?php echo $invoice_due; ?> (Over Due by <?php echo $days; ?> Days)</td>
-                    <td class="text-right text-bold"><?php echo numfmt_format_currency($currency_format, $invoice_amount, $invoice_currency_code); ?></td>
+                    <td class="text-end text-bold"><?php echo numfmt_format_currency($currency_format, $invoice_amount, $invoice_currency_code); ?></td>
                 </tr>
 
                 <?php

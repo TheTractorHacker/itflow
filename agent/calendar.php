@@ -30,7 +30,7 @@ if (isset($_GET['calendar_id'])) {
 
     <div class="col-md-3">
         <div class="card">
-            <div class="card-header bg-dark">
+            <div class="card-header">
                 <h3 class="card-title">Calendars</h3>
                 <div class="card-tools">
                     <button type="button" class="btn btn-tool ajax-modal" data-modal-url="modals/calendar/calendar_add.php"><i class="fas fa-plus" title="New Calendar"></i></button>
@@ -45,21 +45,21 @@ if (isset($_GET['calendar_id'])) {
                     $calendar_color = nullable_htmlentities($row['calendar_color']);
                 ?>
                 <div class="form-group d-flex align-items-center">
-                    <i class="fas fa-fw fa-circle mr-2" style="color:<?= $calendar_color ?>;"></i><?= $calendar_name ?>
+                    <i class="fas fa-fw fa-circle me-2" style="color:<?= $calendar_color ?>;"></i><?= $calendar_name ?>
 
                     <div class="dropdown dropright ml-auto">
-                        <button class="btn btn-tool" type="button" data-toggle="dropdown">
+                        <button class="btn btn-tool" type="button" data-bs-toggle="dropdown" data-boundary="window">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <div class="dropdown-menu">
                             <a class="dropdown-item ajax-modal" href="#"
                                 data-modal-url="modals/calendar/calendar_edit.php?id=<?= $calendar_id ?>">
-                                <i class="fas fa-fw fa-pencil-alt mr-2"></i>Rename
+                                <i class="fas fa-fw fa-pencil-alt me-2"></i>Rename
                             </a>
                             <?php if ($session_user_role == 3) { ?>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_calendar=<?= $calendar_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                 </a>
                             <?php } ?>
                         </div>
@@ -72,38 +72,38 @@ if (isset($_GET['calendar_id'])) {
             </div>
         </div>
         <div class="card">
-            <div class="card-header bg-dark">
+            <div class="card-header">
                 <h3 class="card-title">Built-in</h3>
             </div>
             <div class="card-body">
                 <div class="form-group">
-                    <i class="fas fa-fw fa-circle mr-2" style="color:blue;"></i>Invoices
+                    <i class="fas fa-fw fa-circle me-2" style="color:blue;"></i>Invoices
                 </div>
 
                 <div class="form-group">
-                    <i class="fas fa-fw fa-circle mr-2" style="color:purple;"></i>Quotes
+                    <i class="fas fa-fw fa-circle me-2" style="color:purple;"></i>Quotes
                 </div>
 
                 <div class="form-group">
-                    <i class="fas fa-fw fa-circle mr-2" style="color:red;"></i>Tickets (Created)
+                    <i class="fas fa-fw fa-circle me-2" style="color:red;"></i>Tickets (Created)
                 </div>
 
                 <div class="form-group">
-                    <i class="fas fa-fw fa-circle mr-2" style="color:grey;"></i>Recurring Tickets
+                    <i class="fas fa-fw fa-circle me-2" style="color:grey;"></i>Recurring Tickets
                 </div>
 
                 <div class="form-group">
-                    <i class="fas fa-fw fa-circle mr-2" style="color:grey;"></i>Tickets (Scheduled)
+                    <i class="fas fa-fw fa-circle me-2" style="color:grey;"></i>Tickets (Scheduled)
                 </div>
 
                 <div class="form-group">
-                    <i class="fas fa-fw fa-circle mr-2" style="color:brown;"></i>Vendors
+                    <i class="fas fa-fw fa-circle me-2" style="color:brown;"></i>Vendors
                 </div>
 
                 <?php if (!isset($_GET['client_id'])) { ?>
 
                 <div class="form-group">
-                    <i class="fas fa-fw fa-circle mr-2" style="color:brown;"></i>Clients
+                    <i class="fas fa-fw fa-circle me-2" style="color:brown;"></i>Clients
                 </div>
 
                 <?php } ?>
@@ -119,14 +119,14 @@ if (isset($_GET['calendar_id'])) {
         $webcal_url = "webcal://$config_base_url/agent/calendar_feed.php?token=$cal_token";
         ?>
         <div class="card">
-            <div class="card-header bg-dark">
-                <h3 class="card-title"><i class="fas fa-sync-alt mr-1"></i>Calendar Sync</h3>
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-sync-alt me-1"></i>Calendar Sync</h3>
             </div>
             <div class="card-body p-3">
                 <p class="text-muted mb-3" style="font-size:.85rem;">Subscribe to your scheduled tickets in any calendar app. Refreshes automatically.</p>
 
                 <!-- Outlook Classic -->
-                <p class="mb-1"><strong><i class="fas fa-envelope mr-1"></i>Outlook (Classic)</strong></p>
+                <p class="mb-1"><strong><i class="fas fa-envelope me-1"></i>Outlook (Classic)</strong></p>
                 <div class="input-group input-group-sm mb-1">
                     <input type="text" class="form-control" id="cal_webcal_url" value="<?= htmlspecialchars($webcal_url, ENT_QUOTES) ?>" readonly>
                     <div class="input-group-append">
@@ -136,13 +136,13 @@ if (isset($_GET['calendar_id'])) {
                 <p class="text-muted mb-3" style="font-size:.8rem;">Calendar &rarr; Open Calendar &rarr; From Internet &rarr; paste above</p>
 
                 <!-- Apple / Outlook New -->
-                <p class="mb-1"><strong><i class="fab fa-apple mr-1"></i>Apple / Outlook (New)</strong></p>
+                <p class="mb-1"><strong><i class="fab fa-apple me-1"></i>Apple / Outlook (New)</strong></p>
                 <a href="<?= htmlspecialchars($webcal_url, ENT_QUOTES) ?>" class="btn btn-sm btn-outline-primary btn-block mb-3">
-                    <i class="fas fa-calendar-plus mr-1"></i>Subscribe Now
+                    <i class="fas fa-calendar-plus me-1"></i>Subscribe Now
                 </a>
 
                 <!-- Google Calendar -->
-                <p class="mb-1"><strong><i class="fab fa-google mr-1"></i>Google Calendar</strong></p>
+                <p class="mb-1"><strong><i class="fab fa-google me-1"></i>Google Calendar</strong></p>
                 <div class="input-group input-group-sm mb-1">
                     <input type="text" class="form-control" id="cal_https_url" value="<?= htmlspecialchars($feed_url, ENT_QUOTES) ?>" readonly>
                     <div class="input-group-append">
@@ -189,7 +189,7 @@ while ($row = mysqli_fetch_assoc($sql)) {
 
 <script src='/plugins/fullcalendar/dist/index.global.js'></script>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
 
@@ -201,7 +201,14 @@ while ($row = mysqli_fetch_assoc($sql)) {
                     text: 'New Event',
                     bootstrapFontAwesome: 'fas fa-plus',
                     click: function() {
-                        $("#addCalendarEventModal").modal();
+                        // jQuery's bare $(...).modal() only initializes the instance under
+                        // Bootstrap 5's jQuery interface (it no longer defaults show:true like
+                        // Bootstrap 4 did), so it silently never opened. Use the native BS5 API,
+                        // matching js/ajax_modal.js elsewhere in the app.
+                        var addEventModalEl = document.getElementById('addCalendarEventModal');
+                        if (addEventModalEl) {
+                            bootstrap.Modal.getOrCreateInstance(addEventModalEl).show();
+                        }
                     }
                 }
             },
@@ -450,7 +457,7 @@ while ($row = mysqli_fetch_assoc($sql)) {
 </script>
 
 <!-- Automatically set new event end date to 1 hr after start date -->
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
     // Function - called when user leaves field (onblur)
     function updateIncrementEndTime() {
 

@@ -20,6 +20,8 @@ require_once $DOCUMENT_ROOT . '/functions.php';
 require_once $DOCUMENT_ROOT . '/includes/load_company_settings.php';
 require_once $DOCUMENT_ROOT . '/includes/load_global_settings.php';
 require_once $DOCUMENT_ROOT . '/includes/redis_functions.php';
+require_once __DIR__ . '/includes/api_db.php';
+require_once __DIR__ . '/includes/api_ratelimit.php';
 
 function api_response(int $code, array $data): void {
     http_response_code($code);
@@ -69,7 +71,41 @@ if (is_string($sub)) {
 
 // Public endpoint: auth
 if ($resource === 'auth') {
+    // Tight per-IP limit on the unauthenticated login path (fails open if
+    // Redis is down). auth.php also enforces a per-user failed-login lockout.
+    $auth_ip = getIP();
+    if (!api_rate_limit('auth_ip:' . $auth_ip, 30, 60)) {
+        header('Retry-After: 60');
+        api_error(429, 'Rate limit exceeded');
+    }
     require __DIR__ . '/auth.php';
+    exit;
+}
+
+// Public endpoints: API documentation (OpenAPI spec + human-readable page).
+// Read-only and contain no secrets — just the shape of the API — so they are
+// served without a token, the same way `auth` is. This keeps GET /api/v1/docs
+// browsable in a plain browser (which sends no Bearer token) and the spec
+// fetchable by tooling (Swagger/Postman/CI). Light per-IP rate limit that
+// fails open when Redis is down. The docs page is 100% self-contained (inline
+// CSS, no JS, no external assets), so it renders safely under a strict
+// `default-src 'self'` CSP.
+if ($resource === 'openapi' || $resource === 'docs') {
+    if (!api_rate_limit('docs_ip:' . getIP(), 60, 60)) {
+        header('Retry-After: 60');
+        api_error(429, 'Rate limit exceeded');
+    }
+    if ($method !== 'GET') api_error(405, 'Method not allowed');
+
+    if ($resource === 'openapi') {
+        $spec_path = __DIR__ . '/openapi.yaml';
+        if (!is_readable($spec_path)) api_error(404, 'Spec not found');
+        header('Content-Type: application/yaml; charset=utf-8');
+        readfile($spec_path);
+        exit;
+    }
+
+    require __DIR__ . '/docs.php';
     exit;
 }
 
@@ -158,6 +194,28 @@ if (!$api_user_id && $legacy_key_raw !== null) {
 
 if (!$api_user_id) {
     api_error(401, 'Unauthorized');
+}
+
+// ── Per-caller rate limit ────────────────────────────────────────────────────
+// Best-effort abuse guard; fails open when Redis is unavailable. Keyed per
+// token (or per legacy key / per user) so one caller can't starve others.
+// Long-lived SSE streams are excluded so a held-open connection
+// (notifications/stream, tickets/{id}/chat?stream=1) never trips the limiter —
+// this counts connections, not stream duration.
+$is_sse_stream = ($resource === 'notifications' && $sub === 'stream')
+              || ($resource === 'tickets' && $sub === 'chat' && isset($_GET['stream']));
+if (!$is_sse_stream) {
+    if ($api_token_row) {
+        $rl_bucket = 'tok:' . substr($token_hash, 0, 40);
+    } elseif ($legacy_api_key_auth) {
+        $rl_bucket = 'key:' . substr($legacy_key, 0, 40);
+    } else {
+        $rl_bucket = 'usr:' . intval($api_user_id);
+    }
+    if (!api_rate_limit($rl_bucket, 300, 60)) {
+        header('Retry-After: 60');
+        api_error(429, 'Rate limit exceeded');
+    }
 }
 
 // Route

@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support', 2);
+
 $interface_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM asset_interfaces
@@ -14,6 +16,7 @@ $interface_count = mysqli_num_rows($sql);
 $row = mysqli_fetch_assoc($sql);
 
 $client_id = intval($row['asset_client_id']);
+enforceClientAccess($client_id);
 $asset_id = intval($row['interface_asset_id']);
 $network_id = intval($row['interface_network_id']);
 $asset_name = nullable_htmlentities($row['asset_name']);
@@ -49,8 +52,8 @@ if ($link_row = mysqli_fetch_assoc($sql_link)) {
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class='fa fa-fw fa-ethernet mr-2'></i>Editing Interface: <?php echo $asset_name; ?> - <strong><?php echo $interface_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class='fa fa-fw fa-ethernet me-2'></i>Editing Interface: <?php echo $asset_name; ?> - <strong><?php echo $interface_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -62,13 +65,13 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-interface-details<?php echo $interface_id; ?>">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-interface-details<?php echo $interface_id; ?>">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-interface-network<?php echo $interface_id; ?>">Network</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-interface-network<?php echo $interface_id; ?>">Network</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-interface-notes<?php echo $interface_id; ?>">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-interface-notes<?php echo $interface_id; ?>">Notes</a>
             </li>
         </ul>
 
@@ -330,10 +333,10 @@ ob_start();
     <!-- End Footer Section -->
     <div class="modal-footer">
         <button type="submit" name="edit_asset_interface" class="btn btn-primary text-bold">
-            <i class="fas fa-check mr-2"></i>Save
+            <i class="fas fa-check me-2"></i>Save
         </button>
-        <button type="button" class="btn btn-light" data-dismiss="modal">
-            <i class="fas fa-times mr-2"></i>Close
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Close
         </button>
     </div>
 </form>

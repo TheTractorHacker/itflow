@@ -8,6 +8,8 @@
 
 if(isset($_POST['change_records_per_page'])){
 
+    validateCSRFToken($_POST['csrf_token']);
+
     $records_per_page = intval($_POST['change_records_per_page']);
 
     mysqli_query($mysqli,"UPDATE user_settings SET user_config_records_per_page = $records_per_page WHERE user_id = $session_user_id");

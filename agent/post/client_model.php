@@ -14,3 +14,9 @@ if (empty($abbreviation)) {
 }
 $notes = cleanInput($_POST['notes'] ?? '');
 $lead = intval($_POST['lead'] ?? 0);
+
+// CRM lead qualification fields
+$lead_source = cleanInput($_POST['lead_source'] ?? '');
+$lead_status = cleanInput($_POST['lead_status'] ?? '');
+$lead_owner = intval($_POST['lead_owner'] ?? 0);
+$lead_score = intval($_POST['lead_score'] ?? 0);

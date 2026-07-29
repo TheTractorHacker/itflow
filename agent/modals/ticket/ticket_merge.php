@@ -16,10 +16,13 @@ $ticket_number = intval($row['ticket_number']);
 $client_id = intval($row['ticket_client_id']);
 $client_name = nullable_htmlentities($row['client_name']);
 
+enforceClientAccess($client_id);
+
 $sql_merge = mysqli_query($mysqli, "SELECT * FROM tickets
     LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id
     LEFT JOIN clients ON client_id = ticket_client_id
     WHERE ticket_closed_at IS NULL AND ticket_id != $ticket_id
+    $access_permission_query
     ORDER BY ticket_status ASC, ticket_id DESC"
 );
 
@@ -28,8 +31,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-clone mr-2"></i>Merge & Close <?= "$ticket_prefix$ticket_number" ?> into another ticket</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-clone me-2"></i>Merge & Close <?= "$ticket_prefix$ticket_number" ?> into another ticket</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -88,8 +91,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="merge_ticket" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Merge</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="merge_ticket" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Merge</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

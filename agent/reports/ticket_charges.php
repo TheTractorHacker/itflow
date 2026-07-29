@@ -47,15 +47,15 @@ while ($row = mysqli_fetch_assoc($sql_tickets)) {
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-dollar-sign mr-2"></i>Ticket Charges</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-dollar-sign me-2"></i>Ticket Charges</h3>
             <div class="card-tools">
-                <button type="button" class="btn btn-primary d-print-none" onclick="window.print();"><i class="fas fa-fw fa-print mr-2"></i>Print</button>
+                <button type="button" class="btn btn-primary d-print-none js-print-page"><i class="fas fa-fw fa-print me-2"></i>Print</button>
             </div>
         </div>
         <div class="card-body">
             <form class="form-row align-items-center mb-3">
                 <div class="col-auto">
-                    <select onchange="this.form.submit()" class="form-control" name="year">
+                    <select class="form-control auto-submit-select" name="year">
                         <?php
                         while ($row = mysqli_fetch_assoc($sql_charge_years)) {
                             $charge_year = intval($row['charge_year']); ?>
@@ -64,9 +64,9 @@ while ($row = mysqli_fetch_assoc($sql_tickets)) {
                     </select>
                 </div>
                 <div class="col-auto">
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="uninvoiced" name="uninvoiced" value="1" onchange="this.form.submit()" <?= $show_uninvoiced_only ? 'checked' : '' ?>>
-                        <label class="custom-control-label" for="uninvoiced">Uninvoiced charges only</label>
+                    <div class="form-check form-check">
+                        <input type="checkbox" class="form-check-input auto-submit-select" id="uninvoiced" name="uninvoiced" value="1" <?= $show_uninvoiced_only ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="uninvoiced">Uninvoiced charges only</label>
                     </div>
                 </div>
             </form>
@@ -77,9 +77,9 @@ while ($row = mysqli_fetch_assoc($sql_tickets)) {
                     <tr>
                         <th>Ticket</th>
                         <th>Client</th>
-                        <th class="text-right">Charges</th>
-                        <th class="text-right">Total</th>
-                        <th class="text-right">Uninvoiced</th>
+                        <th class="text-end">Charges</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Uninvoiced</th>
                         <th>Last Charge</th>
                     </tr>
                     </thead>
@@ -102,11 +102,11 @@ while ($row = mysqli_fetch_assoc($sql_tickets)) {
                         <tr>
                             <td><a href="../../agent/ticket.php?ticket_id=<?= $ticket_id ?>">#<?= $ticket_number ?> - <?= $ticket_subject ?></a></td>
                             <td><?= $client_name ?></td>
-                            <td class="text-right"><?= $charge_count ?></td>
-                            <td class="text-right">$<?= number_format($total_amount, 2) ?></td>
-                            <td class="text-right">
+                            <td class="text-end"><?= $charge_count ?></td>
+                            <td class="text-end">$<?= number_format($total_amount, 2) ?></td>
+                            <td class="text-end">
                                 <?php if ($uninvoiced_amount > 0) { ?>
-                                    <span class="badge badge-warning">$<?= number_format($uninvoiced_amount, 2) ?></span>
+                                    <span class="badge text-bg-warning">$<?= number_format($uninvoiced_amount, 2) ?></span>
                                 <?php } else { ?>
                                     $0.00
                                 <?php } ?>
@@ -117,10 +117,10 @@ while ($row = mysqli_fetch_assoc($sql_tickets)) {
                     </tbody>
                     <?php if ($rows) { ?>
                     <tfoot>
-                    <tr class="font-weight-bold">
-                        <td colspan="3" class="text-right">Grand Total</td>
-                        <td class="text-right">$<?= number_format($grand_total, 2) ?></td>
-                        <td class="text-right">$<?= number_format($grand_uninvoiced, 2) ?></td>
+                    <tr class="fw-bold">
+                        <td colspan="3" class="text-end">Grand Total</td>
+                        <td class="text-end">$<?= number_format($grand_total, 2) ?></td>
+                        <td class="text-end">$<?= number_format($grand_uninvoiced, 2) ?></td>
                         <td></td>
                     </tr>
                     </tfoot>

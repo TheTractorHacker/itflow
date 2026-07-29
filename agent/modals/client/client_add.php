@@ -10,6 +10,10 @@ $referral_sql = mysqli_query($mysqli, "SELECT * FROM categories WHERE category_t
 
 $sql_tags_select = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_type = 1 ORDER BY tag_name ASC");
 
+// Lead owner options + lead status presets (CRM)
+$sql_lead_owners = mysqli_query($mysqli, "SELECT user_id, user_name FROM users WHERE user_status = 1 AND user_archived_at IS NULL ORDER BY user_name ASC");
+$lead_status_presets = array('New', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Converted', 'Lost');
+
 $net_terms_array = array (
     '0'=>'On Receipt',
     '7'=>'7 Days',
@@ -26,29 +30,29 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-user-plus mr-2"></i>New <?php if($leads_filter == 0){ echo "Client"; } else { echo "Lead"; } ?></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-user-plus me-2"></i>New <?php if($leads_filter == 0){ echo "Client"; } else { echo "Lead"; } ?></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
 
 <ul class="modal-header nav nav-pills nav-justified">
     <li class="nav-item">
-        <a class="nav-link active" data-toggle="pill" href="#pills-details">Details</a>
+        <a class="nav-link active" data-bs-toggle="pill" href="#pills-details">Details</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" data-toggle="pill" href="#pills-location">Location</a>
+        <a class="nav-link" data-bs-toggle="pill" href="#pills-location">Location</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" data-toggle="pill" href="#pills-contact" id="contactNavPill">Contact</a>
+        <a class="nav-link" data-bs-toggle="pill" href="#pills-contact" id="contactNavPill">Contact</a>
     </li>
     <?php if ($config_module_enable_accounting) { ?>
         <li class="nav-item">
-            <a class="nav-link" data-toggle="pill" href="#pills-billing">Billing</a>
+            <a class="nav-link" data-bs-toggle="pill" href="#pills-billing">Billing</a>
         </li>
     <?php } ?>
     <li class="nav-item">
-        <a class="nav-link" data-toggle="pill" href="#pills-notes">Notes</a>
+        <a class="nav-link" data-bs-toggle="pill" href="#pills-notes">Notes</a>
     </li>
 </ul>
 
@@ -84,7 +88,7 @@ ob_start();
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fa fa-fw fa-id-badge"></i></span>
                         </div>
-                        <input type="text" class="form-control" name="abbreviation" placeholder="Shortned name for client - Max chars 6" maxlength="6" oninput="this.value = this.value.toUpperCase()">
+                        <input type="text" class="form-control js-uppercase-input" name="abbreviation" placeholder="Shortned name for client - Max chars 6" maxlength="6">
                     </div>
                 </div>
 
@@ -130,6 +134,40 @@ ob_start();
                             <span class="input-group-text"><i class="fa fa-fw fa-globe"></i></span>
                         </div>
                         <input type="text" class="form-control" name="website" placeholder="ex. google.com" maxlength="200">
+                    </div>
+                </div>
+
+                <div class="card card-body bg-light mb-3">
+                    <label class="fw-bold text-secondary mb-2"><i class="fa fa-fw fa-bullhorn me-1"></i>Lead Details <small class="text-muted">(for sales / CRM)</small></label>
+                    <div class="form-row">
+                        <div class="form-group col-md-6 mb-2">
+                            <label>Lead Source</label>
+                            <input type="text" class="form-control" name="lead_source" placeholder="e.g. Website, Referral, Cold Call" maxlength="60">
+                        </div>
+                        <div class="form-group col-md-6 mb-2">
+                            <label>Lead Status</label>
+                            <select class="form-control select2" name="lead_status" data-tags="true">
+                                <option value="">- Select Status -</option>
+                                <?php foreach ($lead_status_presets as $preset) { ?>
+                                    <option value="<?php echo $preset; ?>"><?php echo $preset; ?></option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6 mb-0">
+                            <label>Lead Owner</label>
+                            <select class="form-control select2" name="lead_owner">
+                                <option value="0">- Unassigned -</option>
+                                <?php while ($lo = mysqli_fetch_assoc($sql_lead_owners)) { ?>
+                                    <option value="<?php echo intval($lo['user_id']); ?>"><?php echo nullable_htmlentities($lo['user_name']); ?></option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6 mb-0">
+                            <label>Lead Score</label>
+                            <input type="number" min="0" max="100" step="1" class="form-control" name="lead_score" placeholder="0-100">
+                        </div>
                     </div>
                 </div>
 
@@ -376,12 +414,12 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_client" class="btn btn-primary text-bold" onclick="promptPrimaryContact()"><i class="fa fa-check mr-2"></i>Create Client</button>
-        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Close</button>
+        <button type="submit" name="add_client" class="btn btn-primary text-bold js-prompt-primary-contact"><i class="fa fa-check me-2"></i>Create Client</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Close</button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
     // Checks/prompts that the primary contact field (required) is populated
     function promptPrimaryContact() {
         let primaryContactField = document.getElementById("primaryContact").value;
@@ -389,9 +427,12 @@ ob_start();
             document.getElementById("contactNavPill").click();
         }
     }
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.js-prompt-primary-contact')) { promptPrimaryContact(); }
+    });
 </script>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
     // Checks for duplicate clients
     function client_duplicate_check() {
         var name = document.getElementById("client_name").value;

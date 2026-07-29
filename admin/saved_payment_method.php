@@ -35,7 +35,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <ol class="breadcrumb d-print-none">
     <li class="breadcrumb-item">
-        <a href="/admin">Admin</a>
+        <a href="/admin/">Admin</a>
     </li>
     <li class="breadcrumb-item">
         <a href="payment_provider.php">Payment Providers</a>
@@ -45,7 +45,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-fw fa-credit-card mr-2"></i>Saved Payment Methods</h3>
+        <h3 class="card-title"><i class="fas fa-fw fa-credit-card me-2"></i>Saved Payment Methods</h3>
     </div>
     <div class="card-body">
         <form class="mb-4" autocomplete="off">
@@ -133,7 +133,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <td><?php echo $saved_payment_created_at; ?></td>
                         <td>
                             <a class="btn btn-outline-danger confirm-link" href="post.php?delete_saved_payment=<?php echo $saved_payment_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                             </a>
                         </td>
                     </tr>

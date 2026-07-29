@@ -58,24 +58,24 @@ $push_device_count = intval(mysqli_fetch_assoc($sql_push_devices)['cnt']);
 <!-- Mobile Push Notifications card -->
 <div class="card card-primary card-outline mb-3">
     <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mr-auto"><i class="fas fa-mobile-alt mr-2"></i>Mobile App Push Notifications</h3>
+        <h3 class="card-title mr-auto"><i class="fas fa-mobile-alt me-2"></i>Mobile App Push Notifications</h3>
     </div>
     <div class="card-body">
         <?php if ($push_device_count > 0) { ?>
         <div class="d-flex align-items-center flex-wrap" style="gap:1rem;">
-            <span class="text-success"><i class="fas fa-check-circle mr-1"></i>
+            <span class="text-success"><i class="fas fa-check-circle me-1"></i>
                 <strong><?= $push_device_count ?></strong> registered device<?= $push_device_count !== 1 ? 's' : '' ?>
             </span>
             <form method="POST" action="post.php" class="d-inline">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                 <button type="submit" name="test_push_notification" class="btn btn-sm btn-primary">
-                    <i class="fas fa-paper-plane mr-1"></i>Send Test Push
+                    <i class="fas fa-paper-plane me-1"></i>Send Test Push
                 </button>
             </form>
         </div>
         <?php } else { ?>
         <div class="text-muted">
-            <i class="fas fa-exclamation-circle mr-1 text-warning"></i>
+            <i class="fas fa-exclamation-circle me-1 text-warning"></i>
             No mobile devices registered. Log in to the <strong>ITFlow mobile app</strong> to register your device for push notifications.
         </div>
         <?php } ?>
@@ -86,20 +86,20 @@ $push_device_count = intval(mysqli_fetch_assoc($sql_push_devices)['cnt']);
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
         <h3 class="card-title mt-1 mr-auto">
-            <i class="fas fa-fw fa-bell mr-2"></i><?php if ($dismissed_filter) echo "Dismissed "; ?>Notifications
-            <?php if ($num_rows[0] > 0) { ?><span class="badge badge-secondary ml-2"><?= $num_rows[0] ?></span><?php } ?>
+            <i class="fas fa-fw fa-bell me-2"></i><?php if ($dismissed_filter) echo "Dismissed "; ?>Notifications
+            <?php if ($num_rows[0] > 0) { ?><span class="badge text-bg-secondary ms-2"><?= $num_rows[0] ?></span><?php } ?>
         </h3>
         <div class="d-flex align-items-center" style="gap:.5rem;">
             <?php if (!$dismissed_filter && $num_rows[0] > 0) { ?>
             <a href="post.php?dismiss_all_notifications&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                class="btn btn-sm btn-outline-secondary confirm-link" title="Dismiss All">
-                <i class="fas fa-check-double mr-1"></i>Dismiss All
+                <i class="fas fa-check-double me-1"></i>Dismiss All
             </a>
             <?php } ?>
             <?php if ($dismissed_filter) { ?>
-            <a href="notifications.php" class="btn btn-sm btn-primary"><i class="fas fa-bell mr-1"></i>Active</a>
+            <a href="notifications.php" class="btn btn-sm btn-primary"><i class="fas fa-bell me-1"></i>Active</a>
             <?php } else { ?>
-            <a href="notifications.php?dismissed" class="btn btn-sm btn-outline-secondary"><i class="fas fa-history mr-1"></i>Dismissed</a>
+            <a href="notifications.php?dismissed" class="btn btn-sm btn-outline-secondary"><i class="fas fa-history me-1"></i>Dismissed</a>
             <?php } ?>
         </div>
     </div>
@@ -114,7 +114,7 @@ $push_device_count = intval(mysqli_fetch_assoc($sql_push_devices)['cnt']);
                 <div class="input-group-append">
                     <button class="btn btn-primary"><i class="fa fa-search"></i></button>
                     <button class="btn btn-outline-secondary" type="button"
-                            data-toggle="collapse" data-target="#advancedFilter">
+                            data-bs-toggle="collapse" data-bs-target="#advancedFilter">
                         <i class="fas fa-filter"></i>
                     </button>
                 </div>
@@ -153,7 +153,7 @@ $push_device_count = intval(mysqli_fetch_assoc($sql_push_devices)['cnt']);
         ?>
         <div class="d-flex align-items-start py-3 border-bottom notif-item">
             <!-- Icon -->
-            <div class="mr-3 mt-1">
+            <div class="me-3 mt-1">
                 <span class="notif-icon-circle">
                     <i class="fas fa-fw <?= $icon_class ?>"></i>
                 </span>
@@ -161,24 +161,24 @@ $push_device_count = intval(mysqli_fetch_assoc($sql_push_devices)['cnt']);
             <!-- Content -->
             <div class="flex-grow-1 min-width-0">
                 <div class="d-flex align-items-center flex-wrap mb-1" style="gap:.4rem;">
-                    <span class="badge badge-secondary badge-pill" style="font-size:.7rem;"><?= $notification_type ?></span>
+                    <span class="badge text-bg-secondary rounded-pill" style="font-size:.7rem;"><?= $notification_type ?></span>
                     <?php if ($client_name) { ?>
                     <a href="client_overview.php?client_id=<?= $client_id ?>" class="text-muted small">
-                        <i class="fas fa-building mr-1"></i><?= $client_name ?>
+                        <i class="fas fa-building me-1"></i><?= $client_name ?>
                     </a>
                     <?php } ?>
                 </div>
                 <div class="mb-1"><?= $notification ?></div>
                 <div class="small text-muted" title="<?= $notification_ts ?>">
-                    <i class="far fa-clock mr-1"></i><?= $ago ?>
+                    <i class="far fa-clock me-1"></i><?= $ago ?>
                     <?php if ($dismissed_filter && $notification_dismissed_at) { ?>
-                    &nbsp;&middot;&nbsp;<i class="fas fa-check mr-1"></i>Dismissed <?= timeAgo($notification_dismissed_at) ?>
+                    &nbsp;&middot;&nbsp;<i class="fas fa-check me-1"></i>Dismissed <?= timeAgo($notification_dismissed_at) ?>
                     <?php } ?>
                 </div>
             </div>
             <!-- Action -->
             <?php if (!$dismissed_filter) { ?>
-            <div class="ml-3 flex-shrink-0 d-flex" style="gap:.35rem;">
+            <div class="ms-3 flex-shrink-0 d-flex" style="gap:.35rem;">
                 <a href="post.php?push_notification=<?= $notification_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                    class="btn btn-sm btn-outline-primary" title="Send as Push">
                     <i class="fas fa-mobile-alt"></i>

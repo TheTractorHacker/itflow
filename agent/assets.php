@@ -135,13 +135,15 @@ $other_count = intval($row['other_count']);
 
 $sql = mysqli_query(
     $mysqli,
-    "SELECT SQL_CALC_FOUND_ROWS * FROM assets
+    "SELECT SQL_CALC_FOUND_ROWS *, status_cat.category_color AS asset_status_color
+    FROM assets
     LEFT JOIN clients ON asset_client_id = client_id
     LEFT JOIN contacts ON asset_contact_id = contact_id
     LEFT JOIN locations ON asset_location_id = location_id
     LEFT JOIN asset_interfaces ON interface_asset_id = asset_id AND interface_primary = 1
     LEFT JOIN asset_tags ON asset_tag_asset_id = asset_id
     LEFT JOIN tags ON tag_id = asset_tag_tag_id
+    LEFT JOIN categories AS status_cat ON status_cat.category_name = assets.asset_status AND status_cat.category_type = 'asset_status' AND status_cat.category_archived_at IS NULL
     WHERE $archive_query
     $tag_query
     AND (asset_name LIKE '%$q%' OR asset_description LIKE '%$q%' OR asset_type LIKE '%$q%' OR interface_ip LIKE '%$q%' OR interface_ipv6 LIKE '%$q%' OR interface_mac LIKE '%$q%' OR asset_make LIKE '%$q%' OR asset_model LIKE '%$q%' OR asset_serial LIKE '%$q%' OR asset_os LIKE '%$q%' OR contact_name LIKE '%$q%' OR location_name LIKE '%$q%' OR client_name LIKE '%$q%' OR tag_name LIKE '%$q%')
@@ -162,8 +164,10 @@ $rmm_link_map      = [];
 if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     $sql_rmm_bulk = mysqli_query($mysqli,
         "SELECT arl.asset_id, arl.rmm_status, arl.id AS rmm_link_id, arl.tactical_agent_id, arl.mesh_node_id,
+                i.type AS integration_type,
                 (SELECT COUNT(*) FROM rmm_alerts ra WHERE ra.asset_id=arl.asset_id AND ra.status='new') as alert_cnt
          FROM asset_rmm_links arl
+         LEFT JOIN rmm_integrations i ON i.id = arl.integration_id
          WHERE arl.asset_id IN (SELECT asset_id FROM assets
              LEFT JOIN clients ON asset_client_id=client_id
              WHERE $archive_query $client_query
@@ -172,12 +176,24 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     if ($sql_rmm_bulk) {
         while ($rr = mysqli_fetch_assoc($sql_rmm_bulk)) {
             $rmm_asset_id = intval($rr['asset_id']);
+            // An asset can have simultaneous links to more than one RMM
+            // integration (e.g. Tactical RMM + Level.io on the same
+            // physical device). Without this guard, whichever row this
+            // while-loop hit last silently overwrote the map entry. When
+            // config_rmm_prefer_tactical is on, don't let a later
+            // non-tactical row clobber an already-set tactical_rmm entry.
+            $already_tactical = isset($rmm_link_map[$rmm_asset_id])
+                && ($rmm_link_map[$rmm_asset_id]['integration_type'] ?? null) === 'tactical_rmm';
+            if ($config_rmm_prefer_tactical && $already_tactical && $rr['integration_type'] !== 'tactical_rmm') {
+                continue;
+            }
             $rmm_status_map[$rmm_asset_id] = $rr['rmm_status'];
             $rmm_alert_map[$rmm_asset_id]  = intval($rr['alert_cnt']);
             $rmm_link_map[$rmm_asset_id]   = [
                 'id'                => intval($rr['rmm_link_id']),
                 'tactical_agent_id' => $rr['tactical_agent_id'],
                 'mesh_node_id'      => $rr['mesh_node_id'],
+                'integration_type'  => $rr['integration_type'],
             ];
         }
     }
@@ -190,27 +206,27 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
     <div class="btn-toolbar">
         <div class="btn-group btn-block">
             <?php if($all_count) { ?>
-            <a href="?<?php echo $url_query_strings_sort; ?>&type=" class="btn <?php if ($_GET['type'] == 'all' || empty($_GET['type'])) { echo 'btn-primary'; } else { echo 'btn-default'; } ?>">All Assets<span class="right badge badge-light ml-2"><?php echo $all_count; ?></span></a>
+            <a href="?<?php echo $url_query_strings_sort; ?>&type=" class="btn <?php if ($_GET['type'] == 'all' || empty($_GET['type'])) { echo 'btn-primary'; } else { echo 'btn-default'; } ?>">All Assets<span class="right badge text-bg-light ms-2"><?php echo $all_count; ?></span></a>
             <?php } ?>
             <?php
             if ($workstation_count > 0) { ?>
-                <a href="?<?php echo $url_query_strings_sort; ?>&type=workstation" class="btn <?php if ($_GET['type'] == 'workstation') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-desktop mr-2"></i>Workstations<span class="right badge badge-light ml-2"><?php echo $workstation_count; ?></span></a>
+                <a href="?<?php echo $url_query_strings_sort; ?>&type=workstation" class="btn <?php if ($_GET['type'] == 'workstation') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-desktop me-2"></i>Workstations<span class="right badge text-bg-light ms-2"><?php echo $workstation_count; ?></span></a>
                 <?php
             }
             if ($server_count > 0) { ?>
-                <a href="?<?php echo $url_query_strings_sort; ?>&type=server" class="btn <?php if ($_GET['type'] == 'server') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-server mr-2"></i>Servers<span class="right badge badge-light ml-2"><?php echo $server_count; ?></span></a>
+                <a href="?<?php echo $url_query_strings_sort; ?>&type=server" class="btn <?php if ($_GET['type'] == 'server') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-server me-2"></i>Servers<span class="right badge text-bg-light ms-2"><?php echo $server_count; ?></span></a>
                 <?php
             }
             if ($virtual_count > 0) { ?>
-                <a href="?<?php echo $url_query_strings_sort; ?>&type=virtual" class="btn <?php if ($_GET['type'] == 'virtual') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-cloud mr-2"></i>Virtual<span class="right badge badge-light ml-2"><?php echo $virtual_count; ?></span></a>
+                <a href="?<?php echo $url_query_strings_sort; ?>&type=virtual" class="btn <?php if ($_GET['type'] == 'virtual') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-cloud me-2"></i>Virtual<span class="right badge text-bg-light ms-2"><?php echo $virtual_count; ?></span></a>
                 <?php
             }
             if ($network_count > 0) { ?>
-                <a href="?<?php echo $url_query_strings_sort; ?>&type=network" class="btn <?php if ($_GET['type'] == 'network') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-network-wired mr-2"></i>Network<span class="right badge badge-light ml-2"><?php echo $network_count; ?></span></a>
+                <a href="?<?php echo $url_query_strings_sort; ?>&type=network" class="btn <?php if ($_GET['type'] == 'network') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-network-wired me-2"></i>Network<span class="right badge text-bg-light ms-2"><?php echo $network_count; ?></span></a>
                 <?php
             }
             if ($other_count > 0) { ?>
-                <a href="?<?php echo $url_query_strings_sort; ?>&type=other" class="btn <?php if ($_GET['type'] == 'other') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-tag mr-2"></i>Other<span class="right badge badge-light ml-2"><?php echo $other_count; ?></span></a>
+                <a href="?<?php echo $url_query_strings_sort; ?>&type=other" class="btn <?php if ($_GET['type'] == 'other') { echo 'btn-primary'; } else { echo 'btn-default'; } ?>"><i class="fa fa-fw fa-tag me-2"></i>Other<span class="right badge text-bg-light ms-2"><?php echo $other_count; ?></span></a>
                 <?php
             } ?>
         </div>
@@ -219,19 +235,19 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-desktop mr-2"></i>Assets</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-desktop me-2"></i>Assets</h3>
         <div class="card-tools">
             <?php if (lookupUserPermission("module_support") >= 2) { ?>
             <div class="btn-group">
                 <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/asset/asset_add.php?<?= $client_url ?>&type=<?= $type_filter ?>">
-                    <i class="fas fa-plus mr-2"></i>New <?php if ($type_filter) { echo ucwords($type_filter); } else { echo "Asset"; } ?>
+                    <i class="fas fa-plus me-2"></i>New <?php if ($type_filter) { echo ucwords($type_filter); } else { echo "Asset"; } ?>
                 </button>
-                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                 <div class="dropdown-menu">
                     <?php if ($client_url) { ?>
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                         data-modal-url="modals/asset/asset_import.php?<?= $client_url ?>">
-                        <i class="fa fa-fw fa-upload mr-2"></i>Import
+                        <i class="fa fa-fw fa-upload me-2"></i>Import
                     </a>
                     <div class="dropdown-divider"></div>
                     <?php } ?>
@@ -239,7 +255,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
 
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/asset/asset_export.php?<?= $client_url ?>">
-                            <i class="fa fa-fw fa-download mr-2"></i>Export
+                            <i class="fa fa-fw fa-download me-2"></i>Export
                         </a>
                     <?php } ?>
                 </div>
@@ -266,7 +282,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                 <?php if ($client_url) { ?>
                 <div class="col-md-2">
                     <div class="input-group mb-3 mb-md-0">
-                        <select class="form-control select2" name="location" onchange="this.form.submit()">
+                        <select class="form-control select2 auto-submit-select" name="location">
                             <option value="">- All Locations -</option>
 
                             <?php
@@ -292,7 +308,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                 <?php } else { ?>
                 <div class="col-md-2">
                     <div class="input-group mb-3 mb-md-0">
-                        <select class="form-control select2" name="client" onchange="this.form.submit()">
+                        <select class="form-control select2 auto-submit-select" name="client">
                             <option value="" <?php if ($client == "") { echo "selected"; } ?>>- All Clients -</option>
 
                             <?php
@@ -319,7 +335,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                 <?php } ?>
                 <div class="col-md-2">
                     <div class="input-group mb-3 mb-md-0">
-                        <select onchange="this.form.submit()" class="form-control select2" name="tags[]" data-placeholder="- Select Tags -" multiple>
+                        <select class="form-control select2 auto-submit-select" name="tags[]" data-placeholder="- Select Tags -" multiple>
 
                             <?php
                             $sql_tags_filter = mysqli_query($mysqli, "
@@ -344,7 +360,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <select onchange="this.form.submit()" class="form-control select2" name="show_column[]" data-placeholder="- Show Additional Columns -" multiple>
+                        <select class="form-control select2 auto-submit-select" name="show_column[]" data-placeholder="- Show Additional Columns -" multiple>
                             <option
                                 <?php if (isset($_GET['show_column']) && is_array($_GET['show_column']) && in_array('Mac_Address', $_GET['show_column'])) { echo 'selected'; } ?>>Mac_Address
                             </option>
@@ -361,86 +377,86 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="btn-group float-right">
+                    <div class="btn-group float-end">
                         <a href="?<?php echo $client_url; ?>&archived=<?php if($archived == 1){ echo 0; } else { echo 1; } ?>"
                             class="btn btn-<?php if($archived == 1){ echo "primary"; } else { echo "default"; } ?>">
-                            <i class="fa fa-fw fa-archive mr-2"></i>Archived
+                            <i class="fa fa-fw fa-archive me-2"></i>Archived
                         </a>
-                        <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                            <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount"></span>)
+                        <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount"></span>)
                             </button>
                             <div class="dropdown-menu">
                                 <button class="dropdown-item"
                                     type="submit" form="bulkActions" name="bulk_favorite_assets">
-                                    <i class="fas fa-fw fa-star text-warning mr-2"></i>Favorite
+                                    <i class="fas fa-fw fa-star text-warning me-2"></i>Favorite
                                 </button>
                                 <div class="dropdown-divider"></div>
                                 <button class="dropdown-item"
                                     type="submit" form="bulkActions" name="bulk_unfavorite_assets">
-                                    <i class="far fa-fw fa-star mr-2"></i>Unfavorite
+                                    <i class="far fa-fw fa-star me-2"></i>Unfavorite
                                 </button>
                                 <div class="dropdown-divider"></div>
                                 <?php if ($client_url) { ?>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/asset/asset_bulk_assign_contact.php?<?= $client_url ?>"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-user mr-2"></i>Assign Contact
+                                    <i class="fas fa-fw fa-user me-2"></i>Assign Contact
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/asset/asset_bulk_assign_location.php?<?= $client_url ?>"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-map-marker-alt mr-2"></i>Assign Location
+                                    <i class="fas fa-fw fa-map-marker-alt me-2"></i>Assign Location
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <?php } ?>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/asset/asset_bulk_assign_tags.php"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-tags mr-2"></i>Assign Tags
+                                    <i class="fas fa-fw fa-tags me-2"></i>Assign Tags
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/asset/asset_bulk_assign_physical_location.php"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-map-marker-alt mr-2"></i>Set Physical Location
+                                    <i class="fas fa-fw fa-map-marker-alt me-2"></i>Set Physical Location
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/asset/asset_bulk_edit_status.php"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-info mr-2"></i>Set Status
+                                    <i class="fas fa-fw fa-info me-2"></i>Set Status
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/asset/asset_bulk_add_ticket.php"
                                     data-modal-size="lg"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-life-ring mr-2"></i>Create Tickets
+                                    <i class="fas fa-fw fa-life-ring me-2"></i>Create Tickets
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/asset/asset_bulk_transfer_client.php?<?= $client_url ?>"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-arrow-right mr-2"></i>Transfer to Client
+                                    <i class="fas fa-fw fa-arrow-right me-2"></i>Transfer to Client
                                 </a>
                                 <?php if ($archived) { ?>
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item text-info"
                                         type="submit" form="bulkActions" name="bulk_restore_assets">
-                                        <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                        <i class="fas fa-fw fa-redo me-2"></i>Restore
                                     </button>
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item text-danger text-bold"
                                         type="submit" form="bulkActions" name="bulk_delete_assets">
-                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                                     </button>
                                 <?php } else { ?>
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item text-danger confirm-link"
                                         type="submit" form="bulkActions" name="bulk_archive_assets">
-                                        <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                        <i class="fas fa-fw fa-archive me-2"></i>Archive
                                     </button>
                                 <?php } ?>
                             </div>
@@ -460,7 +476,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                     <tr>
                         <td class="bg-light checkbox-column">
                             <div class="form-check">
-                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox" onclick="checkAll(this)">
+                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox">
                             </div>
                         </td>
                         <th>
@@ -573,6 +589,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                         $asset_uri_2 = sanitize_url($row['asset_uri_2']);
                         $asset_uri_client = sanitize_url($row['asset_uri_client']);
                         $asset_status = nullable_htmlentities($row['asset_status']);
+                        $asset_status_color = nullable_htmlentities($row['asset_status_color']);
                         $asset_purchase_reference = nullable_htmlentities($row['asset_purchase_reference']);
                         $asset_purchase_date = nullable_htmlentities($row['asset_purchase_date']);
                         if ($asset_purchase_date) {
@@ -655,7 +672,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                             }
 
                             $asset_tag_id_array[] = $asset_tag_id;
-                            $asset_tag_name_display_array[] = "<a href='assets.php?$client_url tags[]=$asset_tag_id'><span class='badge " . tagTextClass($asset_tag_color) . " p-1 mr-1' style='background-color: $asset_tag_color;'><i class='fa fa-fw fa-$asset_tag_icon mr-1'></i>$asset_tag_name</span></a>";
+                            $asset_tag_name_display_array[] = "<a href='assets.php?$client_url tags[]=$asset_tag_id'><span class='badge " . tagTextClass($asset_tag_color) . " p-1 me-1' style='background-color: $asset_tag_color;'><i class='fa fa-fw fa-$asset_tag_icon me-1'></i>$asset_tag_name</span></a>";
                         }
                         $asset_tags_display = implode('', $asset_tag_name_display_array);
 
@@ -669,14 +686,14 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                             <td>
                                 <a class="text-dark" href="asset_details.php?client_id=<?= $client_id ?>&asset_id=<?= $asset_id ?>">
                                     <div class="media">
-                                        <i class="fa fa-fw fa-2x fa-<?= $device_icon ?> mr-3 mt-1"></i>
+                                        <i class="fa fa-fw fa-2x fa-<?= $device_icon ?> me-3 mt-1"></i>
                                         <div class="media-body">
                                             <div>
                                                 <?= $asset_name ?>
 
                                                 <?php if ($asset_favorite) { echo "<i class='fas fa-fw fa-star text-warning' title='Favorite'></i>"; } ?>
                                                 <?php if (isset($rmm_status_map[$asset_id])): $rs = $rmm_status_map[$asset_id]; ?>
-                                                <span class="badge badge-<?= $rs === 'online' ? 'success' : 'secondary' ?> ml-1" title="RMM: <?= htmlspecialchars($rs) ?>"><?= $rs === 'online' ? 'Online' : 'Offline' ?></span>
+                                                <span class="badge badge-<?= $rs === 'online' ? 'success' : 'secondary' ?> ms-1" title="RMM: <?= htmlspecialchars($rs) ?>"><?= $rs === 'online' ? 'Online' : 'Offline' ?></span>
                                                 <?php endif; ?>
                                                 </div>
                                             <div><small class="text-secondary"><?= $asset_description ?></small></div>
@@ -691,25 +708,25 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                                     <?= $asset_type ?>
                                     <?php if ( !empty($asset_uri) || !empty($asset_uri_2) || !empty($asset_uri_client)) { ?>
                                     <div class="dropdown d-inline">
-                                        <button class="btn btn-tool" type="button" data-toggle="dropdown">
+                                        <button class="btn btn-tool" type="button" data-bs-toggle="dropdown">
                                             <i class="fas fa-external-link-alt"></i>
                                         </button>
                                         <div class="dropdown-menu">
                                             <?php if ($asset_uri) { ?>
                                             <a href="<?php echo $asset_uri; ?>" alt="<?php echo $asset_uri; ?>" target="_blank" class="dropdown-item" >
-                                                <i class="fa fa-fw fa-external-link-alt mr-2"></i><?php echo truncate($asset_uri,40); ?>
+                                                <i class="fa fa-fw fa-external-link-alt me-2"></i><?php echo truncate($asset_uri,40); ?>
                                             </a>
                                             <?php } ?>
                                             <?php if ($asset_uri_2) { ?>
                                             <div class="dropdown-divider"></div>
                                             <a href="<?php echo $asset_uri_2; ?>" target="_blank" class="dropdown-item" >
-                                                <i class="fa fa-fw fa-external-link-alt mr-2"></i><?php echo truncate($asset_uri_2,40); ?>
+                                                <i class="fa fa-fw fa-external-link-alt me-2"></i><?php echo truncate($asset_uri_2,40); ?>
                                             </a>
                                             <?php } ?>
                                             <?php if ($asset_uri_client) { ?>
                                             <div class="dropdown-divider"></div>
                                             <a href="<?php echo $asset_uri_client; ?>" target="_blank" class="dropdown-item" >
-                                                <i class="fa fa-fw fa-external-link-alt mr-2"></i>Client URI: <?php echo truncate($asset_uri_client,40); ?>
+                                                <i class="fa fa-fw fa-external-link-alt me-2"></i>Client URI: <?php echo truncate($asset_uri_client,40); ?>
                                             </a>
                                             <?php } ?>
                                         </div>
@@ -748,7 +765,13 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                                 <div><?php echo $location_name_display; ?></div>
                                 <div><small><?php echo $asset_physical_location_display; ?></small></div>
                             </td>
-                            <td><span class="badge badge-pill badge-secondary p-2"><?php echo $asset_status; ?></span></td>
+                            <td>
+                                <?php if ($asset_status_color) { ?>
+                                    <span class="badge rounded-pill <?php echo tagTextClass($asset_status_color); ?> p-2" style="background-color: <?php echo $asset_status_color; ?>;"><?php echo $asset_status; ?></span>
+                                <?php } else { ?>
+                                    <span class="badge rounded-pill text-bg-secondary p-2"><?php echo $asset_status; ?></span>
+                                <?php } ?>
+                            </td>
                             <?php if (!$client_url) { ?>
                             <td><a href="assets.php?client_id=<?php echo $client_id; ?>"><?php echo $client_name; ?></a></td>
                             <?php } ?>
@@ -756,38 +779,38 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
                                 <div class="btn-group">
                                     <?php $rmm_link_row = $rmm_link_map[$asset_id] ?? null; ?>
                                     <?php if ($can_rmm_remote_connect && !empty($rmm_link_row['tactical_agent_id'])) { ?>
-                                        <button type="button" class="btn btn-success btn-sm" onclick="rmmConnect(<?= intval($rmm_link_row['id']) ?>, 'tactical')" title="Remote Connect">
+                                        <button type="button" class="btn btn-success btn-sm" data-rmm-action="connect" data-link-id="<?= intval($rmm_link_row['id']) ?>" data-rmm-type="tactical" title="Remote Connect">
                                             <i class="fas fa-desktop"></i>
                                         </button>
                                         <?php if (!empty($rmm_link_row['mesh_node_id'])) { ?>
-                                        <button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                                        <button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" data-boundary="window"></button>
                                         <div class="dropdown-menu">
-                                            <a class="dropdown-item" href="#" onclick="rmmConnect(<?= intval($rmm_link_row['id']) ?>, 'mesh'); return false;">
-                                                <i class="fas fa-tv mr-2"></i>MeshCentral Remote Desktop
+                                            <a class="dropdown-item" href="#" data-rmm-action="connect" data-link-id="<?= intval($rmm_link_row['id']) ?>" data-rmm-type="mesh">
+                                                <i class="fas fa-tv me-2"></i>MeshCentral Remote Desktop
                                             </a>
                                         </div>
                                         <?php } ?>
                                     <?php } ?>
                                     <div class="dropdown dropleft text-center">
-                                        <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown"><i class="fas fa-ellipsis-h"></i></button>
+                                        <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window"><i class="fas fa-ellipsis-h"></i></button>
                                         <div class="dropdown-menu">
                                             <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/asset/asset_edit.php?id=<?= $asset_id ?>">
-                                                <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                                <i class="fas fa-fw fa-edit me-2"></i>Edit
                                             </a>
                                             <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/asset/asset_copy.php?id=<?= $asset_id ?>">
-                                                <i class="fas fa-fw fa-copy mr-2"></i>Copy
+                                                <i class="fas fa-fw fa-copy me-2"></i>Copy
                                             </a>
                                             <?php if ($session_user_role > 2) { ?>
                                                 <?php if ($asset_archived_at) { ?>
                                                 <a class="dropdown-item text-info" href="post.php?restore_asset=<?php echo $asset_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                    <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                                    <i class="fas fa-fw fa-redo me-2"></i>Restore
                                                 </a>
                                                 <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_asset=<?php echo $asset_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                 </a>
                                                 <?php } else { ?>
                                                 <a class="dropdown-item text-danger confirm-link" href="post.php?archive_asset=<?php echo $asset_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                    <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                    <i class="fas fa-fw fa-archive me-2"></i>Archive
                                                 </a>
                                                 <?php } ?>
 
@@ -815,7 +838,7 @@ $can_rmm_remote_connect = lookupUserPermission('module_rmm_remote_connect') >= 1
 <script src="../js/bulk_actions.js"></script>
 
 <?php if ($config_module_enable_rmm && $can_rmm_remote_connect) { ?>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 function rmmConnect(linkId, type) {
     fetch('/agent/post/rmm_remote.php', {
         method: 'POST',
@@ -826,6 +849,14 @@ function rmmConnect(linkId, type) {
         else alert('Connect failed: ' + (d.error || 'Unknown error'));
     });
 }
+
+// Delegated wiring (CSP forbids inline onclick= attributes)
+document.addEventListener('click', function (e) {
+    const el = e.target.closest('[data-rmm-action="connect"]');
+    if (!el) return;
+    e.preventDefault();
+    rmmConnect(parseInt(el.dataset.linkId, 10), el.dataset.rmmType);
+});
 </script>
 <?php } ?>
 

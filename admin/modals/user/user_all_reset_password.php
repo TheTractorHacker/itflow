@@ -24,10 +24,10 @@ ob_start();
                 </div>
             </div>
             <br>
-            <button class="btn btn-danger" type="submit" name="ir_reset_user_password"><i class="fas fa-fw fa-key mr-2"></i>Reset passwords</button>
+            <button class="btn btn-danger" type="submit" name="ir_reset_user_password"><i class="fas fa-fw fa-key me-2"></i>Reset passwords</button>
         </form>
     </div>
-    <button type="button" class="btn btn-outline-secondary btn-lg px-5 mr-4" data-dismiss="modal">Cancel</button>
+    <button type="button" class="btn btn-outline-secondary btn-lg px-5 me-4" data-bs-dismiss="modal">Cancel</button>
 
 </div>
 

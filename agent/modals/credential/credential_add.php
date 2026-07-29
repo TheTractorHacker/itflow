@@ -11,8 +11,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-key mr-2"></i>New Credential</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-key me-2"></i>New Credential</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -24,15 +24,15 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-credential-details">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-credential-details">Details</a>
             </li>
             <?php if ($client_id) { ?>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-credential-relation">Relation</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-credential-relation">Relation</a>
             </li>
             <?php } ?>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-credential-notes">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-credential-notes">Notes</a>
             </li>
         </ul>
 
@@ -117,7 +117,7 @@ ob_start();
                             <span class="input-group-text"><i class="fa fa-fw fa-eye"></i></span>
                         </div>
                         <div class="input-group-append">
-                            <span class="btn btn-default"><i class="fa fa-fw fa-question" onclick="generatePassword()"></i></span>
+                            <button type="button" class="btn btn-default generatePasswordBtn" title="Generate password"><i class="fa fa-fw fa-question"></i></button>
                         </div>
                     </div>
                 </div>
@@ -258,8 +258,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_credential" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_credential" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

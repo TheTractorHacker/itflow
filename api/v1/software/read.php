@@ -12,7 +12,7 @@ if (isset($_GET['software_id'])) {
 
 } elseif (isset($_GET['software_key'])) {
     // Specific software via key
-    $key = mysqli_real_escape_string($mysqli, $_GET['software_license']);
+    $key = mysqli_real_escape_string($mysqli, $_GET['software_key']);
     $sql = mysqli_query($mysqli, "SELECT * FROM software WHERE software_key = '$key' AND software_client_id LIKE '$client_id' ORDER BY software_id LIMIT $limit OFFSET $offset");
 
 } elseif (isset($_GET['software_name'])) {

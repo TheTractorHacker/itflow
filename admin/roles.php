@@ -20,11 +20,11 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-user-shield mr-2"></i>Roles</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-user-shield me-2"></i>Roles</h3>
             <div class="card-tools">
                 <div class="btn-group">
                     <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/role/role_add.php">
-                        <i class="fas fa-fw fa-user-plus mr-2"></i>New Role
+                        <i class="fas fa-fw fa-user-plus me-2"></i>New Role
                     </button>
                 </div>
             </div>
@@ -96,7 +96,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td>
                                 <a class="<?php if ($role_id !== 3) { ?> ajax-modal" data-modal-url="modals/role/role_edit.php?id=<?= $role_id ?>" <?php } ?> href="#">
                                     <div class="media">
-                                        <i class="fas fa-fw fa-2x fa-user-shield text-dark mr-2"></i>
+                                        <i class="fas fa-fw fa-2x fa-user-shield text-dark me-2"></i>
                                         <div class="media-body">
                                             <div><?= $role_name ?></div>
                                             <div><small class="text-secondary"><?= $role_description ?></small></div>
@@ -109,20 +109,20 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td>
                                 <?php if ($role_id !== 3) { ?>
                                     <div class="dropdown dropleft text-center">
-                                        <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                        <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                             <i class="fas fa-ellipsis-h"></i>
                                         </button>
                                         <div class="dropdown-menu">
 
                                             <a class="dropdown-item ajax-modal" href="#"
                                                 data-modal-url="modals/role/role_edit.php?id=<?= $role_id ?>">
-                                                <i class="fas fa-fw fa-user-edit mr-2"></i>Edit
+                                                <i class="fas fa-fw fa-user-edit me-2"></i>Edit
                                             </a>
 
                                             <?php if (empty($role_archived_at) && $role_user_count == 0) { ?>
                                                 <div class="dropdown-divider"></div>
                                                 <a class="dropdown-item text-danger confirm-link" href="post.php?archive_role=<?php echo $role_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                                    <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                    <i class="fas fa-fw fa-archive me-2"></i>Archive
                                                 </a>
                                             <?php } ?>
 

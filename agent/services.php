@@ -47,10 +47,10 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 ?>
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fa fa-fw fa-stream mr-2"></i>Services</h3>
+            <h3 class="card-title mt-2"><i class="fa fa-fw fa-stream me-2"></i>Services</h3>
             <div class="card-tools">
                 <?php if (lookupUserPermission("module_support") >= 2) { ?>
-                    <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/service/service_add.php?<?= $client_url ?>"><i class="fas fa-plus mr-2"></i>New Service</button>
+                    <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/service/service_add.php?<?= $client_url ?>"><i class="fas fa-plus me-2"></i>New Service</button>
                 <?php } ?>
             </div>
         </div>
@@ -76,7 +76,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     <?php } else { ?>
                     <div class="col-md-2">
                         <div class="input-group">
-                            <select class="form-control select2" name="client" onchange="this.form.submit()">
+                            <select class="form-control select2 auto-submit-select" name="client">
                                 <option value="" <?php if ($client == "") { echo "selected"; } ?>>- All Clients -</option>
 
                                 <?php
@@ -103,7 +103,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     <?php } ?>
 
                     <div class="col-md-6">
-                        <div class="float-right">
+                        <div class="float-end">
                         </div>
                     </div>
                 </div>
@@ -170,7 +170,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     data-modal-size="xl"
                                     data-modal-url="modals/service/service_details.php?id=<?= $service_id ?>">
                                     <div class="media">
-                                        <i class="fa fa-fw fa-2x fa-stream mr-3"></i>
+                                        <i class="fa fa-fw fa-2x fa-stream me-3"></i>
                                         <div class="media-body">
                                             <div><?php echo $service_name; ?></div>
                                             <div><small class="text-secondary"><?php echo $service_description; ?></small></div>
@@ -189,18 +189,18 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <!-- Action -->
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/service/service_edit.php?id=<?= $service_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <?php if (lookupUserPermission("module_support") >= 3) { ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_service=<?php echo $service_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>">
-                                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                                             </a>
                                         <?php } ?>
                                     </div>

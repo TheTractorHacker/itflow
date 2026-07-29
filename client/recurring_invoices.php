@@ -30,9 +30,9 @@ $payment_provider_threshold = floatval($row['payment_provider_threshold']);
 
 ?>
 
-<div class="row">
+<div class="row mb-4">
     <div class="col">
-        <h3><i class="fas fa-fw fa-sync-alt mr-2"></i>Recurring Invoices</h3>
+        <h3><i class="fas fa-fw fa-sync-alt me-2"></i>Recurring Invoices</h3>
     </div>
 </div>
 <div class="row">
@@ -95,7 +95,7 @@ $payment_provider_threshold = floatval($row['payment_provider_threshold']);
                                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                                 <input type="hidden" name="set_recurring_payment" value="1">
                                 <input type="hidden" name="recurring_invoice_id" value="<?php echo $recurring_invoice_id; ?>">
-                                <select class="form-control select2" name="saved_payment_id" onchange="this.form.submit()">
+                                <select class="form-control select2 auto-submit-select" name="saved_payment_id">
                                     <option value="0">Disabled</option>
                                     <?php
                                         while ($row = mysqli_fetch_assoc($sql)) {

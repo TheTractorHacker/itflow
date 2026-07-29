@@ -64,21 +64,24 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
 ?>
 
 <div class="d-flex align-items-center mb-3">
-    <h4 class="mb-0"><i class="fas fa-plug mr-2"></i>Integrations</h4>
+    <h4 class="mb-0"><i class="fas fa-plug me-2"></i>Integrations</h4>
 </div>
 
 <ul class="nav nav-tabs mb-3" id="integrationsTabs">
     <li class="nav-item">
-        <a class="nav-link <?= $active_tab === 'rmm'       ? 'active' : '' ?>" data-toggle="tab" href="#tab-rmm"       data-tabkey="rmm"><i class="fas fa-desktop mr-1"></i>RMM</a>
+        <a class="nav-link <?= $active_tab === 'rmm'       ? 'active' : '' ?>" data-bs-toggle="tab" href="#tab-rmm"       data-tabkey="rmm"><i class="fas fa-desktop me-1"></i>RMM</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= $active_tab === 'backups'   ? 'active' : '' ?>" data-toggle="tab" href="#tab-backups"   data-tabkey="backups"><i class="fas fa-cloud-upload-alt mr-1"></i>Backups</a>
+        <a class="nav-link <?= $active_tab === 'backups'   ? 'active' : '' ?>" data-bs-toggle="tab" href="#tab-backups"   data-tabkey="backups"><i class="fas fa-cloud-upload-alt me-1"></i>Backups</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= $active_tab === 'firewalls' ? 'active' : '' ?>" data-toggle="tab" href="#tab-firewalls" data-tabkey="firewalls"><i class="fas fa-fire-alt mr-1"></i>Firewalls</a>
+        <a class="nav-link <?= $active_tab === 'firewalls' ? 'active' : '' ?>" data-bs-toggle="tab" href="#tab-firewalls" data-tabkey="firewalls"><i class="fas fa-fire-alt me-1"></i>Firewalls</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= $active_tab === 'unifi'     ? 'active' : '' ?>" data-toggle="tab" href="#tab-unifi"     data-tabkey="unifi"><i class="fas fa-wifi mr-1"></i>UniFi</a>
+        <a class="nav-link <?= $active_tab === 'unifi'     ? 'active' : '' ?>" data-bs-toggle="tab" href="#tab-unifi"     data-tabkey="unifi"><i class="fas fa-wifi me-1"></i>UniFi</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="settings_accounting.php"><i class="fas fa-file-invoice-dollar me-1"></i>Accounting</a>
     </li>
 </ul>
 
@@ -89,36 +92,59 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="tab-pane <?= $active_tab === 'rmm' ? 'show active' : '' ?>" id="tab-rmm">
 
-    <div class="card card-dark mb-3" style="border-top:3px solid #17a2b8;">
+    <div class="card mb-3" style="border-top:3px solid #17a2b8;">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-desktop mr-2"></i>RMM Integration Settings</h3>
+            <h3 class="card-title me-auto"><i class="fas fa-fw fa-desktop me-2"></i>RMM Integration Settings</h3>
             <?php if ($config_module_enable_rmm): ?>
-                <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Module Enabled</span>
+                <span class="badge text-bg-success"><i class="fas fa-check-circle me-1"></i>Module Enabled</span>
             <?php else: ?>
-                <span class="badge badge-secondary"><i class="fas fa-times-circle mr-1"></i>Module Disabled</span>
+                <span class="badge text-bg-secondary"><i class="fas fa-times-circle me-1"></i>Module Disabled</span>
             <?php endif; ?>
         </div>
         <div class="card-body">
             <form action="post.php" method="post">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                 <div class="form-group mb-2">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="rmm_module_enabled"
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="rmm_module_enabled"
                                name="config_module_enable_rmm" value="1" <?= $config_module_enable_rmm ? 'checked' : '' ?>>
-                        <label class="custom-control-label" for="rmm_module_enabled">Enable RMM module (shows RMM features in asset and client pages)</label>
+                        <label class="form-check-label" for="rmm_module_enabled">Enable RMM module (shows RMM features in asset and client pages)</label>
                     </div>
                 </div>
                 <button type="submit" name="save_rmm_module_settings" class="btn btn-primary btn-sm">
-                    <i class="fas fa-check mr-1"></i>Save Module Settings
+                    <i class="fas fa-check me-1"></i>Save Module Settings
                 </button>
             </form>
         </div>
     </div>
 
     <?php if ($config_module_enable_rmm): ?>
-    <div class="card card-dark mb-3">
+    <div class="card mb-3">
         <div class="card-header py-2">
-            <h3 class="card-title"><i class="fas fa-fw fa-ticket-alt mr-2"></i>Automatic Ticket Creation</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-desktop me-2"></i>Connect/Remote Preference</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">When a device is monitored by both Tactical RMM and Level.io at the same time, this controls which integration is used for the Connect button and status display on the asset page and asset list.</p>
+            <form action="post.php" method="post">
+                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                <div class="form-group mb-2">
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="rmm_prefer_tactical"
+                               name="config_rmm_prefer_tactical" value="1" <?= $config_rmm_prefer_tactical ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="rmm_prefer_tactical">Prefer Tactical RMM for Connect/Remote when a device is tracked by multiple RMMs</label>
+                    </div>
+                    <small class="form-text text-muted">When off, no preference is applied and whichever integration synced/linked most recently is shown.</small>
+                </div>
+                <button type="submit" name="save_rmm_prefer_settings" class="btn btn-primary btn-sm">
+                    <i class="fas fa-check me-1"></i>Save Preference
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header py-2">
+            <h3 class="card-title"><i class="fas fa-fw fa-ticket-alt me-2"></i>Automatic Ticket Creation</h3>
         </div>
         <div class="card-body">
             <p class="text-muted small">When a new RMM alert comes in with one of the selected severities, a ticket will be created automatically.</p>
@@ -128,16 +154,16 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 $auto_ticket_severities = array_filter(explode(',', $config_rmm_auto_ticket_severities));
                 foreach (['critical' => 'Critical', 'error' => 'Error', 'warning' => 'Warning', 'info' => 'Info'] as $sev => $label):
                 ?>
-                <div class="custom-control custom-checkbox custom-control-inline">
-                    <input type="checkbox" class="custom-control-input" id="rmm_auto_ticket_<?= $sev ?>"
+                <div class="form-check form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="rmm_auto_ticket_<?= $sev ?>"
                            name="auto_ticket_severities[]" value="<?= $sev ?>"
                            <?= in_array($sev, $auto_ticket_severities) ? 'checked' : '' ?>>
-                    <label class="custom-control-label" for="rmm_auto_ticket_<?= $sev ?>"><?= $label ?></label>
+                    <label class="form-check-label" for="rmm_auto_ticket_<?= $sev ?>"><?= $label ?></label>
                 </div>
                 <?php endforeach; ?>
                 <div class="mt-3">
                     <button type="submit" name="save_rmm_auto_ticket_settings" class="btn btn-primary btn-sm">
-                        <i class="fas fa-check mr-1"></i>Save Automation Settings
+                        <i class="fas fa-check me-1"></i>Save Automation Settings
                     </button>
                 </div>
             </form>
@@ -145,11 +171,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
     </div>
     <?php endif; ?>
 
-    <div class="card card-dark mb-3">
+    <div class="card mb-3">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-plug mr-2"></i>RMM Integrations</h3>
-            <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#rmm_addIntegrationModal" onclick="rmmResetModal()">
-                <i class="fas fa-plus mr-1"></i>Add Integration
+            <h3 class="card-title me-auto"><i class="fas fa-fw fa-plug me-2"></i>RMM Integrations</h3>
+            <button class="btn btn-primary btn-sm js-rmm-reset-modal" data-bs-toggle="modal" data-bs-target="#rmm_addIntegrationModal">
+                <i class="fas fa-plus me-1"></i>Add Integration
             </button>
         </div>
         <div class="card-body p-0">
@@ -160,10 +186,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     <p class="small">Add a Tactical RMM, Level.io, or Action1 connection to get started.</p>
                 </div>
             <?php else: ?>
+            <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
                 <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                     <tr>
-                        <th class="pl-3">Name</th>
+                        <th class="ps-3">Name</th>
                         <th>Provider</th>
                         <th>API URL</th>
                         <th>Status</th>
@@ -184,34 +211,33 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     $provider_color = ['tactical_rmm' => 'info',         'level' => 'primary',   'action1' => 'warning'][$intg_type] ?? 'secondary';
                 ?>
                 <tr>
-                    <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
-                    <td><span class="badge badge-<?= $provider_color ?>"><?= $provider_label ?></span></td>
+                    <td class="ps-3 fw-bold"><?= nullable_htmlentities($intg['name']) ?></td>
+                    <td><span class="badge text-bg-<?= $provider_color ?>"><?= $provider_label ?></span></td>
                     <td class="text-muted small"><?= nullable_htmlentities($intg['api_url']) ?></td>
-                    <td><?= $intg['enabled'] ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-secondary">Disabled</span>' ?></td>
+                    <td><?= $intg['enabled'] ? '<span class="badge text-bg-success">Enabled</span>' : '<span class="badge text-bg-secondary">Disabled</span>' ?></td>
                     <td class="text-muted small"><?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?></td>
-                    <td class="text-right pr-3" style="white-space:nowrap">
-                        <button class="btn btn-xs btn-info" onclick="rmmTestConnection(<?= $intg_id ?>)">
-                            <i class="fas fa-plug mr-1"></i>Test
+                    <td class="text-end pe-3" style="white-space:nowrap">
+                        <button class="btn btn-xs btn-info js-rmm-test" data-intg-id="<?= $intg_id ?>">
+                            <i class="fas fa-plug me-1"></i>Test
                         </button>
-                        <button class="btn btn-xs btn-success" onclick="rmmSyncNow(<?= $intg_id ?>)">
-                            <i class="fas fa-sync mr-1"></i>Sync Now
+                        <button class="btn btn-xs btn-success js-rmm-sync" data-intg-id="<?= $intg_id ?>">
+                            <i class="fas fa-sync me-1"></i>Sync Now
                         </button>
-                        <button class="btn btn-xs btn-secondary"
-                                onclick='rmmEditIntegration(<?= json_encode([
+                        <button class="btn btn-xs btn-secondary js-rmm-edit"
+                                data-intg='<?= json_encode([
                                     "id"              => $intg_id,
                                     "name"            => $intg['name'],
                                     "type"            => $intg_type,
                                     "api_url"         => $intg['api_url'],
                                     "web_url"         => $intg['web_url'] ?? '',
                                     "enabled"         => intval($intg['enabled']),
-                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>'>
                             <i class="fas fa-edit"></i>
                         </button>
-                        <form action="post.php" method="post" class="d-inline"
-                              onsubmit="return confirm('Delete this integration? All linked asset data will be orphaned.')">
+                        <form action="post.php" method="post" class="d-inline">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                             <input type="hidden" name="integration_id" value="<?= $intg_id ?>">
-                            <button type="submit" name="delete_rmm_integration" class="btn btn-xs btn-danger">
+                            <button type="submit" name="delete_rmm_integration" class="btn btn-xs btn-danger confirm-link">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </form>
@@ -220,13 +246,14 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
             <?php endif; ?>
         </div>
     </div>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-2">
-            <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>Recent Sync Log</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-history me-2"></i>Recent Sync Log</h3>
         </div>
         <div class="card-body p-0">
             <?php
@@ -240,10 +267,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
             if (mysqli_num_rows($sql_rmm_log) == 0): ?>
                 <p class="text-muted text-center py-3 mb-0">No sync history yet.</p>
             <?php else: ?>
+            <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
                 <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                     <tr>
-                        <th class="pl-3">Integration</th>
+                        <th class="ps-3">Integration</th>
                         <th>Started</th>
                         <th>Status</th>
                         <th>Created</th>
@@ -255,17 +283,17 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 </thead>
                 <tbody>
                 <?php while ($lr = mysqli_fetch_assoc($sql_rmm_log)):
-                    $badge = ['success' => 'badge-success', 'failed' => 'badge-danger', 'running' => 'badge-warning'];
+                    $badge = ['success' => 'text-bg-success', 'failed' => 'text-bg-danger', 'running' => 'text-bg-warning'];
                 ?>
                 <tr>
-                    <td class="pl-3">
+                    <td class="ps-3">
                         <?= nullable_htmlentities($lr['integration_name']) ?>
                         <?php $tp = $lr['integration_type'] ?? ''; if ($tp): ?>
-                        <span class="badge badge-secondary ml-1" style="font-size:10px"><?= ['level' => 'Level.io', 'action1' => 'Action1'][$tp] ?? 'Tactical' ?></span>
+                        <span class="badge text-bg-secondary ms-1" style="font-size:10px"><?= ['level' => 'Level.io', 'action1' => 'Action1'][$tp] ?? 'Tactical' ?></span>
                         <?php endif; ?>
                     </td>
                     <td class="text-muted small"><?= nullable_htmlentities($lr['started_at']) ?></td>
-                    <td><span class="badge <?= $badge[$lr['status']] ?? 'badge-secondary' ?>"><?= htmlspecialchars($lr['status']) ?></span></td>
+                    <td><span class="badge <?= $badge[$lr['status']] ?? 'text-bg-secondary' ?>"><?= htmlspecialchars($lr['status']) ?></span></td>
                     <td><?= intval($lr['assets_created']) ?></td>
                     <td><?= intval($lr['assets_updated']) ?></td>
                     <td><?= intval($lr['assets_matched']) ?></td>
@@ -275,6 +303,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
             <?php endif; ?>
         </div>
     </div>
@@ -282,10 +311,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
     <!-- Add/Edit RMM Integration Modal -->
     <div class="modal fade" id="rmm_addIntegrationModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content bg-dark">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="rmm_integrationModalTitle">Add RMM Integration</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
                 </div>
                 <form action="post.php" method="post">
                     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -293,78 +322,78 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     <div class="modal-body">
 
                         <div class="form-group">
-                            <label class="text-light small">Provider Type</label>
+                            <label class="small">Provider Type</label>
                             <div class="btn-group btn-group-sm w-100" role="group">
-                                <input type="radio" class="btn-check" name="integration_type" id="rmm_type_tactical"
-                                       value="tactical_rmm" checked onchange="rmmUpdateModalLabels('tactical_rmm')">
+                                <input type="radio" class="btn-check js-rmm-type-radio" name="integration_type" id="rmm_type_tactical"
+                                       value="tactical_rmm" checked>
                                 <label class="btn btn-outline-info flex-fill" for="rmm_type_tactical" id="rmm_lbl_tactical"
                                        style="border-radius:4px 0 0 0">
-                                    <i class="fas fa-server mr-1"></i>Tactical RMM
+                                    <i class="fas fa-server me-1"></i>Tactical RMM
                                 </label>
-                                <input type="radio" class="btn-check" name="integration_type" id="rmm_type_level"
-                                       value="level" onchange="rmmUpdateModalLabels('level')">
+                                <input type="radio" class="btn-check js-rmm-type-radio" name="integration_type" id="rmm_type_level"
+                                       value="level">
                                 <label class="btn btn-outline-primary flex-fill" for="rmm_type_level" id="rmm_lbl_level">
-                                    <i class="fas fa-layer-group mr-1"></i>Level.io
+                                    <i class="fas fa-layer-group me-1"></i>Level.io
                                 </label>
-                                <input type="radio" class="btn-check" name="integration_type" id="rmm_type_action1"
-                                       value="action1" onchange="rmmUpdateModalLabels('action1')">
+                                <input type="radio" class="btn-check js-rmm-type-radio" name="integration_type" id="rmm_type_action1"
+                                       value="action1">
                                 <label class="btn btn-outline-warning flex-fill" for="rmm_type_action1" id="rmm_lbl_action1"
                                        style="border-radius:0 4px 4px 0">
-                                    <i class="fas fa-shield-alt mr-1"></i>Action1
+                                    <i class="fas fa-shield-alt me-1"></i>Action1
                                 </label>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small">Integration Name</label>
+                            <label class="small">Integration Name</label>
                             <input type="text" class="form-control form-control-sm" name="integration_name" id="rmm_integration_name" required
                                    placeholder="e.g. Primary Tactical RMM">
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small" id="rmm_label_api_url">API URL</label>
+                            <label class="small" id="rmm_label_api_url">API URL</label>
                             <input type="url" class="form-control form-control-sm" name="integration_api_url" id="rmm_integration_api_url"
                                    placeholder="https://api.yourdomain.com" required>
-                            <small class="text-light" id="rmm_help_api_url">
+                            <small class="text-muted" id="rmm_help_api_url">
                                 Tactical RMM: enter API server base URL (no trailing slash).
                             </small>
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small" id="rmm_label_web_url">Dashboard / Web URL</label>
+                            <label class="small" id="rmm_label_web_url">Dashboard / Web URL</label>
                             <input type="url" class="form-control form-control-sm" name="integration_web_url" id="rmm_integration_web_url"
                                    placeholder="https://rmm.yourdomain.com">
-                            <small class="text-light" id="rmm_help_web_url">Browser-accessible dashboard URL (used for Connect button).</small>
+                            <small class="text-muted" id="rmm_help_web_url">Browser-accessible dashboard URL (used for Connect button).</small>
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small" id="rmm_label_api_key">API Key</label>
+                            <label class="small" id="rmm_label_api_key">API Key</label>
                             <input type="password" class="form-control form-control-sm" name="integration_api_key" id="rmm_integration_api_key"
                                    autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
-                            <small class="text-light" id="rmm_help_api_key">
+                            <small class="text-muted" id="rmm_help_api_key">
                                 Stored encrypted. Generate in Tactical RMM → Settings → Global Settings → API Keys.
                             </small>
                         </div>
 
                         <div class="form-group" id="rmm_client_secret_group" style="display:none">
-                            <label class="text-light small">Client Secret</label>
+                            <label class="small">Client Secret</label>
                             <input type="password" class="form-control form-control-sm" name="integration_client_secret" id="rmm_integration_client_secret"
                                    autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
-                            <small class="text-light">Stored encrypted.</small>
+                            <small class="text-muted">Stored encrypted.</small>
                         </div>
 
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="rmm_integration_enabled"
+                        <div class="form-check form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="rmm_integration_enabled"
                                    name="integration_enabled" value="1" checked>
-                            <label class="custom-control-label" for="rmm_integration_enabled">Enabled</label>
+                            <label class="form-check-label" for="rmm_integration_enabled">Enabled</label>
                         </div>
 
                         <div id="rmm_test_result" class="mt-3"></div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" name="save_rmm_integration" class="btn btn-primary btn-sm">
-                            <i class="fas fa-check mr-1"></i>Save Integration
+                            <i class="fas fa-check me-1"></i>Save Integration
                         </button>
                     </div>
                 </form>
@@ -379,20 +408,20 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="tab-pane <?= $active_tab === 'backups' ? 'show active' : '' ?>" id="tab-backups">
 
-    <div class="card card-dark mb-3" style="border-top:3px solid #f39c12;">
+    <div class="card mb-3" style="border-top:3px solid #f39c12;">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Comet Backup Integration</h3>
+            <h3 class="card-title me-auto"><i class="fas fa-fw fa-cloud-upload-alt me-2"></i>Comet Backup Integration</h3>
             <?php if ($config_comet_enabled): ?>
                 <?php if ($comet_connected): ?>
-                    <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Connected</span>
+                    <span class="badge text-bg-success"><i class="fas fa-check-circle me-1"></i>Connected</span>
                 <?php else: ?>
-                    <span class="badge badge-danger"><i class="fas fa-times-circle mr-1"></i>Cannot reach server</span>
+                    <span class="badge text-bg-danger"><i class="fas fa-times-circle me-1"></i>Cannot reach server</span>
                 <?php endif; ?>
             <?php endif; ?>
         </div>
         <?php if ($comet_error): ?>
         <div class="px-3 pt-2">
-            <div class="small text-danger"><i class="fas fa-exclamation-triangle mr-1"></i><?= nullable_htmlentities($comet_error) ?></div>
+            <div class="small text-danger"><i class="fas fa-exclamation-triangle me-1"></i><?= nullable_htmlentities($comet_error) ?></div>
         </div>
         <?php endif; ?>
         <div class="card-body">
@@ -400,10 +429,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="comet_enabled"
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="comet_enabled"
                                name="config_comet_enabled" value="1" <?= $config_comet_enabled ? 'checked' : '' ?>>
-                        <label class="custom-control-label" for="comet_enabled">Enable Comet Backup integration</label>
+                        <label class="form-check-label" for="comet_enabled">Enable Comet Backup integration</label>
                     </div>
                 </div>
 
@@ -454,10 +483,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 </div>
 
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="comet_auto_ticket"
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="comet_auto_ticket"
                                name="config_comet_auto_ticket" value="1" <?= $config_comet_auto_ticket ? 'checked' : '' ?>>
-                        <label class="custom-control-label" for="comet_auto_ticket">
+                        <label class="form-check-label" for="comet_auto_ticket">
                             Auto-create tickets on backup failure (one ticket per device, auto-resolves on success)
                         </label>
                     </div>
@@ -465,7 +494,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
 
                 <?php if (!empty($config_base_url)): ?>
                 <div class="alert alert-secondary py-2 mb-3">
-                    <strong><i class="fas fa-link mr-1"></i>Webhook URL</strong> — add this in Comet Server → Admin → Server Settings → Webhooks:<br>
+                    <strong><i class="fas fa-link me-1"></i>Webhook URL</strong> — add this in Comet Server → Admin → Server Settings → Webhooks:<br>
                     <code>https://<?= nullable_htmlentities($config_base_url) ?>/comet_webhook.php</code><br>
                     <small class="text-muted">Event: <strong>Job Completed (4201)</strong> &middot; Custom Header: <strong>X-Comet-Secret</strong></small>
                 </div>
@@ -473,11 +502,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
 
                 <hr>
                 <button type="submit" name="save_comet_settings" class="btn btn-primary btn-sm">
-                    <i class="fas fa-check mr-1"></i>Save &amp; Test Connection
+                    <i class="fas fa-check me-1"></i>Save &amp; Test Connection
                 </button>
                 <?php if ($config_comet_enabled): ?>
-                <a href="comet_status.php" class="btn btn-secondary btn-sm ml-2">
-                    <i class="fas fa-th-list mr-1"></i>View Backup Status
+                <a href="comet_status.php" class="btn btn-secondary btn-sm ms-2">
+                    <i class="fas fa-th-list me-1"></i>View Backup Status
                 </a>
                 <?php endif; ?>
             </form>
@@ -485,9 +514,9 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
     </div>
 
     <!-- Client mapping -->
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-2">
-            <h3 class="card-title"><i class="fas fa-fw fa-link mr-2"></i>Client → Comet User Mapping</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-link me-2"></i>Client → Comet User Mapping</h3>
         </div>
         <div class="card-body p-0">
             <?php if (!$config_comet_enabled || !$comet_connected): ?>
@@ -506,10 +535,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
             ?>
             <form action="post.php" method="post">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                <div class="table-responsive">
                 <table class="table table-sm table-borderless table-hover mb-0">
                     <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                         <tr>
-                            <th class="pl-3">ITFlow Client</th>
+                            <th class="ps-3">ITFlow Client</th>
                             <th>Comet Username</th>
                         </tr>
                     </thead>
@@ -520,7 +550,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                         $mapped = $comet_maps[$cid] ?? '';
                     ?>
                         <tr>
-                            <td class="pl-3"><?= $cname ?></td>
+                            <td class="ps-3"><?= $cname ?></td>
                             <td style="width:55%;">
                                 <select class="form-control form-control-sm" name="comet_map[<?= $cid ?>]">
                                     <option value="">— Not mapped —</option>
@@ -533,9 +563,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     <?php endwhile; ?>
                     </tbody>
                 </table>
+                </div>
                 <div class="card-footer py-2">
                     <button type="submit" name="save_comet_maps" class="btn btn-primary btn-sm">
-                        <i class="fas fa-check mr-1"></i>Save Mappings
+                        <i class="fas fa-check me-1"></i>Save Mappings
                     </button>
                 </div>
             </form>
@@ -551,11 +582,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
 <div class="tab-pane <?= $active_tab === 'firewalls' ? 'show active' : '' ?>" id="tab-firewalls">
 
     <!-- Sophos Central connections -->
-    <div class="card card-dark mb-3" style="border-top:3px solid #28a745;">
+    <div class="card mb-3" style="border-top:3px solid #28a745;">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-fire-alt mr-2"></i>Sophos Central Connections</h3>
-            <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#fw_addModal" onclick="fwResetModal()">
-                <i class="fas fa-plus mr-1"></i>Add Connection
+            <h3 class="card-title me-auto"><i class="fas fa-fw fa-fire-alt me-2"></i>Sophos Central Connections</h3>
+            <button class="btn btn-primary btn-sm js-fw-reset-modal" data-bs-toggle="modal" data-bs-target="#fw_addModal">
+                <i class="fas fa-plus me-1"></i>Add Connection
             </button>
         </div>
         <div class="card-body p-0">
@@ -566,10 +597,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     <p class="small">Add a Sophos Central API credential (Client ID + Secret) to start syncing firewall inventory.</p>
                 </div>
             <?php else: ?>
+            <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
                 <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                     <tr>
-                        <th class="pl-3">Name</th>
+                        <th class="ps-3">Name</th>
                         <th>Status</th>
                         <th>Last Sync</th>
                         <th></th>
@@ -585,32 +617,31 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     ));
                 ?>
                 <tr>
-                    <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
-                    <td><?= $intg['enabled'] ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-secondary">Disabled</span>' ?></td>
+                    <td class="ps-3 fw-bold"><?= nullable_htmlentities($intg['name']) ?></td>
+                    <td><?= $intg['enabled'] ? '<span class="badge text-bg-success">Enabled</span>' : '<span class="badge text-bg-secondary">Disabled</span>' ?></td>
                     <td class="text-muted small"><?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?></td>
-                    <td class="text-right pr-3" style="white-space:nowrap">
-                        <button class="btn btn-xs btn-info" onclick="fwTestConnection(<?= $intg_id ?>)">
-                            <i class="fas fa-plug mr-1"></i>Test
+                    <td class="text-end pe-3" style="white-space:nowrap">
+                        <button class="btn btn-xs btn-info js-fw-test" data-intg-id="<?= $intg_id ?>">
+                            <i class="fas fa-plug me-1"></i>Test
                         </button>
-                        <button class="btn btn-xs btn-success" onclick="fwSyncNow(<?= $intg_id ?>)">
-                            <i class="fas fa-sync mr-1"></i>Sync Now
+                        <button class="btn btn-xs btn-success js-fw-sync" data-intg-id="<?= $intg_id ?>">
+                            <i class="fas fa-sync me-1"></i>Sync Now
                         </button>
-                        <button class="btn btn-xs btn-secondary"
-                                onclick='fwEditIntegration(<?= json_encode([
+                        <button class="btn btn-xs btn-secondary js-fw-edit"
+                                data-intg='<?= json_encode([
                                     "id"               => $intg_id,
                                     "name"             => $intg['name'],
                                     "api_url"          => $intg['api_url'] ?? 'https://api.central.sophos.com',
                                     "web_url"          => $intg['web_url'] ?? '',
                                     "default_client_id"=> intval($intg['default_client_id'] ?? 0),
                                     "enabled"          => intval($intg['enabled']),
-                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>'>
                             <i class="fas fa-edit"></i>
                         </button>
-                        <form action="post.php" method="post" class="d-inline"
-                              onsubmit="return confirm('Delete this connection? Firewall assets will remain but lose their RMM link.')">
+                        <form action="post.php" method="post" class="d-inline">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                             <input type="hidden" name="integration_id" value="<?= $intg_id ?>">
-                            <button type="submit" name="delete_rmm_integration" class="btn btn-xs btn-danger">
+                            <button type="submit" name="delete_rmm_integration" class="btn btn-xs btn-danger confirm-link">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </form>
@@ -619,14 +650,15 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
             <?php endif; ?>
         </div>
     </div>
 
     <!-- Firewall → Client Mapping -->
-    <div class="card card-dark mb-3">
+    <div class="card mb-3">
         <div class="card-header py-2">
-            <h3 class="card-title"><i class="fas fa-fw fa-link mr-2"></i>Firewall &rarr; Client Mapping</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-link me-2"></i>Firewall &rarr; Client Mapping</h3>
         </div>
         <div class="card-body p-0">
             <?php if (mysqli_num_rows($sql_fw_assets) === 0): ?>
@@ -638,10 +670,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
             <?php else: ?>
             <form action="post.php" method="post">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                <div class="table-responsive">
                 <table class="table table-sm table-borderless table-hover mb-0">
                     <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                         <tr>
-                            <th class="pl-3" style="width:28px;"></th>
+                            <th class="ps-3" style="width:28px;"></th>
                             <th>Device</th>
                             <th>Model</th>
                             <th>Firmware</th>
@@ -655,8 +688,8 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                         $si = ['online' => 'check-circle', 'offline' => 'times-circle', 'unknown' => 'question-circle'][$st] ?? 'question-circle';
                     ?>
                         <tr>
-                            <td class="pl-3 text-center"><i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i></td>
-                            <td class="font-weight-bold small">
+                            <td class="ps-3 text-center"><i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i></td>
+                            <td class="fw-bold small">
                                 <a href="/agent/asset_details.php?asset_id=<?= intval($fw['asset_id']) ?>">
                                     <?= nullable_htmlentities($fw['hostname'] ?: $fw['asset_name']) ?>
                                 </a>
@@ -677,9 +710,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     <?php endwhile; ?>
                     </tbody>
                 </table>
+                </div>
                 <div class="card-footer py-2">
                     <button type="submit" name="save_firewall_client_mappings" class="btn btn-primary btn-sm">
-                        <i class="fas fa-check mr-1"></i>Save Mappings
+                        <i class="fas fa-check me-1"></i>Save Mappings
                     </button>
                 </div>
             </form>
@@ -688,9 +722,9 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
     </div>
 
     <!-- Sophos sync log -->
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-2">
-            <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>Recent Sync Log</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-history me-2"></i>Recent Sync Log</h3>
         </div>
         <div class="card-body p-0">
             <?php
@@ -703,10 +737,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
             if (mysqli_num_rows($sql_fw_log) == 0): ?>
                 <p class="text-muted text-center py-3 mb-0">No sync history yet.</p>
             <?php else: ?>
+            <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
                 <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                     <tr>
-                        <th class="pl-3">Connection</th>
+                        <th class="ps-3">Connection</th>
                         <th>Started</th>
                         <th>Status</th>
                         <th>Created</th>
@@ -718,12 +753,12 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 </thead>
                 <tbody>
                 <?php while ($lr = mysqli_fetch_assoc($sql_fw_log)):
-                    $badge = ['success' => 'badge-success', 'failed' => 'badge-danger', 'running' => 'badge-warning'];
+                    $badge = ['success' => 'text-bg-success', 'failed' => 'text-bg-danger', 'running' => 'text-bg-warning'];
                 ?>
                 <tr>
-                    <td class="pl-3"><?= nullable_htmlentities($lr['integration_name']) ?></td>
+                    <td class="ps-3"><?= nullable_htmlentities($lr['integration_name']) ?></td>
                     <td class="text-muted small"><?= nullable_htmlentities($lr['started_at']) ?></td>
-                    <td><span class="badge <?= $badge[$lr['status']] ?? 'badge-secondary' ?>"><?= htmlspecialchars($lr['status']) ?></span></td>
+                    <td><span class="badge <?= $badge[$lr['status']] ?? 'text-bg-secondary' ?>"><?= htmlspecialchars($lr['status']) ?></span></td>
                     <td><?= intval($lr['assets_created']) ?></td>
                     <td><?= intval($lr['assets_updated']) ?></td>
                     <td><?= intval($lr['assets_matched']) ?></td>
@@ -733,6 +768,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
             <?php endif; ?>
         </div>
     </div>
@@ -740,10 +776,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
     <!-- Add/Edit Sophos Connection Modal -->
     <div class="modal fade" id="fw_addModal" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content bg-dark">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="fw_modalTitle">Add Sophos Central Connection</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
                 </div>
                 <form action="post.php" method="post">
                     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -752,34 +788,34 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     <div class="modal-body">
 
                         <div class="form-group">
-                            <label class="text-light small">Connection Name</label>
+                            <label class="small">Connection Name</label>
                             <input type="text" class="form-control form-control-sm" name="integration_name" id="fw_name" required
                                    placeholder="e.g. Sophos Central Firewalls">
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small">API Entry Point</label>
+                            <label class="small">API Entry Point</label>
                             <input type="url" class="form-control form-control-sm" name="integration_api_url" id="fw_api_url"
                                    value="https://api.central.sophos.com" required>
                             <small class="text-muted">Fixed Sophos Central endpoint — leave as-is.</small>
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small">Client ID</label>
+                            <label class="small">Client ID</label>
                             <input type="password" class="form-control form-control-sm" name="integration_api_key" id="fw_client_id"
                                    autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
                             <small class="text-muted">From Sophos Central → Global Settings → API Credentials. Single-tenant credentials only.</small>
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small">Client Secret</label>
+                            <label class="small">Client Secret</label>
                             <input type="password" class="form-control form-control-sm" name="integration_client_secret" id="fw_client_secret"
                                    autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
                             <small class="text-muted">Stored encrypted.</small>
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small">Default Client</label>
+                            <label class="small">Default Client</label>
                             <select class="form-control form-control-sm" name="integration_default_client_id" id="fw_default_client_id">
                                 <option value="0">— None —</option>
                                 <?php foreach ($all_fw_clients as $cl): ?>
@@ -789,18 +825,18 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                             <small class="text-muted">Newly-synced firewalls are auto-assigned to this client. Override per-device in the mapping table.</small>
                         </div>
 
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="fw_enabled"
+                        <div class="form-check form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="fw_enabled"
                                    name="integration_enabled" value="1" checked>
-                            <label class="custom-control-label" for="fw_enabled">Enabled</label>
+                            <label class="form-check-label" for="fw_enabled">Enabled</label>
                         </div>
 
                         <div id="fw_test_result" class="mt-3"></div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" name="save_rmm_integration" class="btn btn-primary btn-sm">
-                            <i class="fas fa-check mr-1"></i>Save Connection
+                            <i class="fas fa-check me-1"></i>Save Connection
                         </button>
                     </div>
                 </form>
@@ -815,13 +851,13 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="tab-pane <?= $active_tab === 'unifi' ? 'show active' : '' ?>" id="tab-unifi">
 
-    <div class="card card-dark mb-3" style="border-top:3px solid #17a2b8;">
+    <div class="card mb-3" style="border-top:3px solid #17a2b8;">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-wifi mr-2"></i>UniFi Integration Settings</h3>
+            <h3 class="card-title me-auto"><i class="fas fa-fw fa-wifi me-2"></i>UniFi Integration Settings</h3>
             <?php if ($config_module_enable_unifi): ?>
-                <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Module Enabled</span>
+                <span class="badge text-bg-success"><i class="fas fa-check-circle me-1"></i>Module Enabled</span>
             <?php else: ?>
-                <span class="badge badge-secondary"><i class="fas fa-times-circle mr-1"></i>Module Disabled</span>
+                <span class="badge text-bg-secondary"><i class="fas fa-times-circle me-1"></i>Module Disabled</span>
             <?php endif; ?>
         </div>
         <div class="card-body">
@@ -832,24 +868,24 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
             <form action="post.php" method="post">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                 <div class="form-group mb-2">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="unifi_module_enabled"
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="unifi_module_enabled"
                                name="config_module_enable_unifi" value="1" <?= $config_module_enable_unifi ? 'checked' : '' ?>>
-                        <label class="custom-control-label" for="unifi_module_enabled">Enable UniFi module</label>
+                        <label class="form-check-label" for="unifi_module_enabled">Enable UniFi module</label>
                     </div>
                 </div>
                 <button type="submit" name="save_unifi_module_settings" class="btn btn-primary btn-sm">
-                    <i class="fas fa-check mr-1"></i>Save Module Settings
+                    <i class="fas fa-check me-1"></i>Save Module Settings
                 </button>
             </form>
         </div>
     </div>
 
-    <div class="card card-dark mb-3">
+    <div class="card mb-3">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-plug mr-2"></i>UniFi Controllers</h3>
-            <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#unifi_addIntegrationModal" onclick="unifiResetModal()">
-                <i class="fas fa-plus mr-1"></i>Add Controller
+            <h3 class="card-title me-auto"><i class="fas fa-fw fa-plug me-2"></i>UniFi Controllers</h3>
+            <button class="btn btn-primary btn-sm js-unifi-reset-modal" data-bs-toggle="modal" data-bs-target="#unifi_addIntegrationModal">
+                <i class="fas fa-plus me-1"></i>Add Controller
             </button>
         </div>
         <div class="card-body p-0">
@@ -860,10 +896,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     <p class="small">Add a UniFi OS controller connection to get started.</p>
                 </div>
             <?php else: ?>
+            <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
                 <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                     <tr>
-                        <th class="pl-3">Name</th>
+                        <th class="ps-3">Name</th>
                         <th>Type</th>
                         <th>Host / Endpoint</th>
                         <th>Status</th>
@@ -885,37 +922,37 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                         : nullable_htmlentities($intg['host']) . ':' . intval($intg['port']);
                 ?>
                 <tr>
-                    <td class="pl-3 font-weight-bold"><?= nullable_htmlentities($intg['name']) ?></td>
+                    <td class="ps-3 fw-bold"><?= nullable_htmlentities($intg['name']) ?></td>
                     <td>
                         <?php if ($intg_type === 'cloud'): ?>
-                            <span class="badge badge-info"><i class="fas fa-cloud mr-1"></i>Cloud</span>
+                            <span class="badge text-bg-info"><i class="fas fa-cloud me-1"></i>Cloud</span>
                         <?php else: ?>
-                            <span class="badge badge-secondary"><i class="fas fa-server mr-1"></i>Local</span>
+                            <span class="badge text-bg-secondary"><i class="fas fa-server me-1"></i>Local</span>
                         <?php endif; ?>
                     </td>
                     <td class="text-muted small"><?= $host_display ?></td>
-                    <td><?= $intg['enabled'] ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-secondary">Disabled</span>' ?></td>
+                    <td><?= $intg['enabled'] ? '<span class="badge text-bg-success">Enabled</span>' : '<span class="badge text-bg-secondary">Disabled</span>' ?></td>
                     <td class="text-muted small"><?= $last_sync_row['ls'] ? nullable_htmlentities($last_sync_row['ls']) : 'Never' ?></td>
-                    <td class="text-right pr-3" style="white-space:nowrap">
-                        <button class="btn btn-xs btn-info" onclick="unifiTestConnection(<?= $intg_id ?>)">
-                            <i class="fas fa-plug mr-1"></i>Test
+                    <td class="text-end pe-3" style="white-space:nowrap">
+                        <button class="btn btn-xs btn-info js-unifi-test" data-intg-id="<?= $intg_id ?>">
+                            <i class="fas fa-plug me-1"></i>Test
                         </button>
-                        <button class="btn btn-xs btn-success" onclick="unifiSyncNow(<?= $intg_id ?>)">
-                            <i class="fas fa-sync mr-1"></i>Sync Now
+                        <button class="btn btn-xs btn-success js-unifi-sync" data-intg-id="<?= $intg_id ?>">
+                            <i class="fas fa-sync me-1"></i>Sync Now
                         </button>
-                        <button class="btn btn-xs btn-primary" onclick='unifiOpenSiteMappings(<?= $intg_id ?>, <?= json_encode($intg['name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
-                            <i class="fas fa-sitemap mr-1"></i>Sites
+                        <button class="btn btn-xs btn-primary js-unifi-open-sites" data-intg-id="<?= $intg_id ?>" data-intg-name="<?= htmlspecialchars($intg['name'], ENT_QUOTES) ?>">
+                            <i class="fas fa-sitemap me-1"></i>Sites
                         </button>
                         <?php if ($intg_type === 'cloud'): ?>
-                        <button class="btn btn-xs btn-warning" onclick="unifiInspectCloudSites(<?= $intg_id ?>)">
-                            <i class="fas fa-bug mr-1"></i>Inspect Hosts
+                        <button class="btn btn-xs btn-warning js-unifi-inspect-sites" data-intg-id="<?= $intg_id ?>">
+                            <i class="fas fa-bug me-1"></i>Inspect Hosts
                         </button>
-                        <button class="btn btn-xs btn-warning" onclick="unifiInspectCloudDevices(<?= $intg_id ?>)">
-                            <i class="fas fa-hdd mr-1"></i>Inspect Devices
+                        <button class="btn btn-xs btn-warning js-unifi-inspect-devices" data-intg-id="<?= $intg_id ?>">
+                            <i class="fas fa-hdd me-1"></i>Inspect Devices
                         </button>
                         <?php endif; ?>
-                        <button class="btn btn-xs btn-secondary"
-                                onclick='unifiEditIntegration(<?= json_encode([
+                        <button class="btn btn-xs btn-secondary js-unifi-edit"
+                                data-intg='<?= json_encode([
                                     "id"         => $intg_id,
                                     "name"       => $intg['name'],
                                     "type"       => $intg_type,
@@ -923,14 +960,13 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                                     "port"       => intval($intg['port']),
                                     "verify_ssl" => intval($intg['verify_ssl']),
                                     "enabled"    => intval($intg['enabled']),
-                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>'>
                             <i class="fas fa-edit"></i>
                         </button>
-                        <form action="post.php" method="post" class="d-inline"
-                              onsubmit="return confirm('Delete this UniFi controller?')">
+                        <form action="post.php" method="post" class="d-inline">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                             <input type="hidden" name="integration_id" value="<?= $intg_id ?>">
-                            <button type="submit" name="delete_unifi_integration" class="btn btn-xs btn-danger">
+                            <button type="submit" name="delete_unifi_integration" class="btn btn-xs btn-danger confirm-link">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </form>
@@ -939,13 +975,14 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
             <?php endif; ?>
         </div>
     </div>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-2">
-            <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>Recent Sync Log</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-history me-2"></i>Recent Sync Log</h3>
         </div>
         <div class="card-body p-0">
             <?php
@@ -958,10 +995,11 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
             if (mysqli_num_rows($sql_unifi_log) == 0): ?>
                 <p class="text-muted text-center py-3 mb-0">No sync history yet.</p>
             <?php else: ?>
+            <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
                 <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                     <tr>
-                        <th class="pl-3">Controller</th>
+                        <th class="ps-3">Controller</th>
                         <th>Started</th>
                         <th>Status</th>
                         <th>Devices</th>
@@ -972,12 +1010,12 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 </thead>
                 <tbody>
                 <?php while ($lr = mysqli_fetch_assoc($sql_unifi_log)):
-                    $badge = ['success' => 'badge-success', 'failed' => 'badge-danger', 'running' => 'badge-warning'];
+                    $badge = ['success' => 'text-bg-success', 'failed' => 'text-bg-danger', 'running' => 'text-bg-warning'];
                 ?>
                 <tr>
-                    <td class="pl-3"><?= nullable_htmlentities($lr['integration_name']) ?></td>
+                    <td class="ps-3"><?= nullable_htmlentities($lr['integration_name']) ?></td>
                     <td class="text-muted small"><?= nullable_htmlentities($lr['started_at']) ?></td>
-                    <td><span class="badge <?= $badge[$lr['status']] ?? 'badge-secondary' ?>"><?= htmlspecialchars($lr['status']) ?></span></td>
+                    <td><span class="badge <?= $badge[$lr['status']] ?? 'text-bg-secondary' ?>"><?= htmlspecialchars($lr['status']) ?></span></td>
                     <td class="text-muted small">+<?= intval($lr['devices_created']) ?> / ~<?= intval($lr['devices_updated']) ?> / -<?= intval($lr['devices_skipped']) ?></td>
                     <td class="text-muted small">+<?= intval($lr['wifi_created']) ?> / ~<?= intval($lr['wifi_updated']) ?> / -<?= intval($lr['wifi_skipped']) ?></td>
                     <td class="text-muted small">+<?= intval($lr['networks_created']) ?> / ~<?= intval($lr['networks_updated']) ?> / -<?= intval($lr['networks_skipped']) ?></td>
@@ -986,16 +1024,17 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                 <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
             <?php endif; ?>
         </div>
     </div>
 
     <!-- ── Site → Client Mappings (all controllers) ─────────────────────── -->
-    <div class="card card-dark mt-3">
+    <div class="card mt-3">
         <div class="card-header py-2 d-flex align-items-center">
-            <h3 class="card-title mr-auto"><i class="fas fa-fw fa-sitemap mr-2"></i>Site &rarr; Client Mappings</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="unifiRefreshAllSites(this)">
-                <i class="fas fa-sync mr-1"></i>Refresh All Sites
+            <h3 class="card-title me-auto"><i class="fas fa-fw fa-sitemap me-2"></i>Site &rarr; Client Mappings</h3>
+            <button type="button" class="btn btn-secondary btn-sm js-unifi-refresh-all-sites">
+                <i class="fas fa-sync me-1"></i>Refresh All Sites
             </button>
         </div>
         <?php if (empty($unifi_site_maps_by_integration)): ?>
@@ -1009,18 +1048,19 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
             <?php $_unifi_intg_idx = 0; foreach ($unifi_site_maps_by_integration as $intg_id => $intg_data):
                 $type_badge = $intg_data['type'] === 'cloud'
-                    ? '<span class="badge badge-info ml-1"><i class="fas fa-cloud mr-1"></i>Cloud</span>'
-                    : '<span class="badge badge-secondary ml-1"><i class="fas fa-server mr-1"></i>Local</span>';
+                    ? '<span class="badge text-bg-info ms-1"><i class="fas fa-cloud me-1"></i>Cloud</span>'
+                    : '<span class="badge text-bg-secondary ms-1"><i class="fas fa-server me-1"></i>Local</span>';
             ?>
             <div class="px-3 pt-3 pb-1">
                 <div class="d-flex align-items-center mb-2">
-                    <strong class="mr-2"><?= nullable_htmlentities($intg_data['name']) ?></strong>
+                    <strong class="me-2"><?= nullable_htmlentities($intg_data['name']) ?></strong>
                     <?= $type_badge ?>
-                    <button type="button" class="btn btn-xs btn-outline-secondary ml-auto"
-                            onclick="unifiRefreshSites(<?= $intg_id ?>, this)">
-                        <i class="fas fa-sync mr-1"></i>Refresh
+                    <button type="button" class="btn btn-xs btn-outline-secondary ms-auto js-unifi-refresh-sites"
+                            data-intg-id="<?= $intg_id ?>">
+                        <i class="fas fa-sync me-1"></i>Refresh
                     </button>
                 </div>
+                <div class="table-responsive">
                 <table class="table table-sm table-borderless mb-2" style="background:transparent">
                     <thead class="text-muted small" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                         <tr>
@@ -1041,10 +1081,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                         }
                     ?>
                     <tr>
-                        <td class="small font-weight-bold align-middle"><?= nullable_htmlentities($sm['unifi_site_name']) ?></td>
+                        <td class="small fw-bold align-middle"><?= nullable_htmlentities($sm['unifi_site_name']) ?></td>
                         <td class="small text-muted align-middle">
                             <?php if ($sm['auto_client_name']): ?>
-                                <i class="fas fa-check-circle text-success mr-1"></i><?= nullable_htmlentities($sm['auto_client_name']) ?>
+                                <i class="fas fa-check-circle text-success me-1"></i><?= nullable_htmlentities($sm['auto_client_name']) ?>
                             <?php else: ?>
                                 <span class="text-muted"><em>no match</em></span>
                             <?php endif; ?>
@@ -1064,6 +1104,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                     <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
             </div>
             <?php if (++$_unifi_intg_idx < count($unifi_site_maps_by_integration)): ?>
             <hr class="my-0">
@@ -1071,7 +1112,7 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
             <?php endforeach; unset($_unifi_intg_idx); ?>
             <div class="card-footer py-2">
                 <button type="submit" name="save_all_unifi_site_mappings" class="btn btn-primary btn-sm">
-                    <i class="fas fa-check mr-1"></i>Save All Mappings
+                    <i class="fas fa-check me-1"></i>Save All Mappings
                 </button>
             </div>
         </form>
@@ -1081,10 +1122,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
     <!-- Add/Edit UniFi Controller Modal -->
     <div class="modal fade" id="unifi_addIntegrationModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content bg-dark">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="unifi_integrationModalTitle">Add UniFi Connection</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
                 </div>
                 <form action="post.php" method="post">
                     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -1093,55 +1134,55 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
 
                         <input type="hidden" name="integration_type" id="unifi_integration_type" value="local">
                         <div class="form-group">
-                            <label class="text-light small mb-2">Connection Type</label>
+                            <label class="small mb-2">Connection Type</label>
                             <div class="d-flex" style="gap:10px">
-                                <div id="unifi_card_local" onclick="unifiSelectType('local')"
-                                     class="flex-fill text-center rounded py-3 px-2"
+                                <div id="unifi_card_local" data-unifi-type="local"
+                                     class="js-unifi-select-type flex-fill text-center rounded py-3 px-2"
                                      style="cursor:pointer;border:2px solid #6c757d;background:rgba(108,117,125,.15);transition:border-color .15s,background .15s;">
                                     <i class="fas fa-server d-block mb-1" style="font-size:1.3rem"></i>
-                                    <div class="font-weight-bold" style="font-size:.85rem">Local Controller</div>
+                                    <div class="fw-bold" style="font-size:.85rem">Local Controller</div>
                                     <div class="text-muted" style="font-size:11px">UDM / CloudKey / etc.</div>
                                 </div>
-                                <div id="unifi_card_cloud" onclick="unifiSelectType('cloud')"
-                                     class="flex-fill text-center rounded py-3 px-2"
+                                <div id="unifi_card_cloud" data-unifi-type="cloud"
+                                     class="js-unifi-select-type flex-fill text-center rounded py-3 px-2"
                                      style="cursor:pointer;border:2px solid transparent;background:transparent;transition:border-color .15s,background .15s;">
                                     <i class="fas fa-cloud d-block mb-1 text-info" style="font-size:1.3rem"></i>
-                                    <div class="font-weight-bold" style="font-size:.85rem">Cloud Site Manager</div>
+                                    <div class="fw-bold" style="font-size:.85rem">Cloud Site Manager</div>
                                     <div class="text-muted" style="font-size:11px">api.ui.com</div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small">Name</label>
+                            <label class="small">Name</label>
                             <input type="text" class="form-control form-control-sm" name="integration_name" id="unifi_integration_name" required
                                    placeholder="e.g. Main Office UniFi">
                         </div>
 
                         <div id="unifi_local_fields">
                             <div class="form-group">
-                                <label class="text-light small">Controller Host / IP</label>
+                                <label class="small">Controller Host / IP</label>
                                 <input type="text" class="form-control form-control-sm" name="integration_host" id="unifi_integration_host"
                                        placeholder="10.1.0.30">
                                 <small class="text-muted">Hostname or IP of your UniFi OS device (UDM, CloudKey, etc.)</small>
                             </div>
 
                             <div class="form-group">
-                                <label class="text-light small">Port</label>
+                                <label class="small">Port</label>
                                 <input type="number" class="form-control form-control-sm" name="integration_port" id="unifi_integration_port"
                                        placeholder="443" min="1" max="65535" value="443">
                             </div>
 
-                            <div class="custom-control custom-switch mb-3">
-                                <input type="checkbox" class="custom-control-input" id="unifi_integration_verify_ssl"
+                            <div class="form-check form-check form-switch mb-3">
+                                <input type="checkbox" class="form-check-input" id="unifi_integration_verify_ssl"
                                        name="integration_verify_ssl" value="1">
-                                <label class="custom-control-label" for="unifi_integration_verify_ssl">Verify SSL certificate</label>
+                                <label class="form-check-label" for="unifi_integration_verify_ssl">Verify SSL certificate</label>
                             </div>
                         </div>
 
                         <div id="unifi_cloud_info" style="display:none">
                             <div class="alert alert-info py-2 mb-3">
-                                <i class="fas fa-cloud mr-1"></i>
+                                <i class="fas fa-cloud me-1"></i>
                                 <strong>UniFi Site Manager</strong> — connects to <code>api.ui.com</code> and syncs devices from
                                 <em>all</em> sites in your account. Each UniFi site is matched to an ITFlow client by name.<br>
                                 <small class="text-muted mt-1 d-block">Devices sync from the cloud API for all sites. Wi-Fi SSIDs/passwords and networks sync via each host's <code>*.id.ui.direct</code> local proxy — works for controllers on the same network as this server or with remote access enabled.</small>
@@ -1149,24 +1190,24 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                         </div>
 
                         <div class="form-group">
-                            <label class="text-light small">API Key</label>
+                            <label class="small">API Key</label>
                             <input type="password" class="form-control form-control-sm" name="integration_api_key" id="unifi_integration_api_key"
                                    autocomplete="new-password" placeholder="(leave blank to keep existing when editing)">
-                            <small class="text-light" id="unifi_api_key_help">Stored encrypted. Generate in UniFi OS &rarr; Settings &rarr; Control Plane &rarr; Integrations &rarr; API Key.</small>
+                            <small class="text-muted" id="unifi_api_key_help">Stored encrypted. Generate in UniFi OS &rarr; Settings &rarr; Control Plane &rarr; Integrations &rarr; API Key.</small>
                         </div>
 
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="unifi_integration_enabled"
+                        <div class="form-check form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="unifi_integration_enabled"
                                    name="integration_enabled" value="1" checked>
-                            <label class="custom-control-label" for="unifi_integration_enabled">Enabled</label>
+                            <label class="form-check-label" for="unifi_integration_enabled">Enabled</label>
                         </div>
 
                         <div id="unifi_test_result" class="mt-3"></div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" name="save_unifi_integration" class="btn btn-primary btn-sm">
-                            <i class="fas fa-check mr-1"></i>Save
+                            <i class="fas fa-check me-1"></i>Save
                         </button>
                     </div>
                 </form>
@@ -1177,17 +1218,17 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
     <!-- Cloud API Inspect Modal -->
     <div class="modal fade" id="unifi_inspectModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
-            <div class="modal-content bg-dark">
+            <div class="modal-content">
                 <div class="modal-header py-2">
-                    <h5 class="modal-title"><i class="fas fa-bug mr-2"></i><span id="unifi_inspectTitle">Raw API Response</span></h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title"><i class="fas fa-bug me-2"></i><span id="unifi_inspectTitle">Raw API Response</span></h5>
+                    <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <p class="text-muted small mb-2" id="unifi_inspectDesc"></p>
-                    <pre id="unifi_inspectBody" class="p-3 rounded text-light small" style="background:#111;max-height:500px;overflow:auto;white-space:pre-wrap;word-break:break-all;">Loading...</pre>
+                    <pre id="unifi_inspectBody" class="p-3 rounded small" style="background:var(--if-bg);border:1px solid var(--if-border-strong);max-height:500px;overflow:auto;white-space:pre-wrap;word-break:break-all;">Loading...</pre>
                 </div>
                 <div class="modal-footer py-2">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -1196,10 +1237,10 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
     <!-- Site Mapping Modal -->
     <div class="modal fade" id="unifi_siteMappingModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content bg-dark">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Site &rarr; Client Mapping <span id="unifi_siteMappingIntgName" class="text-muted"></span></h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <p class="text-muted small">
@@ -1207,13 +1248,13 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
                         Use this to override that match, or skip syncing a site entirely.
                     </p>
                     <div id="unifi_siteMappingBody">
-                        <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i>Loading sites...</div>
+                        <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-1"></i>Loading sites...</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="unifi_saveSiteMappingBtn" onclick="unifiSaveSiteMappings()" disabled>
-                        <i class="fas fa-check mr-1"></i>Save Mapping
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm js-unifi-save-site-mappings" id="unifi_saveSiteMappingBtn" disabled>
+                        <i class="fas fa-check me-1"></i>Save Mapping
                     </button>
                 </div>
             </div>
@@ -1224,13 +1265,13 @@ while ($sm = mysqli_fetch_assoc($sql_unifi_site_maps)) {
 
 </div><!-- /.tab-content -->
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 const CSRF = '<?= $_SESSION['csrf_token'] ?>';
 
 function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 $('#integrationsTabs a').on('shown.bs.tab', function (e) {
@@ -1339,7 +1380,7 @@ function rmmEditIntegration(data) {
 function rmmTestConnection(integrationId) {
     const btn = event.target.closest('button');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Testing...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
     fetch('/admin/post.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1349,26 +1390,26 @@ function rmmTestConnection(integrationId) {
     .then(d => {
         btn.disabled = false;
         if (d.success) {
-            btn.innerHTML = '<i class="fas fa-check mr-1"></i>Connected';
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Connected';
             btn.classList.replace('btn-info', 'btn-success');
         } else {
-            btn.innerHTML = '<i class="fas fa-times mr-1"></i>Failed';
+            btn.innerHTML = '<i class="fas fa-times me-1"></i>Failed';
             btn.classList.replace('btn-info', 'btn-danger');
             alert('Connection failed: ' + (d.error || 'Unknown error'));
         }
         setTimeout(() => {
-            btn.innerHTML = '<i class="fas fa-plug mr-1"></i>Test';
+            btn.innerHTML = '<i class="fas fa-plug me-1"></i>Test';
             btn.className = btn.className.replace(/btn-(success|danger)/g, 'btn-info');
             btn.disabled = false;
         }, 3000);
     })
-    .catch(() => { btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error'; btn.disabled = false; });
+    .catch(() => { btn.innerHTML = '<i class="fas fa-times me-1"></i>Error'; btn.disabled = false; });
 }
 
 function rmmSyncNow(integrationId) {
     const btn = event.target.closest('button');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing...';
     fetch('/admin/post.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1377,10 +1418,10 @@ function rmmSyncNow(integrationId) {
     .then(r => r.json())
     .then(d => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
+        btn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Now';
         if (d.success) { location.reload(); } else { alert('Sync failed: ' + (d.error || 'Unknown error')); }
     })
-    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now'; });
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Now'; });
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1419,7 +1460,7 @@ function fwEditIntegration(data) {
 function fwTestConnection(integrationId) {
     const btn = event.target.closest('button');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Testing...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
     fetch('/admin/post.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1429,21 +1470,21 @@ function fwTestConnection(integrationId) {
     .then(d => {
         btn.disabled = false;
         if (d.success) {
-            btn.innerHTML = '<i class="fas fa-check mr-1"></i>Connected';
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Connected';
             btn.classList.replace('btn-info', 'btn-success');
         } else {
-            btn.innerHTML = '<i class="fas fa-times mr-1"></i>Failed';
+            btn.innerHTML = '<i class="fas fa-times me-1"></i>Failed';
             btn.classList.replace('btn-info', 'btn-danger');
             alert('Connection failed: ' + (d.error || 'Unknown error'));
         }
         setTimeout(() => {
-            btn.innerHTML = '<i class="fas fa-plug mr-1"></i>Test';
+            btn.innerHTML = '<i class="fas fa-plug me-1"></i>Test';
             btn.className = btn.className.replace(/btn-(success|danger)/g, 'btn-info');
             btn.disabled = false;
         }, 3000);
     })
     .catch(err => {
-        btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error';
+        btn.innerHTML = '<i class="fas fa-times me-1"></i>Error';
         btn.disabled = false;
         alert('Connection test error: ' + err.message);
     });
@@ -1452,7 +1493,7 @@ function fwTestConnection(integrationId) {
 function fwSyncNow(integrationId) {
     const btn = event.target.closest('button');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing...';
     fetch('/admin/post.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1464,7 +1505,7 @@ function fwSyncNow(integrationId) {
     })
     .then(d => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
+        btn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Now';
         if (d.success) {
             location.reload();
         } else {
@@ -1473,7 +1514,7 @@ function fwSyncNow(integrationId) {
     })
     .catch(err => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
+        btn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Now';
         alert('Sync error: ' + err.message);
     });
 }
@@ -1539,7 +1580,7 @@ function unifiEditIntegration(data) {
 function unifiTestConnection(integrationId) {
     const btn = event.target.closest('button');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Testing...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
     fetch('/admin/post.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1549,26 +1590,26 @@ function unifiTestConnection(integrationId) {
     .then(d => {
         btn.disabled = false;
         if (d.success) {
-            btn.innerHTML = '<i class="fas fa-check mr-1"></i>Connected';
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Connected';
             btn.classList.replace('btn-info', 'btn-success');
         } else {
-            btn.innerHTML = '<i class="fas fa-times mr-1"></i>Failed';
+            btn.innerHTML = '<i class="fas fa-times me-1"></i>Failed';
             btn.classList.replace('btn-info', 'btn-danger');
             alert('Connection failed: ' + (d.error || 'Unknown error'));
         }
         setTimeout(() => {
-            btn.innerHTML = '<i class="fas fa-plug mr-1"></i>Test';
+            btn.innerHTML = '<i class="fas fa-plug me-1"></i>Test';
             btn.className = btn.className.replace(/btn-(success|danger)/g, 'btn-info');
             btn.disabled = false;
         }, 3000);
     })
-    .catch(() => { btn.innerHTML = '<i class="fas fa-times mr-1"></i>Error'; btn.disabled = false; });
+    .catch(() => { btn.innerHTML = '<i class="fas fa-times me-1"></i>Error'; btn.disabled = false; });
 }
 
 function unifiSyncNow(integrationId) {
     const btn = event.target.closest('button');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing...';
     fetch('/admin/post.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1577,10 +1618,10 @@ function unifiSyncNow(integrationId) {
     .then(r => r.json())
     .then(d => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now';
+        btn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Now';
         if (d.success) { location.reload(); } else { alert('Sync failed: ' + (d.error || 'Unknown error')); }
     })
-    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Now'; });
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Now'; });
 }
 
 function unifiOpenSiteMappings(integrationId, integrationName) {
@@ -1588,7 +1629,7 @@ function unifiOpenSiteMappings(integrationId, integrationName) {
     document.getElementById('unifi_siteMappingIntgName').textContent = '- ' + integrationName;
     document.getElementById('unifi_saveSiteMappingBtn').disabled = true;
     document.getElementById('unifi_siteMappingBody').innerHTML =
-        '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i>Loading sites...</div>';
+        '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-1"></i>Loading sites...</div>';
 
     $('#unifi_siteMappingModal').modal('show');
 
@@ -1601,7 +1642,7 @@ function unifiOpenSiteMappings(integrationId, integrationName) {
     .then(d => {
         if (!d.success) {
             document.getElementById('unifi_siteMappingBody').innerHTML =
-                '<div class="alert alert-danger mb-0">' + (d.error || 'Failed to load sites') + '</div>';
+                '<div class="alert alert-danger mb-0">' + escapeHtml(d.error || 'Failed to load sites') + '</div>';
             return;
         }
         unifiRenderSiteMappings(d.sites);
@@ -1653,7 +1694,7 @@ function unifiRenderSiteMappings(sites) {
 // Refresh a single controller's sites then reload page so inline table updates
 function unifiRefreshSites(integrationId, btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Refreshing...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
     fetch('/admin/post.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1664,13 +1705,13 @@ function unifiRefreshSites(integrationId, btn) {
         if (d.success) { location.reload(); }
         else {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Refresh';
+            btn.innerHTML = '<i class="fas fa-sync me-1"></i>Refresh';
             alert('Failed to load sites: ' + (d.error || 'Unknown error'));
         }
     })
     .catch(() => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Refresh';
+        btn.innerHTML = '<i class="fas fa-sync me-1"></i>Refresh';
     });
 }
 
@@ -1691,7 +1732,7 @@ function unifiRefreshAllSites(btn) {
     if (!toRefresh.length) { location.reload(); return; }
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Refreshing...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
 
     const chain = toRefresh.reduce((p, id) =>
         p.then(() => fetch('/admin/post.php', {
@@ -1754,7 +1795,7 @@ function unifiInspectCloudDevices(integrationId) {
 function unifiSaveSiteMappings() {
     const btn = document.getElementById('unifi_saveSiteMappingBtn');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Saving...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
 
     const params = new URLSearchParams();
     params.append('csrf_token', CSRF);
@@ -1773,12 +1814,42 @@ function unifiSaveSiteMappings() {
     .then(r => r.json())
     .then(d => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check mr-1"></i>Save Mapping';
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Save Mapping';
         if (d.success) { $('#unifi_siteMappingModal').modal('hide'); }
         else { alert('Failed to save mapping: ' + (d.error || 'Unknown error')); }
     })
-    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check mr-1"></i>Save Mapping'; });
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check me-1"></i>Save Mapping'; });
 }
+
+// Delegated wiring (CSP forbids inline onclick=/onchange= attributes): every
+// button above used to call its handler directly via an inline attribute,
+// silently blocked by this app's CSP - none of them did anything.
+document.addEventListener('click', function (e) {
+    let el;
+    if ((el = e.target.closest('.js-rmm-reset-modal')))        { rmmResetModal(); return; }
+    if ((el = e.target.closest('.js-rmm-test')))                { rmmTestConnection(parseInt(el.dataset.intgId, 10)); return; }
+    if ((el = e.target.closest('.js-rmm-sync')))                { rmmSyncNow(parseInt(el.dataset.intgId, 10)); return; }
+    if ((el = e.target.closest('.js-rmm-edit')))                { rmmEditIntegration(JSON.parse(el.dataset.intg)); return; }
+    if ((el = e.target.closest('.js-fw-reset-modal')))          { fwResetModal(); return; }
+    if ((el = e.target.closest('.js-fw-test')))                 { fwTestConnection(parseInt(el.dataset.intgId, 10)); return; }
+    if ((el = e.target.closest('.js-fw-sync')))                 { fwSyncNow(parseInt(el.dataset.intgId, 10)); return; }
+    if ((el = e.target.closest('.js-fw-edit')))                 { fwEditIntegration(JSON.parse(el.dataset.intg)); return; }
+    if ((el = e.target.closest('.js-unifi-reset-modal')))       { unifiResetModal(); return; }
+    if ((el = e.target.closest('.js-unifi-test')))              { unifiTestConnection(parseInt(el.dataset.intgId, 10)); return; }
+    if ((el = e.target.closest('.js-unifi-sync')))              { unifiSyncNow(parseInt(el.dataset.intgId, 10)); return; }
+    if ((el = e.target.closest('.js-unifi-open-sites')))        { unifiOpenSiteMappings(parseInt(el.dataset.intgId, 10), el.dataset.intgName); return; }
+    if ((el = e.target.closest('.js-unifi-inspect-sites')))     { unifiInspectCloudSites(parseInt(el.dataset.intgId, 10)); return; }
+    if ((el = e.target.closest('.js-unifi-inspect-devices')))   { unifiInspectCloudDevices(parseInt(el.dataset.intgId, 10)); return; }
+    if ((el = e.target.closest('.js-unifi-edit')))              { unifiEditIntegration(JSON.parse(el.dataset.intg)); return; }
+    if ((el = e.target.closest('.js-unifi-refresh-all-sites'))) { unifiRefreshAllSites(el); return; }
+    if ((el = e.target.closest('.js-unifi-refresh-sites')))     { unifiRefreshSites(parseInt(el.dataset.intgId, 10), el); return; }
+    if ((el = e.target.closest('.js-unifi-select-type')))       { unifiSelectType(el.dataset.unifiType); return; }
+    if ((el = e.target.closest('.js-unifi-save-site-mappings'))){ unifiSaveSiteMappings(); return; }
+});
+
+document.addEventListener('change', function (e) {
+    if (e.target.closest('.js-rmm-type-radio')) { rmmUpdateModalLabels(e.target.value); }
+});
 </script>
 
 <?php require_once "../includes/footer.php"; ?>

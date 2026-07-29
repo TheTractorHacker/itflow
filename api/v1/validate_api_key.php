@@ -48,7 +48,7 @@ DEFINE("WORDING_UNAUTHORIZED", "HTTP/1.1 401 Unauthorized");
 // Decline methods other than GET/POST
 if ($_SERVER['REQUEST_METHOD'] !== "GET" && $_SERVER['REQUEST_METHOD'] !== "POST") {
     header("HTTP/1.1 405 Method Not Allowed");
-    var_dump($_SERVER['REQUEST_METHOD']);
+    echo json_encode(['success' => 'False', 'message' => 'Method not allowed. Only GET and POST are supported.']);
     exit();
 }
 
@@ -108,6 +108,20 @@ if (isset($api_key)) {
     } else {
 
         // SUCCESS
+
+        // General per-request throttle for authenticated calls, mirroring
+        // api/v1/index.php's Redis-backed cap (300 req/60s), keyed by the
+        // hashed API key so one caller can't starve others or scrape data
+        // unbounded now that they've passed authentication.
+        if (!defined('FROM_API')) {
+            define('FROM_API', true);
+        }
+        require_once __DIR__ . '/includes/api_ratelimit.php';
+        if (!api_rate_limit('key:' . substr($api_key_hash, 0, 40), 300, 60)) {
+            header("HTTP/1.1 429 Too Many Requests");
+            echo json_encode(['success' => 'False', 'message' => 'Rate limit exceeded. Please try again later.']);
+            exit();
+        }
 
         // Set client ID, company ID & key name
         $row = mysqli_fetch_assoc($sql);

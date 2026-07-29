@@ -90,7 +90,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
             <li class="breadcrumb-item active">Ticket <?php echo $ticket_prefix . $ticket_number; ?></li>
         </ol>
 
-        <div class="card" data-ticket-id="<?= $ticket_id ?>" data-live-chat="<?= $config_module_enable_live_chat ? '1' : '0' ?>" data-csrf="<?= $_SESSION['csrf_token'] ?>" data-user-name="<?= nullable_htmlentities($session_contact_name) ?>" data-user-id="<?= intval($session_contact_id) ?>" data-user-type="contact">
+        <div class="card mb-3" data-ticket-id="<?= $ticket_id ?>" data-live-chat="<?= $config_module_enable_live_chat ? '1' : '0' ?>" data-csrf="<?= $_SESSION['csrf_token'] ?>" data-user-name="<?= nullable_htmlentities($session_contact_name) ?>" data-user-id="<?= intval($session_contact_id) ?>" data-user-type="contact">
             <div class="card-header bg-dark my-2">
                 <h4 class="card-title mt-1">
                     Ticket <?php echo $ticket_prefix, $ticket_number ?>
@@ -98,7 +98,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
                 <div class="card-tools">
                     <?php
                     if (empty($ticket_resolved_at) && $task_count == $completed_task_count) { ?>
-                        <a href="post.php?resolve_ticket=<?php echo $ticket_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-sm btn-outline-success float-right text-white confirm-link"><i class="fas fa-fw fa-check text-success"></i> Resolve ticket</a>
+                        <a href="post.php?resolve_ticket=<?php echo $ticket_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-sm btn-outline-success float-end text-white confirm-link"><i class="fas fa-fw fa-check text-success"></i> Resolve ticket</a>
                     <?php } ?>
                 </div>
             </div>
@@ -107,7 +107,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
                 <h5><strong>Subject:</strong> <?php echo $ticket_subject ?></h5>
                 <p>
                     <strong>State:</strong>
-                    <span id="quickStatusColorDot" class="d-inline-block mr-1" style="width:.6rem;height:.6rem;border-radius:50%;background-color: <?= $ticket_status_color ?>;"></span>
+                    <span id="quickStatusColorDot" class="d-inline-block me-1" style="width:.6rem;height:.6rem;border-radius:50%;background-color: <?= $ticket_status_color ?>;"></span>
                     <span id="ticket-status-text"><?php echo $ticket_status ?></span><br>
                     <strong>Priority:</strong> <?php echo $ticket_priority ?><br>
                     <?php if (!empty($ticket_category)) { ?>
@@ -134,7 +134,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
                 while ($ticket_attachment = mysqli_fetch_assoc($sql_ticket_attachments)) {
                     $name = nullable_htmlentities($ticket_attachment['ticket_attachment_name']);
                     $ref_name = nullable_htmlentities($ticket_attachment['ticket_attachment_reference_name']);
-                    echo "<hr><i class='fas fa-fw fa-paperclip text-secondary mr-1'></i>$name | <a href='../uploads/tickets/$ticket_id/$ref_name' download='$name'><i class='fas fa-fw fa-download mr-1'></i>Download</a> | <a target='_blank' href='../uploads/tickets/$ticket_id/$ref_name'><i class='fas fa-fw fa-external-link-alt mr-1'></i>View</a>";
+                    echo "<hr><i class='fas fa-fw fa-paperclip text-secondary me-1'></i>$name | <a href='../uploads/tickets/$ticket_id/$ref_name' download='$name'><i class='fas fa-fw fa-download me-1'></i>Download</a> | <a target='_blank' href='../uploads/tickets/$ticket_id/$ref_name'><i class='fas fa-fw fa-external-link-alt me-1'></i>View</a>";
                 }
                 ?>
             </div>
@@ -142,7 +142,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
 
         <!-- Approvals -->
         <?php if (mysqli_num_rows($sql_task_approvals) > 0) { ?>
-            <div class="card">
+            <div class="card mb-3">
                 <div class="card-body">
                     <h5>Approvals</h5>
                     This ticket has tasks requiring approval:
@@ -215,14 +215,14 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
             }
         ?>
         <!-- Live Chat card -->
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header py-2">
-                <h5 class="card-title mt-1"><i class="fas fa-fw fa-comments mr-2"></i>Live Chat</h5>
+                <h5 class="card-title mt-1"><i class="fas fa-fw fa-comments me-2"></i>Live Chat</h5>
             </div>
             <div class="card-body p-3">
                 <div id="ticket-chat-messages" class="mb-2" style="max-height:260px;overflow-y:auto;"></div>
                 <form id="ticket-chat-form" class="d-flex" autocomplete="off">
-                    <input type="text" id="ticket-chat-input" class="form-control form-control-sm mr-2" placeholder="Type a message...">
+                    <input type="text" id="ticket-chat-input" class="form-control form-control-sm me-2" placeholder="Type a message...">
                     <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i></button>
                 </form>
             </div>
@@ -275,11 +275,11 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                 <input type="hidden" name="ticket_id" value="<?php echo $ticket_id ?>">
 
-                <button type="submit" class="btn btn-primary btn-lg" name="add_ticket_feedback" value="Good" onclick="this.form.submit()">
+                <button type="submit" class="btn btn-primary btn-lg" name="add_ticket_feedback" value="Good">
                     <span class="fa fa-smile" aria-hidden="true"></span> Good
                 </button>
 
-                <button type="submit" class="btn btn-danger btn-lg" name="add_ticket_feedback" value="Bad" onclick="this.form.submit()">
+                <button type="submit" class="btn btn-danger btn-lg" name="add_ticket_feedback" value="Bad">
                     <span class="fa fa-frown" aria-hidden="true"></span> Bad
                 </button>
             </form>
@@ -338,7 +338,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
                             <?php
                             if (!empty($user_avatar)) {
                                 ?>
-                                <img src="<?php echo $avatar_link ?>" alt="User Avatar" class="img-size-50 mr-3 img-circle">
+                                <img src="<?php echo $avatar_link ?>" alt="User Avatar" class="img-size-50 me-3 img-circle">
                                 <?php
                             } else {
                                 ?>
@@ -366,7 +366,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
                     while ($ticket_attachment = mysqli_fetch_assoc($sql_ticket_reply_attachments)) {
                         $name = nullable_htmlentities($ticket_attachment['ticket_attachment_name']);
                         $ref_name = nullable_htmlentities($ticket_attachment['ticket_attachment_reference_name']);
-                        echo "<hr><i class='fas fa-fw fa-paperclip text-secondary mr-1'></i>$name | <a href='../uploads/tickets/$ticket_id/$ref_name' download='$name'><i class='fas fa-fw fa-download mr-1'></i>Download</a> | <a target='_blank' href='../uploads/tickets/$ticket_id/$ref_name'><i class='fas fa-fw fa-external-link-alt mr-1'></i>View</a>";
+                        echo "<hr><i class='fas fa-fw fa-paperclip text-secondary me-1'></i>$name | <a href='../uploads/tickets/$ticket_id/$ref_name' download='$name'><i class='fas fa-fw fa-download me-1'></i>Download</a> | <a target='_blank' href='../uploads/tickets/$ticket_id/$ref_name'><i class='fas fa-fw fa-external-link-alt me-1'></i>View</a>";
                     }
                     ?>
                 </div>

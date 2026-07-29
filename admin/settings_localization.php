@@ -15,7 +15,7 @@ $timezones = DateTimeZone::listIdentifiers();
 
     <div class="card card-dark">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-globe mr-2"></i>Localization</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-globe me-2"></i>Localization</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
@@ -68,7 +68,7 @@ $timezones = DateTimeZone::listIdentifiers();
 
                 <hr>
 
-                <button type="submit" name="edit_localization" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+                <button type="submit" name="edit_localization" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
 
             </form>
         </div>

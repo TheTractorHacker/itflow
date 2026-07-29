@@ -16,8 +16,8 @@ ob_start();
     <?php foreach ($interface_ids as $interface_id) { ?><input type="hidden" name="interface_ids[]" value="<?= $interface_id ?>"><?php } ?>
 
     <div class="modal-header bg-dark">
-        <h5 class="modal-title"><i class="fa fa-fw fa-ethernet mr-2"></i>Bulk Set Interface Type</h5>
-        <button type="button" class="close text-white" data-dismiss="modal">
+        <h5 class="modal-title"><i class="fa fa-fw fa-ethernet me-2"></i>Bulk Set Interface Type</h5>
+        <button type="button" class="close text-white" data-bs-dismiss="modal">
             <span>&times;</span>
         </button>
     </div>
@@ -52,8 +52,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="bulk_edit_asset_interface_type" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Set</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="bulk_edit_asset_interface_type" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Set</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

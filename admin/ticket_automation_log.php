@@ -21,10 +21,10 @@ $trigger_labels = [
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-history mr-2"></i>Automation Run Log</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-history me-2"></i>Automation Run Log</h3>
         <div class="card-tools">
             <a href="ticket_automation.php" class="btn btn-secondary">
-                <i class="fas fa-arrow-left mr-2"></i>Back to Rules
+                <i class="fas fa-arrow-left me-2"></i>Back to Rules
             </a>
         </div>
     </div>
@@ -53,7 +53,7 @@ $trigger_labels = [
                 <tr>
                     <td><?php echo nullable_htmlentities($row['created_at']); ?></td>
                     <td><?php echo nullable_htmlentities($row['rule_name']); ?></td>
-                    <td><span class="badge badge-info"><?php echo $trigger_labels[$row['trigger_type']] ?? $row['trigger_type']; ?></span></td>
+                    <td><span class="badge text-bg-info"><?php echo $trigger_labels[$row['trigger_type']] ?? $row['trigger_type']; ?></span></td>
                     <td><?php echo nullable_htmlentities($row['client_name']); ?></td>
                     <td>
                         <?php if (!empty($row['ticket_id'])): ?>

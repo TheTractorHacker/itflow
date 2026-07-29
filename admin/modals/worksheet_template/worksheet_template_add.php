@@ -3,8 +3,8 @@ require_once '../../../includes/modal_header.php';
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-clipboard-list mr-2"></i>New Worksheet Template</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fa fa-fw fa-clipboard-list me-2"></i>New Worksheet Template</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -25,8 +25,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_worksheet_template" class="btn btn-primary"><i class="fa fa-check mr-2"></i>Create Template</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_worksheet_template" class="btn btn-primary"><i class="fa fa-check me-2"></i>Create Template</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 <?php require_once '../../../includes/modal_footer.php'; ?>

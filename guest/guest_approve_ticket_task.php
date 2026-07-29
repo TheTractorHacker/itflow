@@ -106,7 +106,7 @@ $ticket_details = $purifier->purify($task_row['ticket_details']);
     <hr>
 
     <div class="card-footer">
-        <?php echo "<i class='fas fa-phone fa-fw mr-2'></i>$company_phone | <i class='fas fa-globe fa-fw mr-2 ml-2'></i>$company_website"; ?>
+        <?php echo "<i class='fas fa-phone fa-fw me-2'></i>$company_phone | <i class='fas fa-globe fa-fw me-2 ms-2'></i>$company_website"; ?>
     </div>
 
 <?php

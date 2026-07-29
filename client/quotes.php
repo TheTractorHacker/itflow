@@ -16,9 +16,9 @@ if ($session_contact_primary == 0 && !$session_contact_is_billing_contact) {
 $quotes_sql = mysqli_query($mysqli, "SELECT * FROM quotes WHERE quote_client_id = $session_client_id AND quote_status != 'Draft' ORDER BY quote_date DESC");
 ?>
 
-<div class="row">
+<div class="row mb-4">
     <div class="col">
-        <h3><i class="fas fa-fw fa-file-signature mr-2"></i>Quotes</h3>
+        <h3><i class="fas fa-fw fa-file-signature me-2"></i>Quotes</h3>
     </div>
 </div>
 <div class="row">

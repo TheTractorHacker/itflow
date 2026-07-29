@@ -11,22 +11,49 @@ if (isset($_POST['oauth_connect_microsoft_mail'])) {
     validateCSRFToken($_POST['csrf_token']);
 
     // Save current IMAP/OAuth form values first so auth flow always uses latest inputs.
+    // Secret/token fields are left blank on the form when already saved (they are no
+    // longer prefilled with the decrypted value) - an empty submission means "keep the
+    // currently stored value", not "clear it". $config_mail_oauth_client_secret /
+    // _refresh_token / _access_token are already populated (decrypted) by
+    // includes/load_global_settings.php, so we only touch them when a new value was typed.
     $config_imap_provider = sanitizeInput($_POST['config_imap_provider'] ?? '');
     $config_imap_username = sanitizeInput($_POST['config_imap_username'] ?? '');
     $config_mail_oauth_client_id = sanitizeInput($_POST['config_mail_oauth_client_id'] ?? '');
-    $config_mail_oauth_client_secret = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_client_secret'] ?? '')));
     $config_mail_oauth_tenant_id = sanitizeInput($_POST['config_mail_oauth_tenant_id'] ?? '');
-    $config_mail_oauth_refresh_token = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_refresh_token'] ?? '')));
-    $config_mail_oauth_access_token = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_access_token'] ?? '')));
+
+    $oauth_client_secret_raw = trim($_POST['config_mail_oauth_client_secret'] ?? '');
+    $oauth_refresh_token_raw = trim($_POST['config_mail_oauth_refresh_token'] ?? '');
+    $oauth_access_token_raw = trim($_POST['config_mail_oauth_access_token'] ?? '');
+
+    $oauth_client_secret_sql = '';
+    if ($oauth_client_secret_raw !== '') {
+        $config_mail_oauth_client_secret = $oauth_client_secret_raw;
+        $oauth_client_secret_esc = mysqli_real_escape_string($mysqli, encryptSetting($oauth_client_secret_raw));
+        $oauth_client_secret_sql = ", config_mail_oauth_client_secret = '$oauth_client_secret_esc'";
+    }
+
+    $oauth_refresh_token_sql = '';
+    if ($oauth_refresh_token_raw !== '') {
+        $config_mail_oauth_refresh_token = $oauth_refresh_token_raw;
+        $oauth_refresh_token_esc = mysqli_real_escape_string($mysqli, encryptSetting($oauth_refresh_token_raw));
+        $oauth_refresh_token_sql = ", config_mail_oauth_refresh_token = '$oauth_refresh_token_esc'";
+    }
+
+    $oauth_access_token_sql = '';
+    if ($oauth_access_token_raw !== '') {
+        $config_mail_oauth_access_token = $oauth_access_token_raw;
+        $oauth_access_token_esc = mysqli_real_escape_string($mysqli, encryptSetting($oauth_access_token_raw));
+        $oauth_access_token_sql = ", config_mail_oauth_access_token = '$oauth_access_token_esc'";
+    }
 
     mysqli_query($mysqli, "UPDATE settings SET
         config_imap_provider = '$config_imap_provider',
         config_imap_username = '$config_imap_username',
         config_mail_oauth_client_id = '$config_mail_oauth_client_id',
-        config_mail_oauth_client_secret = '$config_mail_oauth_client_secret',
-        config_mail_oauth_tenant_id = '$config_mail_oauth_tenant_id',
-        config_mail_oauth_refresh_token = '$config_mail_oauth_refresh_token',
-        config_mail_oauth_access_token = '$config_mail_oauth_access_token'
+        config_mail_oauth_tenant_id = '$config_mail_oauth_tenant_id'
+        $oauth_client_secret_sql
+        $oauth_refresh_token_sql
+        $oauth_access_token_sql
         WHERE company_id = 1
     ");
 
@@ -57,7 +84,11 @@ if (isset($_POST['oauth_connect_microsoft_mail'])) {
     $_SESSION['mail_oauth_state'] = $state;
     $_SESSION['mail_oauth_state_expires_at'] = time() + 600;
 
+    // Legacy single-mailbox flow (superseded by Admin > Mailboxes) - still uses the
+    // Office 365 Exchange Online API's IMAP/SMTP scopes, unlike the Graph-based
+    // Mailboxes flow in admin/post/mailbox.php. See admin/oauth_microsoft_mail_callback.php.
     $scope = 'offline_access openid profile https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send';
+    $_SESSION['mail_oauth_scope'] = $scope;
 
     $authorize_url = MICROSOFT_OAUTH_BASE_URL . rawurlencode($config_mail_oauth_tenant_id) . '/oauth2/v2.0/authorize?'
         . http_build_query([
@@ -84,28 +115,32 @@ if (isset($_POST['edit_mail_smtp_settings'])) {
     $config_smtp_port                = intval($_POST['config_smtp_port'] ?? 0);
     $config_smtp_encryption          = sanitizeInput($_POST['config_smtp_encryption']);
     $config_smtp_username            = sanitizeInput($_POST['config_smtp_username']);
-    $config_smtp_password = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_smtp_password'])));
 
-    // Shared OAuth fields
-    $config_mail_oauth_client_id     = sanitizeInput($_POST['config_mail_oauth_client_id']);
-    $config_mail_oauth_client_secret = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_client_secret'])));
-    $config_mail_oauth_tenant_id     = sanitizeInput($_POST['config_mail_oauth_tenant_id']);
-    $config_mail_oauth_refresh_token = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_refresh_token'])));
-    $config_mail_oauth_access_token  = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_access_token'])));
+    // The password field is left blank on the form when a password is already saved
+    // (no longer prefilled with the decrypted value) - an empty submission means "keep
+    // the currently stored password", not "clear it".
+    $config_smtp_password_raw = trim($_POST['config_smtp_password'] ?? '');
+    $smtp_password_sql = '';
+    if ($config_smtp_password_raw !== '') {
+        $config_smtp_password = mysqli_real_escape_string($mysqli, encryptSetting($config_smtp_password_raw));
+        $smtp_password_sql = ", config_smtp_password = '$config_smtp_password'";
+    }
 
+    // NOTE: the shared OAuth fields (Client ID/Secret/Tenant/Refresh/Access token) are
+    // intentionally NOT read/written here - their only input fields live in the IMAP
+    // form below ("OAuth Settings (shared for IMAP & SMTP)"). This form used to also
+    // write those columns from $_POST values that don't exist on this form, which
+    // silently blanked them out (and broke IMAP's OAuth) every time SMTP settings were
+    // saved. Configure/rotate OAuth credentials via the IMAP section; both providers
+    // read the same stored columns whenever either is set to google_oauth/microsoft_oauth.
     mysqli_query($mysqli, "
         UPDATE settings SET
             config_smtp_provider              = '$config_smtp_provider',
             config_smtp_host                  = '$config_smtp_host',
             config_smtp_port                  = $config_smtp_port,
             config_smtp_encryption            = '$config_smtp_encryption',
-            config_smtp_username              = '$config_smtp_username',
-            config_smtp_password              = '$config_smtp_password',
-            config_mail_oauth_client_id       = '$config_mail_oauth_client_id',
-            config_mail_oauth_client_secret   = '$config_mail_oauth_client_secret',
-            config_mail_oauth_tenant_id       = '$config_mail_oauth_tenant_id',
-            config_mail_oauth_refresh_token   = '$config_mail_oauth_refresh_token',
-            config_mail_oauth_access_token    = '$config_mail_oauth_access_token'
+            config_smtp_username              = '$config_smtp_username'
+            $smtp_password_sql
         WHERE company_id = 1
     ");
 
@@ -126,14 +161,41 @@ if (isset($_POST['edit_mail_imap_settings'])) {
     $config_imap_port                = intval($_POST['config_imap_port'] ?? 0);
     $config_imap_encryption          = sanitizeInput($_POST['config_imap_encryption']);
     $config_imap_username            = sanitizeInput($_POST['config_imap_username']);
-    $config_imap_password = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_imap_password'])));
 
     // Shared OAuth fields
     $config_mail_oauth_client_id     = sanitizeInput($_POST['config_mail_oauth_client_id']);
-    $config_mail_oauth_client_secret = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_client_secret'])));
     $config_mail_oauth_tenant_id     = sanitizeInput($_POST['config_mail_oauth_tenant_id']);
-    $config_mail_oauth_refresh_token = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_refresh_token'])));
-    $config_mail_oauth_access_token  = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_mail_oauth_access_token'])));
+
+    // Password/secret/token fields are left blank on the form when already saved (no
+    // longer prefilled with the decrypted value) - an empty submission means "keep the
+    // currently stored value", not "clear it".
+    $config_imap_password_raw = trim($_POST['config_imap_password'] ?? '');
+    $imap_password_sql = '';
+    if ($config_imap_password_raw !== '') {
+        $config_imap_password = mysqli_real_escape_string($mysqli, encryptSetting($config_imap_password_raw));
+        $imap_password_sql = ", config_imap_password = '$config_imap_password'";
+    }
+
+    $oauth_client_secret_raw = trim($_POST['config_mail_oauth_client_secret'] ?? '');
+    $oauth_client_secret_sql = '';
+    if ($oauth_client_secret_raw !== '') {
+        $config_mail_oauth_client_secret = mysqli_real_escape_string($mysqli, encryptSetting($oauth_client_secret_raw));
+        $oauth_client_secret_sql = ", config_mail_oauth_client_secret = '$config_mail_oauth_client_secret'";
+    }
+
+    $oauth_refresh_token_raw = trim($_POST['config_mail_oauth_refresh_token'] ?? '');
+    $oauth_refresh_token_sql = '';
+    if ($oauth_refresh_token_raw !== '') {
+        $config_mail_oauth_refresh_token = mysqli_real_escape_string($mysqli, encryptSetting($oauth_refresh_token_raw));
+        $oauth_refresh_token_sql = ", config_mail_oauth_refresh_token = '$config_mail_oauth_refresh_token'";
+    }
+
+    $oauth_access_token_raw = trim($_POST['config_mail_oauth_access_token'] ?? '');
+    $oauth_access_token_sql = '';
+    if ($oauth_access_token_raw !== '') {
+        $config_mail_oauth_access_token = mysqli_real_escape_string($mysqli, encryptSetting($oauth_access_token_raw));
+        $oauth_access_token_sql = ", config_mail_oauth_access_token = '$config_mail_oauth_access_token'";
+    }
 
     mysqli_query($mysqli, "
         UPDATE settings SET
@@ -142,12 +204,12 @@ if (isset($_POST['edit_mail_imap_settings'])) {
             config_imap_port                  = $config_imap_port,
             config_imap_encryption            = '$config_imap_encryption',
             config_imap_username              = '$config_imap_username',
-            config_imap_password              = '$config_imap_password',
             config_mail_oauth_client_id       = '$config_mail_oauth_client_id',
-            config_mail_oauth_client_secret   = '$config_mail_oauth_client_secret',
-            config_mail_oauth_tenant_id       = '$config_mail_oauth_tenant_id',
-            config_mail_oauth_refresh_token   = '$config_mail_oauth_refresh_token',
-            config_mail_oauth_access_token    = '$config_mail_oauth_access_token'
+            config_mail_oauth_tenant_id       = '$config_mail_oauth_tenant_id'
+            $imap_password_sql
+            $oauth_client_secret_sql
+            $oauth_refresh_token_sql
+            $oauth_access_token_sql
         WHERE company_id = 1
     ");
 

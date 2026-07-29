@@ -11,6 +11,11 @@ require_once __DIR__ . '/includes/api_permissions.php';
 
 $uid = $api_user_id;
 
+// Gate on the support module permission for both GET and POST, mirroring
+// tickets.php - without this, any authenticated API caller could list every
+// scheduled appointment regardless of their role's module_support level.
+api_require_module_permission($mysqli, $uid, 'module_support', $method === 'GET' ? 1 : 2);
+
 if ($method === 'GET') {
     $mine = intval($_GET['mine'] ?? 0);
     $when = $_GET['when'] ?? 'future'; // past, today, future
@@ -70,8 +75,6 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-    api_require_module_permission($mysqli, $api_user_id, 'module_support', 2);
-
     $body      = json_decode(file_get_contents('php://input'), true) ?? [];
     $ticket_id = intval($body['ticket_id'] ?? 0);
     $start     = trim($body['schedule_start'] ?? '');

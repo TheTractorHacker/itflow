@@ -37,24 +37,24 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 <div class="card card-dark">
     <div class="card-header py-2">
         <h3 class="card-title mt-2">
-            <i class="fas fa-fw fa-building mr-2"></i>Vendors
+            <i class="fas fa-fw fa-building me-2"></i>Vendors
         </h3>
         <div class="card-tools">
             <div class="btn-group">
                 <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/vendor/vendor_add.php?<?= $client_url ?>">
-                    <i class="fas fa-plus mr-2"></i>New Vendor
+                    <i class="fas fa-plus me-2"></i>New Vendor
                 </button>
-                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                 <div class="dropdown-menu">
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                         data-modal-url="modals/vendor/vendor_add_from_template.php?<?= $client_url ?>">
-                        <i class="fa fa-fw fa-puzzle-piece mr-2"></i>Create from Template
+                        <i class="fa fa-fw fa-puzzle-piece me-2"></i>Create from Template
                     </a>
                     <?php if ($num_rows[0] > 0) { ?>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/vendor/vendor_export.php?<?= $client_url ?>">
-                            <i class="fa fa-fw fa-download mr-2"></i>Export
+                            <i class="fa fa-fw fa-download me-2"></i>Export
                         </a>
                     <?php } ?>
                 </div>
@@ -79,30 +79,30 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 </div>
 
                 <div class="col-md-8">
-                    <div class="btn-group float-right">
+                    <div class="btn-group float-end">
                         <a href="?<?php echo "$client_url"; ?>archived=<?php if($archived == 1){ echo 0; } else { echo 1; } ?>"
                             class="btn btn-<?php if($archived == 1){ echo "primary"; } else { echo "default"; } ?>">
-                            <i class="fa fa-fw fa-archive mr-2"></i>Archived
+                            <i class="fa fa-fw fa-archive me-2"></i>Archived
                         </a>
-                        <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                            <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
+                        <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                             </button>
                             <div class="dropdown-menu">
                                 <?php if ($archived) { ?>
                                 <button class="dropdown-item text-info"
                                     type="submit" form="bulkActions" name="bulk_restore_vendors">
-                                    <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                    <i class="fas fa-fw fa-redo me-2"></i>Restore
                                 </button>
                                 <div class="dropdown-divider"></div>
                                 <button class="dropdown-item text-danger text-bold"
                                     type="submit" form="bulkActions" name="bulk_delete_vendors">
-                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                 </button>
                                 <?php } else { ?>
                                 <button class="dropdown-item text-danger confirm-link"
                                     type="submit" form="bulkActions" name="bulk_archive_vendors">
-                                    <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                    <i class="fas fa-fw fa-archive me-2"></i>Archive
                                 </button>
                                 <?php } ?>
                             </div>
@@ -122,7 +122,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     <tr>
                         <td class="bg-light checkbox-column">
                             <div class="form-check">
-                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox" onclick="checkAll(this)">
+                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox">
                             </div>
                         </td>
                         <th>
@@ -192,7 +192,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         $vendor_template_id = intval($row['vendor_template_id']);
                         $vendor_template_name = nullable_htmlentities($row['vendor_template_name']);
                         if ($vendor_template_id) {
-                            $vendor_template_display = "<div class='text-secondary' title='Base Vendor Template'><i class='fas fa-puzzle-piece mr-1'></i>$vendor_template_name</div>";
+                            $vendor_template_display = "<div class='text-secondary' title='Base Vendor Template'><i class='fas fa-puzzle-piece me-1'></i>$vendor_template_name</div>";
                         } else {
                             $vendor_template_display = "";
                         }
@@ -207,7 +207,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td>
                                 <a class="ajax-modal" href="#" data-modal-url="modals/vendor/vendor_details.php?id=<?= $vendor_id ?>">
                                     <div class="media">
-                                        <i class="fas fa-fw fa-2x fa-building text-dark mr-2"></i>
+                                        <i class="fas fa-fw fa-2x fa-building text-dark me-2"></i>
                                         <div class="media-body">
                                             <div><?php echo $vendor_name; ?></div>
                                             <div><?php echo $vendor_account_number_display; ?></div>
@@ -221,19 +221,19 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td>
                                 <?php
                                 if (!empty($vendor_contact_name)) { ?>
-                                    <i class="fa fa-fw fa-user text-secondary mr-2 mb-2"></i><?php echo $vendor_contact_name_display; ?>
+                                    <i class="fa fa-fw fa-user text-secondary me-2 mb-2"></i><?php echo $vendor_contact_name_display; ?>
                                     <br>
                                 <?php } else {
                                     echo $vendor_contact_name_display;
                                 }
 
                                 if (!empty($vendor_phone)) { ?>
-                                    <i class="fa fa-fw fa-phone text-secondary mr-2 mb-2"></i><?php echo $vendor_phone; ?>
+                                    <i class="fa fa-fw fa-phone text-secondary me-2 mb-2"></i><?php echo $vendor_phone; ?>
                                     <br>
                                 <?php }
 
                                 if (!empty($vendor_email)) { ?>
-                                    <i class="fa fa-fw fa-envelope text-secondary mr-2 mb-2"></i><?php echo $vendor_email; ?>
+                                    <i class="fa fa-fw fa-envelope text-secondary me-2 mb-2"></i><?php echo $vendor_email; ?>
                                     <br>
                                 <?php } ?>
                             </td>
@@ -241,29 +241,29 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                              <td><?php echo $vendor_template_display; ?></td>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/vendor/vendor_edit.php?id=<?= $vendor_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <?php if ($session_user_role == 3) { ?>
                                             <?php if ($vendor_archived_at) { ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-info confirm-link" href="post.php?restore_vendor=<?= $vendor_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                                <i class="fas fa-fw fa-redo me-2"></i>Restore
                                             </a>
                                             <?php if ($config_destructive_deletes_enable) { ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_vendor=<?= $vendor_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                                             </a>
                                             <?php } ?>
                                             <?php } else { ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-danger confirm-link" href="post.php?archive_vendor=<?= $vendor_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                <i class="fas fa-fw fa-archive me-2"></i>Archive
                                             </a>
                                             <?php } ?>
                                         <?php } ?>

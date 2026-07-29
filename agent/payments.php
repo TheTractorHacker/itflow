@@ -48,6 +48,7 @@ $sql = mysqli_query(
     AND (CONCAT(invoice_prefix,invoice_number) LIKE '%$q%' OR client_name LIKE '%$q%' OR account_name LIKE '%$q%' OR payment_method LIKE '%$q%' OR payment_reference LIKE '%$q%')
     $account_query
     $payment_method_query
+    $access_permission_query
     $client_query
     ORDER BY $sort $order LIMIT $record_from, $record_to"
 );
@@ -58,12 +59,12 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-credit-card mr-2"></i>Payments</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-credit-card me-2"></i>Payments</h3>
             <?php if ($num_rows[0] > 0) { ?>
             <div class="card-tools">
                 <button type="button" class="btn btn-default ajax-modal"
                     data-modal-url="modals/payment/payment_export.php?<?= $client_url ?>">
-                    <i class="fa fa-fw fa-download mr-2"></i>Export
+                    <i class="fa fa-fw fa-download me-2"></i>Export
                 </button>
             </div>
             <?php } ?>
@@ -79,14 +80,14 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="input-group mb-3 mb-sm-0">
                             <input type="search" class="form-control" name="q" value="<?php if (isset($q)) {echo stripslashes(nullable_htmlentities($q));} ?>" placeholder="Search Payments">
                             <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
+                                <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilter"><i class="fas fa-filter"></i></button>
                                 <button class="btn btn-primary"><i class="fa fa-search"></i></button>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-2">
                         <div class="input-group mb-3 mb-sm-0">
-                            <select class="form-control select2" name="account" onchange="this.form.submit()">
+                            <select class="form-control select2 auto-submit-select" name="account">
                                 <option value="">- All Accounts -</option>
 
                                 <?php
@@ -106,7 +107,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                     <div class="col-sm-2">
                         <div class="input-group">
-                            <select class="form-control select2" name="method" onchange="this.form.submit()">
+                            <select class="form-control select2 auto-submit-select" name="method">
                                 <option value="">- All Payment Methods -</option>
 
                                 <?php
@@ -164,12 +165,12 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             </a>
                         </th>
                         <?php } ?>
-                        <th class="text-right">
+                        <th class="text-end">
                             <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=invoice_amount&order=<?php echo $disp; ?>">
                                 Invoice Amount <?php if ($sort == 'invoice_amount') { echo $order_icon; } ?>
                             </a>
                         </th>
-                        <th class="text-right">
+                        <th class="text-end">
                             <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=payment_amount&order=<?php echo $disp; ?>">
                                 Payment Amount <?php if ($sort == 'payment_amount') { echo $order_icon; } ?>
                             </a>
@@ -237,25 +238,25 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <?php if (!$client_url) { ?>
                             <td><a href="payments.php?client_id=<?php echo $client_id; ?>"><?php echo $client_name; ?></a></td>
                             <?php } ?>
-                            <td class="text-right"><?php echo numfmt_format_currency($currency_format, $invoice_amount, $invoice_currency_code); ?></td>
-                            <td class="text-right"><?php echo numfmt_format_currency($currency_format, $payment_amount, $payment_currency_code); ?></td>
+                            <td class="text-end"><?php echo numfmt_format_currency($currency_format, $invoice_amount, $invoice_currency_code); ?></td>
+                            <td class="text-end"><?php echo numfmt_format_currency($currency_format, $payment_amount, $payment_currency_code); ?></td>
                             <td><?php echo $payment_method; ?></td>
                             <td><?php echo $payment_reference_display; ?></td>
                             <td><?php echo "$account_archived_display$account_name"; ?></td>
                             <td>
                                 <?php if (lookupUserPermission("module_sales") >= 3) { ?>
                                     <div class="dropdown dropleft text-center">
-                                        <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                        <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                             <i class="fas fa-ellipsis-h"></i>
                                         </button>
                                         <div class="dropdown-menu">
                                             <a class="dropdown-item ajax-modal"
                                                 data-modal-url="modals/payment/payment_edit.php?id=<?= $payment_id ?>">
-                                                <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                                <i class="fas fa-fw fa-edit me-2"></i>Edit
                                             </a>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_payment=<?= $payment_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                                             </a>
                                         </div>
                                     </div>

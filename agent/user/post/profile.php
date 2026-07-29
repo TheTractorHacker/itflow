@@ -12,6 +12,8 @@ if (isset($_POST['edit_your_user_details'])) {
 
     $name = sanitizeInput($_POST['name']);
     $email = sanitizeInput($_POST['email']);
+    $title = mysqli_real_escape_string($mysqli, sanitizeInput($_POST['title'] ?? ''));
+    $phone = mysqli_real_escape_string($mysqli, sanitizeInput($_POST['phone'] ?? ''));
     $signature = mysqli_escape_string($mysqli,$_POST['signature']);
 
     $existing_file_name = sanitizeInput(getFieldById('users', $session_user_id, 'user_avatar'));
@@ -76,7 +78,7 @@ if (isset($_POST['edit_your_user_details'])) {
         }
     }
 
-    mysqli_query($mysqli,"UPDATE users SET user_name = '$name', user_email = '$email' WHERE user_id = $session_user_id");
+    mysqli_query($mysqli,"UPDATE users SET user_name = '$name', user_email = '$email', user_title = '$title', user_phone = '$phone' WHERE user_id = $session_user_id");
 
     mysqli_query($mysqli,"UPDATE user_settings SET user_config_signature = '$signature' WHERE user_id = $session_user_id");
 
@@ -386,7 +388,7 @@ if (isset($_POST['test_push_notification'])) {
     }
 
     if ($sent) {
-        flash_alert('<i class="fas fa-bell mr-2"></i>Test push notification sent to your registered devices.');
+        flash_alert('<i class="fas fa-bell me-2"></i>Test push notification sent to your registered devices.');
     } else {
         flash_alert('No registered devices found, or push delivery failed. Make sure the app is logged in with push enabled.', 'error');
     }

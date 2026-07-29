@@ -25,7 +25,7 @@ $credential_created_at   = nullable_htmlentities($row['credential_created_at']);
 if (empty($credential_otp_secret)) {
     $otp_display = '<span class="text-muted">—</span>';
 } else {
-    $otp_display = "<span onmouseenter='showOTPViaCredentialID($credential_id)'><i class='far fa-clock mr-1'></i><span id='otp_$credential_id'><em class='text-muted'>Hover to reveal…</em></span></span>";
+    $otp_display = "<span class='otp-reveal-trigger' data-credential-id='$credential_id'><i class='far fa-clock me-1'></i><span id='otp_$credential_id'><em class='text-muted'>Hover to reveal…</em></span></span>";
 }
 
 enforceClientAccess();
@@ -35,7 +35,7 @@ ob_start();
 
 <div class="modal-header bg-dark text-white">
     <div class="d-flex align-items-center">
-        <i class="fas fa-fw fa-key fa-2x mr-3"></i>
+        <i class="fas fa-fw fa-key fa-2x me-3"></i>
         <div>
             <h5 class="modal-title mb-0"><?= $credential_name ?></h5>
             <?php if ($credential_description) { ?>
@@ -43,7 +43,7 @@ ob_start();
             <?php } ?>
         </div>
     </div>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 
 <div class="modal-body">
@@ -52,11 +52,11 @@ ob_start();
         <tbody>
 
             <tr>
-                <td class="text-muted" style="width:130px;white-space:nowrap;"><i class="fas fa-fw fa-user mr-1"></i>Username</td>
+                <td class="text-muted" style="width:130px;white-space:nowrap;"><i class="fas fa-fw fa-user me-1"></i>Username</td>
                 <td>
                     <?php if ($credential_username) { ?>
                         <span id="cred-username-<?= $credential_id ?>"><?= $credential_username ?></span>
-                        <button class="btn btn-sm clipboardjs ml-1" type="button" title="Copy username" data-clipboard-text="<?= $credential_username ?>"><i class="far fa-copy text-secondary"></i></button>
+                        <button class="btn btn-sm clipboardjs ms-1" type="button" title="Copy username" data-clipboard-text="<?= $credential_username ?>"><i class="far fa-copy text-secondary"></i></button>
                     <?php } else { ?>
                         <span class="text-muted">—</span>
                     <?php } ?>
@@ -64,14 +64,13 @@ ob_start();
             </tr>
 
             <tr>
-                <td class="text-muted"><i class="fas fa-fw fa-lock mr-1"></i>Password</td>
+                <td class="text-muted"><i class="fas fa-fw fa-lock me-1"></i>Password</td>
                 <td>
                     <?php if ($credential_password_raw) { ?>
                         <span id="cred-pw-<?= $credential_id ?>"
                             data-pw="<?= htmlspecialchars($credential_password_raw, ENT_QUOTES, 'UTF-8') ?>"
                             style="font-family:monospace;letter-spacing:.1em;">••••••••</span>
-                        <button class="btn btn-sm ml-1" type="button" title="Show / hide"
-                            onclick="var s=document.getElementById('cred-pw-<?= $credential_id ?>');var h=s.textContent!=='••••••••';s.textContent=h?'••••••••':s.dataset.pw;">
+                        <button id="cred-pw-toggle-<?= $credential_id ?>" class="btn btn-sm ms-1" type="button" title="Show / hide">
                             <i class="far fa-eye text-secondary"></i>
                         </button>
                         <button class="btn btn-sm clipboardjs" type="button" title="Copy password" data-clipboard-text="<?= $credential_password ?>"><i class="far fa-copy text-secondary"></i></button>
@@ -82,16 +81,16 @@ ob_start();
             </tr>
 
             <tr>
-                <td class="text-muted"><i class="fas fa-fw fa-shield-alt mr-1"></i>TOTP</td>
+                <td class="text-muted"><i class="fas fa-fw fa-shield-alt me-1"></i>TOTP</td>
                 <td><?= $otp_display ?></td>
             </tr>
 
             <tr>
-                <td class="text-muted"><i class="fas fa-fw fa-link mr-1"></i>URI</td>
+                <td class="text-muted"><i class="fas fa-fw fa-link me-1"></i>URI</td>
                 <td>
                     <?php if ($credential_uri) { ?>
                         <a href="<?= $credential_uri_link ?>" target="_blank" rel="noopener noreferrer"><?= $credential_uri ?></a>
-                        <button class="btn btn-sm clipboardjs ml-1" type="button" title="Copy URI" data-clipboard-text="<?= $credential_uri ?>"><i class="far fa-copy text-secondary"></i></button>
+                        <button class="btn btn-sm clipboardjs ms-1" type="button" title="Copy URI" data-clipboard-text="<?= $credential_uri ?>"><i class="far fa-copy text-secondary"></i></button>
                     <?php } else { ?>
                         <span class="text-muted">—</span>
                     <?php } ?>
@@ -100,23 +99,23 @@ ob_start();
 
             <?php if ($credential_uri_2) { ?>
             <tr>
-                <td class="text-muted"><i class="fas fa-fw fa-link mr-1"></i>URI 2</td>
+                <td class="text-muted"><i class="fas fa-fw fa-link me-1"></i>URI 2</td>
                 <td>
                     <a href="<?= $credential_uri_2_link ?>" target="_blank" rel="noopener noreferrer"><?= $credential_uri_2 ?></a>
-                    <button class="btn btn-sm clipboardjs ml-1" type="button" title="Copy URI 2" data-clipboard-text="<?= $credential_uri_2 ?>"><i class="far fa-copy text-secondary"></i></button>
+                    <button class="btn btn-sm clipboardjs ms-1" type="button" title="Copy URI 2" data-clipboard-text="<?= $credential_uri_2 ?>"><i class="far fa-copy text-secondary"></i></button>
                 </td>
             </tr>
             <?php } ?>
 
             <?php if ($credential_note) { ?>
             <tr>
-                <td class="text-muted align-top"><i class="fas fa-fw fa-sticky-note mr-1"></i>Notes</td>
+                <td class="text-muted align-top"><i class="fas fa-fw fa-sticky-note me-1"></i>Notes</td>
                 <td style="white-space:pre-wrap;"><?= $credential_note ?></td>
             </tr>
             <?php } ?>
 
             <tr>
-                <td class="text-muted"><i class="fas fa-fw fa-calendar-alt mr-1"></i>Created</td>
+                <td class="text-muted"><i class="fas fa-fw fa-calendar-alt me-1"></i>Created</td>
                 <td class="text-muted"><?= $credential_created_at ?></td>
             </tr>
 
@@ -129,13 +128,27 @@ ob_start();
     <?php if (lookupUserPermission('module_credential') >= 2) { ?>
     <a href="#" class="btn btn-outline-secondary ajax-modal"
         data-modal-url="modals/credential/credential_edit.php?id=<?= $credential_id ?>">
-        <i class="fas fa-edit mr-1"></i>Edit
+        <i class="fas fa-edit me-1"></i>Edit
     </a>
     <?php } ?>
-    <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fas fa-times mr-1"></i>Close</button>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Close</button>
 </div>
 
 <script src="js/credential_show_otp_via_id.js"></script>
+<?php if ($credential_password_raw) { ?>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '', ENT_QUOTES) ?>">
+(function () {
+    var toggleBtn = document.getElementById('cred-pw-toggle-<?= $credential_id ?>');
+    var pwSpan = document.getElementById('cred-pw-<?= $credential_id ?>');
+    if (toggleBtn && pwSpan) {
+        toggleBtn.addEventListener('click', function () {
+            var hidden = pwSpan.textContent !== '••••••••';
+            pwSpan.textContent = hidden ? '••••••••' : pwSpan.dataset.pw;
+        });
+    }
+})();
+</script>
+<?php } ?>
 
 <?php
 require_once '../../../includes/modal_footer.php';

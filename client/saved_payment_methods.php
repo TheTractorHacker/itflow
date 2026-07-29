@@ -27,7 +27,7 @@ if (!$stripe_provider) {
 
 $stripe_provider_id = intval($stripe_provider['payment_provider_id']);
 $stripe_public_key = nullable_htmlentities($stripe_provider['payment_provider_public_key']);
-$stripe_secret_key = nullable_htmlentities($stripe_provider['payment_provider_private_key']);
+$stripe_secret_key = nullable_htmlentities(decryptSetting($stripe_provider['payment_provider_private_key'] ?? ''));
 
 // Get client's Stripe customer ID
 $stripe_customer_query = mysqli_query($mysqli, "
@@ -72,7 +72,7 @@ if (!$stripe_public_key || !$stripe_secret_key) {
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
                 <div class="form-group">
-                    <button type="submit" class="btn btn-success" name="create_stripe_customer"><strong><i class="fas fa-check mr-2"></i>I grant consent for automatic payments</strong></button>
+                    <button type="submit" class="btn btn-success" name="create_stripe_customer"><strong><i class="fas fa-check me-2"></i>I grant consent for automatic payments</strong></button>
                 </div>
             </form>
 
@@ -108,7 +108,7 @@ if (!$stripe_public_key || !$stripe_secret_key) {
                             $exp_month = nullable_htmlentities($pm->card->exp_month);
                             $exp_year = nullable_htmlentities($pm->card->exp_year);
 
-                            echo "<li><i class='$payment_icon fa-2x mr-2'></i>$brand x<strong>$last4</strong> | Exp. $exp_month/$exp_year";
+                            echo "<li><i class='$payment_icon fa-2x me-2'></i>$brand x<strong>$last4</strong> | Exp. $exp_month/$exp_year";
                             echo " – <a class='text-danger' href='post.php?delete_saved_payment={$method['saved_payment_id']}&csrf_token={$_SESSION['csrf_token']}'>Remove</a></li>";
                         }
                     } catch (Exception $e) {

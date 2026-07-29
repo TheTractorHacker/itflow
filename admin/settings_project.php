@@ -4,7 +4,7 @@ require_once "includes/inc_all_admin.php";
 
     <div class="card card-dark">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-project-diagram mr-2"></i>Project Settings</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-project-diagram me-2"></i>Project Settings</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
@@ -34,7 +34,7 @@ require_once "includes/inc_all_admin.php";
 
                 <hr>
 
-                <button type="submit" name="edit_project_settings" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+                <button type="submit" name="edit_project_settings" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
 
             </form>
         </div>

@@ -10,8 +10,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-check mr-2"></i>Resolve <strong><?= $count ?></strong> Tickets</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-check me-2"></i>Resolve <strong><?= $count ?></strong> Tickets</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -34,17 +34,17 @@ ob_start();
         </div>
 
         <div class="form-group">
-            <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" id="bulkPrivateCheckbox" name="bulk_private_note" value="1">
-                <label class="custom-control-label" for="bulkPrivateCheckbox">Mark as Internal</label>
+            <div class="form-check form-check">
+                <input type="checkbox" class="form-check-input" id="bulkPrivateCheckbox" name="bulk_private_note" value="1">
+                <label class="form-check-label" for="bulkPrivateCheckbox">Mark as Internal</label>
                 <small class="form-text text-muted">If checked this note will only be visible to agents. The contact / watcher will not be informed this ticket was resolved.</small>
             </div>
         </div>
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="bulk_resolve_tickets" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Resolve Tickets</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="bulk_resolve_tickets" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Resolve Tickets</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

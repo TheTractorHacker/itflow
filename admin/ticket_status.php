@@ -19,9 +19,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-info-circle mr-2"></i>Tickets Statuses</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-info-circle me-2"></i>Tickets Statuses</h3>
         <div class="card-tools">
-            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/ticket_status/ticket_status_add.php"><i class="fas fa-plus mr-2"></i>New Ticket Status</button>
+            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/ticket_status/ticket_status_add.php"><i class="fas fa-plus me-2"></i>New Ticket Status</button>
         </div>
     </div>
 
@@ -90,21 +90,21 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             </a>
                         </td>
                         <td>
-                            <span class='badge badge-pill text-light p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span>
+                            <span class='badge rounded-pill <?php echo tagTextClass($ticket_status_color); ?> p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span>
                         <td><?php echo $ticket_status_display; ?></td>
                         <td>
                             <div class="dropdown dropleft text-center">
-                                <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-boundary="window">
                                     <i class="fas fa-ellipsis-h"></i>
                                 </button>
                                 <div class="dropdown-menu">
                                     <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/ticket_status/ticket_status_edit.php?id=<?= $ticket_status_id ?>">
-                                        <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                        <i class="fas fa-fw fa-edit me-2"></i>Edit
                                     </a>
                                     <?php if (!$ticket_status_active) { ?>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_ticket_status=<?php echo $ticket_status_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>">
-                                            <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash me-2"></i>Delete
                                         </a>
                                     <?php } ?>
                                 </div>

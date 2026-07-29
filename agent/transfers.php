@@ -46,9 +46,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-exchange-alt mr-2"></i>Transfers</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-exchange-alt me-2"></i>Transfers</h3>
             <div class="card-tools">
-                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/transfer/transfer_add.php"><i class="fas fa-plus mr-2"></i>New Transfer</button>
+                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/transfer/transfer_add.php"><i class="fas fa-plus me-2"></i>New Transfer</button>
             </div>
         </div>
 
@@ -59,7 +59,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="input-group">
                             <input type="search" class="form-control" name="q" value="<?php if (isset($q)) { echo stripslashes(nullable_htmlentities($q)); } ?>" placeholder="Search Transfers">
                             <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-filter"></i></button>
+                                <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilter"><i class="fas fa-filter"></i></button>
                                 <button class="btn btn-primary"><i class="fa fa-search"></i></button>
                             </div>
                         </div>
@@ -79,7 +79,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="col-sm-2">
                             <div class="form-group">
                                 <label>Account From</label>
-                                <select class="form-control select2" name="account_from" onchange="this.form.submit()">
+                                <select class="form-control select2 auto-submit-select" name="account_from">
                                     <option value="">- All Accounts -</option>
 
                                     <?php
@@ -99,7 +99,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <div class="col-sm-2">
                             <div class="form-group">
                                 <label>Account To</label>
-                                <select class="form-control select2" name="account_to" onchange="this.form.submit()">
+                                <select class="form-control select2 auto-submit-select" name="account_to">
                                     <option value="">- All Accounts -</option>
 
                                     <?php
@@ -149,7 +149,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 Notes <?php if ($sort == 'transfer_notes') { echo $order_icon; } ?>
                             </a>
                         </th>
-                        <th class="text-right">
+                        <th class="text-end">
                             <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=transfer_amount&order=<?php echo $disp; ?>">
                                 Amount <?php if ($sort == 'transfer_amount') { echo $order_icon; } ?>
                             </a>
@@ -214,20 +214,20 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td><?php echo "$account_to_archived_display$account_name_to"; ?></td>
                             <td><?php echo $transfer_method_display; ?></td>
                             <td><?php echo $transfer_notes_display; ?></td>
-                            <td class="text-bold text-right"><?php echo numfmt_format_currency($currency_format, $transfer_amount, $session_company_currency); ?></td>
+                            <td class="text-bold text-end"><?php echo numfmt_format_currency($currency_format, $transfer_amount, $session_company_currency); ?></td>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url = "modals/transfer/transfer_edit.php?id=<?= $transfer_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_transfer=<?= $transfer_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash me-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>

@@ -31,6 +31,91 @@ if (isset($_POST['add_task'])) {
 
 }
 
+if (isset($_POST['add_project_task'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_support', 2);
+
+    $project_id = intval($_POST['project_id']);
+    $task_name = sanitizeInput($_POST['name']);
+    $milestone_id = intval($_POST['milestone_id'] ?? 0);
+    $assigned_to = intval($_POST['assigned_to'] ?? 0);
+    $task_start = sanitizeInput($_POST['start'] ?? '');
+    $task_due = sanitizeInput($_POST['due'] ?? '');
+    $task_completion_estimate = intval($_POST['completion_estimate'] ?? 0);
+    $task_progress = intval($_POST['progress'] ?? 0);
+    if ($task_progress < 0) { $task_progress = 0; }
+    if ($task_progress > 100) { $task_progress = 100; }
+
+    // Resolve client from the project for access checks/logging
+    $client_id = intval(getFieldById('projects', $project_id, 'project_client_id'));
+    if ($client_id) {
+        enforceClientAccess($client_id);
+    }
+
+    $milestone_id_sql = $milestone_id ? $milestone_id : "NULL";
+    $assigned_to_sql = $assigned_to ? $assigned_to : "NULL";
+    $task_start_sql = $task_start ? "'$task_start'" : "NULL";
+    $task_due_sql = $task_due ? "'$task_due'" : "NULL";
+
+    mysqli_query($mysqli, "INSERT INTO tasks SET task_name = '$task_name', task_project_id = $project_id, task_milestone_id = $milestone_id_sql, task_assigned_to = $assigned_to_sql, task_start = $task_start_sql, task_due = $task_due_sql, task_completion_estimate = $task_completion_estimate, task_progress = $task_progress");
+
+    $task_id = mysqli_insert_id($mysqli);
+
+    logAction("Task", "Create", "$session_name created task $task_name", $client_id, $task_id);
+
+    flash_alert("You created Task <strong>$task_name</strong>");
+
+    redirect();
+
+}
+
+if (isset($_POST['edit_project_task'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_support', 2);
+
+    $task_id = intval($_POST['task_id']);
+    $task_name = sanitizeInput($_POST['name']);
+    $milestone_id = intval($_POST['milestone_id'] ?? 0);
+    $assigned_to = intval($_POST['assigned_to'] ?? 0);
+    $task_start = sanitizeInput($_POST['start'] ?? '');
+    $task_due = sanitizeInput($_POST['due'] ?? '');
+    $task_completion_estimate = intval($_POST['completion_estimate'] ?? 0);
+    $task_progress = intval($_POST['progress'] ?? 0);
+    if ($task_progress < 0) { $task_progress = 0; }
+    if ($task_progress > 100) { $task_progress = 100; }
+
+    // Resolve client from the task's project (or its ticket) for access checks/logging
+    $sql = mysqli_query($mysqli, "SELECT * FROM tasks LEFT JOIN tickets ON ticket_id = task_ticket_id WHERE task_id = $task_id");
+    $row = mysqli_fetch_assoc($sql);
+    $task_project_id = intval($row['task_project_id']);
+    if ($task_project_id) {
+        $client_id = intval(getFieldById('projects', $task_project_id, 'project_client_id'));
+    } else {
+        $client_id = intval($row['ticket_client_id']);
+    }
+    if ($client_id) {
+        enforceClientAccess($client_id);
+    }
+
+    $milestone_id_sql = $milestone_id ? $milestone_id : "NULL";
+    $assigned_to_sql = $assigned_to ? $assigned_to : "NULL";
+    $task_start_sql = $task_start ? "'$task_start'" : "NULL";
+    $task_due_sql = $task_due ? "'$task_due'" : "NULL";
+
+    mysqli_query($mysqli, "UPDATE tasks SET task_name = '$task_name', task_milestone_id = $milestone_id_sql, task_assigned_to = $assigned_to_sql, task_start = $task_start_sql, task_due = $task_due_sql, task_completion_estimate = $task_completion_estimate, task_progress = $task_progress WHERE task_id = $task_id");
+
+    logAction("Task", "Edit", "$session_name edited task $task_name", $client_id, $task_id);
+
+    flash_alert("Task <strong>$task_name</strong> edited");
+
+    redirect();
+
+}
+
 if (isset($_POST['edit_ticket_task'])) {
 
     validateCSRFToken($_POST['csrf_token']);
@@ -112,24 +197,37 @@ if (isset($_GET['complete_task'])) {
 
     $task_id = intval($_GET['complete_task']);
 
-    // Get Client ID
+    // Task may be ticket-linked or project-only (no ticket)
     $sql = mysqli_query($mysqli, "SELECT * FROM tasks LEFT JOIN tickets ON ticket_id = task_ticket_id WHERE task_id = $task_id");
     $row = mysqli_fetch_assoc($sql);
-    $client_id = intval($row['ticket_client_id']);
     $task_name = sanitizeInput($row['task_name']);
     $task_completion_estimate = intval($row['task_completion_estimate']);
-    $ticket_id = intval($row['ticket_id']);
-    enforceClientAccess($client_id);
+    $ticket_id = intval($row['task_ticket_id']);
+    $task_project_id = intval($row['task_project_id']);
 
-    mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NOW(), task_completed_by = $session_user_id WHERE task_id = $task_id");
+    // Resolve client: from the ticket when present, otherwise from the project
+    if ($ticket_id) {
+        $client_id = intval($row['ticket_client_id']);
+    } else {
+        $client_id = intval(getFieldById('projects', $task_project_id, 'project_client_id'));
+    }
+    if ($client_id) {
+        enforceClientAccess($client_id);
+    }
 
-    // Convert task completion estimate from minutes to TIME format
-    $time_worked = gmdate("H:i:s", $task_completion_estimate * 60); // Convert minutes to HH:MM:SS
+    mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NOW(), task_completed_by = $session_user_id, task_progress = 100 WHERE task_id = $task_id");
 
-    // Add reply
-    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Completed Task - $task_name', ticket_reply_time_worked = '$time_worked', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+    // Only log a time entry against a ticket for ticket-linked tasks.
+    // Project-only tasks have no ticket, so we must NOT insert an orphan ticket_replies row.
+    if ($ticket_id) {
+        // Convert task completion estimate from minutes to TIME format
+        $time_worked = gmdate("H:i:s", $task_completion_estimate * 60); // Convert minutes to HH:MM:SS
 
-    $ticket_reply_id = mysqli_insert_id($mysqli);
+        // Add reply
+        mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Completed Task - $task_name', ticket_reply_time_worked = '$time_worked', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+
+        $ticket_reply_id = mysqli_insert_id($mysqli);
+    }
 
     logAction("Task", "Edit", "$session_name completed task $task_name", $client_id, $task_id);
 
@@ -147,20 +245,31 @@ if (isset($_GET['undo_complete_task'])) {
 
     $task_id = intval($_GET['undo_complete_task']);
 
-    // Get Client ID
+    // Task may be ticket-linked or project-only (no ticket)
     $sql = mysqli_query($mysqli, "SELECT * FROM tasks LEFT JOIN tickets ON ticket_id = task_ticket_id WHERE task_id = $task_id");
     $row = mysqli_fetch_assoc($sql);
-    $client_id = intval($row['ticket_client_id']);
     $task_name = sanitizeInput($row['task_name']);
-    $ticket_id = intval($row['ticket_id']);
-    enforceClientAccess($client_id);
+    $ticket_id = intval($row['task_ticket_id']);
+    $task_project_id = intval($row['task_project_id']);
 
-    mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NULL, task_completed_by = NULL WHERE task_id = $task_id");
+    // Resolve client: from the ticket when present, otherwise from the project
+    if ($ticket_id) {
+        $client_id = intval($row['ticket_client_id']);
+    } else {
+        $client_id = intval(getFieldById('projects', $task_project_id, 'project_client_id'));
+    }
+    if ($client_id) {
+        enforceClientAccess($client_id);
+    }
 
-    // Add reply
-    mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Undo Completed Task - $task_name', ticket_reply_time_worked = '00:01:00', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+    mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NULL, task_completed_by = NULL, task_progress = 0 WHERE task_id = $task_id");
 
-    $ticket_reply_id = mysqli_insert_id($mysqli);
+    // Only log a time entry against a ticket for ticket-linked tasks (project-only tasks have no ticket)
+    if ($ticket_id) {
+        mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Undo Completed Task - $task_name', ticket_reply_time_worked = '00:01:00', ticket_reply_type = 'System', ticket_reply_by = $session_user_id, ticket_reply_ticket_id = $ticket_id");
+
+        $ticket_reply_id = mysqli_insert_id($mysqli);
+    }
 
     logAction("Task", "Edit", "$session_name marked task $task_name as incomplete", $client_id, $task_id);
 
@@ -186,10 +295,6 @@ if (isset($_POST['add_ticket_task_approver'])) {
         $required_user_id = intval($_POST['approval_required_user_id']);
     }
 
-    mysqli_query($mysqli, "INSERT INTO task_approvals SET approval_scope = '$scope', approval_type = '$type', approval_required_user_id = $required_user_id, approval_status = 'pending', approval_created_by = $session_user_id, approval_url_key = '$approval_url_key', approval_task_id = $task_id");
-
-    $approval_id = mysqli_insert_id($mysqli);
-
     // Task/Ticket Info
     $tt_row = mysqli_fetch_assoc(mysqli_query($mysqli, "
         SELECT * FROM tasks
@@ -207,6 +312,11 @@ if (isset($_POST['add_ticket_task_approver'])) {
     $ticket_url_key = sanitizeInput($tt_row['ticket_url_key']);
     $ticket_contact_id = intval($tt_row['ticket_contact_id']);
     $client_id = intval($tt_row['ticket_client_id']);
+    enforceClientAccess($client_id);
+
+    mysqli_query($mysqli, "INSERT INTO task_approvals SET approval_scope = '$scope', approval_type = '$type', approval_required_user_id = $required_user_id, approval_status = 'pending', approval_created_by = $session_user_id, approval_url_key = '$approval_url_key', approval_task_id = $task_id");
+
+    $approval_id = mysqli_insert_id($mysqli);
 
     // --Notifications--
 
@@ -214,6 +324,8 @@ if (isset($_POST['add_ticket_task_approver'])) {
     $config_ticket_from_name = sanitizeInput($config_ticket_from_name);
     $config_ticket_from_email = sanitizeInput($config_ticket_from_email);
     $config_base_url = sanitizeInput($config_base_url);
+
+    $ticket_from = resolveTicketFromIdentity($ticket_id);
 
     // Get Company Info
     $crow = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT company_name, company_phone, company_phone_country_code FROM companies WHERE company_id = 1"));
@@ -235,8 +347,8 @@ if (isset($_POST['add_ticket_task_approver'])) {
             // Only add contact to email queue if email is valid
             if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $data[] = [
-                    'from' => $config_ticket_from_email,
-                    'from_name' => $config_ticket_from_name,
+                    'from' => $ticket_from['email'],
+                    'from_name' => $ticket_from['name'],
                     'recipient' => $email,
                     'recipient_name' => $name,
                     'subject' => $subject,
@@ -259,8 +371,8 @@ if (isset($_POST['add_ticket_task_approver'])) {
 
         if (filter_var($contact_email, FILTER_VALIDATE_EMAIL)) {
             $data[] = [
-                'from' => $config_ticket_from_email,
-                'from_name' => $config_ticket_from_name,
+                'from' => $ticket_from['email'],
+                'from_name' => $ticket_from['name'],
                 'recipient' => $contact_email,
                 'recipient_name' => $contact_name,
                 'subject' => $subject,
@@ -289,8 +401,8 @@ if (isset($_POST['add_ticket_task_approver'])) {
 
             if (filter_var($technical_contact_email, FILTER_VALIDATE_EMAIL)) {
                 $data[] = [
-                    'from' => $config_ticket_from_email,
-                    'from_name' => $config_ticket_from_name,
+                    'from' => $ticket_from['email'],
+                    'from_name' => $ticket_from['name'],
                     'recipient' => $technical_contact_email,
                     'recipient_name' => $technical_contact_name,
                     'subject' => $subject,
@@ -322,8 +434,8 @@ if (isset($_POST['add_ticket_task_approver'])) {
 
             if (filter_var($billing_contact_email, FILTER_VALIDATE_EMAIL)) {
                 $data[] = [
-                        'from' => $config_ticket_from_email,
-                        'from_name' => $config_ticket_from_name,
+                        'from' => $ticket_from['email'],
+                        'from_name' => $ticket_from['name'],
                         'recipient' => $billing_contact_email,
                         'recipient_name' => $billing_contact_name,
                         'subject' => $subject,
@@ -423,6 +535,7 @@ if (isset($_GET['complete_all_tasks'])) {
 
     // Get Client ID
     $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess($client_id);
 
     mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NOW(), task_completed_by = $session_user_id WHERE task_ticket_id = $ticket_id AND task_completed_at IS NULL");
 
@@ -449,6 +562,7 @@ if (isset($_GET['undo_complete_all_tasks'])) {
 
     // Get Client ID
     $client_id = intval(getFieldById('tickets', $ticket_id, 'ticket_client_id'));
+    enforceClientAccess($client_id);
 
     mysqli_query($mysqli, "UPDATE tasks SET task_completed_at = NULL, task_completed_by = NULL WHERE task_ticket_id = $ticket_id AND task_completed_at IS NOT NULL");
 

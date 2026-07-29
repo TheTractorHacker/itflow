@@ -17,13 +17,38 @@ if ($client_access_string && !$session_is_admin) { $where .= " AND a.asset_clien
 
 $sql_links = mysqli_query($mysqli,
     "SELECT arl.*, a.asset_id, a.asset_name, a.asset_type, a.asset_client_id,
-            c.client_name
+            c.client_name, i.type AS integration_type
      FROM asset_rmm_links arl
      JOIN assets a ON a.asset_id = arl.asset_id
      LEFT JOIN clients c ON c.client_id = a.asset_client_id
+     LEFT JOIN rmm_integrations i ON i.id = arl.integration_id
      WHERE $where
      ORDER BY arl.rmm_status ASC, arl.hostname ASC"
 );
+
+// A single physical asset can be linked to more than one RMM integration at
+// once (e.g. both Tactical RMM and Level.io tracking the same device). This
+// query is per-link, not per-asset, so without deduping it that device would
+// be listed twice with no explanation. Collapse to one row per asset_id,
+// preferring the Tactical RMM link when config_rmm_prefer_tactical is on,
+// then re-sort to match the original status/hostname ordering.
+$rmm_link_rows = [];
+while ($row = mysqli_fetch_assoc($sql_links)) {
+    $aid = intval($row['asset_id']);
+    if (!isset($rmm_link_rows[$aid])) {
+        $rmm_link_rows[$aid] = $row;
+    } elseif ($config_rmm_prefer_tactical
+        && $row['integration_type'] === 'tactical_rmm'
+        && $rmm_link_rows[$aid]['integration_type'] !== 'tactical_rmm') {
+        $rmm_link_rows[$aid] = $row;
+    }
+}
+$rmm_link_rows = array_values($rmm_link_rows);
+usort($rmm_link_rows, function ($a, $b) {
+    $status_cmp = strcmp($a['rmm_status'] ?? '', $b['rmm_status'] ?? '');
+    if ($status_cmp !== 0) return $status_cmp;
+    return strcasecmp($a['hostname'] ?? '', $b['hostname'] ?? '');
+});
 
 // Counts for stat cards
 $cnt = mysqli_fetch_assoc(mysqli_query($mysqli,
@@ -51,14 +76,14 @@ $sync_target_name_js = json_encode($sync_target_name, JSON_HEX_TAG);
 ?>
 
 <div class="d-flex align-items-center mb-3">
-    <h4 class="mb-0 mr-auto"><i class="fas fa-desktop mr-2"></i>RMM Assets</h4>
+    <h4 class="mb-0 mr-auto"><i class="fas fa-desktop me-2"></i>RMM Assets</h4>
     <?php if (lookupUserPermission('module_rmm_sync') >= 1 && $filter_intg_id): ?>
-    <button class="btn btn-success btn-sm mr-2" id="syncBtn" onclick="triggerSync()">
-        <i class="fas fa-sync mr-1"></i>Sync from <?= nullable_htmlentities($sync_target_name) ?>
+    <button class="btn btn-success btn-sm me-2 js-trigger-sync" id="syncBtn">
+        <i class="fas fa-sync me-1"></i>Sync from <?= nullable_htmlentities($sync_target_name) ?>
     </button>
     <?php endif; ?>
     <a href="/admin/settings_integrations.php?tab=rmm" class="btn btn-secondary btn-sm">
-        <i class="fas fa-cog mr-1"></i>Settings
+        <i class="fas fa-cog me-1"></i>Settings
     </a>
 </div>
 
@@ -96,14 +121,14 @@ $sync_target_name_js = json_encode($sync_target_name, JSON_HEX_TAG);
 
 <!-- Sync status bar -->
 <div id="syncStatus" class="alert alert-info d-none mb-3">
-    <i class="fas fa-spinner fa-spin mr-2"></i><span id="syncStatusText">Syncing...</span>
+    <i class="fas fa-spinner fa-spin me-2"></i><span id="syncStatusText">Syncing...</span>
 </div>
 
 <!-- Filter bar -->
 <div class="card card-dark mb-2">
     <div class="card-body py-2">
         <form method="get" class="form-inline">
-            <select name="integration_id" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
+            <select name="integration_id" class="form-control form-control-sm me-2 auto-submit-select">
                 <option value="">All Integrations</option>
                 <?php while ($i = mysqli_fetch_assoc($sql_integrations)): ?>
                 <option value="<?= $i['id'] ?>" <?= $filter_intg_id == $i['id'] ? 'selected' : '' ?>>
@@ -111,7 +136,7 @@ $sync_target_name_js = json_encode($sync_target_name, JSON_HEX_TAG);
                 </option>
                 <?php endwhile; ?>
             </select>
-            <select name="status" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
+            <select name="status" class="form-control form-control-sm me-2 auto-submit-select">
                 <option value="">All Statuses</option>
                 <option value="online"  <?= $filter_status === 'online'  ? 'selected' : '' ?>>Online</option>
                 <option value="offline" <?= $filter_status === 'offline' ? 'selected' : '' ?>>Offline</option>
@@ -127,16 +152,16 @@ $sync_target_name_js = json_encode($sync_target_name, JSON_HEX_TAG);
 <!-- Asset table -->
 <div class="card card-dark">
     <div class="card-body p-0">
-        <?php if (mysqli_num_rows($sql_links) === 0): ?>
+        <?php if (count($rmm_link_rows) === 0): ?>
             <div class="text-center text-muted py-5">
                 <i class="fas fa-desktop fa-3x mb-3"></i>
-                <p>No RMM assets found. <a href="#" onclick="triggerSync()">Sync from <?= nullable_htmlentities($sync_target_name) ?></a> to import devices.</p>
+                <p>No RMM assets found. <a href="#" class="js-trigger-sync">Sync from <?= nullable_htmlentities($sync_target_name) ?></a> to import devices.</p>
             </div>
         <?php else: ?>
         <table class="table table-hover table-sm mb-0" id="rmm-assets-table">
             <thead class="text-muted small border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;">
                 <tr>
-                    <th class="pl-3">Status</th>
+                    <th class="ps-3">Status</th>
                     <th>Hostname</th>
                     <th>Client</th>
                     <th>OS</th>
@@ -147,17 +172,17 @@ $sync_target_name_js = json_encode($sync_target_name, JSON_HEX_TAG);
                 </tr>
             </thead>
             <tbody>
-            <?php while ($row = mysqli_fetch_assoc($sql_links)):
+            <?php foreach ($rmm_link_rows as $row):
                 $status    = $row['rmm_status'];
-                $badge     = $status === 'online' ? 'badge-success' : ($status === 'offline' ? 'badge-danger' : 'badge-secondary');
+                $badge     = $status === 'online' ? 'text-bg-success' : ($status === 'offline' ? 'text-bg-danger' : 'text-bg-secondary');
                 $icon      = $status === 'online' ? 'fa-circle text-success' : ($status === 'offline' ? 'fa-circle text-danger' : 'fa-question-circle text-muted');
             ?>
             <tr>
-                <td class="pl-3">
-                    <i class="fas <?= $icon ?>" data-toggle="tooltip" title="<?= ucfirst($status) ?>"></i>
+                <td class="ps-3">
+                    <i class="fas <?= $icon ?>" data-bs-toggle="tooltip" title="<?= ucfirst($status) ?>"></i>
                 </td>
                 <td>
-                    <a href="/agent/asset_details.php?client_id=<?= intval($row['asset_client_id']) ?>&asset_id=<?= intval($row['asset_id']) ?>" class="font-weight-bold">
+                    <a href="/agent/asset_details.php?client_id=<?= intval($row['asset_client_id']) ?>&asset_id=<?= intval($row['asset_id']) ?>" class="fw-bold">
                         <?= nullable_htmlentities($row['hostname']) ?>
                     </a>
                 </td>
@@ -185,26 +210,31 @@ $sync_target_name_js = json_encode($sync_target_name, JSON_HEX_TAG);
                 <td class="text-muted small">
                     <?= $row['last_sync'] ? nullable_htmlentities($row['last_sync']) : '—' ?>
                 </td>
-                <td class="text-right pr-2">
-                    <a href="/agent/asset_details.php?client_id=<?= intval($row['asset_client_id']) ?>&asset_id=<?= intval($row['asset_id']) ?>" class="btn btn-xs btn-info" data-toggle="tooltip" title="View Asset">
+                <td class="text-end pe-2">
+                    <a href="/agent/asset_details.php?client_id=<?= intval($row['asset_client_id']) ?>&asset_id=<?= intval($row['asset_id']) ?>" class="btn btn-xs btn-info" data-bs-toggle="tooltip" title="View Asset">
                         <i class="fas fa-tachometer-alt"></i>
                     </a>
                 </td>
             </tr>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
             </tbody>
         </table>
         <?php endif; ?>
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+// Delegated wiring (CSP forbids inline onclick= attributes).
+document.addEventListener('click', function (e) {
+    if (e.target.closest('.js-trigger-sync')) { e.preventDefault(); triggerSync(); }
+});
+
 function triggerSync() {
     const btn = document.getElementById('syncBtn');
     const bar = document.getElementById('syncStatus');
     const txt = document.getElementById('syncStatusText');
     const syncTargetName = <?= $sync_target_name_js ?>;
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing...'; }
     bar.classList.remove('d-none');
     txt.textContent = `Syncing assets from ${syncTargetName}...`;
 
@@ -222,13 +252,13 @@ function triggerSync() {
         } else {
             txt.textContent = 'Sync failed: ' + (d.error || 'Unknown error');
             bar.classList.replace('alert-info', 'alert-danger');
-            if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-sync mr-1"></i>Sync from ${syncTargetName}`; }
+            if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-sync me-1"></i>Sync from ${syncTargetName}`; }
         }
     })
     .catch(() => {
         txt.textContent = 'Network error during sync.';
         bar.classList.replace('alert-info', 'alert-danger');
-        if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-sync mr-1"></i>Sync from ${syncTargetName}`; }
+        if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-sync me-1"></i>Sync from ${syncTargetName}`; }
     });
 }
 

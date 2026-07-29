@@ -2,8 +2,8 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-dark">
-                <h5 class="modal-title"><i class="fa fa-fw fa-calendar-plus mr-2"></i>New Event</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fa fa-fw fa-calendar-plus me-2"></i>New Event</h5>
+                <button type="button" class="close text-white" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -13,13 +13,13 @@
 
                     <ul class="nav nav-pills nav-justified mb-3">
                         <li class="nav-item">
-                            <a class="nav-link active" data-toggle="pill" href="#pills-event"><i class="fa fa-fw fa-calendar mr-2"></i>Event</a>
+                            <a class="nav-link active" data-bs-toggle="pill" href="#pills-event"><i class="fa fa-fw fa-calendar me-2"></i>Event</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" data-toggle="pill" href="#pills-details"><i class="fa fa-fw fa-info-circle mr-2"></i>Details</a>
+                            <a class="nav-link" data-bs-toggle="pill" href="#pills-details"><i class="fa fa-fw fa-info-circle me-2"></i>Details</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" data-toggle="pill" href="#pills-attendees"><i class="fa fa-fw fa-users mr-2"></i>Attendees</a>
+                            <a class="nav-link" data-bs-toggle="pill" href="#pills-attendees"><i class="fa fa-fw fa-users me-2"></i>Attendees</a>
                         </li>
                     </ul>
 
@@ -45,7 +45,7 @@
                                             $calendar_name = nullable_htmlentities($row['calendar_name']);
                                             $calendar_color = nullable_htmlentities($row['calendar_color']);
                                             ?>
-                                            <option <?php if ($config_default_calendar == $calendar_id) { echo "selected"; } ?> data-content="<i class='fa fa-circle mr-2' style='color:<?php echo $calendar_color; ?>;'></i> <?php echo $calendar_name; ?>" value="<?php echo $calendar_id; ?>"><?php echo $calendar_name; ?></option>
+                                            <option <?php if ($config_default_calendar == $calendar_id) { echo "selected"; } ?> data-content="<i class='fa fa-circle me-2' style='color:<?php echo $calendar_color; ?>;'></i> <?php echo $calendar_name; ?>" value="<?php echo $calendar_id; ?>"><?php echo $calendar_name; ?></option>
                                         <?php } ?>
 
                                     </select>
@@ -68,7 +68,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text"><i class="fa fa-fw fa-calendar-check"></i></span>
                                     </div>
-                                    <input type="datetime-local" class="form-control" id="event_add_start" name="start" required onblur="updateIncrementEndTime()">
+                                    <input type="datetime-local" class="form-control" id="event_add_start" name="start" required>
                                 </div>
                             </div>
 
@@ -80,6 +80,19 @@
                                     <input type="datetime-local" class="form-control" id="event_add_end" name="end" required>
                                 </div>
                             </div>
+
+                            <script nonce="<?= htmlspecialchars($csp_nonce ?? '', ENT_QUOTES) ?>">
+                            (function () {
+                                var startInput = document.getElementById('event_add_start');
+                                if (startInput) {
+                                    startInput.addEventListener('blur', function () {
+                                        if (typeof updateIncrementEndTime === 'function') {
+                                            updateIncrementEndTime();
+                                        }
+                                    });
+                                }
+                            })();
+                            </script>
 
                             <div class="form-group">
                                 <label>Repeat</label>
@@ -150,9 +163,9 @@
 
                             <?php if (!empty($config_smtp_host)) { ?>
                                 <div class="form-group">
-                                    <div class="custom-control custom-checkbox">
-                                        <input type="checkbox" class="custom-control-input" id="emailEventCheckbox" name="email_event" value="1" >
-                                        <label class="custom-control-label" for="emailEventCheckbox">Email Event</label>
+                                    <div class="form-check form-check">
+                                        <input type="checkbox" class="form-check-input" id="emailEventCheckbox" name="email_event" value="1" >
+                                        <label class="form-check-label" for="emailEventCheckbox">Email Event</label>
                                     </div>
                                 </div>
                             <?php } ?>
@@ -163,8 +176,8 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" name="add_event" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Create</button>
-                    <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+                    <button type="submit" name="add_event" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Create</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
                 </div>
             </form>
         </div>

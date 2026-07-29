@@ -107,16 +107,15 @@ $kanban = array_values($statuses);
                     }
                     ?>
 
-                    <div class="task grab-cursor"
+                    <div class="task grab-cursor js-open-ticket"
                          data-ticket-id="<?php echo $item['ticket_id']; ?>"
-                         data-ticket-status-id="<?php echo $item['ticket_status_id']; ?>"
-                         ondblclick="window.location.href='ticket.php?ticket_id=<?php echo $item['ticket_id']; ?>'">
+                         data-ticket-status-id="<?php echo $item['ticket_status_id']; ?>">
 
                 <span class="badge badge-<?php echo $ticket_priority_color; ?>">
                     <?php echo $item['ticket_priority']; ?>
                 </span>
 
-                        <span class="badge badge-secondary">
+                        <span class="badge text-bg-secondary">
                     <?php echo $item['category_name']; ?>
                 </span>
 
@@ -143,16 +142,16 @@ $kanban = array_values($statuses);
                         <br>
 
                         <?php if ($item['asset_name'] != "") { ?>
-                            <i class="fa fa-fw fa-desktop text-secondary mr-2"></i><?php echo $item['asset_name']; ?><br>
+                            <i class="fa fa-fw fa-desktop text-secondary me-2"></i><?php echo $item['asset_name']; ?><br>
                         <?php } ?>
 
-                        <i class="fa fa-fw fa-life-ring text-secondary mr-2"></i><?php echo $item['ticket_subject']; ?><br>
+                        <i class="fa fa-fw fa-life-ring text-secondary me-2"></i><?php echo $item['ticket_subject']; ?><br>
 
-                        <i class="fas fa-fw fa-user mr-2 text-secondary"></i><?php echo $item['user_name']; ?><br>
+                        <i class="fas fa-fw fa-user me-2 text-secondary"></i><?php echo $item['user_name']; ?><br>
 
                         <?php if ($item['ticket_schedule'] != "") { ?>
-                            <i class="fa fa-fw fa-calendar-check text-secondary mr-2"></i>
-                            <span class="badge badge-warning"><?php echo $item['ticket_schedule']; ?></span>
+                            <i class="fa fa-fw fa-calendar-check text-secondary me-2"></i>
+                            <span class="badge text-bg-warning"><?php echo $item['ticket_schedule']; ?></span>
                         <?php } ?>
 
                     </div>
@@ -167,7 +166,7 @@ $kanban = array_values($statuses);
 </div>
 
 <?php
-echo "<script>";
+echo "<script nonce=\"" . htmlspecialchars($csp_nonce ?? '') . "\">";
 echo "const CONFIG_TICKET_MOVING_COLUMNS = " . json_encode($config_ticket_moving_columns) . ";";
 echo "const CONFIG_TICKET_ORDERING = " . json_encode($config_ticket_ordering) . ";";
 echo "const KANBAN_CSRF_TOKEN = " . json_encode($_SESSION['csrf_token']) . ";";

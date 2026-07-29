@@ -9,9 +9,9 @@ $freq = intval($row['field_required']);
 $ftmpl = intval($row['field_template_id']);
 ob_start();
 ?>
-<div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-edit mr-2"></i>Edit Field</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+<div class="modal-header">
+    <h5 class="modal-title"><i class="fa fa-fw fa-edit me-2"></i>Edit Field</h5>
+    <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -35,18 +35,18 @@ ob_start();
             <textarea class="form-control" name="field_options" rows="4"><?= $fopts ?></textarea>
         </div>
         <div class="form-group">
-            <div class="custom-control custom-switch">
-                <input type="checkbox" class="custom-control-input" id="fieldRequiredEdit" name="field_required" value="1" <?= $freq ? 'checked' : '' ?>>
-                <label class="custom-control-label" for="fieldRequiredEdit">Required field</label>
+            <div class="form-check form-check form-switch">
+                <input type="checkbox" class="form-check-input" id="fieldRequiredEdit" name="field_required" value="1" <?= $freq ? 'checked' : '' ?>>
+                <label class="form-check-label" for="fieldRequiredEdit">Required field</label>
             </div>
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_worksheet_field" class="btn btn-primary"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_worksheet_field" class="btn btn-primary"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 document.getElementById('fieldTypeSelectEdit').addEventListener('change', function() {
     document.getElementById('fieldOptionsGroupEdit').style.display = this.value === 'select' ? 'block' : 'none';
 });

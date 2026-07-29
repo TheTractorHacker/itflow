@@ -35,9 +35,9 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-user-shield mr-2"></i>Editing role:
+    <h5 class="modal-title"><i class="fas fa-fw fa-user-shield me-2"></i>Editing role:
         <strong><?= $role_name ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -47,11 +47,11 @@ ob_start();
     <div class="modal-body">
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-role-details">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-role-details">Details</a>
             </li>
             <?php if (!$role_admin) { ?>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-role-permissions">Permissions</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-role-permissions">Permissions</a>
             </li>
             <?php } ?>
         </ul>
@@ -85,18 +85,18 @@ ob_start();
 
                 <div class="form-group">
                     <label>Admin Access <strong class="text-danger">*</strong></label>
-                    <div class="custom-control custom-radio mb-2">
-                        <input type="radio" class="custom-control-input" id="admin_yes" name="role_is_admin" value="1"
+                    <div class="form-check form-check mb-2">
+                        <input type="radio" class="form-check-input" id="admin_yes" name="role_is_admin" value="1"
                             <?php if ($role_admin) { echo 'checked'; } ?> required>
-                        <label class="custom-control-label" for="admin_yes">
+                        <label class="form-check-label" for="admin_yes">
                             Yes - this role should have full admin access
                         </label>
                     </div>
 
-                    <div class="custom-control custom-radio">
-                        <input type="radio" class="custom-control-input" id="admin_no" name="role_is_admin" value="0"
+                    <div class="form-check form-check">
+                        <input type="radio" class="form-check-input" id="admin_no" name="role_is_admin" value="0"
                             <?php if (!$role_admin) { echo 'checked'; } ?> required>
-                        <label class="custom-control-label" for="admin_no">
+                        <label class="form-check-label" for="admin_no">
                             No - use permissions on the next tab
                         </label>
                     </div>
@@ -135,7 +135,7 @@ ob_start();
                         $group_id = "perm_group_$module_id";
                         ?>
 
-                        <div class="btn-group btn-group-toggle btn-block" data-toggle="buttons" role="group" aria-label="Permissions for <?= $module_name_display ?>">
+                        <div class="btn-group js-btn-group-toggle btn-block" role="group" aria-label="Permissions for <?= $module_name_display ?>">
 
                             <label class="btn btn-outline-secondary btn-sm <?php if ($module_permission == 0) { echo 'active'; } ?>" title="No Access">
                                 <input
@@ -159,7 +159,7 @@ ob_start();
                                     autocomplete="off"
                                     <?php if ($module_permission == 1) { echo 'checked'; } ?>
                                 >
-                                <i class="fas fa-fw fa-eye mr-1"></i>Read
+                                <i class="fas fa-fw fa-eye me-1"></i>Read
                             </label>
 
                             <label class="btn btn-outline-warning btn-sm <?php if ($module_permission == 2) { echo 'active'; } ?>" title="Read, Edit, Archive">
@@ -171,7 +171,7 @@ ob_start();
                                     autocomplete="off"
                                     <?php if ($module_permission == 2) { echo 'checked'; } ?>
                                 >
-                                <i class="fas fa-fw fa-edit mr-1"></i>Modify
+                                <i class="fas fa-fw fa-edit me-1"></i>Modify
                             </label>
 
                             <label class="btn btn-outline-danger btn-sm <?php if ($module_permission == 3) { echo 'active'; } ?>" title="Read, Edit, Archive, Delete">
@@ -183,7 +183,7 @@ ob_start();
                                     autocomplete="off"
                                     <?php if ($module_permission == 3) { echo 'checked'; } ?>
                                 >
-                                <i class="fas fa-fw fa-trash mr-1"></i>Full
+                                <i class="fas fa-fw fa-trash me-1"></i>Full
                             </label>
 
                         </div>
@@ -201,8 +201,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_role" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_role" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

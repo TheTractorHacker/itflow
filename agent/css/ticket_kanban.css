@@ -12,15 +12,17 @@
     height: calc(100vh - 210px);
 }
 
-/* Kanban Column */
+/* Kanban Column - migrated to the shared --if-* design tokens (was hardcoded
+   light-theme-only colors, so this board was unreadable/inconsistent in dark
+   mode and visually out of step with the rest of the app's card treatment). */
 .kanban-column {
     flex: 1;
     min-width: 300px;
     max-width: 300px;
     margin: 0 10px;
-    background: #f4f4f4;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    background: var(--if-bg);
+    border: 1px solid var(--if-border);
+    border-radius: var(--if-radius, 12px);
     padding: 10px;
     min-height: calc(100vh - 230px);
     max-height: calc(100vh - 230px);
@@ -36,17 +38,17 @@
     min-height: 60px;
     position: relative;
     padding: 5px;
-    background-color: #f9f9f9;
-    border-radius: 4px;
+    background-color: var(--if-bg);
+    border-radius: var(--if-radius-sm, 8px);
 }
 
 /* Individual Task Cards */
 .task {
-    background: #fff;
+    background: var(--if-surface);
     margin: 5px 0;
     padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    border: 1px solid var(--if-border);
+    border-radius: var(--if-radius-sm, 8px);
     cursor: grab;
     user-select: none;
 }
@@ -65,19 +67,21 @@
 
 /* Placeholder shown in empty columns */
 .empty-placeholder {
-    border: 2px dashed #ccc;
-    background-color: #fcfcfc;
-    color: #999;
+    border: 2px dashed var(--if-border-strong);
+    background-color: var(--if-bg);
+    color: var(--if-ink);
+    opacity: .6;
     font-style: italic;
     padding: 12px;
     margin: 10px 0;
     text-align: center;
-    border-radius: 4px;
+    border-radius: var(--if-radius-sm, 8px);
     pointer-events: none;
 }
 
-/* Sortable drop zone feedback (optional visual cue) */
+/* Sortable drop zone feedback (optional visual cue) - a translucent tint of
+   the theme accent color so it reads correctly over either --if-bg shade. */
 .kanban-status.sortable-over {
-    background-color: #eaf6ff;
+    background-color: rgba(13, 148, 136, .15);
     transition: background-color 0.2s ease;
 }

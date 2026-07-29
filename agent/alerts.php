@@ -198,12 +198,12 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
 ?>
 
 <div class="d-flex align-items-center mb-3">
-    <h4 class="mb-0 mr-auto"><i class="fas fa-bell mr-2"></i>Alerts</h4>
-    <a href="/agent/rmm_dashboard.php" class="btn btn-secondary btn-sm mr-2">
-        <i class="fas fa-tachometer-alt mr-1"></i>RMM Dashboard
+    <h4 class="mb-0 mr-auto"><i class="fas fa-bell me-2"></i>Alerts</h4>
+    <a href="/agent/rmm_dashboard.php" class="btn btn-secondary btn-sm me-2">
+        <i class="fas fa-tachometer-alt me-1"></i>RMM Dashboard
     </a>
     <a href="/agent/backups.php" class="btn btn-secondary btn-sm">
-        <i class="fas fa-cloud-upload-alt mr-1"></i>Backup Dashboard
+        <i class="fas fa-cloud-upload-alt me-1"></i>Backup Dashboard
     </a>
 </div>
 
@@ -240,21 +240,21 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
     <div class="card-body py-2">
         <form method="get" class="d-flex flex-wrap align-items-center" style="gap:6px">
             <!-- Source filter -->
-            <div class="btn-group btn-group-sm mr-2">
+            <div class="btn-group btn-group-sm me-2">
                 <a href="?source=all&status=<?= $h_status ?>" class="btn <?= $filter_source === 'all' ? 'btn-primary' : 'btn-outline-primary' ?>">All</a>
-                <a href="?source=rmm&status=<?= $h_status ?>" class="btn <?= $filter_source === 'rmm' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-server mr-1"></i>RMM</a>
-                <a href="?source=backup&status=<?= $h_status ?>" class="btn <?= $filter_source === 'backup' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-cloud-upload-alt mr-1"></i>Backup</a>
-                <a href="?source=network&status=<?= $h_status ?>" class="btn <?= $filter_source === 'network' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-network-wired mr-1"></i>Network</a>
+                <a href="?source=rmm&status=<?= $h_status ?>" class="btn <?= $filter_source === 'rmm' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-server me-1"></i>RMM</a>
+                <a href="?source=backup&status=<?= $h_status ?>" class="btn <?= $filter_source === 'backup' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-cloud-upload-alt me-1"></i>Backup</a>
+                <a href="?source=network&status=<?= $h_status ?>" class="btn <?= $filter_source === 'network' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="fas fa-network-wired me-1"></i>Network</a>
             </div>
             <!-- Status filter -->
-            <div class="btn-group btn-group-sm mr-2">
+            <div class="btn-group btn-group-sm me-2">
                 <a href="?status=all&source=<?= $h_source ?>" class="btn <?= $filter_status === 'all' ? 'btn-secondary' : 'btn-outline-secondary' ?>">All</a>
                 <a href="?status=new&source=<?= $h_source ?>" class="btn <?= $filter_status === 'new' ? 'btn-danger' : 'btn-outline-secondary' ?>">New</a>
                 <a href="?status=acknowledged&source=<?= $h_source ?>" class="btn <?= $filter_status === 'acknowledged' ? 'btn-warning' : 'btn-outline-secondary' ?>">Acked</a>
                 <a href="?status=resolved&source=<?= $h_source ?>" class="btn <?= $filter_status === 'resolved' ? 'btn-success' : 'btn-outline-secondary' ?>">Resolved</a>
             </div>
             <!-- Severity filter -->
-            <div class="btn-group btn-group-sm mr-2">
+            <div class="btn-group btn-group-sm me-2">
                 <?php foreach (['critical'=>'danger','error'=>'danger','warning'=>'warning','info'=>'info'] as $sev => $col): ?>
                 <a href="?status=<?= $h_status ?>&source=<?= $h_source ?>&severity=<?= $filter_severity === $sev ? '' : $sev ?>"
                    class="btn <?= $filter_severity === $sev ? "btn-$col" : "btn-outline-$col" ?>">
@@ -264,7 +264,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
             </div>
             <!-- Client filter -->
             <?php if (mysqli_num_rows($sql_clients) > 0): ?>
-            <select name="client_id" class="form-control form-control-sm mr-2" style="max-width:180px" onchange="this.form.submit()">
+            <select name="client_id" class="form-control form-control-sm me-2 auto-submit-select" style="max-width:180px">
                 <option value="">All Clients</option>
                 <?php while ($cl = mysqli_fetch_assoc($sql_clients)): ?>
                 <option value="<?= $cl['client_id'] ?>" <?= $filter_client == $cl['client_id'] ? 'selected' : '' ?>>
@@ -277,10 +277,10 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
             <?php if ($filter_severity): ?><input type="hidden" name="severity" value="<?= htmlspecialchars($filter_severity) ?>"><?php endif; ?>
             <?php endif; ?>
             <!-- Search -->
-            <input type="text" name="q" value="<?= htmlspecialchars($filter_search) ?>" class="form-control form-control-sm mr-2" placeholder="Search message, device, client…" style="max-width:220px">
-            <button type="submit" class="btn btn-sm btn-secondary mr-2"><i class="fas fa-search"></i></button>
+            <input type="text" name="q" value="<?= htmlspecialchars($filter_search) ?>" class="form-control form-control-sm me-2" placeholder="Search message, device, client…" style="max-width:220px">
+            <button type="submit" class="btn btn-sm btn-secondary me-2"><i class="fas fa-search"></i></button>
             <?php if ($has_active_filter || $filter_status !== 'new'): ?>
-            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times mr-1"></i>Clear</a>
+            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times me-1"></i>Clear</a>
             <?php endif; ?>
         </form>
     </div>
@@ -290,11 +290,11 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
 <?php if ($total_shown > 0 && $filter_status === 'new' && lookupUserPermission('module_rmm_alerts_ack') >= 1): ?>
 <div class="d-flex align-items-center mb-2 px-1">
     <small class="text-muted mr-auto">Showing <?= $total_shown ?> alert<?= $total_shown != 1 ? 's' : '' ?></small>
-    <button class="btn btn-sm btn-outline-warning mr-2" onclick="bulkAction('acknowledge')">
-        <i class="fas fa-check-double mr-1"></i>Ack All Shown
+    <button class="btn btn-sm btn-outline-warning me-2 js-bulk-alert-action" data-bulk-action="acknowledge">
+        <i class="fas fa-check-double me-1"></i>Ack All Shown
     </button>
-    <button class="btn btn-sm btn-outline-success" onclick="bulkAction('resolve')">
-        <i class="fas fa-check-circle mr-1"></i>Resolve All Shown
+    <button class="btn btn-sm btn-outline-success js-bulk-alert-action" data-bulk-action="resolve">
+        <i class="fas fa-check-circle me-1"></i>Resolve All Shown
     </button>
 </div>
 <?php elseif ($total_shown > 0): ?>
@@ -311,13 +311,14 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
             <p class="mb-0">No alerts match your filters.</p>
         </div>
         <?php else: ?>
+        <div class="table-responsive">
         <table class="table table-sm table-hover mb-0" id="alertsTable">
             <thead class="text-muted border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
                 <tr>
                     <?php if (lookupUserPermission('module_rmm_alerts_ack') >= 1 && $filter_status === 'new'): ?>
-                    <th class="pl-3" style="width:32px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+                    <th class="ps-3" style="width:32px"><input type="checkbox" id="selectAll" class="js-toggle-select-all"></th>
                     <?php else: ?>
-                    <th class="pl-3" style="width:10px"></th>
+                    <th class="ps-3" style="width:10px"></th>
                     <?php endif; ?>
                     <th style="width:70px">Source</th>
                     <th>Severity</th>
@@ -339,7 +340,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                 $row_id       = $alert['source'] . '-' . $aid;
             ?>
             <tr id="alert-row-<?= $row_id ?>" class="<?= $row_class ?>">
-                <td class="pl-3">
+                <td class="ps-3">
                     <?php if (lookupUserPermission('module_rmm_alerts_ack') >= 1 && $alert['status'] !== 'resolved'): ?>
                     <input type="checkbox" class="alert-chk" data-id="<?= $aid ?>" data-source="<?= $alert['source'] ?>" data-row="<?= $row_id ?>">
                     <?php endif; ?>
@@ -349,7 +350,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                         $itype = $alert['integration_type'] ?? '';
                         $iname = $alert['integration_name'] ?? 'RMM';
                         $iicon = $itype === 'sophos_central' ? 'fa-fire-alt' : 'fa-server';
-                        $ibadge = $itype === 'sophos_central' ? 'badge-success' : 'badge-primary';
+                        $ibadge = $itype === 'sophos_central' ? 'text-bg-success' : 'text-bg-primary';
                     ?>
                     <span class="badge <?= $ibadge ?>" title="<?= nullable_htmlentities($iname) ?>">
                         <i class="fas <?= $iicon ?>"></i>
@@ -358,7 +359,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                     <?php } elseif ($alert['source'] === 'network') {
                         $iname = $alert['integration_name'] ?? 'Network';
                     ?>
-                    <span class="badge badge-info" title="<?= nullable_htmlentities($iname) ?>">
+                    <span class="badge text-bg-info" title="<?= nullable_htmlentities($iname) ?>">
                         <i class="fas fa-network-wired"></i>
                     </span>
                     <div class="text-muted" style="font-size:.65rem;margin-top:.1rem;line-height:1;"><?= nullable_htmlentities($iname) ?></div>
@@ -368,7 +369,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                     </span>
                     <?php } ?>
                 </td>
-                <td><span class="badge badge-<?= $sev_color ?>"><?= nullable_htmlentities($alert['severity']) ?></span></td>
+                <td><span class="badge text-bg-<?= $sev_color ?>"><?= nullable_htmlentities($alert['severity']) ?></span></td>
                 <td class="small" style="max-width:280px;overflow:hidden"><?= nullable_htmlentities($alert['message']) ?></td>
                 <td class="small">
                     <?php if ($alert['subject_url']) { ?>
@@ -383,7 +384,7 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                     <?php } else { ?>—<?php } ?>
                 </td>
                 <td>
-                    <span class="badge badge-<?= $status_color ?>"><?= $alert['status'] ?></span>
+                    <span class="badge text-bg-<?= $status_color ?>"><?= $alert['status'] ?></span>
                     <?php if ($alert['status'] === 'acknowledged' && $alert['ack_by']) { ?>
                     <br><small class="text-muted"><?= nullable_htmlentities($alert['ack_by']) ?></small>
                     <?php } ?>
@@ -392,23 +393,23 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
                     <?= nullable_htmlentities(date('M j', strtotime($alert['created_at']))) ?>
                     <br><?= nullable_htmlentities(date('g:ia', strtotime($alert['created_at']))) ?>
                 </td>
-                <td class="text-right pr-2" style="white-space:nowrap">
+                <td class="text-end pe-2" style="white-space:nowrap">
                     <?php if ($alert['status'] === 'new' && lookupUserPermission('module_rmm_alerts_ack') >= 1) { ?>
-                    <button class="btn btn-xs btn-warning" onclick="alertAction('<?= $alert['source'] ?>', <?= $aid ?>, 'acknowledge', '<?= $row_id ?>')" title="Acknowledge">
+                    <button class="btn btn-xs btn-warning js-alert-action" data-source="<?= nullable_htmlentities($alert['source']) ?>" data-alert-id="<?= $aid ?>" data-alert-action="acknowledge" data-row-id="<?= nullable_htmlentities($row_id) ?>" title="Acknowledge">
                         <i class="fas fa-eye"></i>
                     </button>
                     <?php } ?>
                     <?php if ($alert['status'] !== 'resolved' && lookupUserPermission('module_rmm_alerts_ack') >= 1) { ?>
-                    <button class="btn btn-xs btn-success ml-1" onclick="alertAction('<?= $alert['source'] ?>', <?= $aid ?>, 'resolve', '<?= $row_id ?>')" title="Resolve">
+                    <button class="btn btn-xs btn-success ms-1 js-alert-action" data-source="<?= nullable_htmlentities($alert['source']) ?>" data-alert-id="<?= $aid ?>" data-alert-action="resolve" data-row-id="<?= nullable_htmlentities($row_id) ?>" title="Resolve">
                         <i class="fas fa-check"></i>
                     </button>
                     <?php } ?>
                     <?php if ($alert['ticket_id']) { ?>
-                    <a href="/agent/ticket.php?ticket_id=<?= $alert['ticket_id'] ?>" class="btn btn-xs btn-outline-primary ml-1" title="View linked ticket">
-                        <i class="fas fa-ticket-alt mr-1"></i><?= nullable_htmlentities($alert['ticket_label']) ?>
+                    <a href="/agent/ticket.php?ticket_id=<?= $alert['ticket_id'] ?>" class="btn btn-xs btn-outline-primary ms-1" title="View linked ticket">
+                        <i class="fas fa-ticket-alt me-1"></i><?= nullable_htmlentities($alert['ticket_label']) ?>
                     </a>
                     <?php } elseif ($alert['can_create_ticket'] && lookupUserPermission('module_support') >= 2) { ?>
-                    <button class="btn btn-xs btn-primary ml-1" onclick="alertAction('<?= $alert['source'] ?>', <?= $aid ?>, 'create_ticket', '<?= $row_id ?>')" title="Create Ticket">
+                    <button class="btn btn-xs btn-primary ms-1 js-alert-action" data-source="<?= nullable_htmlentities($alert['source']) ?>" data-alert-id="<?= $aid ?>" data-alert-action="create_ticket" data-row-id="<?= nullable_htmlentities($row_id) ?>" title="Create Ticket">
                         <i class="fas fa-ticket-alt"></i>
                     </button>
                     <?php } ?>
@@ -417,11 +418,12 @@ $has_active_filter = $filter_severity || $filter_client || $filter_search || $fi
             <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
         <?php endif; ?>
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 const CSRF = '<?= $_SESSION['csrf_token'] ?>';
 const ENDPOINTS = {rmm: '/agent/post/rmm_alert.php', network: '/agent/post/rmm_alert.php', backup: '/agent/post/comet_alert.php'};
 
@@ -471,6 +473,17 @@ function bulkAction(action) {
         });
     });
 }
+
+document.addEventListener('click', function (e) {
+    var el;
+    if ((el = e.target.closest('.js-bulk-alert-action'))) { bulkAction(el.dataset.bulkAction); return; }
+    if ((el = e.target.closest('.js-alert-action'))) {
+        alertAction(el.dataset.source, parseInt(el.dataset.alertId, 10), el.dataset.alertAction, el.dataset.rowId);
+    }
+});
+document.addEventListener('change', function (e) {
+    if (e.target.closest('.js-toggle-select-all')) { toggleSelectAll(e.target); }
+});
 </script>
 
 <?php require_once "../includes/footer.php"; ?>

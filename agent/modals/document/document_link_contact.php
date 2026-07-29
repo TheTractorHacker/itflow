@@ -12,14 +12,15 @@ $sql = mysqli_query($mysqli, "SELECT * FROM documents
 $row = mysqli_fetch_assoc($sql);
 $document_name = nullable_htmlentities($row['document_name']);
 $client_id = intval($row['document_client_id']);
+enforceClientAccess($client_id);
 
 ob_start();
 
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-user mr-2"></i>Link Contact to <strong><?= $document_name ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-user me-2"></i>Link Contact to <strong><?= $document_name ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -62,8 +63,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="link_contact_to_document" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Link Contact</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="link_contact_to_document" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Link Contact</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

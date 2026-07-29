@@ -75,22 +75,81 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     <div class="col-12">
         <div class="card mb-0" style="border-left:4px solid <?= intval($rmm_client_stats['crit_alerts']) ? '#dc3545' : (intval($rmm_client_stats['offline_cnt']) ? '#ffc107' : '#28a745') ?>">
             <div class="card-body py-2 d-flex align-items-center flex-wrap" style="gap:12px">
-                <span class="text-muted small font-weight-bold"><i class="fas fa-heartbeat mr-1"></i>RMM</span>
+                <span class="text-muted small fw-bold"><i class="fas fa-heartbeat me-1"></i>RMM</span>
                 <span>
-                    <span class="badge badge-success mr-1"><?= intval($rmm_client_stats['online_cnt']) ?> Online</span>
-                    <span class="badge badge-secondary"><?= intval($rmm_client_stats['offline_cnt']) ?> Offline</span>
+                    <span class="badge text-bg-success me-1"><?= intval($rmm_client_stats['online_cnt']) ?> Online</span>
+                    <span class="badge text-bg-secondary"><?= intval($rmm_client_stats['offline_cnt']) ?> Offline</span>
                 </span>
                 <?php if (intval($rmm_client_stats['total_alerts']) > 0): ?>
                 <a href="rmm_alerts.php?client_id=<?= $client_id ?>&status=new" class="text-decoration-none">
-                    <span class="badge badge-danger"><i class="fas fa-bell mr-1"></i><?= intval($rmm_client_stats['total_alerts']) ?> Alert<?= $rmm_client_stats['total_alerts'] != 1 ? 's' : '' ?></span>
+                    <span class="badge text-bg-danger"><i class="fas fa-bell me-1"></i><?= intval($rmm_client_stats['total_alerts']) ?> Alert<?= $rmm_client_stats['total_alerts'] != 1 ? 's' : '' ?></span>
                     <?php if ($rmm_client_stats['crit_alerts'] > 0): ?>
-                        <span class="badge badge-danger ml-1"><?= intval($rmm_client_stats['crit_alerts']) ?> Critical</span>
+                        <span class="badge text-bg-danger ms-1"><?= intval($rmm_client_stats['crit_alerts']) ?> Critical</span>
                     <?php endif; ?>
                 </a>
                 <?php endif; ?>
                 <a href="rmm_assets.php?client_id=<?= $client_id ?>" class="btn btn-xs btn-outline-secondary ml-auto">
-                    <i class="fas fa-desktop mr-1"></i>View RMM Assets
+                    <i class="fas fa-desktop me-1"></i>View RMM Assets
                 </a>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- ── CRM Opportunities widget ──────────────────────────────────────────── -->
+<?php if (lookupUserPermission('module_sales') >= 1):
+    $sql_client_opps = mysqli_query($mysqli,
+        "SELECT * FROM opportunities
+         WHERE opportunity_client_id = $client_id
+           AND opportunity_status = 'open'
+           AND opportunity_archived_at IS NULL
+         ORDER BY opportunity_amount DESC LIMIT 8");
+    $client_opps_total = floatval(mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COALESCE(SUM(opportunity_amount),0) AS t FROM opportunities
+         WHERE opportunity_client_id = $client_id AND opportunity_status = 'open' AND opportunity_archived_at IS NULL"))['t']);
+?>
+<div class="row">
+    <div class="col-12">
+        <div class="card card-dark mb-3">
+            <div class="card-header p-2 d-flex align-items-center justify-content-between">
+                <h5 class="card-title mb-0"><i class="fas fa-fw fa-funnel-dollar me-2"></i>Open Opportunities
+                    <span class="badge text-bg-success ms-1"><?= numfmt_format_currency($currency_format, $client_opps_total, "$session_company_currency") ?></span>
+                </h5>
+                <div>
+                    <a href="opportunities.php?client_id=<?= $client_id ?>" class="text-muted small me-2">View all <i class="fas fa-chevron-right fa-xs"></i></a>
+                    <?php if (lookupUserPermission('module_sales') >= 2): ?>
+                        <button type="button" class="btn btn-primary btn-xs ajax-modal" data-modal-url="modals/opportunity/opportunity_add.php?client_id=<?= $client_id ?>"><i class="fas fa-plus me-1"></i>Add Opportunity</button>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <?php if (mysqli_num_rows($sql_client_opps) > 0): ?>
+                <table class="table table-sm table-hover mb-0">
+                    <tbody>
+                    <?php while ($opp_row = mysqli_fetch_assoc($sql_client_opps)):
+                        $o_id = intval($opp_row['opportunity_id']);
+                        $o_name = nullable_htmlentities($opp_row['opportunity_name']);
+                        $o_stage = nullable_htmlentities($opp_row['opportunity_stage']);
+                        $o_color = opportunityStageColor($opp_row['opportunity_stage']);
+                        $o_amount = floatval($opp_row['opportunity_amount']);
+                        $o_prob = intval($opp_row['opportunity_probability']);
+                        $o_close = nullable_htmlentities($opp_row['opportunity_close_date']);
+                    ?>
+                        <tr>
+                            <td class="ps-3">
+                                <a href="#" class="text-dark ajax-modal" data-modal-url="modals/opportunity/opportunity_edit.php?id=<?= $o_id ?>"><?= $o_name ?></a>
+                            </td>
+                            <td><span class="badge badge-<?= $o_color ?>"><?= $o_stage ?></span></td>
+                            <td class="text-muted small"><?= $o_prob ?>%</td>
+                            <td class="text-end pe-3 fw-bold"><?= numfmt_format_currency($currency_format, $o_amount, "$session_company_currency") ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+                <?php else: ?>
+                    <div class="p-3 text-muted text-center">No open opportunities for this client.</div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -104,12 +163,12 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     <div class="col-md-8">
         <div class="card card-dark mb-3">
             <div class="card-header p-2">
-                <h5 class="card-title"><i class="fas fa-fw fa-edit mr-2"></i>Quick Notes</h5>
+                <h5 class="card-title"><i class="fas fa-fw fa-edit me-2"></i>Quick Notes</h5>
             </div>
             <div class="card-body p-2">
-                <textarea class="form-control border-0 bg-white" rows="7" id="clientNotes"
+                <textarea class="form-control border-0 bg-white js-update-client-notes" rows="7" id="clientNotes"
                     placeholder="Type notes here…"
-                    onblur="updateClientNotes(<?= $client_id ?>)"><?= $client_notes ?></textarea>
+                    data-client-id="<?= $client_id ?>"><?= $client_notes ?></textarea>
             </div>
         </div>
     </div>
@@ -119,7 +178,7 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     <div class="col-md-4">
         <div class="card card-dark mb-3">
             <div class="card-header p-2 d-flex align-items-center justify-content-between">
-                <h5 class="card-title mb-0"><i class="fas fa-fw fa-users mr-2"></i>Key Contacts</h5>
+                <h5 class="card-title mb-0"><i class="fas fa-fw fa-users me-2"></i>Key Contacts</h5>
                 <a href="contacts.php?client_id=<?= $client_id ?>" class="text-muted small">View all <i class="fas fa-chevron-right fa-xs"></i></a>
             </div>
             <div class="list-group list-group-flush">
@@ -134,10 +193,10 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
                     $contact_initials = initials($contact_name);
 
                     $badges = [];
-                    if ($row['contact_primary'])   $badges[] = '<span class="badge badge-success">Primary</span>';
-                    if ($row['contact_billing'])   $badges[] = '<span class="badge badge-info">Billing</span>';
-                    if ($row['contact_technical']) $badges[] = '<span class="badge badge-secondary">Technical</span>';
-                    if ($row['contact_important']) $badges[] = '<span class="badge badge-warning">Important</span>';
+                    if ($row['contact_primary'])   $badges[] = '<span class="badge text-bg-success">Primary</span>';
+                    if ($row['contact_billing'])   $badges[] = '<span class="badge text-bg-info">Billing</span>';
+                    if ($row['contact_technical']) $badges[] = '<span class="badge text-bg-secondary">Technical</span>';
+                    if ($row['contact_important']) $badges[] = '<span class="badge text-bg-warning">Important</span>';
                 ?>
                 <a href="#" class="list-group-item list-group-item-action py-2 ajax-modal"
                     data-modal-size="lg"
@@ -145,25 +204,25 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
                     <div class="d-flex align-items-center">
                         <?php if ($contact_photo): ?>
                             <img src="../uploads/clients/<?= $client_id ?>/<?= $contact_photo ?>"
-                                class="img-circle mr-2 flex-shrink-0"
+                                class="img-circle me-2 flex-shrink-0"
                                 style="width:36px;height:36px;object-fit:cover">
                         <?php else: ?>
-                            <span class="mr-2 flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle bg-secondary text-white"
+                            <span class="me-2 flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle bg-secondary text-white"
                                 style="width:36px;height:36px;font-size:.8rem"><?= $contact_initials ?></span>
                         <?php endif; ?>
                         <div class="flex-grow-1" style="min-width:0">
-                            <div class="font-weight-bold text-dark"><?= $contact_name ?></div>
+                            <div class="fw-bold text-dark"><?= $contact_name ?></div>
                             <?php if ($contact_title): ?>
                                 <div class="text-muted small"><?= $contact_title ?></div>
                             <?php endif; ?>
                             <?php if ($contact_phone): ?>
-                                <div class="small text-muted"><i class="fas fa-phone fa-xs mr-1"></i><?= $contact_phone ?></div>
+                                <div class="small text-muted"><i class="fas fa-phone fa-xs me-1"></i><?= $contact_phone ?></div>
                             <?php elseif ($contact_email): ?>
-                                <div class="small text-muted text-truncate"><i class="fas fa-envelope fa-xs mr-1"></i><?= $contact_email ?></div>
+                                <div class="small text-muted text-truncate"><i class="fas fa-envelope fa-xs me-1"></i><?= $contact_email ?></div>
                             <?php endif; ?>
                         </div>
                         <?php if ($badges): ?>
-                            <div class="ml-2 flex-shrink-0"><?= implode(' ', $badges) ?></div>
+                            <div class="ms-2 flex-shrink-0"><?= implode(' ', $badges) ?></div>
                         <?php endif; ?>
                     </div>
                 </a>
@@ -187,7 +246,7 @@ if ($has_fav_assets || $has_fav_creds):
     <div class="col-md-<?= $has_fav_creds ? '6' : '12' ?>">
         <div class="card card-dark mb-3">
             <div class="card-header p-2 d-flex align-items-center justify-content-between">
-                <h5 class="card-title mb-0"><i class="fas fa-fw fa-star text-warning mr-2"></i>Favorite Assets</h5>
+                <h5 class="card-title mb-0"><i class="fas fa-fw fa-star text-warning me-2"></i>Favorite Assets</h5>
                 <a href="assets.php?client_id=<?= $client_id ?>" class="text-muted small">View all <i class="fas fa-chevron-right fa-xs"></i></a>
             </div>
             <table class="table table-sm table-hover mb-0">
@@ -205,7 +264,7 @@ if ($has_fav_assets || $has_fav_creds):
                         <a href="#" class="ajax-modal"
                             data-modal-size="lg"
                             data-modal-url="modals/asset/asset_details.php?id=<?= $asset_id ?>">
-                            <i class="fas fa-fw fa-<?= $asset_icon ?> text-dark mr-1"></i><?= $asset_name ?>
+                            <i class="fas fa-fw fa-<?= $asset_icon ?> text-dark me-1"></i><?= $asset_name ?>
                         </a>
                     </td>
                     <td class="text-muted"><?= trim("$asset_make $asset_model") ?></td>
@@ -221,7 +280,7 @@ if ($has_fav_assets || $has_fav_creds):
     <div class="col-md-<?= $has_fav_assets ? '6' : '12' ?>">
         <div class="card card-dark mb-3">
             <div class="card-header p-2 d-flex align-items-center justify-content-between">
-                <h5 class="card-title mb-0"><i class="fas fa-fw fa-star text-warning mr-2"></i>Favorite Credentials</h5>
+                <h5 class="card-title mb-0"><i class="fas fa-fw fa-star text-warning me-2"></i>Favorite Credentials</h5>
                 <a href="credentials.php?client_id=<?= $client_id ?>" class="text-muted small">View all <i class="fas fa-chevron-right fa-xs"></i></a>
             </div>
             <table class="table table-sm table-hover mb-0">
@@ -246,13 +305,13 @@ if ($has_fav_assets || $has_fav_creds):
                     <td>
                         <a href="#" class="ajax-modal"
                             data-modal-url="modals/credential/credential_view.php?id=<?= $credential_id ?>">
-                            <i class="fas fa-fw fa-key text-dark mr-1"></i><?= $credential_name ?>
+                            <i class="fas fa-fw fa-key text-dark me-1"></i><?= $credential_name ?>
                         </a>
                     </td>
                     <td><?= $username_display ?></td>
                     <td class="text-nowrap">
                         <button class="btn p-0" type="button"
-                            data-toggle="popover" data-trigger="focus" data-placement="top"
+                            data-bs-toggle="popover" data-trigger="focus" data-placement="top"
                             data-content="<?= $credential_password ?>">
                             <i class="fas fa-2x fa-ellipsis-h text-secondary"></i><i class="fas fa-2x fa-ellipsis-h text-secondary"></i>
                         </button>
@@ -280,9 +339,9 @@ if ($has_fav_assets || $has_fav_creds):
         <div class="card card-dark mb-3">
             <div class="card-header p-2 d-flex align-items-center justify-content-between">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-fw fa-ticket-alt mr-2"></i>Open Tickets
+                    <i class="fas fa-fw fa-ticket-alt me-2"></i>Open Tickets
                     <?php if ($num_active_tickets > 0): ?>
-                        <span class="badge badge-danger ml-1"><?= $num_active_tickets ?></span>
+                        <span class="badge text-bg-danger ms-1"><?= $num_active_tickets ?></span>
                     <?php endif; ?>
                 </h5>
                 <a href="tickets.php?client_id=<?= $client_id ?>" class="text-muted small">View all <i class="fas fa-chevron-right fa-xs"></i></a>
@@ -307,9 +366,9 @@ if ($has_fav_assets || $has_fav_creds):
                     <td>
                         <a href="ticket.php?client_id=<?= $client_id ?>&ticket_id=<?= $tid ?>" class="text-dark"><?= $tsubj ?></a>
                         <div class="small mt-1">
-                            <span class="badge badge-pill badge-<?= $prio_class ?>"><?= $tprio ?></span>
-                            <span class="badge badge-pill text-white ml-1" style="background:<?= $tscolor ?>"><?= $tsname ?></span>
-                            <span class="text-muted ml-1"><?= $tago ?></span>
+                            <span class="badge rounded-pill badge-<?= $prio_class ?>"><?= $tprio ?></span>
+                            <span class="badge rounded-pill <?= tagTextClass($tscolor) ?> ms-1" style="background:<?= $tscolor ?>"><?= $tsname ?></span>
+                            <span class="text-muted ms-1"><?= $tago ?></span>
                         </div>
                     </td>
                 </tr>
@@ -329,7 +388,7 @@ if ($has_fav_assets || $has_fav_creds):
     <div class="col-md-6">
         <div class="card card-dark mb-3">
             <div class="card-header p-2 d-flex align-items-center justify-content-between">
-                <h5 class="card-title mb-0"><i class="fas fa-fw fa-history mr-2"></i>Recent Activity</h5>
+                <h5 class="card-title mb-0"><i class="fas fa-fw fa-history me-2"></i>Recent Activity</h5>
                 <?php if ($session_user_role == 3): ?>
                 <a href="../admin/audit_log.php?client=<?= $client_id ?>" class="text-muted small">Full log <i class="fas fa-chevron-right fa-xs"></i></a>
                 <?php endif; ?>
@@ -369,14 +428,18 @@ $has_expired  = mysqli_num_rows($sql_domains_expired) > 0 || mysqli_num_rows($sq
              || mysqli_num_rows($sql_asset_retired) > 0;
 
 if ($has_stale || $has_expiring || $has_expired):
+    // Column width follows how many of the 3 alert cards actually render,
+    // so a lone card fills the row instead of leaving a dead gap beside it.
+    $alert_card_count = ($has_stale ? 1 : 0) + ($has_expiring ? 1 : 0) + ($has_expired ? 1 : 0);
+    $alert_col_class = $alert_card_count === 1 ? 'col-md-12' : ($alert_card_count === 2 ? 'col-md-6' : 'col-md-4');
 ?>
 <div class="row">
 
     <?php if ($has_stale): ?>
-    <div class="col-md-4">
+    <div class="<?= $alert_col_class ?>">
         <div class="card mb-3" style="border-left:4px solid #ffc107">
             <div class="card-header p-2">
-                <h5 class="card-title text-warning mb-0"><i class="fas fa-fw fa-clock mr-2"></i>Stale Tickets <small class="text-muted font-weight-normal">(7+ days)</small></h5>
+                <h5 class="card-title text-warning mb-0"><i class="fas fa-fw fa-clock me-2"></i>Stale Tickets <small class="text-muted fw-normal">(7+ days)</small></h5>
             </div>
             <div class="list-group list-group-flush">
                 <?php while ($row = mysqli_fetch_assoc($sql_stale_tickets)):
@@ -388,9 +451,9 @@ if ($has_stale || $has_expiring || $has_expired):
                 <a href="ticket.php?client_id=<?= $client_id ?>&ticket_id=<?= $tid ?>"
                     class="list-group-item list-group-item-action py-2">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted small mr-2 text-nowrap"><?= $tnum ?></span>
+                        <span class="text-muted small me-2 text-nowrap"><?= $tnum ?></span>
                         <span class="flex-grow-1 text-dark text-truncate"><?= $tsubj ?></span>
-                        <span class="text-muted small ml-2 text-nowrap"><?= $tago ?></span>
+                        <span class="text-muted small ms-2 text-nowrap"><?= $tago ?></span>
                     </div>
                 </a>
                 <?php endwhile; ?>
@@ -400,10 +463,10 @@ if ($has_stale || $has_expiring || $has_expired):
     <?php endif; ?>
 
     <?php if ($has_expiring): ?>
-    <div class="col-md-4">
+    <div class="<?= $alert_col_class ?>">
         <div class="card mb-3" style="border-left:4px solid #fd7e14">
             <div class="card-header p-2">
-                <h5 class="card-title mb-0" style="color:#fd7e14"><i class="fas fa-fw fa-exclamation-triangle mr-2"></i>Expiring (45 days)</h5>
+                <h5 class="card-title mb-0" style="color:#fd7e14"><i class="fas fa-fw fa-exclamation-triangle me-2"></i>Expiring (45 days)</h5>
             </div>
             <div class="list-group list-group-flush">
                 <?php
@@ -411,20 +474,20 @@ if ($has_stale || $has_expiring || $has_expired):
                     $name = nullable_htmlentities($row['domain_name']);
                     $date = nullable_htmlentities($row['domain_expire']);
                     $ago  = timeAgo($row['domain_expire']);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-globe text-muted mr-1'></i><a href='domains.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-warning ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Domain &middot; $date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-globe text-muted me-1'></i><a href='domains.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-warning ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Domain &middot; $date</div></div>";
                 }
                 while ($row = mysqli_fetch_assoc($sql_certificates_expiring)) {
                     $name = nullable_htmlentities($row['certificate_name']);
                     $date = nullable_htmlentities($row['certificate_expire']);
                     $ago  = timeAgo($row['certificate_expire']);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-lock text-muted mr-1'></i><a href='certificates.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-warning ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Certificate &middot; $date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-lock text-muted me-1'></i><a href='certificates.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-warning ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Certificate &middot; $date</div></div>";
                 }
                 while ($row = mysqli_fetch_assoc($sql_asset_warranties_expiring)) {
                     $aid  = intval($row['asset_id']);
                     $name = nullable_htmlentities($row['asset_name']);
                     $date = nullable_htmlentities($row['asset_warranty_expire']);
                     $ago  = timeAgo($row['asset_warranty_expire']);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-laptop text-muted mr-1'></i><a href='asset_details.php?client_id=$client_id&asset_id=$aid'>$name</a></span><small class='text-warning ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Warranty &middot; $date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-laptop text-muted me-1'></i><a href='asset_details.php?client_id=$client_id&asset_id=$aid'>$name</a></span><small class='text-warning ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Warranty &middot; $date</div></div>";
                 }
                 while ($row = mysqli_fetch_assoc($sql_asset_retire)) {
                     $aid         = intval($row['asset_id']);
@@ -432,13 +495,13 @@ if ($has_stale || $has_expiring || $has_expired):
                     $install     = $row['asset_install_date'];
                     $retire_date = date('Y-m-d', strtotime($install . ' + 7 years'));
                     $ago         = timeAgo($retire_date);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-desktop text-muted mr-1'></i><a href='asset_details.php?client_id=$client_id&asset_id=$aid'>$name</a></span><small class='text-warning ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Retiring &middot; $retire_date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-desktop text-muted me-1'></i><a href='asset_details.php?client_id=$client_id&asset_id=$aid'>$name</a></span><small class='text-warning ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Retiring &middot; $retire_date</div></div>";
                 }
                 while ($row = mysqli_fetch_assoc($sql_licenses_expiring)) {
                     $name = nullable_htmlentities($row['software_name']);
                     $date = nullable_htmlentities($row['software_expire']);
                     $ago  = timeAgo($row['software_expire']);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-cube text-muted mr-1'></i><a href='software.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-warning ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>License &middot; $date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-cube text-muted me-1'></i><a href='software.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-warning ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>License &middot; $date</div></div>";
                 }
                 ?>
             </div>
@@ -447,10 +510,10 @@ if ($has_stale || $has_expiring || $has_expired):
     <?php endif; ?>
 
     <?php if ($has_expired): ?>
-    <div class="col-md-4">
+    <div class="<?= $alert_col_class ?>">
         <div class="card mb-3" style="border-left:4px solid #dc3545">
             <div class="card-header p-2">
-                <h5 class="card-title text-danger mb-0"><i class="fas fa-fw fa-times-circle mr-2"></i>Expired</h5>
+                <h5 class="card-title text-danger mb-0"><i class="fas fa-fw fa-times-circle me-2"></i>Expired</h5>
             </div>
             <div class="list-group list-group-flush">
                 <?php
@@ -458,20 +521,20 @@ if ($has_stale || $has_expiring || $has_expired):
                     $name = nullable_htmlentities($row['domain_name']);
                     $date = nullable_htmlentities($row['domain_expire']);
                     $ago  = timeAgo($row['domain_expire']);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-globe text-muted mr-1'></i><a href='domains.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-danger ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Domain &middot; $date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-globe text-muted me-1'></i><a href='domains.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-danger ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Domain &middot; $date</div></div>";
                 }
                 while ($row = mysqli_fetch_assoc($sql_certificates_expired)) {
                     $name = nullable_htmlentities($row['certificate_name']);
                     $date = nullable_htmlentities($row['certificate_expire']);
                     $ago  = timeAgo($row['certificate_expire']);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-lock text-muted mr-1'></i><a href='certificates.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-danger ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Certificate &middot; $date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-lock text-muted me-1'></i><a href='certificates.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-danger ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Certificate &middot; $date</div></div>";
                 }
                 while ($row = mysqli_fetch_assoc($sql_asset_warranties_expired)) {
                     $aid  = intval($row['asset_id']);
                     $name = nullable_htmlentities($row['asset_name']);
                     $date = nullable_htmlentities($row['asset_warranty_expire']);
                     $ago  = timeAgo($row['asset_warranty_expire']);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-laptop text-muted mr-1'></i><a href='asset_details.php?client_id=$client_id&asset_id=$aid'>$name</a></span><small class='text-danger ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Warranty &middot; $date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-laptop text-muted me-1'></i><a href='asset_details.php?client_id=$client_id&asset_id=$aid'>$name</a></span><small class='text-danger ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Warranty &middot; $date</div></div>";
                 }
                 while ($row = mysqli_fetch_assoc($sql_asset_retired)) {
                     $aid         = intval($row['asset_id']);
@@ -479,13 +542,13 @@ if ($has_stale || $has_expiring || $has_expired):
                     $install     = $row['asset_install_date'];
                     $retire_date = date('Y-m-d', strtotime($install . ' + 7 years'));
                     $ago         = timeAgo($retire_date);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-desktop text-muted mr-1'></i><a href='asset_details.php?client_id=$client_id&asset_id=$aid'>$name</a></span><small class='text-danger ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Retired &middot; $retire_date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-desktop text-muted me-1'></i><a href='asset_details.php?client_id=$client_id&asset_id=$aid'>$name</a></span><small class='text-danger ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>Retired &middot; $retire_date</div></div>";
                 }
                 while ($row = mysqli_fetch_assoc($sql_licenses_expired)) {
                     $name = nullable_htmlentities($row['software_name']);
                     $date = nullable_htmlentities($row['software_expire']);
                     $ago  = timeAgo($row['software_expire']);
-                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-cube text-muted mr-1'></i><a href='software.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-danger ml-2 text-nowrap'>$ago</small></div><div class='text-muted small'>License &middot; $date</div></div>";
+                    echo "<div class='list-group-item py-2'><div class='d-flex justify-content-between'><span><i class='fas fa-fw fa-cube text-muted me-1'></i><a href='software.php?client_id=$client_id&q=$name'>$name</a></span><small class='text-danger ms-2 text-nowrap'>$ago</small></div><div class='text-muted small'>License &middot; $date</div></div>";
                 }
                 ?>
             </div>
@@ -499,10 +562,10 @@ if ($has_stale || $has_expiring || $has_expired):
 <!-- ── Shared Items ──────────────────────────────────────────────────────── -->
 <?php if (mysqli_num_rows($sql_shared_items) > 0): ?>
 <div class="row">
-    <div class="col-md-6">
-        <div class="card card-dark mb-3">
+    <div class="col-md-12">
+        <div class="card mb-3">
             <div class="card-header p-2">
-                <h5 class="card-title"><i class="fa fa-fw fa-share-square mr-2"></i>Shared Items</h5>
+                <h5 class="card-title"><i class="fa fa-fw fa-share-square me-2"></i>Shared Items</h5>
             </div>
             <div class="card-body p-2">
                 <table class="table table-borderless table-sm">
@@ -531,7 +594,7 @@ if ($has_stale || $has_expiring || $has_expired):
                         }
                     ?>
                     <tr>
-                        <td title="<?= $item_type ?>"><i class="<?= $item_icon ?> mr-2 text-secondary"></i><?= $item_name ?></td>
+                        <td title="<?= $item_type ?>"><i class="<?= $item_icon ?> me-2 text-secondary"></i><?= $item_name ?></td>
                         <td>
                             <div>Views: <?= $item_views ?></div>
                             <div class="text-secondary"><?= $item_recipient ?></div>
@@ -539,7 +602,7 @@ if ($has_stale || $has_expiring || $has_expired):
                         <td title="Expires at <?= $item_expire_at ?>">Expires <?= $item_expire_at_human ?></td>
                         <td title="Deactivate Link">
                             <a class="text-danger confirm-link" href="post.php?deactivate_shared_item=<?= $item_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                <i class="fas fa-fw fa-calendar-times mr-2"></i>
+                                <i class="fas fa-fw fa-calendar-times me-2"></i>
                             </a>
                         </td>
                     </tr>
@@ -567,11 +630,11 @@ if (!empty($config_comet_enabled)) {
 <div class="card card-dark mt-3">
     <div class="card-header py-2 d-flex align-items-center">
         <h3 class="card-title mr-auto">
-            <i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Comet Backup
-            <small class="text-muted ml-2"><?= htmlspecialchars($c_username) ?></small>
+            <i class="fas fa-fw fa-cloud-upload-alt me-2"></i>Comet Backup
+            <small class="text-muted ms-2"><?= htmlspecialchars($c_username) ?></small>
         </h3>
         <a href="/admin/comet_status.php" class="btn btn-xs btn-outline-secondary">
-            <i class="fas fa-expand-alt mr-1"></i>Full View
+            <i class="fas fa-expand-alt me-1"></i>Full View
         </a>
     </div>
     <div class="card-body p-0">
@@ -581,7 +644,7 @@ if (!empty($config_comet_enabled)) {
         <table class="table table-sm table-borderless table-hover mb-0">
             <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;" class="text-muted border-bottom">
                 <tr>
-                    <th class="pl-3" style="width:30px;"></th>
+                    <th class="ps-3" style="width:30px;"></th>
                     <th>Device</th>
                     <th>Status</th>
                     <th>Last Backup</th>
@@ -602,8 +665,8 @@ if (!empty($config_comet_enabled)) {
                 $err = !empty($job['ErrorString']) ? htmlspecialchars(mb_strimwidth($job['ErrorString'], 0, 60, '…')) : '';
             ?>
             <tr>
-                <td class="pl-3 text-center"><i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i></td>
-                <td class="small font-weight-bold"><?= htmlspecialchars($dev_name) ?></td>
+                <td class="ps-3 text-center"><i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i></td>
+                <td class="small fw-bold"><?= htmlspecialchars($dev_name) ?></td>
                 <td>
                     <span class="badge badge-<?= $sc ?>"><?= $sl ?></span>
                     <?php if ($err): ?><span class="text-danger small d-block"><?= $err ?></span><?php endif; ?>
@@ -624,7 +687,7 @@ if (!empty($config_comet_enabled)) {
 
 <script src="js/credential_show_otp_via_id.js"></script>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 function updateClientNotes(client_id) {
     var notes = document.getElementById("clientNotes").value;
     jQuery.post("ajax.php", {
@@ -634,6 +697,10 @@ function updateClientNotes(client_id) {
         notes: notes
     });
 }
+document.addEventListener('blur', function (e) {
+    var el = e.target.closest && e.target.closest('.js-update-client-notes');
+    if (el) { updateClientNotes(el.dataset.clientId); }
+}, true);
 </script>
 
 <?php require_once "../includes/footer.php"; ?>

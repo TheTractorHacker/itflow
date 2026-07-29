@@ -10,6 +10,8 @@ if (isset($_POST['add_calendar'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
+    enforceUserPermission('module_support', 2);
+
     $name = sanitizeInput($_POST['name']);
     $color = sanitizeInput($_POST['color']);
 
@@ -29,6 +31,8 @@ if (isset($_POST['edit_calendar'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
+    enforceUserPermission('module_support', 2);
+
     $calendar_id = intval($_POST['calendar_id']);
     $name = sanitizeInput($_POST['name']);
     $color = sanitizeInput($_POST['color']);
@@ -46,6 +50,8 @@ if (isset($_POST['edit_calendar'])) {
 if (isset($_GET['delete_calendar'])) {
 
     validateCSRFToken($_GET['csrf_token']);
+
+    enforceUserPermission('module_support', 3);
 
     $calendar_id = intval($_GET['delete_calendar']);
 
@@ -151,12 +157,23 @@ if (isset($_POST['edit_event'])) {
 
     require_once 'event_model.php';
 
+    $event_id = intval($_POST['event_id']);
+
+    // Enforce access based on the event's EXISTING client, not just the
+    // newly-submitted one - otherwise the check can be bypassed by
+    // omitting/zeroing client_id in the POST body while still updating an
+    // event that belongs to a client the user isn't permitted to access.
+    $sql_existing_event = mysqli_query($mysqli, "SELECT event_client_id FROM calendar_events WHERE event_id = $event_id");
+    $existing_event = mysqli_fetch_assoc($sql_existing_event);
+    $existing_client_id = intval($existing_event['event_client_id']);
+    if ($existing_client_id) {
+        enforceClientAccess($existing_client_id);
+    }
+
     // Don't Enforce Client Access if Calendar event doesn't have a client
     if ($client_id) {
         enforceClientAccess();
     }
-
-    $event_id = intval($_POST['event_id']);
 
     mysqli_query($mysqli,"UPDATE calendar_events SET event_title = '$title', event_location = '$location', event_description = '$description', event_start = '$start', event_end = '$end', event_repeat = '$repeat', event_calendar_id = $calendar_id, event_client_id = $client_id WHERE event_id = $event_id");
 

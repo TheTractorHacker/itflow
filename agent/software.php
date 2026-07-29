@@ -63,23 +63,23 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-cube mr-2"></i>Software & Licenses</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-cube me-2"></i>Software & Licenses</h3>
             <div class="card-tools">
                 <div class="btn-group">
                     <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/software/software_add.php?<?= $client_url ?>">
-                        <i class="fas fa-plus mr-2"></i>New License
+                        <i class="fas fa-plus me-2"></i>New License
                     </button>
-                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                     <div class="dropdown-menu">
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/software/software_add_from_template.php?<?= $client_url ?>">
-                            <i class="fas fa-fw fa-puzzle-piece mr-2"></i>Create from Template
+                            <i class="fas fa-fw fa-puzzle-piece me-2"></i>Create from Template
                         </a>
                         <?php if ($num_rows[0] > 0) { ?>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item text-dark ajax-modal" href="#"
                                 data-modal-url="modals/software/software_export.php?<?= $client_url ?>">
-                                <i class="fa fa-fw fa-download mr-2"></i>Export
+                                <i class="fa fa-fw fa-download me-2"></i>Export
                             </a>
                         <?php } ?>
                     </div>
@@ -108,7 +108,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     <?php } else { ?>
                     <div class="col-md-2">
                         <div class="input-group mb-3 mb-md-0">
-                            <select class="form-control select2" name="client" onchange="this.form.submit()">
+                            <select class="form-control select2 auto-submit-select" name="client">
                                 <option value="" <?php if ($client == "") { echo "selected"; } ?>>- All Clients -</option>
 
                                 <?php
@@ -135,10 +135,10 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     <?php } ?>
 
                     <div class="col-md-6">
-                        <div class="float-right">
+                        <div class="float-end">
                             <a href="?<?php echo $client_url; ?>archived=<?php if($archived == 1){ echo 0; } else { echo 1; } ?>"
                                 class="btn btn-<?php if($archived == 1){ echo "primary"; } else { echo "default"; } ?>">
-                                <i class="fa fa-fw fa-archive mr-2"></i>Archived
+                                <i class="fa fa-fw fa-archive me-2"></i>Archived
                             </a>
                         </div>
                     </div>
@@ -267,7 +267,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td>
                                 <a class="text-dark ajax-modal" href="#" data-modal-url="modals/software/software_edit.php?id=<?= $software_id ?>">
                                     <div class="media">
-                                        <i class="fa fa-fw fa-2x fa-cube mr-3"></i>
+                                        <i class="fa fa-fw fa-2x fa-cube me-3"></i>
                                         <div class="media-body">
                                             <div><?php echo "$software_name <span>$software_version</span>"; ?></div>
                                             <div><small class="text-secondary"><?php echo $software_description; ?></small></div>
@@ -285,22 +285,22 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <?php } ?>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" data-bs-toggle="dropdown" data-boundary="window">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/software/software_edit.php?id=<?= $software_id ?>"
                                             >
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger confirm-link" href="post.php?archive_software=<?php echo $software_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-archive mr-2"></i>Archive and<br><small>Remove Licenses</small></a>
+                                            <i class="fas fa-fw fa-archive me-2"></i>Archive and<br><small>Remove Licenses</small></a>
                                         <?php if ($session_user_role == 3) { ?>
                                             <?php if ($config_destructive_deletes_enable) { ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_software=<?php echo $software_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-trash mr-2"></i>Delete and<br><small>Remove Licenses</small></a>
+                                                <i class="fas fa-fw fa-trash me-2"></i>Delete and<br><small>Remove Licenses</small></a>
                                             <?php } ?>
                                         <?php } ?>
                                     </div>

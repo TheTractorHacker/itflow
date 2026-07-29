@@ -8,6 +8,11 @@ $year  = isset($_GET['year']) ? intval($_GET['year']) : intval(date('Y'));
 $month = isset($_GET['month']) ? intval($_GET['month']) : null;
 $month_filter = $month ? "AND MONTH(t.ticket_created_at) = $month" : "";
 
+// A legacy API key deliberately restricted to one client ($api_key_client_id) must never
+// see another client's (or the whole company's) ticket breakdown - an unrestricted key
+// keeps the same company-wide behavior as before.
+$client_filter = !empty($api_key_client_id) ? " AND c.client_id = " . intval($api_key_client_id) : '';
+
 $sql = mysqli_query($mysqli,
     "SELECT
         c.client_id, c.client_name,
@@ -32,7 +37,7 @@ $sql = mysqli_query($mysqli,
           AND tr.ticket_reply_time_worked IS NOT NULL
         GROUP BY tt.ticket_client_id
      ) tw ON tw.client_id = c.client_id
-     WHERE c.client_archived_at IS NULL
+     WHERE c.client_archived_at IS NULL$client_filter
      GROUP BY c.client_id, c.client_name, tw.seconds_worked
      HAVING raised > 0
      ORDER BY raised DESC"

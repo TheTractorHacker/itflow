@@ -6,6 +6,10 @@
 
 defined('FROM_POST_HANDLER') || die("Direct file access is not allowed");
 
+// Accounting (QuickBooks Online) one-way sync enqueue helper. No-ops unless the
+// accounting module + a connected integration with auto-push are configured.
+require_once __DIR__ . '/../../includes/accounting_functions.php';
+
 if (isset($_POST['add_payment'])) {
 
     validateCSRFToken($_POST['csrf_token']);
@@ -14,7 +18,6 @@ if (isset($_POST['add_payment'])) {
     enforceUserPermission('module_financial', 2);
 
     $invoice_id = intval($_POST['invoice_id']);
-    $balance = floatval($_POST['balance']);
     $date = sanitizeInput($_POST['date']);
     $amount = floatval($_POST['amount']);
     $account = intval($_POST['account']);
@@ -26,6 +29,13 @@ if (isset($_POST['add_payment'])) {
     $client_id = intval(getFieldById('invoices', $invoice_id, 'invoice_client_id'));
 
     enforceClientAccess();
+
+    // Recomputed server-side - the submitted $_POST['balance'] is client-controlled and
+    // could be inflated to let an overpayment/negative-balance payment row through.
+    $balance_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT invoice_amount - IFNULL((SELECT SUM(payment_amount) FROM payments WHERE payment_invoice_id = invoice_id), 0) AS balance
+         FROM invoices WHERE invoice_id = $invoice_id LIMIT 1"));
+    $balance = $balance_row ? floatval($balance_row['balance']) : 0;
 
     //Check to see if amount entered is greater than the balance of the invoice
     if ($amount > $balance) {
@@ -167,6 +177,10 @@ if (isset($_POST['add_payment'])) {
         logAction("Invoice", "Payment", "Payment amount of " . numfmt_format_currency($currency_format, $amount, $invoice_currency_code) . " added to invoice $invoice_prefix$invoice_number", $client_id, $invoice_id);
 
         customAction('invoice_pay', $invoice_id);
+
+        // Enqueue a one-way push of this payment to the accounting provider
+        // (the worker resolves the invoice dependency first).
+        enqueueAccountingSync($mysqli, 'payment', $payment_id);
 
         flash_alert("Payment amount <strong>" . numfmt_format_currency($currency_format, $amount, $invoice_currency_code) . "</strong> added");
 
@@ -368,10 +382,17 @@ if (isset($_POST['add_payment_stripe'])) {
     $config_invoice_from_name = sanitizeInput($config_invoice_from_name);
     $config_invoice_from_email = sanitizeInput($config_invoice_from_email);
 
-    // Get Client Payment Details
-    $sql = mysqli_query($mysqli, "SELECT * FROM client_saved_payment_methods LEFT JOIN payment_providers ON saved_payment_provider_id = payment_provider_id LEFT JOIN client_payment_provider ON saved_payment_client_id = client_id WHERE saved_payment_id = $saved_payment_id LIMIT 1");
+    // Get Client Payment Details - must belong to THIS invoice's client, otherwise a
+    // saved_payment_id belonging to a different client could be charged for this invoice.
+    $sql = mysqli_query($mysqli, "SELECT * FROM client_saved_payment_methods LEFT JOIN payment_providers ON saved_payment_provider_id = payment_provider_id LEFT JOIN client_payment_provider ON saved_payment_client_id = client_id WHERE saved_payment_id = $saved_payment_id AND saved_payment_client_id = $client_id LIMIT 1");
     $row = mysqli_fetch_assoc($sql);
 
+    if (!$row) {
+        flash_alert("Saved payment method not found", 'error');
+        redirect();
+    }
+
+    $provider_id = intval($row['payment_provider_id']);
     $public_key = sanitizeInput($row['payment_provider_public_key']);
     $private_key = sanitizeInput($row['payment_provider_private_key']);
     $account_id = intval($row['payment_provider_account']);
@@ -395,16 +416,20 @@ if (isset($_POST['add_payment_stripe'])) {
         redirect();
     }
 
-    // Initialize Stripe
-    require_once __DIR__ . '/../../plugins/stripe-php/init.php';
-    $stripe = new \Stripe\StripeClient($private_key);
+    // Initialize the payment provider (Stripe) via the factory
+    require_once __DIR__ . '/../../includes/payment_provider_factory.php';
+    $provider = getPaymentProvider($provider_id);
 
     $balance_to_pay = round($invoice_amount, 2);
     $pi_description = "ITFlow: $client_name payment of $invoice_currency_code $balance_to_pay for $invoice_prefix$invoice_number";
 
-    // Create a payment intent
+    // Charge the saved payment method (off-session). The idempotency key is stable for
+    // one minute so a double-click/browser-retry of this same submission collapses into
+    // a single Stripe charge instead of billing the card twice; a genuinely new attempt
+    // after that window (e.g. retried later after fixing something) gets a fresh key.
+    $idempotency_key = md5("agent_pay_stripe_{$invoice_id}_{$saved_payment_id}_" . intdiv(time(), 60));
     try {
-        $payment_intent = $stripe->paymentIntents->create([
+        $payment_intent = $provider->chargeSavedMethod([
             'amount' => intval($balance_to_pay * 100), // Times by 100 as Stripe expects values in cents
             'currency' => $invoice_currency_code,
             'customer' => $payment_provider_client,
@@ -418,7 +443,7 @@ if (isset($_POST['add_payment_stripe'])) {
                 'itflow_invoice_number' => $invoice_prefix . $invoice_number,
                 'itflow_invoice_id' => $invoice_id,
             ]
-        ]);
+        ], $idempotency_key);
 
         // Get details from PI
         $pi_id = sanitizeInput($payment_intent->id);
@@ -440,7 +465,11 @@ if (isset($_POST['add_payment_stripe'])) {
 
         // Add Payment to History
         mysqli_query($mysqli, "INSERT INTO payments SET payment_date = '$pi_date', payment_amount = $pi_amount_paid, payment_currency_code = '$pi_currency', payment_account_id = $account_id, payment_method = 'Stripe', payment_reference = 'Stripe - $pi_id', payment_invoice_id = $invoice_id");
+        $stripe_payment_id = mysqli_insert_id($mysqli);
         mysqli_query($mysqli, "INSERT INTO history SET history_status = 'Paid', history_description = 'Online Payment added (agent)', history_invoice_id = $invoice_id");
+
+        // Enqueue a one-way push of this payment to the accounting provider.
+        enqueueAccountingSync($mysqli, 'payment', intval($stripe_payment_id));
 
         // Email receipt
         if ((!empty($config_smtp_host) || !empty($config_smtp_provider))) {
@@ -784,6 +813,9 @@ if (isset($_POST['add_bulk_payment'])) {
         $email_body_invoices .= "<br>Invoice <a href=\'https://$config_base_url/guest/guest_view_invoice.php?invoice_id=$invoice_id&url_key=$invoice_url_key\'>$invoice_prefix$invoice_number</a> - Outstanding Amount: " . numfmt_format_currency($currency_format, $invoice_balance, $currency_code) . " - Payment Applied: " . numfmt_format_currency($currency_format, $payment_amount, $currency_code) . " - New Balance: " . numfmt_format_currency($currency_format, $remaining_invoice_balance, $currency_code);
 
         customAction('invoice_pay', $invoice_id);
+
+        // Enqueue a one-way push of this payment to the accounting provider.
+        enqueueAccountingSync($mysqli, 'payment', $payment_id);
 
     } // End Invoice Loop
 

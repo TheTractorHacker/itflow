@@ -6,6 +6,10 @@
 
 defined('FROM_POST_HANDLER') || die("Direct file access is not allowed");
 
+// Accounting (QuickBooks Online) one-way sync enqueue helper. No-ops unless the
+// accounting module + a connected integration with auto-push are configured.
+require_once __DIR__ . '/../../includes/accounting_functions.php';
+
 if (isset($_POST['add_invoice'])) {
 
     validateCSRFToken($_POST['csrf_token']);
@@ -186,6 +190,9 @@ if (isset($_GET['mark_invoice_sent'])) {
     mysqli_query($mysqli,"INSERT INTO history SET history_status = 'Sent', history_description = 'Invoice marked sent by $session_name', history_invoice_id = $invoice_id");
 
     logAction("Invoice", "Edit", "$session_name marked invoice $invoice_prefix$invoice_number sent", $client_id, $invoice_id);
+
+    // Invoice finalized (-> Sent): enqueue a one-way push to the accounting provider.
+    enqueueAccountingSync($mysqli, 'invoice', $invoice_id);
 
     flash_alert("Invoice marked sent");
 
@@ -612,6 +619,9 @@ if (isset($_GET['email_invoice'])) {
     if ($invoice_status == 'Draft') {
         mysqli_query($mysqli,"UPDATE invoices SET invoice_status = 'Sent' WHERE invoice_id = $invoice_id");
     }
+
+    // Invoice finalized (emailed / -> Sent): enqueue a one-way push to accounting.
+    enqueueAccountingSync($mysqli, 'invoice', $invoice_id);
 
     logAction("Invoice", "Email", "$session_name Emailed $contact_email Invoice $invoice_prefix$invoice_number Email queued to Email ID: $email_id", $client_id, $invoice_id);
 

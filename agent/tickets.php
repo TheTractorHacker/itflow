@@ -374,7 +374,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
         <div class="col-lg-2 mb-3">
             <div class="card card-dark h-100">
                 <div class="card-header py-2 d-flex align-items-center justify-content-between">
-                    <h3 class="card-title mt-0 mb-0"><i class="fa fa-fw fa-thumbtack mr-2"></i>Ticket Views</h3>
+                    <h3 class="card-title mt-0 mb-0"><i class="fa fa-fw fa-thumbtack me-2"></i>Ticket Views</h3>
                     <button type="button" class="btn btn-sm btn-outline-secondary ajax-modal" title="Save current view"
                         data-modal-url="modals/ticket/ticket_saved_view_add.php?<?= htmlspecialchars(http_build_query($_GET)) ?>">
                         <i class="fas fa-plus"></i>
@@ -392,20 +392,20 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                             $_can_edit = ($_view_owner == $session_user_id) || ($_view_owner == 0 && lookupUserPermission("module_support") === 3);
                         ?>
                         <li class="nav-item d-flex align-items-center">
-                            <a class="nav-link flex-grow-1 <?= $_view_active ? 'active' : '' ?>" href="?<?= $_view_query ?>">
-                                <i class="fas fa-fw <?= $_view_icon ?> mr-2"></i><?= $_view_name ?>
+                            <a class="nav-link flex-grow-1 <?= $_view_active ? 'active' : '' ?>" href="?<?= htmlspecialchars($_view_query, ENT_QUOTES) ?>">
+                                <i class="fas fa-fw <?= $_view_icon ?> me-2"></i><?= $_view_name ?>
                             </a>
                             <?php if ($_can_edit) { ?>
                             <div class="dropdown saved-view-actions">
-                                <button class="btn btn-sm btn-link text-secondary p-0 px-1" type="button" data-toggle="dropdown">
+                                <button class="btn btn-sm btn-link text-secondary p-0 px-1" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-fw fa-ellipsis-v"></i>
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-right">
-                                    <a class="dropdown-item" href="post.php?move_ticket_saved_view_up=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-arrow-up mr-2"></i>Move Up</a>
-                                    <a class="dropdown-item" href="post.php?move_ticket_saved_view_down=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-arrow-down mr-2"></i>Move Down</a>
-                                    <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/ticket/ticket_saved_view_edit.php?id=<?= $_view_id ?>"><i class="fas fa-fw fa-edit mr-2"></i>Rename</a>
+                                    <a class="dropdown-item" href="post.php?move_ticket_saved_view_up=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-arrow-up me-2"></i>Move Up</a>
+                                    <a class="dropdown-item" href="post.php?move_ticket_saved_view_down=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-arrow-down me-2"></i>Move Down</a>
+                                    <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/ticket/ticket_saved_view_edit.php?id=<?= $_view_id ?>"><i class="fas fa-fw fa-edit me-2"></i>Rename</a>
                                     <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item text-danger confirm-link" href="post.php?delete_ticket_saved_view=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-trash mr-2"></i>Delete</a>
+                                    <a class="dropdown-item text-danger confirm-link" href="post.php?delete_ticket_saved_view=<?= $_view_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-trash me-2"></i>Delete</a>
                                 </div>
                             </div>
                             <?php } ?>
@@ -425,7 +425,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                         ?>
                         <li class="nav-item">
                             <a class="nav-link <?= ($board_filter == $_board_id) ? 'active' : '' ?>" href="?<?= $client_url ?>board=<?= $_board_id ?>&status=Open">
-                                <i class="fas fa-fw fa-layer-group mr-2"></i><?= $_board_name ?>
+                                <i class="fas fa-fw fa-layer-group me-2"></i><?= $_board_name ?>
                             </a>
                         </li>
                         <?php } ?>
@@ -464,24 +464,24 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fa fa-fw fa-life-ring mr-2"></i>Tickets
-                <small class="ml-3">
-                    <a href="?<?= $client_url ?>status=Open" class="badge badge-pill p-1 <?= $status == 'Open' ? 'badge-light text-dark' : 'badge-secondary text-light' ?>"><strong><?= $total_tickets_open ?></strong> Open</a> |
-                    <a href="?<?= $client_url ?>status=Closed" class="badge badge-pill p-1 <?= $status == 'Closed' ? 'badge-light text-dark' : 'badge-secondary text-light' ?>"><strong><?= $total_tickets_closed ?></strong> Closed</a>
+            <h3 class="card-title mt-2"><i class="fa fa-fw fa-life-ring me-2"></i>Tickets
+                <small class="ms-3">
+                    <a href="?<?= $client_url ?>status=Open" class="badge rounded-pill p-1 <?= $status == 'Open' ? 'text-bg-light text-dark' : 'text-bg-secondary text-light' ?>"><strong><?= $total_tickets_open ?></strong> Open</a> |
+                    <a href="?<?= $client_url ?>status=Closed" class="badge rounded-pill p-1 <?= $status == 'Closed' ? 'text-bg-light text-dark' : 'text-bg-secondary text-light' ?>"><strong><?= $total_tickets_closed ?></strong> Closed</a>
                 </small>
             </h3>
             <?php if (lookupUserPermission("module_support") >= 2) { ?>
                 <div class="card-tools">
                     <div class="btn-group">
                         <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/ticket/ticket_add_v2.php?<?= $client_url ?>" data-modal-size="lg">
-                            <i class="fas fa-plus"></i><span class="d-none d-lg-inline ml-2">New Ticket</span>
+                            <i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-2">New Ticket</span>
                         </button>
                         <?php if ($num_rows[0] > 0) { ?>
-                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                         <div class="dropdown-menu">
                             <a class="dropdown-item text-dark ajax-modal" href="#"
                                 data-modal-url="modals/ticket/ticket_export.php?<?= $client_url ?>">
-                                <i class="fa fa-fw fa-download mr-2"></i>Export
+                                <i class="fa fa-fw fa-download me-2"></i>Export
                             </a>
                         </div>
                         <?php } ?>
@@ -508,7 +508,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                 <div class="filter-toolbar">
                 <div class="row align-items-center filter-row-nowrap">
                     <div class="col-auto mb-2">
-                        <select class="form-control select2" name="board" onchange="this.form.submit()" data-placeholder="Board" style="width:150px;">
+                        <select class="form-control select2 auto-submit-select" name="board" data-placeholder="Board" style="width:150px;">
                             <option value="">- All Boards -</option>
                             <?php
                             while ($row = mysqli_fetch_assoc($sql_boards_filter)) {
@@ -520,7 +520,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                         </select>
                     </div>
                     <div class="col-auto mb-2">
-                        <select class="form-control select2" name="category" onchange="this.form.submit()" data-placeholder="Category" style="width:170px;">
+                        <select class="form-control select2 auto-submit-select" name="category" data-placeholder="Category" style="width:170px;">
                             <option value="">- All Categories -</option>
                             <?php
                             while ($row = mysqli_fetch_assoc($sql_categories_filter)) {
@@ -532,7 +532,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                         </select>
                     </div>
                     <div class="col-auto mb-2">
-                        <select class="form-control select2" name="status" onchange="this.form.submit()" data-placeholder="Status" style="width:140px;">
+                        <select class="form-control select2 auto-submit-select" name="status" data-placeholder="Status" style="width:140px;">
                             <option value="Open" <?= $status === 'Open' ? 'selected' : '' ?>>All Open</option>
                             <option value="Closed" <?= $status === 'Closed' ? 'selected' : '' ?>>All Closed</option>
                             <?php
@@ -545,7 +545,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                         </select>
                     </div>
                     <div class="col-auto mb-2">
-                        <select class="form-control select2" name="priority" onchange="this.form.submit()" id="priorityFilterSelect" data-placeholder="Priority" style="width:150px;">
+                        <select class="form-control select2 auto-submit-select" name="priority" id="priorityFilterSelect" data-placeholder="Priority" style="width:150px;">
                             <option value="">All Priorities</option>
                             <option value="High" data-dot="high" <?= $priority_filter === 'High' ? 'selected' : '' ?>>High</option>
                             <option value="Medium" data-dot="medium" <?= $priority_filter === 'Medium' ? 'selected' : '' ?>>Medium</option>
@@ -561,7 +561,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                         </div>
                     </div>
                     <div class="col-auto mb-2">
-                        <select class="form-control select2" name="tags[]" data-placeholder="Tags Filter" multiple onchange="this.form.submit()" style="width:160px;">
+                        <select class="form-control select2 auto-submit-select" name="tags[]" data-placeholder="Tags Filter" multiple style="width:160px;">
                             <?php
                             while ($row = mysqli_fetch_assoc($sql_ticket_tags_filter)) {
                                 $tag_id = intval($row['tag_id']);
@@ -572,10 +572,10 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                         </select>
                     </div>
                     <div class="col-auto mb-2">
-                        <a href="?<?= $client_url ?>" class="btn btn-outline-secondary"><i class="fas fa-undo mr-1"></i>Reset Filters</a>
+                        <a href="?<?= $client_url ?>" class="btn btn-outline-secondary"><i class="fas fa-undo me-1"></i>Reset Filters</a>
                     </div>
                     <div class="col-auto mb-2">
-                        <button class="btn btn-outline-dark" type="button" data-toggle="collapse" data-target="#advancedFilter"><i class="fas fa-sliders-h mr-1"></i>More Filters</button>
+                        <button class="btn btn-outline-dark" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilter"><i class="fas fa-sliders-h me-1"></i>More Filters</button>
                     </div>
                 </div>
                 </div>
@@ -584,58 +584,58 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                     <div class="col-12">
                         <div class="btn-group">
                             <?php if (lookupUserPermission("module_support") >= 2) { ?>
-                                <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                                    <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                        <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
+                                <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                                    <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_assign.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-user-check mr-2"></i>Assign Agent
+                                            <i class="fas fa-fw fa-user-check me-2"></i>Assign Agent
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_edit_category.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-layer-group mr-2"></i>Set Category
+                                            <i class="fas fa-fw fa-layer-group me-2"></i>Set Category
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_edit_priority.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-thermometer-half mr-2"></i>Set Priority
+                                            <i class="fas fa-fw fa-thermometer-half me-2"></i>Set Priority
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_reply.php"
                                             data-modal-size="lg"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-paper-plane mr-2"></i>Update/Reply
+                                            <i class="fas fa-fw fa-paper-plane me-2"></i>Update/Reply
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_add_project.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-project-diagram mr-2"></i>Set Project
+                                            <i class="fas fa-fw fa-project-diagram me-2"></i>Set Project
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_merge.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-clone mr-2"></i>Merge
+                                            <i class="fas fa-fw fa-clone me-2"></i>Merge
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_resolve.php"
                                             data-modal-size="lg"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-check mr-2"></i>Resolve
+                                            <i class="fas fa-fw fa-check me-2"></i>Resolve
                                         </a>
                                         <?php if (lookupUserPermission("module_support") === 3) { ?>
                                         <div class="dropdown-divider"></div>
                                         <button class="dropdown-item text-danger text-bold confirm-link" type="submit" form="bulkActions" name="bulk_delete_tickets">
-                                            <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash me-2"></i>Delete
                                         </button>
                                         <?php } ?>
                                     </div>
@@ -668,7 +668,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Assigned to</label>
-                                <select onchange="this.form.submit()" class="form-control select2" name="assigned">
+                                <select class="form-control select2 auto-submit-select" name="assigned">
                                     <option value="" <?php if ($ticket_assigned_filter_id == "") { echo "selected"; } ?>>Any</option>
                                     <option value="unassigned" <?php if ($ticket_assigned_filter_id == "0") { echo "selected"; } ?>>Unassigned</option>
 
@@ -689,7 +689,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Project</label>
-                                <select onchange="this.form.submit()" class="form-control select2" name="project">
+                                <select class="form-control select2 auto-submit-select" name="project">
                                     <option value="" <?php if ($ticket_project_filter_id == "") { echo "selected"; } ?>>Any</option>
 
                                     <?php
@@ -739,7 +739,7 @@ if (isset($_GET["view"])) {
 
 <script src="../js/bulk_actions.js"></script>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(function () {
     if ($.fn.select2) {
         $('#priorityFilterSelect').select2({

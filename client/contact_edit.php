@@ -84,17 +84,17 @@ if ($row) {
             <div class="form-row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="contactBillingCheckbox" name="contact_billing" value="1" <?php if ($contact_billing == 1) { echo "checked"; } ?>>
-                            <label class="custom-control-label" for="contactBillingCheckbox">Billing</label>
+                        <div class="form-check form-check">
+                            <input type="checkbox" class="form-check-input" id="contactBillingCheckbox" name="contact_billing" value="1" <?php if ($contact_billing == 1) { echo "checked"; } ?>>
+                            <label class="form-check-label" for="contactBillingCheckbox">Billing</label>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="contactTechnicalCheckbox" name="contact_technical" value="1" <?php if ($contact_technical == 1) { echo "checked"; } ?>>
-                            <label class="custom-control-label" for="contactTechnicalCheckbox">Technical</label>
+                        <div class="form-check form-check">
+                            <input type="checkbox" class="form-check-input" id="contactTechnicalCheckbox" name="contact_technical" value="1" <?php if ($contact_technical == 1) { echo "checked"; } ?>>
+                            <label class="form-check-label" for="contactTechnicalCheckbox">Technical</label>
                         </div>
                     </div>
                 </div>

@@ -108,11 +108,21 @@ if ($ticket_row) {
         <div class="col-4">
             <div class="row">
                 <div class="col">
-                    <a href="guest_post.php?reopen_ticket&ticket_id=<?php echo $ticket_id; ?>&url_key=<?php echo $url_key ?>" class="btn btn-secondary btn-lg"><i class="fas fa-fw fa-redo text-white"></i> Reopen ticket</a>
+                    <form method="post" action="guest_post.php" class="d-inline">
+                        <input type="hidden" name="reopen_ticket" value="1">
+                        <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
+                        <input type="hidden" name="url_key" value="<?php echo $url_key ?>">
+                        <button type="submit" class="btn btn-secondary btn-lg"><i class="fas fa-fw fa-redo text-white"></i> Reopen ticket</button>
+                    </form>
                 </div>
 
                 <div class="col">
-                    <a href="guest_post.php?close_ticket=&ticket_id=<?php echo $ticket_id; ?>&url_key=<?php echo $url_key ?>" class="btn btn-success btn-lg"><i class="fas fa-fw fa-gavel text-white"></i> Close ticket</a>
+                    <form method="post" action="guest_post.php" class="d-inline">
+                        <input type="hidden" name="close_ticket" value="1">
+                        <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
+                        <input type="hidden" name="url_key" value="<?php echo $url_key ?>">
+                        <button type="submit" class="btn btn-success btn-lg"><i class="fas fa-fw fa-gavel text-white"></i> Close ticket</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -125,11 +135,23 @@ if ($ticket_row) {
         <div class="col-4">
             <div class="row">
                 <div class="col">
-                    <a href="guest_post.php?add_ticket_feedback&ticket_id=<?php echo $ticket_id; ?>&url_key=<?php echo $url_key ?>&feedback=Good" class="btn btn-success btn-lg"><i class="fas fa-fw fa-smile text-white"></i> Good</a>
+                    <form method="post" action="guest_post.php" class="d-inline">
+                        <input type="hidden" name="add_ticket_feedback" value="1">
+                        <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
+                        <input type="hidden" name="url_key" value="<?php echo $url_key ?>">
+                        <input type="hidden" name="feedback" value="Good">
+                        <button type="submit" class="btn btn-success btn-lg"><i class="fas fa-fw fa-smile text-white"></i> Good</button>
+                    </form>
                 </div>
 
                 <div class="col">
-                    <a href="guest_post.php?add_ticket_feedback&ticket_id=<?php echo $ticket_id; ?>&url_key=<?php echo $url_key ?>&feedback=Bad" class="btn btn-danger btn-lg"><i class="fas fa-fw fa-frown text-white"></i> Bad</a>
+                    <form method="post" action="guest_post.php" class="d-inline">
+                        <input type="hidden" name="add_ticket_feedback" value="1">
+                        <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
+                        <input type="hidden" name="url_key" value="<?php echo $url_key ?>">
+                        <input type="hidden" name="feedback" value="Bad">
+                        <button type="submit" class="btn btn-danger btn-lg"><i class="fas fa-fw fa-frown text-white"></i> Bad</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -178,7 +200,7 @@ if ($ticket_row) {
                         <?php
                         if (!empty($user_avatar)) {
                             ?>
-                            <img src="<?php echo $avatar_link ?>" alt="User Avatar" class="img-size-50 mr-3 img-circle">
+                            <img src="<?php echo $avatar_link ?>" alt="User Avatar" class="img-size-50 me-3 img-circle">
                             <?php
                         } else {
                             ?>
@@ -217,7 +239,7 @@ if ($ticket_row) {
     } ?>
 
 <div class="card-footer">
-    <?php echo "<i class='fas fa-phone fa-fw mr-2'></i>$company_phone | <i class='fas fa-globe fa-fw mr-2 ml-2'></i>$company_website"; ?>
+    <?php echo "<i class='fas fa-phone fa-fw me-2'></i>$company_phone | <i class='fas fa-globe fa-fw me-2 ms-2'></i>$company_website"; ?>
 </div>
 
 <?php

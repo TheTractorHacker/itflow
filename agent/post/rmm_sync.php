@@ -148,15 +148,30 @@ if ($action === 'sync_scripts') {
     try {
         $client  = getRmmClient($integration_id);
         $scripts = $client->getScripts();
+
+        // Script payloads differ per provider: Tactical exposes shell/code,
+        // Level exposes language/content. Map by the integration's type.
+        $intg_row  = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT type FROM rmm_integrations WHERE id=$integration_id LIMIT 1"
+        ));
+        $intg_type = $intg_row['type'] ?? 'tactical_rmm';
+
         $imported = 0;
         $updated  = 0;
         foreach ($scripts as $s) {
             $tac_id = intval($s['id'] ?? 0);
             if (!$tac_id) continue;
             $name    = mysqli_real_escape_string($mysqli, substr($s['name'] ?? 'Untitled', 0, 200));
-            $stype   = mysqli_real_escape_string($mysqli, $s['shell'] ?? $s['script_type'] ?? 'powershell');
+            if ($intg_type === 'level') {
+                $stype_raw = $s['language'] ?? $s['shell'] ?? $s['script_type'] ?? 'powershell';
+                $body_raw  = $s['content'] ?? $s['script'] ?? $s['body'] ?? $s['code'] ?? '';
+            } else {
+                $stype_raw = $s['shell'] ?? $s['script_type'] ?? 'powershell';
+                $body_raw  = $s['code'] ?? $s['script_body'] ?? '';
+            }
+            $stype   = mysqli_real_escape_string($mysqli, $stype_raw);
             $desc    = mysqli_real_escape_string($mysqli, substr($s['description'] ?? '', 0, 500));
-            $body    = mysqli_real_escape_string($mysqli, $s['code'] ?? $s['script_body'] ?? '');
+            $body    = mysqli_real_escape_string($mysqli, $body_raw);
             $cat     = mysqli_real_escape_string($mysqli, substr($s['category'] ?? 'Uncategorized', 0, 100));
 
             $existing = mysqli_fetch_assoc(mysqli_query($mysqli,

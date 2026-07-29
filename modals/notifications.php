@@ -95,7 +95,7 @@ ob_start();
     </button>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(document).ready(function () {
     var perPage = 8;
     var $items = $(".notification-item");

@@ -27,7 +27,7 @@ $company_initials = nullable_htmlentities(initials($company_name));
 
     <div class="card card-dark">
         <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-fw fa-briefcase mr-2"></i>Company Details</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-briefcase me-2"></i>Company Details</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" enctype="multipart/form-data" autocomplete="off">
@@ -159,7 +159,7 @@ $company_initials = nullable_htmlentities(initials($company_name));
 
                             <hr>
 
-                            <button type="submit" name="edit_company" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+                            <button type="submit" name="edit_company" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
                         </div>
                     </div>
                 </div>

@@ -11,8 +11,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-envelope-open mr-2"></i>Send Emails to <strong><?= $count ?></strong> Client(s)</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-envelope-open me-2"></i>Send Emails to <strong><?= $count ?></strong> Client(s)</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -50,33 +50,33 @@ ob_start();
 
             <div class="col-md-3">
                 <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="contactPrimaryCheckbox" name="primary_contacts" value="1">
-                        <label class="custom-control-label" for="contactPrimaryCheckbox">Primary Contacts</label>
+                    <div class="form-check form-check">
+                        <input type="checkbox" class="form-check-input" id="contactPrimaryCheckbox" name="primary_contacts" value="1">
+                        <label class="form-check-label" for="contactPrimaryCheckbox">Primary Contacts</label>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="contactImportantCheckbox" name="important_contacts" value="1">
-                        <label class="custom-control-label" for="contactImportantCheckbox">Important Contacts</label>
+                    <div class="form-check form-check">
+                        <input type="checkbox" class="form-check-input" id="contactImportantCheckbox" name="important_contacts" value="1">
+                        <label class="form-check-label" for="contactImportantCheckbox">Important Contacts</label>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="contactBillingCheckbox" name="billing_contacts" value="1">
-                        <label class="custom-control-label" for="contactBillingCheckbox">Billing Contacts</label>
+                    <div class="form-check form-check">
+                        <input type="checkbox" class="form-check-input" id="contactBillingCheckbox" name="billing_contacts" value="1">
+                        <label class="form-check-label" for="contactBillingCheckbox">Billing Contacts</label>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="contactTechnicalCheckbox" name="technical_contacts" value="1">
-                        <label class="custom-control-label" for="contactTechnicalCheckbox">Technical Contacts</label>
+                    <div class="form-check form-check">
+                        <input type="checkbox" class="form-check-input" id="contactTechnicalCheckbox" name="technical_contacts" value="1">
+                        <label class="form-check-label" for="contactTechnicalCheckbox">Technical Contacts</label>
                     </div>
                 </div>
             </div>
@@ -104,8 +104,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="bulk_send_client_email" class="btn btn-primary text-bold"><i class="fas fa-paper-plane mr-2"></i>Send</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="bulk_send_client_email" class="btn btn-primary text-bold"><i class="fas fa-paper-plane me-2"></i>Send</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

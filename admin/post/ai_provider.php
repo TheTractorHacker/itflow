@@ -13,7 +13,7 @@ if (isset($_POST['add_ai_provider'])) {
     $provider = sanitizeInput($_POST['provider']);
     $url = sanitizeInput($_POST['url']);
     $model = sanitizeInput($_POST['model']);
-    $api_key = sanitizeInput($_POST['api_key']);
+    $api_key = mysqli_real_escape_string($mysqli, encryptSetting(sanitizeInput($_POST['api_key'])));
 
     mysqli_query($mysqli,"INSERT INTO ai_providers SET ai_provider_name = '$provider', ai_provider_api_url = '$url', ai_provider_api_key = '$api_key'");
 
@@ -34,9 +34,17 @@ if (isset($_POST['edit_ai_provider'])) {
     $provider_id = intval($_POST['provider_id']);
     $provider = sanitizeInput($_POST['provider']);
     $url = sanitizeInput($_POST['url']);
-    $api_key = sanitizeInput($_POST['api_key']);
 
-    mysqli_query($mysqli,"UPDATE ai_providers SET ai_provider_name = '$provider', ai_provider_api_url = '$url', ai_provider_api_key = '$api_key' WHERE ai_provider_id = $provider_id");
+    // Only overwrite the stored API key if a new value was actually entered,
+    // so a blank field (the normal case, since the key is never redisplayed) doesn't wipe it.
+    $api_key_raw = trim($_POST['api_key'] ?? '');
+    $api_key_sql = '';
+    if ($api_key_raw !== '') {
+        $api_key_esc = mysqli_real_escape_string($mysqli, encryptSetting(sanitizeInput($api_key_raw)));
+        $api_key_sql = "ai_provider_api_key = '$api_key_esc', ";
+    }
+
+    mysqli_query($mysqli,"UPDATE ai_providers SET ai_provider_name = '$provider', {$api_key_sql}ai_provider_api_url = '$url' WHERE ai_provider_id = $provider_id");
 
     logAction("AI Provider", "Edit", "$session_name edited AI Provider $provider");
 

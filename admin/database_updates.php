@@ -5290,3 +5290,667 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.26'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.26') {
+
+        // Per-user Outlook/Microsoft Graph OAuth tokens for the Outlook Calendar
+        // integration - stores the encrypted refresh/access token pair and their
+        // expiry so getOutlookAccessToken() (functions.php) can silently refresh
+        // instead of re-prompting the user to sign in.
+        mysqli_query($mysqli, "ALTER TABLE `users`
+            ADD COLUMN IF NOT EXISTS `user_outlook_refresh_token` text DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `user_outlook_access_token` text DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `user_outlook_token_expires` datetime DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.27'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.27') {
+
+        // Shared Azure AD app-registration credentials backing the Outlook Calendar
+        // integration (client ID/secret + tenant ID) - used alongside the per-user
+        // tokens above by getOutlookAccessToken() (functions.php) to talk to
+        // Microsoft Graph.
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_outlook_cal_client_id` varchar(200) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `config_outlook_cal_client_secret` varchar(500) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `config_outlook_cal_tenant_id` varchar(200) DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.28'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.28') {
+
+        // Tracks the Microsoft Graph calendar event created for a scheduled ticket,
+        // so the legacy-path deleteOutlookCalendarEvent() (functions.php) can find
+        // and remove it from the technician's Outlook calendar when the ticket
+        // schedule changes or the ticket is closed.
+        mysqli_query($mysqli, "ALTER TABLE `tickets`
+            ADD COLUMN IF NOT EXISTS `ticket_outlook_event_id` varchar(255) DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.29'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.29') {
+
+        // AI feature config (re-introduced after v2.3.2 dropped the old config_ai_*
+        // provider/url/key columns - those now live in ai_providers / ai_models).
+        // config_ai_enable   - company-wide on/off switch checked by aiEnabled()
+        // config_ai_max_input_chars / config_ai_timeout_seconds - safety caps used
+        //   by includes/ai_functions.php aiChat() (input truncation + cURL timeout).
+        // Defaults enable=1 to preserve the pre-existing "always try" behaviour of
+        // the agent/ajax.php AI handlers.
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_ai_enable` tinyint(1) NOT NULL DEFAULT 1,
+            ADD COLUMN IF NOT EXISTS `config_ai_max_input_chars` int(11) NOT NULL DEFAULT 12000,
+            ADD COLUMN IF NOT EXISTS `config_ai_timeout_seconds` int(11) NOT NULL DEFAULT 25");
+
+        // Per-client opt-out from AI processing (e.g. ticket summaries).
+        mysqli_query($mysqli, "ALTER TABLE `clients`
+            ADD COLUMN IF NOT EXISTS `client_ai_opt_out` tinyint(1) NOT NULL DEFAULT 0");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.30'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.30') {
+
+        // ------------------------------------------------------------------
+        // Consolidated migration for schema that had been applied directly to
+        // the beta database during feature development but was never captured
+        // in a version block. Groups: Theme, RMM health, Billing/webhooks,
+        // Projects/tasks, SLA engine (+ default calendar/policy seed),
+        // QuickBooks Online sync, Analytics/reporting, CRM/leads, and the
+        // AI ticket-summary cache table. Every statement is idempotent
+        // (CREATE TABLE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS + guarded
+        // seed inserts) so it is safe to re-run and safe on installs that
+        // already carry some of these objects.
+        // NOTE: config_ai_* and clients.client_ai_opt_out are intentionally
+        // NOT repeated here - they are handled by the 2.6.29 block above.
+        // ------------------------------------------------------------------
+
+        // --- Theme customisation (settings) -------------------------------
+        // Custom accent colour, card corner radius and a company-wide
+        // "default to dark mode" toggle, read by the theme/CSS layer.
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_theme_accent_custom` varchar(7) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `config_theme_card_radius` varchar(8) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `config_theme_dark_default` tinyint(1) NOT NULL DEFAULT 0");
+
+        // --- RMM device health (asset_rmm_links) --------------------------
+        // Live health telemetry pulled from the linked RMM agent, shown on
+        // the asset page and used to raise/auto-clear health alerts.
+        mysqli_query($mysqli, "ALTER TABLE `asset_rmm_links`
+            ADD COLUMN IF NOT EXISTS `rmm_cpu_percent` int(11) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `rmm_ram_percent` int(11) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `rmm_disk_percent` int(11) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `rmm_needs_reboot` tinyint(1) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS `rmm_last_boot` datetime DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `rmm_maintenance_mode` tinyint(1) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS `rmm_health_updated_at` datetime DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `rmm_patches_pending` tinyint(1) DEFAULT NULL");
+
+        // Auto-close RMM health alerts once the device reports healthy again.
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_rmm_auto_close_on_clear` tinyint(1) NOT NULL DEFAULT 1");
+
+        // --- Billing / payment webhooks -----------------------------------
+        // Provider webhook signing secret, saved-method type (card/bank), and
+        // an idempotency log of inbound payment-provider webhook events.
+        mysqli_query($mysqli, "ALTER TABLE `payment_providers`
+            ADD COLUMN IF NOT EXISTS `payment_provider_webhook_secret` varchar(250) DEFAULT NULL");
+
+        mysqli_query($mysqli, "ALTER TABLE `client_saved_payment_methods`
+            ADD COLUMN IF NOT EXISTS `saved_payment_type` varchar(20) DEFAULT 'card'");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payment_webhook_events` (
+            `event_id` int(11) NOT NULL AUTO_INCREMENT,
+            `event_provider_id` int(11) NOT NULL,
+            `event_provider_ref` varchar(255) NOT NULL,
+            `event_type` varchar(100) DEFAULT NULL,
+            `event_status` enum('received','processed','ignored','error') NOT NULL DEFAULT 'received',
+            `event_payload` longtext DEFAULT NULL,
+            `event_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            PRIMARY KEY (`event_id`),
+            UNIQUE KEY `uq_provider_ref` (`event_provider_id`,`event_provider_ref`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // --- Projects / tasks (planning + Gantt) --------------------------
+        mysqli_query($mysqli, "ALTER TABLE `projects`
+            ADD COLUMN IF NOT EXISTS `project_start` date DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `project_estimated_hours` decimal(10,2) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `project_budget_amount` decimal(12,2) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `project_hourly_rate` decimal(10,2) DEFAULT NULL");
+
+        mysqli_query($mysqli, "ALTER TABLE `tasks`
+            ADD COLUMN IF NOT EXISTS `task_project_id` int(11) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `task_milestone_id` int(11) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `task_assigned_to` int(11) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `task_start` date DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `task_due` date DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `task_progress` tinyint(4) NOT NULL DEFAULT 0");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `project_milestones` (
+            `milestone_id` int(11) NOT NULL AUTO_INCREMENT,
+            `milestone_project_id` int(11) NOT NULL,
+            `milestone_name` varchar(255) NOT NULL,
+            `milestone_description` text DEFAULT NULL,
+            `milestone_due` date DEFAULT NULL,
+            `milestone_order` int(11) NOT NULL DEFAULT 0,
+            `milestone_status` varchar(30) NOT NULL DEFAULT 'open',
+            `milestone_completed_at` datetime DEFAULT NULL,
+            `milestone_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            PRIMARY KEY (`milestone_id`),
+            KEY `milestone_project_id` (`milestone_project_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `project_task_dependencies` (
+            `dependency_id` int(11) NOT NULL AUTO_INCREMENT,
+            `task_id` int(11) NOT NULL,
+            `predecessor_id` int(11) NOT NULL,
+            `dependency_type` varchar(10) NOT NULL DEFAULT 'FS',
+            PRIMARY KEY (`dependency_id`),
+            UNIQUE KEY `task_id` (`task_id`,`predecessor_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // --- SLA engine ---------------------------------------------------
+        // Business-hours calendars + weekly periods + holidays, SLA policies
+        // (response/resolution targets per priority), per-ticket SLA state,
+        // and an event log used to compute paused/elapsed SLA time.
+        mysqli_query($mysqli, "ALTER TABLE `tickets`
+            ADD COLUMN IF NOT EXISTS `ticket_sla_policy_id` int(11) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `ticket_sla_paused_seconds` int(11) NOT NULL DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS `ticket_sla_paused_at` datetime DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `ticket_sla_response_met` tinyint(4) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `ticket_sla_resolution_met` tinyint(4) DEFAULT NULL");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `sla_business_hours` (
+            `calendar_id` int(11) NOT NULL AUTO_INCREMENT,
+            `calendar_name` varchar(150) NOT NULL,
+            `calendar_timezone` varchar(64) NOT NULL DEFAULT 'UTC',
+            `calendar_is_default` tinyint(4) NOT NULL DEFAULT 0,
+            PRIMARY KEY (`calendar_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `sla_business_hours_periods` (
+            `period_id` int(11) NOT NULL AUTO_INCREMENT,
+            `calendar_id` int(11) NOT NULL,
+            `day_of_week` tinyint(4) NOT NULL,
+            `open_time` time NOT NULL,
+            `close_time` time NOT NULL,
+            PRIMARY KEY (`period_id`),
+            KEY `calendar_id` (`calendar_id`,`day_of_week`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `sla_holidays` (
+            `holiday_id` int(11) NOT NULL AUTO_INCREMENT,
+            `calendar_id` int(11) NOT NULL,
+            `holiday_date` date NOT NULL,
+            `holiday_name` varchar(150) DEFAULT NULL,
+            PRIMARY KEY (`holiday_id`),
+            KEY `calendar_id` (`calendar_id`,`holiday_date`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `sla_policies` (
+            `policy_id` int(11) NOT NULL AUTO_INCREMENT,
+            `policy_name` varchar(150) NOT NULL,
+            `policy_calendar_id` int(11) DEFAULT NULL,
+            `policy_pause_status_ids` varchar(255) DEFAULT NULL,
+            `policy_low_response` int(11) DEFAULT NULL,
+            `policy_low_resolution` int(11) DEFAULT NULL,
+            `policy_medium_response` int(11) DEFAULT NULL,
+            `policy_medium_resolution` int(11) DEFAULT NULL,
+            `policy_high_response` int(11) DEFAULT NULL,
+            `policy_high_resolution` int(11) DEFAULT NULL,
+            `policy_is_default` tinyint(4) NOT NULL DEFAULT 0,
+            `policy_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`policy_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `ticket_sla_events` (
+            `event_id` int(11) NOT NULL AUTO_INCREMENT,
+            `ticket_id` int(11) NOT NULL,
+            `event_type` varchar(20) NOT NULL,
+            `from_status` int(11) DEFAULT NULL,
+            `to_status` int(11) DEFAULT NULL,
+            `event_at` datetime DEFAULT current_timestamp(),
+            PRIMARY KEY (`event_id`),
+            KEY `ticket_id` (`ticket_id`,`event_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // Seed a default Mon-Fri 09:00-17:00 business-hours calendar (id 1)
+        // and a default SLA policy (id 1) referencing it, only if the SLA
+        // tables are still empty. Ticket status 3 (on-hold/waiting) pauses
+        // the SLA clock by default. Guarded so re-runs never duplicate.
+        $sla_cal_check = mysqli_query($mysqli, "SELECT `calendar_id` FROM `sla_business_hours` LIMIT 1");
+        if ($sla_cal_check && mysqli_num_rows($sla_cal_check) === 0) {
+            mysqli_query($mysqli, "INSERT INTO `sla_business_hours`
+                (`calendar_id`,`calendar_name`,`calendar_timezone`,`calendar_is_default`)
+                VALUES (1,'Default (Mon-Fri 9-5)','UTC',1)");
+            mysqli_query($mysqli, "INSERT INTO `sla_business_hours_periods`
+                (`calendar_id`,`day_of_week`,`open_time`,`close_time`) VALUES
+                (1,1,'09:00:00','17:00:00'),
+                (1,2,'09:00:00','17:00:00'),
+                (1,3,'09:00:00','17:00:00'),
+                (1,4,'09:00:00','17:00:00'),
+                (1,5,'09:00:00','17:00:00')");
+        }
+        $sla_pol_check = mysqli_query($mysqli, "SELECT `policy_id` FROM `sla_policies` LIMIT 1");
+        if ($sla_pol_check && mysqli_num_rows($sla_pol_check) === 0) {
+            mysqli_query($mysqli, "INSERT INTO `sla_policies`
+                (`policy_id`,`policy_name`,`policy_calendar_id`,`policy_pause_status_ids`,`policy_is_default`)
+                VALUES (1,'Default SLA Policy',1,'3',1)");
+        }
+
+        // --- QuickBooks Online / accounting sync --------------------------
+        // Integration credentials, local<->remote entity id map, outbound
+        // push queue and a sync activity log.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `accounting_integrations` (
+            `accounting_id` int(11) NOT NULL AUTO_INCREMENT,
+            `accounting_provider` varchar(30) NOT NULL DEFAULT 'quickbooks_online',
+            `accounting_realm_id` varchar(64) DEFAULT NULL,
+            `accounting_client_id` varchar(255) DEFAULT NULL,
+            `accounting_client_secret` text DEFAULT NULL,
+            `accounting_environment` varchar(20) NOT NULL DEFAULT 'production',
+            `accounting_refresh_token` text DEFAULT NULL,
+            `accounting_access_token` text DEFAULT NULL,
+            `accounting_token_expires_at` datetime DEFAULT NULL,
+            `accounting_default_income_account_id` varchar(64) DEFAULT NULL,
+            `accounting_auto_push` tinyint(4) NOT NULL DEFAULT 1,
+            `accounting_enabled` tinyint(4) NOT NULL DEFAULT 0,
+            `accounting_connected_at` datetime DEFAULT NULL,
+            `accounting_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            PRIMARY KEY (`accounting_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `accounting_entity_map` (
+            `map_id` int(11) NOT NULL AUTO_INCREMENT,
+            `map_accounting_id` int(11) NOT NULL,
+            `map_local_type` varchar(20) NOT NULL,
+            `map_local_id` int(11) NOT NULL,
+            `map_remote_id` varchar(64) DEFAULT NULL,
+            `map_remote_sync_token` varchar(32) DEFAULT NULL,
+            `map_last_synced_at` datetime NOT NULL DEFAULT current_timestamp(),
+            PRIMARY KEY (`map_id`),
+            UNIQUE KEY `uniq_map` (`map_accounting_id`,`map_local_type`,`map_local_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `accounting_sync_queue` (
+            `queue_id` int(11) NOT NULL AUTO_INCREMENT,
+            `queue_accounting_id` int(11) NOT NULL,
+            `queue_local_type` varchar(20) NOT NULL,
+            `queue_local_id` int(11) NOT NULL,
+            `queue_op` varchar(10) NOT NULL DEFAULT 'push',
+            `queue_status` enum('pending','delivered','failed') NOT NULL DEFAULT 'pending',
+            `queue_attempts` tinyint(4) NOT NULL DEFAULT 0,
+            `queue_last_error` varchar(500) DEFAULT NULL,
+            `queue_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `queue_next_attempt_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `queue_delivered_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`queue_id`),
+            UNIQUE KEY `uniq_queue` (`queue_accounting_id`,`queue_local_type`,`queue_local_id`,`queue_op`),
+            KEY `idx_status_next` (`queue_status`,`queue_next_attempt_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `accounting_sync_log` (
+            `log_id` int(11) NOT NULL AUTO_INCREMENT,
+            `log_accounting_id` int(11) NOT NULL,
+            `log_local_type` varchar(20) DEFAULT NULL,
+            `log_local_id` int(11) DEFAULT NULL,
+            `log_status` varchar(20) DEFAULT NULL,
+            `log_message` varchar(1000) DEFAULT NULL,
+            `log_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            PRIMARY KEY (`log_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // --- Analytics / reporting ----------------------------------------
+        // Pre-aggregated daily ticket metrics and scheduled report configs.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `ticket_metrics_daily` (
+            `metric_date` date NOT NULL,
+            `company_id` int(11) NOT NULL,
+            `opened` int(11) DEFAULT 0,
+            `resolved` int(11) DEFAULT 0,
+            `closed` int(11) DEFAULT 0,
+            `backlog_open` int(11) DEFAULT 0,
+            UNIQUE KEY `uniq_company_date` (`company_id`,`metric_date`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `report_schedules` (
+            `schedule_id` int(11) NOT NULL AUTO_INCREMENT,
+            `schedule_report` varchar(60) NOT NULL,
+            `schedule_frequency` varchar(20) NOT NULL,
+            `schedule_recipients` text DEFAULT NULL,
+            `schedule_last_sent` datetime DEFAULT NULL,
+            `schedule_active` tinyint(4) DEFAULT 1,
+            `schedule_created_at` datetime DEFAULT current_timestamp(),
+            PRIMARY KEY (`schedule_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // --- CRM / leads / opportunities ----------------------------------
+        // Sales pipeline, lead qualification fields on clients, activity
+        // timeline, saved segments and email campaigns.
+        mysqli_query($mysqli, "ALTER TABLE `clients`
+            ADD COLUMN IF NOT EXISTS `client_lead_source` varchar(60) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `client_lead_status` varchar(40) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `client_lead_owner` int(11) DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `client_lead_score` int(11) DEFAULT NULL");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `opportunities` (
+            `opportunity_id` int(11) NOT NULL AUTO_INCREMENT,
+            `opportunity_name` varchar(255) NOT NULL,
+            `opportunity_client_id` int(11) DEFAULT NULL,
+            `opportunity_contact_id` int(11) DEFAULT NULL,
+            `opportunity_stage` varchar(40) NOT NULL DEFAULT 'Qualification',
+            `opportunity_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+            `opportunity_probability` tinyint(4) NOT NULL DEFAULT 0,
+            `opportunity_close_date` date DEFAULT NULL,
+            `opportunity_status` varchar(12) NOT NULL DEFAULT 'open',
+            `opportunity_owner` int(11) DEFAULT NULL,
+            `opportunity_notes` text DEFAULT NULL,
+            `opportunity_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `opportunity_updated_at` datetime DEFAULT NULL,
+            `opportunity_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`opportunity_id`),
+            KEY `opportunity_client_id` (`opportunity_client_id`),
+            KEY `opportunity_stage` (`opportunity_stage`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `crm_activities` (
+            `activity_id` int(11) NOT NULL AUTO_INCREMENT,
+            `activity_type` varchar(20) NOT NULL,
+            `activity_subject` varchar(255) DEFAULT NULL,
+            `activity_body` text DEFAULT NULL,
+            `activity_related_type` varchar(12) NOT NULL,
+            `activity_related_id` int(11) NOT NULL,
+            `activity_at` datetime DEFAULT current_timestamp(),
+            `activity_due_at` datetime DEFAULT NULL,
+            `activity_reminder_at` datetime DEFAULT NULL,
+            `activity_completed` tinyint(4) DEFAULT 0,
+            `activity_owner` int(11) DEFAULT NULL,
+            `activity_created_at` datetime DEFAULT current_timestamp(),
+            `activity_reminded_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`activity_id`),
+            KEY `activity_related` (`activity_related_type`,`activity_related_id`),
+            KEY `activity_reminder` (`activity_reminder_at`,`activity_completed`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `crm_segments` (
+            `segment_id` int(11) NOT NULL AUTO_INCREMENT,
+            `segment_name` varchar(150) DEFAULT NULL,
+            `segment_criteria_json` text DEFAULT NULL,
+            `segment_created_at` datetime DEFAULT current_timestamp(),
+            PRIMARY KEY (`segment_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `crm_campaigns` (
+            `campaign_id` int(11) NOT NULL AUTO_INCREMENT,
+            `campaign_name` varchar(150) DEFAULT NULL,
+            `campaign_segment_id` int(11) DEFAULT NULL,
+            `campaign_subject` varchar(255) DEFAULT NULL,
+            `campaign_body` mediumtext DEFAULT NULL,
+            `campaign_status` varchar(20) DEFAULT 'draft',
+            `campaign_sent_at` datetime DEFAULT NULL,
+            `campaign_created_at` datetime DEFAULT current_timestamp(),
+            PRIMARY KEY (`campaign_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `crm_campaign_recipients` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `campaign_id` int(11) DEFAULT NULL,
+            `contact_id` int(11) DEFAULT NULL,
+            `email` varchar(255) DEFAULT NULL,
+            `sent` tinyint(4) DEFAULT 0,
+            PRIMARY KEY (`id`),
+            KEY `campaign_id` (`campaign_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // --- AI ticket-summary cache --------------------------------------
+        // Cache of the generated ticket summary (includes/ai_functions.php).
+        // This table was applied directly to beta and is NOT created by the
+        // 2.6.29 AI block, so it is captured here to reach production.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `ticket_ai_summaries` (
+            `ticket_id` int(11) NOT NULL,
+            `summary_html` text DEFAULT NULL,
+            `based_on_reply_id` int(11) DEFAULT NULL,
+            `model_used` varchar(120) DEFAULT NULL,
+            `tokens` int(11) DEFAULT NULL,
+            `stale` tinyint(1) NOT NULL DEFAULT 0,
+            `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            UNIQUE KEY `uq_ticket_ai_summaries_ticket_id` (`ticket_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.31'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.31') {
+
+        // --- RMM connect/status preference (asset_rmm_links) --------------
+        // An asset can be linked to more than one RMM integration at once
+        // (e.g. both Tactical RMM and Level.io tracking the same physical
+        // device). Wherever the app previously picked a single link to act
+        // on (Connect/Remote button, status badges) it did so with no
+        // ORDER BY, so whichever integration synced/linked last "won"
+        // arbitrarily. This toggle lets admins pin that preference to
+        // Tactical RMM (default) instead.
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_rmm_prefer_tactical` tinyint(1) NOT NULL DEFAULT 1");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.32'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.32') {
+
+        // --- Payroll: gross-pay-only payroll runs from manually-entered hours ---
+        // No tax withholding (federal/state/FICA) is calculated anywhere in this
+        // feature - by design, that stays outside ITFlow. Hours are entered
+        // manually for now (a future integration can poll an external timeclock
+        // and upsert into payroll_hours_entries with source='api' - the schema
+        // is deliberately shaped so that needs no redesign later).
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_payroll_overtime_threshold_hours` decimal(6,2) NOT NULL DEFAULT 40.00,
+            ADD COLUMN IF NOT EXISTS `config_payroll_overtime_multiplier` decimal(4,2) NOT NULL DEFAULT 1.50,
+            ADD COLUMN IF NOT EXISTS `config_payroll_default_pay_frequency` varchar(20) NOT NULL DEFAULT 'biweekly',
+            ADD COLUMN IF NOT EXISTS `config_module_enable_payroll` tinyint(1) NOT NULL DEFAULT 0");
+
+        // One CURRENT pay rate per enrolled employee - not effective-dated.
+        // History/immutability comes from snapshotting into payroll_run_line_items
+        // at compute time, not from versioning this table.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_pay_rates` (
+            `payroll_pay_rate_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_pay_rate_user_id` int(11) NOT NULL,
+            `payroll_pay_rate_type` enum('hourly','salary') NOT NULL DEFAULT 'hourly',
+            `payroll_pay_rate_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_pay_rate_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `payroll_pay_rate_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+            `payroll_pay_rate_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`payroll_pay_rate_id`),
+            KEY `idx_payroll_pay_rate_user` (`payroll_pay_rate_user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // User-defined deduction categories (no tax/benefit rules built in).
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_deduction_categories` (
+            `payroll_deduction_category_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_deduction_category_name` varchar(100) NOT NULL,
+            `payroll_deduction_category_description` varchar(255) DEFAULT NULL,
+            `payroll_deduction_category_order` int(11) NOT NULL DEFAULT 0,
+            `payroll_deduction_category_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`payroll_deduction_category_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // Standing per-employee deduction assignment - applied every run until archived.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_employee_deductions` (
+            `payroll_employee_deduction_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_employee_deduction_user_id` int(11) NOT NULL,
+            `payroll_employee_deduction_category_id` int(11) NOT NULL,
+            `payroll_employee_deduction_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_employee_deduction_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `payroll_employee_deduction_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+            `payroll_employee_deduction_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`payroll_employee_deduction_id`),
+            KEY `idx_payroll_employee_deduction_user` (`payroll_employee_deduction_user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // Pay periods - status flips to 'locked' the moment its run is finalized.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_periods` (
+            `payroll_period_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_period_start_date` date NOT NULL,
+            `payroll_period_end_date` date NOT NULL,
+            `payroll_period_status` enum('open','locked') NOT NULL DEFAULT 'open',
+            `payroll_period_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `payroll_period_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+            `payroll_period_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`payroll_period_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // Hours entries keyed by (employee, workweek) - NOT by period, so a
+        // future timeclock-API pull can upsert here with source='api' without
+        // any schema change or payroll-math change.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_hours_entries` (
+            `payroll_hours_entry_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_hours_entry_user_id` int(11) NOT NULL,
+            `payroll_hours_entry_week_start_date` date NOT NULL,
+            `payroll_hours_entry_worked_time` time NOT NULL DEFAULT '00:00:00',
+            `payroll_hours_entry_source` enum('manual','api') NOT NULL DEFAULT 'manual',
+            `payroll_hours_entry_note` varchar(255) DEFAULT NULL,
+            `payroll_hours_entry_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `payroll_hours_entry_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+            PRIMARY KEY (`payroll_hours_entry_id`),
+            UNIQUE KEY `uq_payroll_hours_entry` (`payroll_hours_entry_user_id`, `payroll_hours_entry_week_start_date`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // One row per created/finalized payroll run.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_runs` (
+            `payroll_run_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_run_period_id` int(11) NOT NULL,
+            `payroll_run_status` enum('draft','finalized') NOT NULL DEFAULT 'draft',
+            `payroll_run_total_gross` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_total_deductions` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_total_net` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_currency_code` varchar(200) NOT NULL DEFAULT 'USD',
+            `payroll_run_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `payroll_run_created_by` int(11) NOT NULL,
+            `payroll_run_finalized_at` datetime DEFAULT NULL,
+            `payroll_run_finalized_by` int(11) DEFAULT NULL,
+            `payroll_run_archived_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`payroll_run_id`),
+            KEY `idx_payroll_run_period` (`payroll_run_period_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // One row per employee per run - every value is a SNAPSHOT taken at
+        // compute time (rate, pay type, overtime rule, even the employee's
+        // display name), so later edits elsewhere can never alter a historical
+        // run. Mirrors the existing invoices -> invoice_items parent/child shape.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_run_line_items` (
+            `payroll_run_line_item_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_run_line_item_run_id` int(11) NOT NULL,
+            `payroll_run_line_item_user_id` int(11) NOT NULL,
+            `payroll_run_line_item_employee_name_snapshot` varchar(200) NOT NULL,
+            `payroll_run_line_item_pay_type_snapshot` enum('hourly','salary') NOT NULL,
+            `payroll_run_line_item_rate_snapshot` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_overtime_threshold_snapshot` decimal(6,2) NOT NULL DEFAULT 40.00,
+            `payroll_run_line_item_overtime_multiplier_snapshot` decimal(4,2) NOT NULL DEFAULT 1.50,
+            `payroll_run_line_item_regular_hours` decimal(7,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_overtime_hours` decimal(7,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_regular_pay` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_overtime_pay` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_gross_pay` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_total_deductions` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_net_pay` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_currency_code` varchar(200) NOT NULL DEFAULT 'USD',
+            `payroll_run_line_item_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `payroll_run_line_item_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+            PRIMARY KEY (`payroll_run_line_item_id`),
+            KEY `idx_payroll_run_line_item_run` (`payroll_run_line_item_run_id`),
+            KEY `idx_payroll_run_line_item_user` (`payroll_run_line_item_user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // Itemized per-employee-per-run deduction breakdown - mirrors
+        // invoices -> invoice_items again.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_run_line_item_deductions` (
+            `payroll_run_line_item_deduction_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_run_line_item_deduction_line_item_id` int(11) NOT NULL,
+            `payroll_run_line_item_deduction_category_id` int(11) DEFAULT NULL,
+            `payroll_run_line_item_deduction_category_name_snapshot` varchar(200) NOT NULL,
+            `payroll_run_line_item_deduction_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+            PRIMARY KEY (`payroll_run_line_item_deduction_id`),
+            KEY `idx_payroll_run_line_item_deduction_item` (`payroll_run_line_item_deduction_line_item_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.33'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.33') {
+
+        // --- Payroll: per-job pay rate overrides ---------------------------
+        // Sometimes an employee is paid a different one-off rate for a
+        // specific job (ticket) than their standard rate - e.g. hazard pay,
+        // a rush job, a special engagement. These hours are tracked
+        // separately from the weekly hourly/salary bucket and do NOT
+        // participate in the weekly overtime threshold calculation - they are
+        // always paid flat as hours x the one-off rate entered for that job.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_job_hours_entries` (
+            `payroll_job_hours_entry_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_job_hours_entry_period_id` int(11) NOT NULL,
+            `payroll_job_hours_entry_user_id` int(11) NOT NULL,
+            `payroll_job_hours_entry_ticket_id` int(11) NOT NULL,
+            `payroll_job_hours_entry_worked_time` time NOT NULL DEFAULT '00:00:00',
+            `payroll_job_hours_entry_rate` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_job_hours_entry_note` varchar(255) DEFAULT NULL,
+            `payroll_job_hours_entry_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            `payroll_job_hours_entry_updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+            PRIMARY KEY (`payroll_job_hours_entry_id`),
+            KEY `idx_payroll_job_hours_entry_period` (`payroll_job_hours_entry_period_id`),
+            KEY `idx_payroll_job_hours_entry_user` (`payroll_job_hours_entry_user_id`),
+            KEY `idx_payroll_job_hours_entry_ticket` (`payroll_job_hours_entry_ticket_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // Snapshot totals on the run line item, mirroring regular/overtime.
+        mysqli_query($mysqli, "ALTER TABLE `payroll_run_line_items`
+            ADD COLUMN IF NOT EXISTS `payroll_run_line_item_job_hours` decimal(7,2) NOT NULL DEFAULT 0.00,
+            ADD COLUMN IF NOT EXISTS `payroll_run_line_item_job_pay` decimal(15,2) NOT NULL DEFAULT 0.00");
+
+        // Itemized per-job breakdown, mirrors payroll_run_line_item_deductions.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `payroll_run_line_item_jobs` (
+            `payroll_run_line_item_job_id` int(11) NOT NULL AUTO_INCREMENT,
+            `payroll_run_line_item_job_line_item_id` int(11) NOT NULL,
+            `payroll_run_line_item_job_ticket_id` int(11) DEFAULT NULL,
+            `payroll_run_line_item_job_ticket_label_snapshot` varchar(255) NOT NULL,
+            `payroll_run_line_item_job_hours` decimal(7,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_job_rate` decimal(15,2) NOT NULL DEFAULT 0.00,
+            `payroll_run_line_item_job_pay` decimal(15,2) NOT NULL DEFAULT 0.00,
+            PRIMARY KEY (`payroll_run_line_item_job_id`),
+            KEY `idx_payroll_run_line_item_job_item` (`payroll_run_line_item_job_line_item_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.34'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.34') {
+
+        // AI provider API keys are now stored encrypted (ENC:<base64 iv+ciphertext>) instead of
+        // plaintext - widen the column so the encrypted value (larger than the original plaintext)
+        // never gets silently truncated, matching every other encrypted-secret column in this app
+        // (mailbox_imap_password_enc, mailbox_oauth_refresh_token_enc, accounting_client_secret),
+        // all of which use `text` rather than a fixed-length varchar.
+        mysqli_query($mysqli, "ALTER TABLE `ai_providers`
+            MODIFY COLUMN `ai_provider_api_key` text DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.35'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.35') {
+
+        // Seed sensible default colors on the built-in asset_status categories so the
+        // status pill on the assets list is color-coded out of the box - these rows were
+        // originally inserted without a category_color, leaving the color-coding feature
+        // invisible until an admin manually configured colors via Settings > Categories.
+        // Only touch rows that are still unconfigured (color IS NULL) so any admin who
+        // already customized a status color is left alone.
+        mysqli_query($mysqli, "UPDATE `categories` SET `category_color` = '#0dcaf0' WHERE `category_type` = 'asset_status' AND `category_name` = 'Ready to Deploy' AND `category_color` IS NULL");
+        mysqli_query($mysqli, "UPDATE `categories` SET `category_color` = '#198754' WHERE `category_type` = 'asset_status' AND `category_name` = 'Deployed' AND `category_color` IS NULL");
+        mysqli_query($mysqli, "UPDATE `categories` SET `category_color` = '#fd7e14' WHERE `category_type` = 'asset_status' AND `category_name` = 'Out for Repair' AND `category_color` IS NULL");
+        mysqli_query($mysqli, "UPDATE `categories` SET `category_color` = '#dc3545' WHERE `category_type` = 'asset_status' AND `category_name` = 'Lost' AND `category_color` IS NULL");
+        mysqli_query($mysqli, "UPDATE `categories` SET `category_color` = '#dc3545' WHERE `category_type` = 'asset_status' AND `category_name` = 'Stolen' AND `category_color` IS NULL");
+        mysqli_query($mysqli, "UPDATE `categories` SET `category_color` = '#6c757d' WHERE `category_type` = 'asset_status' AND `category_name` = 'Retired' AND `category_color` IS NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.36'");
+    }

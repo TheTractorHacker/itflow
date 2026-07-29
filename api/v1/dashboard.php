@@ -1,6 +1,7 @@
 <?php
 // GET /api/v1/dashboard
 defined('FROM_API') || die();
+require_once __DIR__ . '/includes/api_permissions.php';
 if ($method !== 'GET') api_error(405, 'Method not allowed');
 
 $uid = $api_user_id;
@@ -11,7 +12,8 @@ $my_open = mysqli_fetch_assoc(mysqli_query($mysqli,
 
 $all_open = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT COUNT(*) AS c FROM tickets
-     WHERE ticket_resolved_at IS NULL AND ticket_archived_at IS NULL"))['c'];
+     WHERE ticket_resolved_at IS NULL AND ticket_archived_at IS NULL
+     AND " . api_client_scope_sql('ticket_client_id')))['c'];
 
 $unread = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT COUNT(*) AS c FROM notifications
@@ -20,16 +22,19 @@ $unread = mysqli_fetch_assoc(mysqli_query($mysqli,
 
 $overdue = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT COUNT(*) AS c FROM tickets
-     WHERE ticket_due_at < NOW() AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL"))['c'];
+     WHERE ticket_due_at < NOW() AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL
+     AND " . api_client_scope_sql('ticket_client_id')))['c'];
 
 $due_today = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT COUNT(*) AS c FROM tickets
      WHERE ticket_due_at IS NOT NULL AND DATE(ticket_due_at) = CURDATE()
-     AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL"))['c'];
+     AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL
+     AND " . api_client_scope_sql('ticket_client_id')))['c'];
 
 $onsite_open = mysqli_fetch_assoc(mysqli_query($mysqli,
     "SELECT COUNT(*) AS c FROM tickets
-     WHERE ticket_onsite = 1 AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL"))['c'];
+     WHERE ticket_onsite = 1 AND ticket_resolved_at IS NULL AND ticket_archived_at IS NULL
+     AND " . api_client_scope_sql('ticket_client_id')))['c'];
 
 // My queue - recent open tickets assigned to me
 $queue = [];

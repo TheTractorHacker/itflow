@@ -12,6 +12,7 @@ $sql = mysqli_query($mysqli, "SELECT * FROM contacts
 $row = mysqli_fetch_assoc($sql);
 $contact_name = nullable_htmlentities($row['contact_name']);
 $client_id = intval($row['contact_client_id']);
+enforceClientAccess($client_id);
 
 // Generate the HTML form content using output buffering.
 ob_start();
@@ -19,8 +20,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-folder mr-2"></i>Link Document to <strong><?php echo $contact_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-folder me-2"></i>Link Document to <strong><?php echo $contact_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -61,8 +62,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="link_contact_to_document" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Link</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="link_contact_to_document" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Link</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

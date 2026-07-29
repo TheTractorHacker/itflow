@@ -24,7 +24,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fa fa-fw fa-list-ul mr-2"></i>
+        <h3 class="card-title mt-2"><i class="fa fa-fw fa-list-ul me-2"></i>
             <?= nullable_htmlentities(ucwords(str_replace('_', ' ', $category))); ?> Categories
         </h3>
         <?php
@@ -32,7 +32,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
         ?>
         <div class="card-tools">
             <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/category/category_add.php?category=<?= nullable_htmlentities($category) ?>"><i
-                    class="fas fa-plus mr-2"></i>New <?= nullable_htmlentities(ucwords(str_replace('_', ' ', $category))); ?> Category</button>
+                    class="fas fa-plus me-2"></i>New <?= nullable_htmlentities(ucwords(str_replace('_', ' ', $category))); ?> Category</button>
         </div>
         <?php
             }
@@ -55,7 +55,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     </div>
                 </div>
                 <div class="col-sm-8">
-                    <div class="btn-group float-right">
+                    <div class="btn-group float-end">
                         <a href="?category=Expense"
                             class="btn <?php if ($category == 'Expense') {
                                 echo 'btn-primary';
@@ -116,7 +116,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             } else {
                                 echo 'btn-default';
                             } ?>"><i
-                                class="fas fa-fw fa-archive mr-2"></i>Archived</a>
+                                class="fas fa-fw fa-archive me-2"></i>Archived</a>
                     </div>
                 </div>
             </div>
@@ -160,10 +160,10 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 <a class="text-dark ajax-modal" href="#"
                                     data-modal-url="modals/category/category_edit.php?id=<?= $category_id ?>">
                                     <?php if ($is_group) { ?>
-                                        <i class="fas fa-layer-group mr-1 text-muted"></i><strong><?= $category_name ?></strong>
-                                        <span class="badge badge-light ml-1">Group</span>
+                                        <i class="fas fa-layer-group me-1 text-muted"></i><strong><?= $category_name ?></strong>
+                                        <span class="badge text-bg-light ms-1">Group</span>
                                     <?php } else { ?>
-                                        <?php if ($parent_name) { ?><small class="text-muted mr-1"><?= $parent_name ?> /</small><?php } ?>
+                                        <?php if ($parent_name) { ?><small class="text-muted me-1"><?= $parent_name ?> /</small><?php } ?>
                                         <?= $category_name ?>
                                     <?php } ?>
                                     <div><small class="text-secondary"><?= $category_description ?></small></div>
@@ -172,7 +172,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td><i class="fa fa-3x fa-circle" style="color:<?php echo $category_color; ?>;"></i></td>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
@@ -181,22 +181,22 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                             ?>
                                             <a class="dropdown-item text-info confirm-link"
                                                 href="post.php?restore_category=<?php echo $category_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                                <i class="fas fa-fw fa-redo me-2"></i>Restore
                                             </a>
                                             <a class="dropdown-item text-danger confirm-link"
                                                 href="post.php?delete_category=<?php echo $category_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                                             </a>
                                             <?php
                                         } else {
                                             ?>
                                             <a class="dropdown-item ajax-modal" href="#"
                                                 data-modal-url="modals/category/category_edit.php?id=<?= $category_id ?>">
-                                                <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                                <i class="fas fa-fw fa-edit me-2"></i>Edit
                                             </a>
                                             <a class="dropdown-item text-danger confirm-link"
                                                 href="post.php?archive_category=<?php echo $category_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                <i class="fas fa-fw fa-archive me-2"></i>Archive
                                             </a>
                                             <?php
                                         }

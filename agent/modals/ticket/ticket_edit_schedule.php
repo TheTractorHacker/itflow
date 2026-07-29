@@ -38,9 +38,9 @@ ob_start();
 ?>
 <div class="modal-header bg-dark">
     <h5 class="modal-title">
-        <i class="fa fa-fw fa-calendar-check mr-2"></i>Schedule: <strong><?= $ticket_prefix . $ticket_number ?></strong>
+        <i class="fa fa-fw fa-calendar-check me-2"></i>Schedule: <strong><?= $ticket_prefix . $ticket_number ?></strong>
     </h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -53,10 +53,10 @@ ob_start();
             <label class="d-block">Appointment Type</label>
             <div class="btn-group btn-group-sm w-100" role="group">
                 <button type="button" class="btn <?= !$ticket_onsite ? 'btn-primary' : 'btn-outline-primary' ?> onsite-opt" data-val="0">
-                    <i class="fas fa-laptop mr-1"></i>Remote
+                    <i class="fas fa-laptop me-1"></i>Remote
                 </button>
                 <button type="button" class="btn <?= $ticket_onsite ? 'btn-primary' : 'btn-outline-primary' ?> onsite-opt" data-val="1">
-                    <i class="fas fa-map-marker-alt mr-1"></i>Onsite
+                    <i class="fas fa-map-marker-alt me-1"></i>Onsite
                 </button>
             </div>
             <input type="hidden" name="onsite" id="onsite_value" value="<?= $ticket_onsite ?>">
@@ -127,7 +127,7 @@ ob_start();
 
         <!-- Live preview -->
         <div id="appt_preview" class="alert alert-info py-2 mb-0" style="font-size:.875rem;display:none;">
-            <i class="fa fa-clock mr-1"></i><span id="appt_preview_text"></span>
+            <i class="fa fa-clock me-1"></i><span id="appt_preview_text"></span>
         </div>
 
     </div>
@@ -136,15 +136,15 @@ ob_start();
         <?php if ($ticket_scheduled) { ?>
         <a href="post.php?cancel_ticket_schedule=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
            class="btn btn-outline-danger mr-auto confirm-link">
-            <i class="fa fa-trash mr-1"></i>Remove
+            <i class="fa fa-trash me-1"></i>Remove
         </a>
         <?php } ?>
-        <button type="submit" name="edit_ticket_schedule" class="btn btn-primary"><i class="fa fa-check mr-1"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-1"></i>Cancel</button>
+        <button type="submit" name="edit_ticket_schedule" class="btn btn-primary"><i class="fa fa-check me-1"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i>Cancel</button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(function () {
     var useCustomEnd = $('#sched_duration').val() === 'custom';
 

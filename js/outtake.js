@@ -45,3 +45,40 @@ function createAndSignOuttake(ticketId, clientId, csrfToken) {
         spinner.remove();
     });
 }
+
+// CSP forbids inline onclick= attributes - every trigger above is wired via a
+// class + data-* attributes and this one delegated listener instead.
+document.addEventListener('click', function (e) {
+    var createBtn = e.target.closest('.js-create-outtake');
+    if (createBtn) {
+        e.preventDefault();
+        createAndSignOuttake(
+            parseInt(createBtn.dataset.ticketId, 10) || 0,
+            parseInt(createBtn.dataset.clientId, 10) || 0,
+            createBtn.dataset.csrfToken || ''
+        );
+        return;
+    }
+
+    var signBtn = e.target.closest('.js-sign-outtake');
+    if (signBtn) {
+        e.preventDefault();
+        openOuttakeSignModal(
+            parseInt(signBtn.dataset.outtakeId, 10) || 0,
+            parseInt(signBtn.dataset.ticketId, 10) || 0,
+            parseInt(signBtn.dataset.clientId, 10) || 0
+        );
+        return;
+    }
+
+    var copyBtn = e.target.closest('.js-copy-outtake-link');
+    if (copyBtn) {
+        e.preventDefault();
+        var url = copyBtn.dataset.url || '';
+        if (url && navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(function () {
+                alert('Link copied!');
+            });
+        }
+    }
+});

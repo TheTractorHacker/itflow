@@ -26,9 +26,9 @@ $recurring_ticket_count = mysqli_num_rows($sql_related_recurring_tickets);
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-user-slash mr-2"></i>Archiving user:
+    <h5 class="modal-title"><i class="fas fa-fw fa-user-slash me-2"></i>Archiving user:
         <strong><?php echo $user_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -74,8 +74,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="archive_user" class="btn btn-danger text-bold"><i class="fas fa-archive mr-2"></i>Archive</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="archive_user" class="btn btn-danger text-bold"><i class="fas fa-archive me-2"></i>Archive</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

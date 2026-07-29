@@ -13,13 +13,23 @@ function populateShareModal(client_id, item_type, item_ref_id) {
     document.getElementById("div_share_link_form").hidden = false;
     document.getElementById("div_share_link_generate").hidden = false;
 
-    $(document).ready(function() {
-        $('#share_email').select2({
-            tags: true,
-            placeholder: 'Select or type a value',
-            allowClear: true
+    // Note: this app replaced select2 with Tom Select app-wide (see js/app.js).
+    // `#share_email` needs to stay re-initializable every time the modal is populated
+    // (a fresh row can be shared without a full page reload), so re-create the
+    // Tom Select instance here rather than relying solely on the one-time
+    // DOMContentLoaded auto-init in js/app.js.
+    var shareEmailEl = document.getElementById('share_email');
+    if (shareEmailEl && window.TomSelect) {
+        if (shareEmailEl.tomselect) {
+            shareEmailEl.tomselect.destroy();
+        }
+        new TomSelect(shareEmailEl, {
+            create: true,
+            persist: false,
+            allowEmptyOption: true,
+            placeholder: 'Select or enter an Email'
         });
-    });
+    }
 }
 
 function generateShareLink() {
@@ -57,3 +67,21 @@ function generateShareLink() {
         );
     }
 }
+
+// Delegated wiring (CSP forbids inline onclick= attributes):
+// - any element with .share-link-trigger + data-client-id/data-item-type/data-item-ref-id
+//   populates and opens the share modal
+// - #div_share_link_generate ("Send and Show Link") submits the share-link request
+document.addEventListener('click', function (e) {
+    const trigger = e.target.closest('.share-link-trigger');
+    if (trigger) {
+        populateShareModal(trigger.dataset.clientId, trigger.dataset.itemType, trigger.dataset.itemRefId);
+        return;
+    }
+
+    const sendBtn = e.target.closest('#div_share_link_generate');
+    if (sendBtn) {
+        e.preventDefault();
+        generateShareLink();
+    }
+});

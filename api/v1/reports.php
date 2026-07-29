@@ -30,6 +30,18 @@ switch ($sub) {
     case 'tech-performance':
         require __DIR__ . '/reports/tech_performance.php';
         break;
+    case 'technician-performance':
+        require __DIR__ . '/reports/technician_performance.php';
+        break;
+    case 'service-desk':
+        require __DIR__ . '/reports/service_desk.php';
+        break;
+    case 'mrr':
+        require __DIR__ . '/reports/mrr.php';
+        break;
+    case 'rmm-health':
+        require __DIR__ . '/reports/rmm_health.php';
+        break;
     case 'unbilled-tickets':
         require __DIR__ . '/reports/unbilled_tickets.php';
         break;

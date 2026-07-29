@@ -23,11 +23,11 @@
 
 <?php require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/inc_confirm_modal.php'; ?>
 
-<!-- jQuery -->
+<!-- jQuery (kept as a coexistence shim for un-ported inline $() calls) -->
 <script src="/plugins/jquery/jquery.min.js"></script>
 
-<!-- Bootstrap 4 -->
-<script src="/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap 5 (bundle includes Popper) -->
+<script src="/plugins/bootstrap5/js/bootstrap.bundle.min.js"></script>
 
 <!--- TinyMCE -->
 <script src="/plugins/tinymce/tinymce.min.js" referrerpolicy="origin"></script>

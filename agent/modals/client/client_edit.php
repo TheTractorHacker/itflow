@@ -20,6 +20,15 @@ $client_notes = nullable_htmlentities($row['client_notes']);
 $client_created_at = nullable_htmlentities($row['client_created_at']);
 $client_archived_at = nullable_htmlentities($row['client_archived_at']);
 
+// CRM lead qualification fields
+$client_lead_source = nullable_htmlentities($row['client_lead_source'] ?? '');
+$client_lead_status = nullable_htmlentities($row['client_lead_status'] ?? '');
+$client_lead_owner = intval($row['client_lead_owner'] ?? 0);
+$client_lead_score = isset($row['client_lead_score']) && $row['client_lead_score'] !== null ? intval($row['client_lead_score']) : '';
+
+$sql_lead_owners = mysqli_query($mysqli, "SELECT user_id, user_name FROM users WHERE user_status = 1 AND user_archived_at IS NULL ORDER BY user_name ASC");
+$lead_status_presets = array('New', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Converted', 'Lost');
+
 // Client Tags
 $client_tag_id_array = array();
 $sql_client_tags = mysqli_query($mysqli, "SELECT tag_id FROM client_tags WHERE client_id = $client_id");
@@ -44,8 +53,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class='fa fa-fw fa-user-edit mr-2'></i>Editing Client: <strong><?php echo $client_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class='fa fa-fw fa-user-edit me-2'></i>Editing Client: <strong><?php echo $client_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -56,15 +65,15 @@ ob_start();
 
     <ul class="modal-header nav nav-pills nav-justified mb-3">
         <li class="nav-item">
-            <a class="nav-link active" data-toggle="pill" href="#pills-client-details<?php echo $client_id; ?>">Details</a>
+            <a class="nav-link active" data-bs-toggle="pill" href="#pills-client-details<?php echo $client_id; ?>">Details</a>
         </li>
         <?php if ($config_module_enable_accounting) { ?>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-client-billing<?php echo $client_id; ?>">Billing</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-client-billing<?php echo $client_id; ?>">Billing</a>
             </li>
         <?php } ?>
         <li class="nav-item">
-            <a class="nav-link" data-toggle="pill" href="#pills-client-notes<?php echo $client_id; ?>">Notes</a>
+            <a class="nav-link" data-bs-toggle="pill" href="#pills-client-notes<?php echo $client_id; ?>">Notes</a>
         </li>
     </ul>
 
@@ -96,7 +105,7 @@ ob_start();
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fa fa-fw fa-id-badge"></i></span>
                         </div>
-                        <input type="text" class="form-control" name="abbreviation" placeholder="Shortned name for client - Max chars 6" value="<?php echo $client_abbreviation; ?>" maxlength="6" oninput="this.value = this.value.toUpperCase()">
+                        <input type="text" class="form-control js-uppercase-input" name="abbreviation" placeholder="Shortned name for client - Max chars 6" value="<?php echo $client_abbreviation; ?>" maxlength="6">
                     </div>
                 </div>
 
@@ -152,6 +161,50 @@ ob_start();
                         </div>
                         <input type="text" class="form-control" name="website" placeholder="ex. google.com" maxlength="200"
                                value="<?php echo $client_website; ?>">
+                    </div>
+                </div>
+
+                <div class="card card-body bg-light mb-3">
+                    <label class="fw-bold text-secondary mb-2"><i class="fa fa-fw fa-bullhorn me-1"></i>Lead Details <small class="text-muted">(for sales / CRM)</small></label>
+                    <div class="form-row">
+                        <div class="form-group col-md-6 mb-2">
+                            <label>Lead Source</label>
+                            <input type="text" class="form-control" name="lead_source" placeholder="e.g. Website, Referral, Cold Call" maxlength="60" value="<?php echo $client_lead_source; ?>">
+                        </div>
+                        <div class="form-group col-md-6 mb-2">
+                            <label>Lead Status</label>
+                            <select class="form-control select2" name="lead_status" data-tags="true">
+                                <option value="">- Select Status -</option>
+                                <?php
+                                $lead_status_has_match = false;
+                                foreach ($lead_status_presets as $preset) {
+                                    $sel = ($preset === $client_lead_status) ? 'selected' : '';
+                                    if ($sel) { $lead_status_has_match = true; }
+                                    echo "<option value=\"$preset\" $sel>$preset</option>";
+                                }
+                                // Preserve a custom (non-preset) stored status
+                                if (!$lead_status_has_match && $client_lead_status !== '') {
+                                    echo "<option value=\"$client_lead_status\" selected>$client_lead_status</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6 mb-0">
+                            <label>Lead Owner</label>
+                            <select class="form-control select2" name="lead_owner">
+                                <option value="0">- Unassigned -</option>
+                                <?php while ($lo = mysqli_fetch_assoc($sql_lead_owners)) {
+                                    $lo_id = intval($lo['user_id']); ?>
+                                    <option value="<?php echo $lo_id; ?>" <?php if ($lo_id === $client_lead_owner) { echo 'selected'; } ?>><?php echo nullable_htmlentities($lo['user_name']); ?></option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6 mb-0">
+                            <label>Lead Score</label>
+                            <input type="number" min="0" max="100" step="1" class="form-control" name="lead_score" placeholder="0-100" value="<?php echo $client_lead_score; ?>">
+                        </div>
                     </div>
                 </div>
 
@@ -245,8 +298,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_client" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_client" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

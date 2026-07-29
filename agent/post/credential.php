@@ -351,7 +351,7 @@ if (isset($_POST['bulk_favorite_credentials'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
-    enforceUserPermission('module_support', 2);
+    enforceUserPermission('module_credential', 2);
 
     if (isset($_POST['credential_ids'])) {
 
@@ -389,7 +389,7 @@ if (isset($_POST['bulk_unfavorite_credentials'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
-    enforceUserPermission('module_support', 2);
+    enforceUserPermission('module_credential', 2);
 
     if (isset($_POST['credential_ids'])) {
 

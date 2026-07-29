@@ -70,7 +70,8 @@ $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_ty
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Outtake Form — <?= $ticket_num ?></title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/plugins/bootstrap5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/itflow_bs5_bridge.css">
     <style>
         body { background: #f0f2f5; font-family: Arial, sans-serif; font-size: 14px; }
         .form-card { max-width: 800px; margin: 30px auto 60px; background: #fff; border-radius: 6px; box-shadow: 0 2px 16px rgba(0,0,0,.12); overflow: hidden; }
@@ -137,7 +138,7 @@ $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_ty
     <?php } ?>
 
     <div class="text-center py-4 no-print">
-        <button onclick="window.print()" class="btn btn-outline-secondary"><i class="fas fa-print mr-1"></i>Print / Save PDF</button>
+        <button class="btn btn-outline-secondary js-print-page"><i class="fas fa-print me-1"></i>Print / Save PDF</button>
     </div>
 
     <?php } else { ?>
@@ -198,7 +199,7 @@ $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_ty
                 <canvas id="sig_canvas"></canvas>
                 <input type="hidden" name="outtake_signature" id="sig_data">
                 <div class="mt-2 d-flex align-items-center">
-                    <button type="button" class="btn btn-sm btn-outline-secondary mr-3 no-print" onclick="clearSig()">Clear</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-3 no-print js-clear-outtake-sig">Clear</button>
                     <small class="text-secondary">Draw your signature in the box above</small>
                 </div>
             </div>
@@ -219,15 +220,18 @@ $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_ty
     <?php } // end not-signed ?>
 </div>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" href="/plugins/fontawesome-free/css/all.min.css">
 <script src="/js/signature_pad.js"></script>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 function clearSig() {
     var hidden = document.getElementById('sig_data');
     if (hidden) hidden.value = '';
     var canvas = document.getElementById('sig_canvas');
     if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
+document.addEventListener('click', function (e) {
+    if (e.target.closest('.js-clear-outtake-sig')) { clearSig(); }
+});
 
 document.addEventListener('DOMContentLoaded', function() {
     initSignaturePad('sig_canvas', 'sig_data');

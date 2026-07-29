@@ -19,9 +19,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-cube mr-2"></i>License Templates</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-cube me-2"></i>License Templates</h3>
         <div class="card-tools">
-            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/software_template/software_template_add.php"><i class="fas fa-plus mr-2"></i>New License Template</button>
+            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/software_template/software_template_add.php"><i class="fas fa-plus me-2"></i>New License Template</button>
         </div>
     </div>
     <div class="card-body">
@@ -82,7 +82,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <td>
                             <a class="text-dark ajax-modal" href="#" data-modal-url="modals/software_template/software_template_edit.php?id=<?= $software_template_id ?>">
                                 <div class="media">
-                                    <i class="fa fa-fw fa-2x fa-cube mr-3"></i>
+                                    <i class="fa fa-fw fa-2x fa-cube me-3"></i>
                                     <div class="media-body">
                                         <div><?php echo "$software_template_name <span>$software_template_version</span>"; ?></div>
                                         <div><small class="text-secondary"><?php echo $software_template_description; ?></small></div>
@@ -94,17 +94,17 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <td><?php echo $software_template_license_type; ?></td>
                         <td>
                             <div class="dropdown dropleft text-center">
-                                <button class="btn btn-secondary btn-sm" data-toggle="dropdown">
+                                <button class="btn btn-secondary btn-sm" data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-h"></i>
                                 </button>
                                 <div class="dropdown-menu">
                                     <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/software_template/software_template_edit.php?id=<?= $software_template_id ?>">
-                                        <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                        <i class="fas fa-fw fa-edit me-2"></i>Edit
                                     </a>
                                     <?php if($session_user_role == 3) { ?>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_software_template=<?php echo $software_template_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash me-2"></i>Delete
                                         </a>
                                     <?php } ?>
                                 </div>

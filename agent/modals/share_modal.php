@@ -4,8 +4,8 @@
     <div class="modal-dialog modal-md">
         <div class="modal-content">
             <div class="modal-header bg-dark">
-                <h5 class="modal-title"><i class="fas fa-fw fa-share mr-2"></i>Share Link</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fas fa-fw fa-share me-2"></i>Share Link</h5>
+                <button type="button" class="close text-white" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -45,7 +45,7 @@
 
                         <label>Expiration</label>
                         <div class="form-group">
-                            <div class="btn-group btn-block btn-group-toggle" data-toggle="buttons">
+                            <div class="btn-group btn-block js-btn-group-toggle">
                                 <label class="btn btn-outline-dark active">
                                     <input type="radio" name="expires" value="1 HOUR" checked>1 hour
                                 </label>
@@ -62,9 +62,9 @@
                         </div>
 
                         <div class="form-group">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" name="views" id="share_views" value="1">
-                                <label class="custom-control-label" for="share_views">Delete after view</label>
+                            <div class="form-check form-check form-switch">
+                                <input type="checkbox" class="form-check-input" name="views" id="share_views" value="1">
+                                <label class="form-check-label" for="share_views">Delete after view</label>
                             </div>
                         </div>
 
@@ -84,8 +84,8 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" id="div_share_link_generate" class="btn btn-primary text-bold" onclick="event.preventDefault(); generateShareLink()"><i class="fas fa-paper-plane mr-2"></i>Send and Show Link</button>
-                    <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+                    <button type="button" id="div_share_link_generate" class="btn btn-primary text-bold"><i class="fas fa-paper-plane me-2"></i>Send and Show Link</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
                 </div>
             </form>
         </div>

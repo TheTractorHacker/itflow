@@ -18,12 +18,17 @@ $calendar_name = nullable_htmlentities($row['calendar_name']);
 $calendar_color = nullable_htmlentities($row['calendar_color']);
 $client_id = intval($row['event_client_id']);
 
+// Don't Enforce Client Access if Calendar event doesn't have a client
+if ($client_id) {
+    enforceClientAccess($client_id);
+}
+
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-calendar-check mr-2" style="color:<?php echo $calendar_color; ?>"></i>Editing: <strong><?php echo $event_title; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-calendar-check me-2" style="color:<?php echo $calendar_color; ?>"></i>Editing: <strong><?php echo $event_title; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -36,13 +41,13 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-event<?php echo $event_id; ?>"><i class="fa fa-fw fa-calendar-check mr-2"></i>Event</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-event<?php echo $event_id; ?>"><i class="fa fa-fw fa-calendar-check me-2"></i>Event</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-details<?php echo $event_id; ?>"><i class="fa fa-fw fa-info-circle mr-2"></i>Details</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-details<?php echo $event_id; ?>"><i class="fa fa-fw fa-info-circle me-2"></i>Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-attendees<?php echo $event_id; ?>"><i class="fa fa-fw fa-users mr-2"></i>Attendees</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-attendees<?php echo $event_id; ?>"><i class="fa fa-fw fa-users me-2"></i>Attendees</a>
             </li>
         </ul>
 
@@ -67,7 +72,7 @@ ob_start();
                                 $calendar_name_select = nullable_htmlentities($row['calendar_name']);
                                 $calendar_color_select = nullable_htmlentities($row['calendar_color']);
                                 ?>
-                                <option data-content="<i class='fa fa-circle mr-2' style='color:<?php echo $calendar_color_select; ?>;'></i> <?php echo $calendar_name_select; ?>"<?php if ($calendar_id == $calendar_id_select) { echo "selected"; } ?> value="<?php echo $calendar_id_select; ?>"><?php echo $calendar_name_select; ?></option>
+                                <option data-content="<i class='fa fa-circle me-2' style='color:<?php echo $calendar_color_select; ?>;'></i> <?php echo $calendar_name_select; ?>"<?php if ($calendar_id == $calendar_id_select) { echo "selected"; } ?> value="<?php echo $calendar_id_select; ?>"><?php echo $calendar_name_select; ?></option>
 
                             <?php } ?>
                         </select>
@@ -173,9 +178,9 @@ ob_start();
                 <?php } ?>
 
                 <?php if (!empty($config_smtp_host)) { ?>
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="customControlAutosizing<?php echo $event_id; ?>" name="email_event" value="1" >
-                        <label class="custom-control-label" for="customControlAutosizing<?php echo $event_id; ?>">Email Event</label>
+                    <div class="form-check form-check">
+                        <input type="checkbox" class="form-check-input" id="customControlAutosizing<?php echo $event_id; ?>" name="email_event" value="1" >
+                        <label class="form-check-label" for="customControlAutosizing<?php echo $event_id; ?>">Email Event</label>
                     </div>
                 <?php } ?>
 
@@ -185,9 +190,9 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <a class="btn btn-default text-danger mr-auto" href="post.php?delete_event=<?= $event_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fa fa-calendar-times mr-2"></i>Delete</a>
-        <button type="submit" name="edit_event" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <a class="btn btn-default text-danger mr-auto" href="post.php?delete_event=<?= $event_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fa fa-calendar-times me-2"></i>Delete</a>
+        <button type="submit" name="edit_event" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

@@ -60,24 +60,31 @@ if (isset($_GET['project_id'])) {
     $client_id = intval($row['client_id']);
     $client_name = nullable_htmlentities($row['client_name']);
     if ($client_name) {
-        $client_name_display = "<div class='text-secondary'><i class='fas fa-fw fa-users mr-2'></i>$client_name</div>";
+        $client_name_display = "<div class='text-secondary'><i class='fas fa-fw fa-users me-2'></i>$client_name</div>";
     } else {
         $client_name_display = "";
     }
 
     $project_manager = intval($row['user_id']);
     $project_manager_name = nullable_htmlentities($row['user_name']);
+
+    // Planning / budget fields (captured now before $row is reused by later queries)
+    $project_start = nullable_htmlentities($row['project_start']);
+    $project_estimated_hours = $row['project_estimated_hours'] !== null ? floatval($row['project_estimated_hours']) : 0;
+    $project_budget_amount = $row['project_budget_amount'] !== null ? floatval($row['project_budget_amount']) : 0;
+    $project_hourly_rate = $row['project_hourly_rate'] !== null ? floatval($row['project_hourly_rate']) : 0;
+
     if ($project_manager) {
-        $project_manager_display = "<div class='text-secondary'><i class='fas fa-fw fa-user-tie mr-2'></i>$project_manager_name</div>";
+        $project_manager_display = "<div class='text-secondary'><i class='fas fa-fw fa-user-tie me-2'></i>$project_manager_name</div>";
     } else {
         $project_manager_display = "-";
     }
 
     if ($project_completed_at) {
-        $project_status_display = "<span class='badge badge-pill badge-dark ml-2'>Closed</span>";
-        $project_completed_date_display = "<div class='text-primary text-bold'><small><i class='fa fa-fw fa-door-closed mr-2'></i>" . date('Y-m-d', strtotime($project_completed_at)) . "</small></div>";
+        $project_status_display = "<span class='badge rounded-pill text-bg-dark ms-2'>Closed</span>";
+        $project_completed_date_display = "<div class='text-primary text-bold'><small><i class='fa fa-fw fa-door-closed me-2'></i>" . date('Y-m-d', strtotime($project_completed_at)) . "</small></div>";
     } else {
-        $project_status_display = "<span class='badge badge-pill badge-primary ml-2'>Open</span>";
+        $project_status_display = "<span class='badge rounded-pill text-bg-primary ms-2'>Open</span>";
         $project_completed_date_display = "";
     }
 
@@ -115,27 +122,43 @@ if (isset($_GET['project_id'])) {
     }
 
     // Get All Tasks
+    // LEFT JOIN (plus OR task_project_id) so that project-only tasks (task_project_id set,
+    // no task_ticket_id) are included alongside tasks belonging to the project's tickets.
     $sql_tasks = mysqli_query($mysqli,
-        "SELECT * FROM tickets, tasks
-        WHERE ticket_id = task_ticket_id
-        AND ticket_project_id = $project_id
-        ORDER BY task_created_at ASC"
+        "SELECT tasks.*, tickets.ticket_prefix, tickets.ticket_number, tickets.ticket_project_id
+        FROM tasks
+        LEFT JOIN tickets ON tickets.ticket_id = tasks.task_ticket_id
+        WHERE tickets.ticket_project_id = $project_id
+        OR tasks.task_project_id = $project_id
+        ORDER BY task_order ASC, task_created_at ASC"
     );
-    $task_count = mysqli_num_rows($sql_tasks);
+    $project_tasks = [];
+    while ($task_row = mysqli_fetch_assoc($sql_tasks)) {
+        $project_tasks[] = $task_row;
+    }
+    $task_count = count($project_tasks);
 
-    // Get Completed Task Count
-    $sql_tasks_completed = mysqli_query($mysqli,
-        "SELECT * FROM tickets, tasks
-        WHERE ticket_id = task_ticket_id
-        AND ticket_project_id = $project_id
-        AND task_completed_at IS NOT NULL"
-    );
-    $completed_task_count = mysqli_num_rows($sql_tasks_completed);
+    // Completed Task Count
+    $completed_task_count = 0;
+    foreach ($project_tasks as $task_row) {
+        if (!empty($task_row['task_completed_at'])) {
+            $completed_task_count++;
+        }
+    }
 
     // Tasks Completed Percent
+    $tasks_completed_percent = 0;
     if ($task_count) {
         $tasks_completed_percent = round(($completed_task_count / $task_count) * 100);
     }
+
+    // Get Milestones for this project
+    $sql_milestones = mysqli_query($mysqli, "SELECT * FROM project_milestones WHERE milestone_project_id = $project_id ORDER BY milestone_order ASC, milestone_id ASC");
+    $project_milestones = [];
+    while ($milestone_row = mysqli_fetch_assoc($sql_milestones)) {
+        $project_milestones[] = $milestone_row;
+    }
+    $milestone_count = count($project_milestones);
 
     //Get Total Ticket Time
     $sql_ticket_total_reply_time = mysqli_query($mysqli, "SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(ticket_reply_time_worked))) AS ticket_total_reply_time FROM ticket_replies
@@ -159,6 +182,92 @@ if (isset($_GET['project_id'])) {
     // The user names in a comma-separated string
     $ticket_collaborators = nullable_htmlentities($row['user_names']);
 
+    // --- Budget / Effort rollup ---
+    // Actual worked seconds from ticket replies on this project's tickets (same rollup as the time card)
+    $bud_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COALESCE(SUM(TIME_TO_SEC(ticket_reply_time_worked)), 0) AS s
+        FROM ticket_replies
+        LEFT JOIN tickets ON ticket_id = ticket_reply_ticket_id
+        WHERE ticket_reply_archived_at IS NULL AND ticket_project_id = $project_id"));
+    $actual_seconds = intval($bud_row['s']);
+
+    // Add completed project-only task estimates - these never create ticket_replies (guarded),
+    // so they are not represented in the reply-time rollup above.
+    $ptask_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COALESCE(SUM(task_completion_estimate), 0) * 60 AS s
+        FROM tasks
+        WHERE task_project_id = $project_id
+        AND (task_ticket_id IS NULL OR task_ticket_id = 0)
+        AND task_completed_at IS NOT NULL"));
+    $actual_seconds += intval($ptask_row['s']);
+
+    $actual_hours = $actual_seconds / 3600;
+
+    // Estimated hours: use the project field, else fall back to the sum of task estimates
+    $estimated_hours = $project_estimated_hours;
+    if ($estimated_hours <= 0) {
+        $est_minutes = 0;
+        foreach ($project_tasks as $task_row) {
+            $est_minutes += intval($task_row['task_completion_estimate']);
+        }
+        $estimated_hours = $est_minutes / 60;
+    }
+    $hours_percent = $estimated_hours > 0 ? round(($actual_hours / $estimated_hours) * 100) : 0;
+
+    // Budget $ vs burned $ (actual hours x hourly rate)
+    $burned_amount = $actual_hours * $project_hourly_rate;
+    $budget_percent = $project_budget_amount > 0 ? round(($burned_amount / $project_budget_amount) * 100) : 0;
+
+    // Only show the budget card when there is something meaningful to display
+    $show_budget_card = ($estimated_hours > 0 || $project_budget_amount > 0 || $project_hourly_rate > 0 || $actual_hours > 0);
+
+    // Renderer for a single task row (shared by the milestones section and the tasks card)
+    $render_task_row = function ($t) {
+        $t_id = intval($t['task_id']);
+        $t_name = nullable_htmlentities($t['task_name']);
+        $t_completed = !empty($t['task_completed_at']);
+        $t_progress = intval($t['task_progress']);
+        $t_due = nullable_htmlentities($t['task_due']);
+        $t_ticket_id = intval($t['task_ticket_id']);
+        $t_prefix = nullable_htmlentities($t['ticket_prefix'] ?? '');
+        $t_number = nullable_htmlentities($t['ticket_number'] ?? '');
+        $csrf = $_SESSION['csrf_token'];
+        ?>
+        <tr>
+            <td style="width: 28px;">
+                <?php if ($t_completed) { ?>
+                    <a href="post.php?undo_complete_task=<?= $t_id ?>&csrf_token=<?= $csrf ?>" title="Mark incomplete">
+                        <i class="far fa-check-square text-success"></i>
+                    </a>
+                <?php } else { ?>
+                    <a href="post.php?complete_task=<?= $t_id ?>&csrf_token=<?= $csrf ?>" title="Mark complete">
+                        <i class="far fa-square text-secondary"></i>
+                    </a>
+                <?php } ?>
+            </td>
+            <td>
+                <span class="<?= $t_completed ? 'text-secondary' : '' ?>" style="<?= $t_completed ? 'text-decoration: line-through;' : '' ?>"><?= $t_name ?></span>
+                <?php if ($t_ticket_id) { ?>
+                    <a href="ticket.php?ticket_id=<?= $t_ticket_id ?>" class="badge text-bg-light border ms-1"><?= "$t_prefix$t_number" ?></a>
+                <?php } ?>
+                <?php if ($t_due) { ?>
+                    <span class="badge text-bg-light border ms-1"><i class="far fa-calendar me-1"></i><?= $t_due ?></span>
+                <?php } ?>
+                <?php if (!$t_completed && $t_progress > 0) { ?>
+                    <span class="badge text-bg-info ms-1"><?= $t_progress ?>%</span>
+                <?php } ?>
+            </td>
+            <td class="text-end" style="width: 34px;">
+                <div class="dropdown">
+                    <a href="#" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v text-secondary"></i></a>
+                    <div class="dropdown-menu dropdown-menu-right">
+                        <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/project/task_edit.php?id=<?= $t_id ?>"><i class="fas fa-fw fa-edit me-2"></i>Edit</a>
+                        <a class="dropdown-item text-danger confirm-link" href="post.php?delete_task=<?= $t_id ?>&csrf_token=<?= $csrf ?>"><i class="fas fa-fw fa-trash me-2"></i>Delete</a>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        <?php
+    };
+
     ?>
 
 <!-- Breadcrumbs-->
@@ -169,66 +278,85 @@ if (isset($_GET['project_id'])) {
     <li class="breadcrumb-item active">Project Details</li>
 </ol>
 
+<!-- Project view tabs -->
+<ul class="nav nav-pills mb-3 d-print-none">
+    <li class="nav-item">
+        <a class="nav-link active" href="project_details.php?<?= $client_url ?>project_id=<?= $project_id ?>"><i class="fas fa-fw fa-info-circle me-2"></i>Details</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="project_gantt.php?<?= $client_url ?>project_id=<?= $project_id ?>"><i class="fas fa-fw fa-stream me-2"></i>Gantt</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="project_kanban.php?<?= $client_url ?>project_id=<?= $project_id ?>"><i class="fas fa-fw fa-columns me-2"></i>Kanban</a>
+    </li>
+</ul>
+
 <!-- Project Header -->
 <div class="card">
     <div class="card-header">
         <h5 class="card-title">
-            <i class="fas fa-project-diagram text-secondary mr-2"></i>
+            <i class="fas fa-project-diagram text-secondary me-2"></i>
             <span class="h4"><?= "$project_prefix$project_number$project_status_display" ?></span>
         </h5>
         <div class="card-tools d-print-none">
             <div class="btn-group">
                 <?php if (empty($project_completed_at)) { ?>
-                    <div class="dropdown mr-2">
-                        <button class="btn btn-primary btn-sm" type="button" id="dropdownMenuButton" data-toggle="dropdown">
-                            <i class="fas fa-fw fa-plus mr-2"></i>New
+                    <div class="dropdown me-2">
+                        <button class="btn btn-primary btn-sm" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+                            <i class="fas fa-fw fa-plus me-2"></i>New
                         </button>
                         <div class="dropdown-menu">
                             <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/ticket/ticket_add.php?<?= $client_url ?>&project_id=<?= $project_id ?>" data-modal-size="lg">
-                            <i class="fa fa-fw fa-life-ring mr-2"></i>Ticket
-                        </a>
+                                <i class="fa fa-fw fa-life-ring me-2"></i>Ticket
+                            </a>
+                            <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/project/milestone_add.php?project_id=<?= $project_id ?>">
+                                <i class="fa fa-fw fa-flag-checkered me-2"></i>Milestone
+                            </a>
+                            <a class="dropdown-item text-dark ajax-modal" href="#" data-modal-url="modals/project/task_add.php?project_id=<?= $project_id ?>">
+                                <i class="fa fa-fw fa-tasks me-2"></i>Task
+                            </a>
                         </div>
                     </div>
                     <div class="dropdown">
-                        <button class="btn btn-outline-primary btn-sm mr-3" type="button" id="dropdownMenuButton" data-toggle="dropdown">
-                            <i class="fas fa-fw fa-link mr-2"></i>Link
+                        <button class="btn btn-outline-primary btn-sm me-3" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+                            <i class="fas fa-fw fa-link me-2"></i>Link
                         </button>
                         <div class="dropdown-menu">
                             <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/project/project_link_ticket.php?<?= $client_url ?>project_id=<?= $project_id ?>">
-                                <i class="fas fa-fw fa-life-ring mr-2"></i>Open Ticket
+                                <i class="fas fa-fw fa-life-ring me-2"></i>Open Ticket
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/project/project_link_closed_ticket.php?<?= $client_url ?>project_id=<?= $project_id ?>.php">
-                                <i class="fas fa-fw fa-life-ring mr-2"></i>Closed Ticket
+                            <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/project/project_link_closed_ticket.php?<?= $client_url ?>project_id=<?= $project_id ?>">
+                                <i class="fas fa-fw fa-life-ring me-2"></i>Closed Ticket
                             </a>
                         </div>
                     </div>
                 <?php } ?>
                 <?php if (($tickets_closed_percent == 100 || $tickets_resolved_percent == 100) && empty($project_completed_at)) { ?>
                     <a class="btn btn-dark btn-sm confirm-link" href="post.php?close_project=<?= $project_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                        <i class="fas fa-fw fa-check mr-2"></i>Close
+                        <i class="fas fa-fw fa-check me-2"></i>Close
                     </a>
                 <?php } ?>
-                <div class="dropdown dropleft text-center ml-3">
-                    <button class="btn btn-secondary btn-sm" type="button" id="dropdownMenuButton" data-toggle="dropdown">
+                <div class="dropdown dropleft text-center ms-3">
+                    <button class="btn btn-secondary btn-sm" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" data-boundary="window">
                         <i class="fas fa-fw fa-ellipsis-v"></i>
                     </button>
                     <div class="dropdown-menu">
                         <?php if (empty($project_completed_at)) { ?>
                             <a class="dropdown-item ajax-modal" href="#"
                                 data-modal-url = "modals/project/project_edit.php?id=<?= $project_id ?>">
-                                <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                <i class="fas fa-fw fa-edit me-2"></i>Edit
                             </a>
                         <?php } ?>
                         <?php if (!empty($project_completed_at) && empty($project_archived_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?archive_project=<?= $project_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                <i class="fas fa-fw fa-archive me-2"></i>Archive
                             </a>
                         <?php } ?>
                         <?php if (!empty($project_archived_at) && lookupUserPermission("module_support" >= 3)) { ?>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item text-danger confirm-link" href="post.php?delete_project=<?php echo $project_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                             </a>
                         <?php } ?>
                     </div>
@@ -246,12 +374,12 @@ if (isset($_GET['project_id'])) {
     <div class="card card-body">
         <div><?php echo $client_name_display; ?></div>
         <div><?php echo $project_manager_display; ?></div>
-        <div class='text-secondary'><i class='fa fa-fw fa-clock mr-2'></i><?php echo $project_due; ?></div>
+        <div class='text-secondary'><i class='fa fa-fw fa-clock me-2'></i><?php echo $project_due; ?></div>
         <div><?php echo $project_completed_date_display; ?></div>
         <!-- Time tracking -->
         <?php if ($ticket_total_reply_time) { ?>
             <div>
-                <i class="far fa-fw fa-clock text-secondary mr-2"></i>Total time worked: <?php echo $ticket_total_reply_time; ?>
+                <i class="far fa-fw fa-clock text-secondary me-2"></i>Total time worked: <?php echo $ticket_total_reply_time; ?>
             </div>
         <?php } ?>
     </div>
@@ -259,77 +387,185 @@ if (isset($_GET['project_id'])) {
     <div class="card card-body">
         <?php if ($ticket_count) { ?>
             <div class="progress" style="height: 20px;">
-                <i class="fa fas fa-fw fa-life-ring mr-2"></i>
+                <i class="fa fas fa-fw fa-life-ring me-2"></i>
                 <div class="progress-bar bg-primary" style="width: <?php echo $tickets_closed_percent; ?>%;"><?php echo $closed_ticket_count; ?> / <?php echo $ticket_count; ?></div>
             </div>
         <?php } ?>
         <?php if ($task_count) { ?>
             <div class="progress mt-2" style="height: 20px;">
-                <i class="fa fas fa-fw fa-tasks mr-2"></i>
+                <i class="fa fas fa-fw fa-tasks me-2"></i>
                 <div class="progress-bar bg-secondary" style="width: <?php echo $tasks_completed_percent; ?>%;"><?php echo $completed_task_count; ?> / <?php echo $task_count; ?></div>
             </div>
         <?php } ?>
         <?php if ($ticket_collaborators) { ?>
             <div class=mt-1>
-                <i class="fas fa-fw fa-users mr-2 text-secondary"></i><?php echo $ticket_collaborators; ?>
+                <i class="fas fa-fw fa-users me-2 text-secondary"></i><?php echo $ticket_collaborators; ?>
             </div>
         <?php } ?>
     </div>
 </div>
 
+<!-- Budget & Effort card -->
+<?php if ($show_budget_card) { ?>
+    <div class="card mb-3">
+        <div class="card-header py-2">
+            <h5 class="card-title mt-2 mb-2"><i class="fas fa-fw fa-coins me-2"></i>Budget &amp; Effort</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-2 mb-md-0">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary"><i class="far fa-fw fa-clock me-2"></i>Hours</span>
+                        <span><strong><?php echo number_format($actual_hours, 1); ?></strong> / <?php echo number_format($estimated_hours, 1); ?> hrs (<?php echo $hours_percent; ?>%)</span>
+                    </div>
+                    <div class="progress mt-1" style="height: 20px;">
+                        <div class="progress-bar <?php echo $hours_percent > 100 ? 'bg-danger' : 'bg-info'; ?>" style="width: <?php echo min($hours_percent, 100); ?>%;"><?php echo $hours_percent; ?>%</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary"><i class="fas fa-fw fa-dollar-sign me-2"></i>Budget</span>
+                        <span><strong><?php echo numfmt_format_currency($currency_format, $burned_amount, $session_company_currency); ?></strong> / <?php echo numfmt_format_currency($currency_format, $project_budget_amount, $session_company_currency); ?> (<?php echo $budget_percent; ?>%)</span>
+                    </div>
+                    <div class="progress mt-1" style="height: 20px;">
+                        <div class="progress-bar <?php echo $budget_percent > 100 ? 'bg-danger' : 'bg-success'; ?>" style="width: <?php echo min($budget_percent, 100); ?>%;"><?php echo $budget_percent; ?>%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php } ?>
+
 <div class="row">
     <div class="col-md-9">
 
+        <!-- Milestones card -->
+        <?php if ($milestone_count > 0) { ?>
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <h5 class="card-title mt-2 mb-2"><i class="fas fa-fw fa-flag-checkered me-2"></i>Milestones</h5>
+                    <div class="card-tools">
+                        <?php if (empty($project_completed_at)) { ?>
+                            <a class="btn btn-sm btn-secondary ajax-modal" href="#" data-modal-url="modals/project/milestone_add.php?project_id=<?= $project_id ?>" title="New Milestone"><i class="fas fa-fw fa-plus"></i></a>
+                        <?php } ?>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <?php foreach ($project_milestones as $ms) {
+                        $ms_id = intval($ms['milestone_id']);
+                        $ms_name = nullable_htmlentities($ms['milestone_name']);
+                        $ms_description = nullable_htmlentities($ms['milestone_description']);
+                        $ms_due = nullable_htmlentities($ms['milestone_due']);
+                        $ms_status = nullable_htmlentities($ms['milestone_status']);
+                        $ms_is_complete = ($ms_status == 'completed');
+
+                        // Tasks belonging to this milestone
+                        $ms_tasks = array_filter($project_tasks, function ($t) use ($ms_id) {
+                            return intval($t['task_milestone_id']) === $ms_id;
+                        });
+                        $ms_total = count($ms_tasks);
+                        $ms_done = 0;
+                        foreach ($ms_tasks as $t) {
+                            if (!empty($t['task_completed_at'])) { $ms_done++; }
+                        }
+                        if ($ms_total) {
+                            $ms_percent = round(($ms_done / $ms_total) * 100);
+                        } else {
+                            $ms_percent = $ms_is_complete ? 100 : 0;
+                        }
+                        ?>
+                        <div class="border-bottom p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <?php if ($ms_is_complete) { ?>
+                                        <span class="badge text-bg-success"><i class="fas fa-check"></i></span>
+                                    <?php } ?>
+                                    <strong><?php echo $ms_name; ?></strong>
+                                    <?php if ($ms_due) { ?>
+                                        <span class="badge text-bg-light border ms-1"><i class="far fa-calendar me-1"></i><?php echo $ms_due; ?></span>
+                                    <?php } ?>
+                                    <?php if ($ms_description) { ?>
+                                        <div><small class="text-secondary"><?php echo $ms_description; ?></small></div>
+                                    <?php } ?>
+                                </div>
+                                <div class="dropdown">
+                                    <a href="#" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v text-secondary"></i></a>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <?php if (empty($project_completed_at)) { ?>
+                                            <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/project/task_add.php?project_id=<?= $project_id ?>&milestone_id=<?= $ms_id ?>"><i class="fas fa-fw fa-plus me-2"></i>Add Task</a>
+                                            <a class="dropdown-item confirm-link" href="post.php?toggle_milestone=<?= $ms_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-check me-2"></i><?= $ms_is_complete ? 'Reopen' : 'Mark Complete' ?></a>
+                                            <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/project/milestone_edit.php?id=<?= $ms_id ?>"><i class="fas fa-fw fa-edit me-2"></i>Edit</a>
+                                            <div class="dropdown-divider"></div>
+                                        <?php } ?>
+                                        <a class="dropdown-item text-danger confirm-link" href="post.php?delete_milestone=<?= $ms_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class="fas fa-fw fa-trash me-2"></i>Delete</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="progress mt-2" style="height: 16px;">
+                                <div class="progress-bar <?php echo $ms_percent >= 100 ? 'bg-success' : 'bg-secondary'; ?>" style="width: <?php echo $ms_percent; ?>%;"><?php echo "$ms_done / $ms_total"; ?></div>
+                            </div>
+                            <?php if ($ms_total > 0) { ?>
+                                <table class="table table-sm mt-2 mb-0">
+                                    <?php foreach ($ms_tasks as $t) { $render_task_row($t); } ?>
+                                </table>
+                            <?php } ?>
+                        </div>
+                    <?php } ?>
+                </div>
+            </div>
+        <?php } ?>
+        <!-- End Milestones card -->
+
         <!-- Tickets card -->
         <?php if (mysqli_num_rows($sql_tickets) > 0) { ?>
-            <div class="card card-outline card-dark mb-3">
+            <div class="card mb-3">
                 <div class="card-header py-2">
 
-                    <h5 class="card-title mt-2 mb-2"><i class="fa fa-fw fa-life-ring mr-2"></i>Project Tickets</h5>
+                    <h5 class="card-title mt-2 mb-2"><i class="fa fa-fw fa-life-ring me-2"></i>Project Tickets</h5>
 
                     <div class="card-tools">
                         <?php if (lookupUserPermission("module_support") >= 2) { ?>
-                            <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                                <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                    <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
+                            <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                                <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                                 </button>
                                 <div class="dropdown-menu">
                                     <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_assign.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-user-check mr-2"></i>Assign Agent
+                                            <i class="fas fa-fw fa-user-check me-2"></i>Assign Agent
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_edit_category.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-layer-group mr-2"></i>Set Category
+                                            <i class="fas fa-fw fa-layer-group me-2"></i>Set Category
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_edit_priority.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-thermometer-half mr-2"></i>Set Priority
+                                            <i class="fas fa-fw fa-thermometer-half me-2"></i>Set Priority
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_reply.php"
                                             data-modal-size="lg"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-paper-plane mr-2"></i>Update/Reply
+                                            <i class="fas fa-fw fa-paper-plane me-2"></i>Update/Reply
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_merge.php"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-clone mr-2"></i>Merge
+                                            <i class="fas fa-fw fa-clone me-2"></i>Merge
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/ticket/ticket_bulk_resolve.php"
                                             data-modal-size="lg"
                                             data-bulk="true">
-                                            <i class="fas fa-fw fa-check mr-2"></i>Resolve
+                                            <i class="fas fa-fw fa-check me-2"></i>Resolve
                                         </a>
                                 </div>
                             </div>
@@ -347,7 +583,7 @@ if (isset($_GET['project_id'])) {
                                 <tr>
                                     <td class="bg-light checkbox-column">
                                         <div class="form-check">
-                                            <input class="form-check-input" id="selectAllCheckbox" type="checkbox" onclick="checkAll(this)">
+                                            <input class="form-check-input" id="selectAllCheckbox" type="checkbox">
                                         </div>
                                     </td>
                                     <th>
@@ -411,11 +647,11 @@ if (isset($_GET['project_id'])) {
                                     $ticket_closed_at = nullable_htmlentities($row['ticket_closed_at']);
 
                                     if ($ticket_priority == "High") {
-                                        $ticket_priority_display = "<span class='p-2 badge badge-danger'>$ticket_priority</span>";
+                                        $ticket_priority_display = "<span class='p-2 badge text-bg-danger'>$ticket_priority</span>";
                                     } elseif ($ticket_priority == "Medium") {
-                                        $ticket_priority_display = "<span class='p-2 badge badge-warning'>$ticket_priority</span>";
+                                        $ticket_priority_display = "<span class='p-2 badge text-bg-warning'>$ticket_priority</span>";
                                     } elseif ($ticket_priority == "Low") {
-                                        $ticket_priority_display = "<span class='p-2 badge badge-info'>$ticket_priority</span>";
+                                        $ticket_priority_display = "<span class='p-2 badge text-bg-info'>$ticket_priority</span>";
                                     } else{
                                         $ticket_priority_display = "-";
                                     }
@@ -471,7 +707,7 @@ if (isset($_GET['project_id'])) {
                                         <!-- Ticket Number / Subject -->
                                         <td>
                                             <a href="ticket.php?ticket_id=<?php echo $ticket_id; ?>">
-                                                <span class="badge badge-pill badge-secondary p-3 mr-2"><?php echo "$ticket_prefix$ticket_number"; ?></span>
+                                                <span class="badge rounded-pill text-bg-secondary p-3 me-2"><?php echo "$ticket_prefix$ticket_number"; ?></span>
                                                 <?php echo $ticket_subject; ?>
                                             </a>
                                         </td>
@@ -480,7 +716,7 @@ if (isset($_GET['project_id'])) {
 
                                         <!-- Ticket Status -->
                                         <td>
-                                            <span class='badge badge-pill text-light p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span>
+                                            <span class='badge rounded-pill <?php echo tagTextClass($ticket_status_color); ?> p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span>
                                         </td>
 
                                         <!-- Ticket Assigned agent -->
@@ -507,37 +743,27 @@ if (isset($_GET['project_id'])) {
 
     <div class="col-md-3">
 
-        <!-- Tasks Card -->
-        <?php if (mysqli_num_rows($sql_tasks) > 0) { ?>
-            <div class="card card-outline card-dark">
-                <div class="card-header py-3">
-                    <h5 class="card-title"><i class="fas fa-fw fa-tasks mr-2"></i>All Tasks</h5>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-sm">
-                        <?php
-                        while($row = mysqli_fetch_assoc($sql_tasks)){
-                            $task_id = intval($row['task_id']);
-                            $task_name = nullable_htmlentities($row['task_name']);
-                            $task_completed_at = nullable_htmlentities($row['task_completed_at']);
-                            ?>
-                            <tr>
-                                <td>
-                                    <?php if ($task_completed_at) { ?>
-                                        <i class="far fa-check-square text-success mr-2"></i>
-                                    <?php } else { ?>
-                                        <a href="post.php?complete_task=<?= $task_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="far fa-square text-secondary mr-2"></i>
-                                        </a>
-                                    <?php } ?>
-                                    <?php echo $task_name; ?>
-                                </td>
-                            </tr>
-                        <?php } ?>
-                    </table>
+        <!-- Tasks Card (tasks not attached to a milestone) -->
+        <?php $unassigned_tasks = array_filter($project_tasks, function ($t) { return empty($t['task_milestone_id']); }); ?>
+        <div class="card">
+            <div class="card-header py-2">
+                <h5 class="card-title mt-2 mb-2"><i class="fas fa-fw fa-tasks me-2"></i><?= $milestone_count > 0 ? 'Other Tasks' : 'Tasks' ?></h5>
+                <div class="card-tools">
+                    <?php if (empty($project_completed_at)) { ?>
+                        <a class="btn btn-sm btn-secondary ajax-modal" href="#" data-modal-url="modals/project/task_add.php?project_id=<?= $project_id ?>" title="New Task"><i class="fas fa-fw fa-plus"></i></a>
+                    <?php } ?>
                 </div>
             </div>
-        <?php } ?>
+            <div class="card-body p-0">
+                <?php if (count($unassigned_tasks) > 0) { ?>
+                    <table class="table table-sm mb-0">
+                        <?php foreach ($unassigned_tasks as $t) { $render_task_row($t); } ?>
+                    </table>
+                <?php } else { ?>
+                    <div class="text-center text-secondary py-3"><small>No tasks</small></div>
+                <?php } ?>
+            </div>
+        </div>
         <!-- End Tasks Card -->
 
     </div> <!-- End col-3 -->

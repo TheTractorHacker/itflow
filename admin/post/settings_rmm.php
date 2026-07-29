@@ -11,6 +11,17 @@ if (isset($_POST['save_rmm_module_settings'])) {
     redirect();
 }
 
+// Save Connect/Remote RMM preference (which integration "wins" when an
+// asset is tracked by more than one RMM)
+if (isset($_POST['save_rmm_prefer_settings'])) {
+    validateCSRFToken($_POST['csrf_token']);
+    $prefer_tactical = isset($_POST['config_rmm_prefer_tactical']) ? 1 : 0;
+    mysqli_query($mysqli, "UPDATE settings SET config_rmm_prefer_tactical=$prefer_tactical WHERE company_id=1");
+    logAction('Settings', 'Edit', "$session_name " . ($prefer_tactical ? 'enabled' : 'disabled') . " RMM preference for Tactical RMM");
+    flash_alert('RMM preference settings saved');
+    redirect();
+}
+
 // Save auto-ticket severity settings
 if (isset($_POST['save_rmm_auto_ticket_settings'])) {
     validateCSRFToken($_POST['csrf_token']);

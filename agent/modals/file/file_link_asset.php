@@ -2,8 +2,8 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-dark">
-                <h5 class="modal-title"><i class="fa fa-fw fa-desktop mr-2"></i>Link Asset to <strong><?php echo $file_name; ?></strong></h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fa fa-fw fa-desktop me-2"></i>Link Asset to <strong><?php echo $file_name; ?></strong></h5>
+                <button type="button" class="close text-white" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -55,9 +55,9 @@
                                 $linked_assets[] = $asset_id;
 
                         ?>
-                                <div class="ml-2">
+                                <div class="ms-2">
                                     <a href="asset_details.php?client_id=<?php echo $client_id; ?>&asset_id=<?php echo $asset_id; ?>" target="_blank"><?php echo $asset_name; ?></a>
-                                    <a class="confirm-link float-right" href="post.php?unlink_asset_from_file&asset_id=<?php echo $asset_id; ?>&file_id=<?php echo $file_id; ?>">
+                                    <a class="confirm-link float-end" href="post.php?unlink_asset_from_file&asset_id=<?php echo $asset_id; ?>&file_id=<?php echo $file_id; ?>">
                                         <i class="fas fa-fw fa-trash-alt text-secondary"></i>
                                     </a>
                                 </div>
@@ -67,8 +67,8 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" name="link_asset_to_file" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Link</button>
-                    <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+                    <button type="submit" name="link_asset_to_file" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Link</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
                 </div>
             </form>
         </div>

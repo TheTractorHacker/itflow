@@ -2,9 +2,9 @@
 require_once "includes/inc_all_admin.php";
  ?>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-envelope mr-2"></i>SMTP Mail Settings <small>(For Sending Email)</small></h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-envelope me-2"></i>SMTP Mail Settings <small>(For Sending Email)</small></h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
@@ -26,6 +26,9 @@ require_once "includes/inc_all_admin.php";
                     </div>
                     <small class="text-secondary d-block mt-1" id="smtp_provider_hint">
                         Choose your SMTP provider. OAuth options ignore the SMTP password here.
+                    </small>
+                    <small class="text-secondary d-block mt-1">
+                        SMTP and IMAP are independent &mdash; you can use Standard SMTP here with Microsoft 365 (OAuth) for IMAP below, or vice versa. If either is set to Google/Microsoft OAuth, the Client ID/Secret/Tenant/Refresh Token configured in the <strong>IMAP Mail Settings</strong> section below is shared by both.
                     </small>
                 </div>
 
@@ -83,7 +86,7 @@ require_once "includes/inc_all_admin.php";
                                 <div class="input-group-prepend">
                                     <span class="input-group-text"><i class="fa fa-fw fa-key"></i></span>
                                 </div>
-                                <input type="password" class="form-control" data-toggle="password" name="config_smtp_password" placeholder="Password (Leave blank if no auth is required)" value="<?php echo nullable_htmlentities($config_smtp_password); ?>" autocomplete="new-password">
+                                <input type="password" class="form-control" data-toggle="password" name="config_smtp_password" placeholder="<?php echo !empty($config_smtp_password) ? '(saved - leave blank to keep current)' : 'Password (Leave blank if no auth is required)'; ?>" autocomplete="new-password">
                                 <div class="input-group-append">
                                     <span class="input-group-text"><i class="fa fa-fw fa-eye"></i></span>
                                 </div>
@@ -95,17 +98,22 @@ require_once "includes/inc_all_admin.php";
 
                 <hr>
 
-                <button type="submit" name="edit_mail_smtp_settings" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+                <button type="submit" name="edit_mail_smtp_settings" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
 
             </form>
         </div>
     </div>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-envelope mr-2"></i>IMAP Mail Settings <small>(For Monitoring Ticket Inbox)</small></h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-envelope me-2"></i>IMAP Mail Settings <small>(For Monitoring Ticket Inbox)</small></h3>
         </div>
         <div class="card-body">
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="fas fa-info-circle me-1"></i>
+                This legacy single-mailbox setting has been superseded by <a href="mailbox.php" class="alert-link">Admin &gt; Mailboxes</a>, which supports multiple independent mailboxes. Existing configuration here was auto-migrated; manage it going forward under Mailboxes.
+                <button type="button" class="close" data-bs-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
             <form action="post.php" method="post" autocomplete="off">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
 
@@ -178,7 +186,7 @@ require_once "includes/inc_all_admin.php";
                         <div class='input-group-prepend'>
                             <span class='input-group-text'><i class='fa fa-fw fa-key'></i></span>
                         </div>
-                        <input type='password' class='form-control' data-toggle='password' name='config_imap_password' placeholder='Password (not used for OAuth)' value="<?php echo nullable_htmlentities($config_imap_password); ?>" autocomplete='new-password'>
+                        <input type='password' class='form-control' data-toggle='password' name='config_imap_password' placeholder="<?php echo !empty($config_imap_password) ? '(saved - leave blank to keep current)' : 'Password (not used for OAuth)'; ?>" autocomplete='new-password'>
                         <div class='input-group-append'>
                             <span class='input-group-text'><i class='fa fa-fw fa-eye'></i></span>
                         </div>
@@ -207,7 +215,7 @@ require_once "includes/inc_all_admin.php";
                         <div class="input-group">
                             <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-fw fa-key"></i></span></div>
                             <input type="password" class="form-control" data-toggle="password" name="config_mail_oauth_client_secret"
-                                   value="<?php echo nullable_htmlentities($config_mail_oauth_client_secret ?? ''); ?>" autocomplete="new-password">
+                                   placeholder="<?php echo !empty($config_mail_oauth_client_secret) ? '(saved - leave blank to keep current)' : 'Client Secret'; ?>" autocomplete="new-password">
                             <div class="input-group-append"><span class="input-group-text"><i class="fa fa-fw fa-eye"></i></span></div>
                         </div>
                     </div>
@@ -226,7 +234,7 @@ require_once "includes/inc_all_admin.php";
                         <div class="input-group">
                             <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-fw fa-sync-alt"></i></span></div>
                             <textarea class="form-control" name="config_mail_oauth_refresh_token" rows="2"
-                                      placeholder="Paste refresh token"><?php echo nullable_htmlentities($config_mail_oauth_refresh_token ?? ''); ?></textarea>
+                                      placeholder="<?php echo !empty($config_mail_oauth_refresh_token) ? '(saved - leave blank to keep current)' : 'Paste refresh token'; ?>"></textarea>
                         </div>
                     </div>
 
@@ -235,7 +243,7 @@ require_once "includes/inc_all_admin.php";
                         <div class="input-group">
                             <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-fw fa-shield-alt"></i></span></div>
                             <textarea class="form-control" name="config_mail_oauth_access_token" rows="2"
-                                      placeholder="Can be left blank; system refreshes using the refresh token"><?php echo nullable_htmlentities($config_mail_oauth_access_token ?? ''); ?></textarea>
+                                      placeholder="<?php echo !empty($config_mail_oauth_access_token) ? '(saved - leave blank to keep current)' : 'Can be left blank; system refreshes using the refresh token'; ?>"></textarea>
                         </div>
                         <small class="text-secondary">
                             Expires at: <?php echo !empty($config_mail_oauth_access_token_expires_at) ? htmlspecialchars($config_mail_oauth_access_token_expires_at) : 'n/a'; ?>
@@ -260,27 +268,27 @@ require_once "includes/inc_all_admin.php";
                         <input type="text" class="form-control" readonly value="<?php echo htmlspecialchars($mail_oauth_callback_uri); ?>">
                         <div class="input-group-append">
                             <button type="submit" name="oauth_connect_microsoft_mail" class="btn btn-outline-primary">
-                                <i class="fab fa-fw fa-microsoft mr-2"></i>Connect Microsoft 365
+                                <i class="fab fa-fw fa-microsoft me-2"></i>Connect Microsoft 365
                             </button>
                         </div>
                     </div>
                     <small class="text-secondary">
                         Add this callback URI in Entra App Registration, then click Connect to authorize and store refresh token automatically.
-                        <a href="#" data-toggle="modal" data-target="#ms365OAuthGuideModal" class="ml-2"><i class="fas fa-question-circle mr-1"></i>Setup Guide</a>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#ms365OAuthGuideModal" class="ms-2"><i class="fas fa-question-circle me-1"></i>Setup Guide</a>
                     </small>
                 </div>
 
                 <hr>
 
-                <button type="submit" name="edit_mail_imap_settings" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+                <button type="submit" name="edit_mail_imap_settings" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
 
             </form>
         </div>
     </div>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-paper-plane mr-2"></i>Mail From Configuration</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-paper-plane me-2"></i>Mail From Configuration</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
@@ -380,7 +388,7 @@ require_once "includes/inc_all_admin.php";
 
                 <hr>
 
-                <button type="submit" name="edit_mail_from_settings" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+                <button type="submit" name="edit_mail_from_settings" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
 
             </form>
         </div>
@@ -403,9 +411,9 @@ require_once "includes/inc_all_admin.php";
 
     <?php if ($smtp_standard_ready || $smtp_oauth_ready) { ?>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-paper-plane mr-2"></i>Test Email Sending</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-paper-plane me-2"></i>Test Email Sending</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
@@ -442,7 +450,7 @@ require_once "includes/inc_all_admin.php";
                     </select>
                     <input type="email" class="form-control " name="email_to" placeholder="Email address to send to">
                     <div class="input-group-append">
-                        <button type="submit" name="test_email_smtp" class="btn btn-success"><i class="fas fa-fw fa-paper-plane mr-2"></i>Send</button>
+                        <button type="submit" name="test_email_smtp" class="btn btn-success"><i class="fas fa-fw fa-paper-plane me-2"></i>Send</button>
                     </div>
                 </div>
             </form>
@@ -467,16 +475,16 @@ require_once "includes/inc_all_admin.php";
 
     <?php if ($imap_standard_ready || $imap_oauth_ready) { ?>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-plug mr-2"></i>Test IMAP Connection</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-plug me-2"></i>Test IMAP Connection</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
 
                 <div class="input-group-append">
-                    <button type="submit" name="test_email_imap" class="btn btn-success"><i class="fas fa-fw fa-inbox mr-2"></i>Test</button>
+                    <button type="submit" name="test_email_imap" class="btn btn-success"><i class="fas fa-fw fa-inbox me-2"></i>Test</button>
                 </div>
             </form>
         </div>
@@ -501,9 +509,9 @@ require_once "includes/inc_all_admin.php";
 
     <?php if ($oauth_has_required_fields) { ?>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-key mr-2"></i>Test OAuth Token Refresh</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-key me-2"></i>Test OAuth Token Refresh</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
@@ -516,7 +524,7 @@ require_once "includes/inc_all_admin.php";
                 </p>
 
                 <button type="submit" name="test_oauth_token_refresh" class="btn btn-success">
-                    <i class="fas fa-fw fa-sync-alt mr-2"></i>Test OAuth Token Refresh
+                    <i class="fas fa-fw fa-sync-alt me-2"></i>Test OAuth Token Refresh
                 </button>
             </form>
         </div>
@@ -527,44 +535,42 @@ require_once "includes/inc_all_admin.php";
 <!-- Microsoft 365 OAuth Setup Guide Modal -->
 <div class="modal fade" id="ms365OAuthGuideModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="background:#1f2d40;color:#c2cfd6;">
-            <div class="modal-header" style="border-color:#2d3f55;">
-                <h5 class="modal-title text-white"><i class="fab fa-microsoft mr-2"></i>Microsoft 365 OAuth Setup Guide</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fab fa-microsoft me-2"></i>Microsoft 365 OAuth Setup Guide</h5>
+                <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
 
-                <p class="text-muted mb-3">Follow these steps to connect ITFlow to Microsoft 365 for IMAP email monitoring and SMTP sending using OAuth.</p>
+                <p class="text-muted mb-3">Follow these steps to connect ITFlow to Microsoft 365. For mailbox monitoring (ticket creation/replies), use <a href="mailbox.php">Admin &gt; Mailboxes</a> going forward &mdash; it reads mail via Microsoft Graph. The legacy IMAP settings below only need step 2's "Legacy" instructions and remain for existing setups.</p>
 
                 <div id="ms365GuideAccordion">
 
                     <!-- Step 1 -->
-                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
-                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid var(--if-border-strong);">
+                        <div style="background:var(--if-bg);padding:.6rem 1rem;">
                             <h6 class="mb-0">
-                                <a href="#" data-toggle="collapse" data-target="#ms365Step1" aria-expanded="true" aria-controls="ms365Step1" class="text-white d-flex align-items-center" style="text-decoration:none;">
-                                    <span class="badge badge-primary mr-2 px-2 py-1">1</span>
+                                <a href="#" data-bs-toggle="collapse" data-bs-target="#ms365Step1" aria-expanded="true" aria-controls="ms365Step1" class="d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge text-bg-primary me-2 px-2 py-1">1</span>
                                     <span>Register an App in Entra ID</span>
-                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                    <i class="fas fa-chevron-down ms-auto"></i>
                                 </a>
                             </h6>
                         </div>
-                        <div id="ms365Step1" class="collapse show" data-parent="#ms365GuideAccordion">
+                        <div id="ms365Step1" class="collapse show" data-bs-parent="#ms365GuideAccordion">
                             <div style="padding:1rem 1.25rem;">
-                                <ol class="mb-0 pl-3 text-light">
+                                <ol class="mb-0 ps-3">
                                     <li>Go to <strong>portal.azure.com</strong> &rarr; <strong>Microsoft Entra ID</strong> &rarr; <strong>App registrations</strong> &rarr; <strong>New registration</strong></li>
                                     <li class="mt-2">Give it a name (e.g. <code>ITFlow Mail</code>)</li>
                                     <li class="mt-2">Supported account types: <strong>Accounts in this organizational directory only (Single tenant)</strong></li>
                                     <li class="mt-2">
                                         Redirect URI &mdash; set type to <strong>Web</strong> and paste this URI:
                                         <div class="input-group mt-1">
-                                            <input type="text" class="form-control form-control-sm border-0 text-white" readonly
-                                                   style="background:#111d2b;"
+                                            <input type="text" class="form-control form-control-sm" readonly
                                                    value="<?php echo htmlspecialchars($mail_oauth_callback_uri); ?>"
                                                    id="ms365GuideCallbackUri">
                                             <div class="input-group-append">
-                                                <button class="btn btn-sm btn-outline-secondary text-light" type="button"
-                                                        onclick="navigator.clipboard.writeText(document.getElementById('ms365GuideCallbackUri').value); this.innerHTML='<i class=\'fas fa-check text-success\'></i>'">
+                                                <button class="btn btn-sm btn-outline-secondary js-copy-ms365-uri" type="button">
                                                     <i class="fas fa-copy"></i>
                                                 </button>
                                             </div>
@@ -577,72 +583,87 @@ require_once "includes/inc_all_admin.php";
                     </div>
 
                     <!-- Step 2 -->
-                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
-                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid var(--if-border-strong);">
+                        <div style="background:var(--if-bg);padding:.6rem 1rem;">
                             <h6 class="mb-0">
-                                <a href="#" data-toggle="collapse" data-target="#ms365Step2" aria-expanded="false" aria-controls="ms365Step2" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
-                                    <span class="badge badge-primary mr-2 px-2 py-1">2</span>
+                                <a href="#" data-bs-toggle="collapse" data-bs-target="#ms365Step2" aria-expanded="false" aria-controls="ms365Step2" class="collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge text-bg-primary me-2 px-2 py-1">2</span>
                                     <span>Add API Permissions</span>
-                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                    <i class="fas fa-chevron-down ms-auto"></i>
                                 </a>
                             </h6>
                         </div>
-                        <div id="ms365Step2" class="collapse" data-parent="#ms365GuideAccordion">
+                        <div id="ms365Step2" class="collapse" data-bs-parent="#ms365GuideAccordion">
                             <div style="padding:1rem 1.25rem;">
-                                <ol class="mb-0 pl-3 text-light">
-                                    <li>In your new app, go to <strong>API permissions</strong> &rarr; <strong>Add a permission</strong></li>
-                                    <li class="mt-2">
-                                        Click the <strong>"APIs my organization uses"</strong> tab &mdash; <em>not</em> "Microsoft APIs"
-                                        <div class="alert alert-warning mt-2 mb-0 py-2">
-                                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                                            <strong>Do not use Microsoft Graph.</strong> The <code>Mail.Read</code> / <code>Mail.Send</code> permissions listed there will not work for IMAP OAuth. You need the Exchange Online API specifically.
-                                        </div>
-                                    </li>
-                                    <li class="mt-2">Search for <strong>Office 365 Exchange Online</strong> and select it</li>
-                                    <li class="mt-2">Choose <strong>Delegated permissions</strong> (your application accesses the API as the signed-in user)</li>
-                                    <li class="mt-2">
-                                        In the <strong>filter/search box</strong>, type <code>IMAP</code> &mdash; tick <strong>IMAP.AccessAsUser.All</strong>
-                                        <div class="alert alert-warning mt-2 mb-0 py-2">
-                                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                                            <strong>Search returns "No results"?</strong> IMAP OAuth is not enabled in your tenant. You need to enable it first:
-                                            <ol class="mt-2 mb-1 pl-4">
-                                                <li>Open a new tab &rarr; go to <strong>admin.exchange.microsoft.com</strong></li>
-                                                <li>Go to <strong>Settings &rarr; Mail flow</strong> (or search <em>Modern authentication</em>)</li>
-                                                <li>Alternatively, run this in <strong>Exchange Online PowerShell</strong>:<br>
-                                                    <code>Set-OrganizationConfig -OAuth2ClientProfileEnabled $true</code>
-                                                </li>
-                                                <li>Wait a few minutes, then <strong>refresh</strong> this Azure page and search again</li>
-                                            </ol>
-                                        </div>
-                                    </li>
-                                    <li class="mt-2">
-                                        Clear the filter, type <code>SMTP</code> &mdash; tick <strong>SMTP.Send</strong>
-                                    </li>
-                                    <li class="mt-2">Click <strong>Add permissions</strong> at the bottom</li>
-                                    <li class="mt-2">Back on the permissions list, click <strong>Grant admin consent for [your org]</strong> and confirm</li>
-                                </ol>
+                                <p class="text-muted mb-2">The permission you need depends on how you're connecting:</p>
+
+                                <div class="rounded mb-3" style="border:1px solid rgba(5,150,105,.35);">
+                                    <div style="background:rgba(5,150,105,.08);padding:.5rem .85rem;box-shadow:inset 3px 0 0 #059669;">
+                                        <strong><i class="fas fa-check-circle text-success me-1"></i>Recommended &mdash; Admin &gt; Mailboxes (Microsoft Graph)</strong>
+                                    </div>
+                                    <div style="padding:.85rem;">
+                                        <ol class="mb-0 ps-3">
+                                            <li>In your new app, go to <strong>API permissions</strong> &rarr; <strong>Add a permission</strong></li>
+                                            <li class="mt-2">Click the <strong>"Microsoft APIs"</strong> tab &rarr; <strong>Microsoft Graph</strong> &rarr; <strong>Delegated permissions</strong></li>
+                                            <li class="mt-2">In the filter box, type <code>Mail.ReadWrite</code> and tick it (covers reading, marking read, and moving messages into ITFlow's processed folder)</li>
+                                            <li class="mt-2">Click <strong>Add permissions</strong>, then back on the permissions list click <strong>Grant admin consent for [your org]</strong> and confirm</li>
+                                        </ol>
+                                    </div>
+                                </div>
+
+                                <div class="rounded mb-2" style="border:1px solid rgba(217,119,6,.35);">
+                                    <div style="background:rgba(217,119,6,.08);padding:.5rem .85rem;box-shadow:inset 3px 0 0 #d97706;">
+                                        <strong><i class="fas fa-archive me-1"></i>Legacy &mdash; single global IMAP settings above (superseded)</strong>
+                                    </div>
+                                    <div style="padding:.85rem;">
+                                        <p class="text-muted mb-2">Only needed if you're still using this page's own "IMAP Mail Settings" card instead of Admin &gt; Mailboxes. Microsoft has been progressively hiding this API from new app registrations, so it may not be available to add.</p>
+                                        <ol class="mb-0 ps-3">
+                                            <li>Click the <strong>"APIs my organization uses"</strong> tab &mdash; <em>not</em> "Microsoft APIs"</li>
+                                            <li class="mt-2">Search for <strong>Office 365 Exchange Online</strong> and select it</li>
+                                            <li class="mt-2">Choose <strong>Delegated permissions</strong></li>
+                                            <li class="mt-2">
+                                                In the filter box, type <code>IMAP</code> &mdash; tick <strong>IMAP.AccessAsUser.All</strong>
+                                                <div class="alert alert-warning mt-2 mb-0 py-2">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                                    <strong>Search returns "No results"?</strong> IMAP OAuth is not enabled in your tenant, or this legacy API is no longer available on your app registration &mdash; switch to the Graph-based Admin &gt; Mailboxes flow above instead. If you need to try enabling it anyway:
+                                                    <ol class="mt-2 mb-1 ps-4">
+                                                        <li>Open a new tab &rarr; go to <strong>admin.exchange.microsoft.com</strong></li>
+                                                        <li>Go to <strong>Settings &rarr; Mail flow</strong> (or search <em>Modern authentication</em>)</li>
+                                                        <li>Alternatively, run this in <strong>Exchange Online PowerShell</strong>:<br>
+                                                            <code>Set-OrganizationConfig -OAuth2ClientProfileEnabled $true</code>
+                                                        </li>
+                                                        <li>Wait a few minutes, then <strong>refresh</strong> this Azure page and search again</li>
+                                                    </ol>
+                                                </div>
+                                            </li>
+                                            <li class="mt-2">Clear the filter, type <code>SMTP</code> &mdash; tick <strong>SMTP.Send</strong></li>
+                                            <li class="mt-2">Click <strong>Add permissions</strong>, then <strong>Grant admin consent for [your org]</strong> and confirm</li>
+                                        </ol>
+                                    </div>
+                                </div>
+
                                 <div class="alert alert-info mt-3 mb-0 py-2">
-                                    <i class="fas fa-info-circle mr-1"></i>
-                                    These must be <strong>Delegated</strong> permissions, not Application. The OAuth flow requires a real user to sign in interactively.
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Either way, these must be <strong>Delegated</strong> permissions, not Application. The OAuth flow requires a real user to sign in interactively.
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Step 3 -->
-                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
-                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid var(--if-border-strong);">
+                        <div style="background:var(--if-bg);padding:.6rem 1rem;">
                             <h6 class="mb-0">
-                                <a href="#" data-toggle="collapse" data-target="#ms365Step3" aria-expanded="false" aria-controls="ms365Step3" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
-                                    <span class="badge badge-primary mr-2 px-2 py-1">3</span>
+                                <a href="#" data-bs-toggle="collapse" data-bs-target="#ms365Step3" aria-expanded="false" aria-controls="ms365Step3" class="collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge text-bg-primary me-2 px-2 py-1">3</span>
                                     <span>Create a Client Secret</span>
-                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                    <i class="fas fa-chevron-down ms-auto"></i>
                                 </a>
                             </h6>
                         </div>
-                        <div id="ms365Step3" class="collapse" data-parent="#ms365GuideAccordion">
+                        <div id="ms365Step3" class="collapse" data-bs-parent="#ms365GuideAccordion">
                             <div style="padding:1rem 1.25rem;">
-                                <ol class="mb-0 pl-3 text-light">
+                                <ol class="mb-0 ps-3">
                                     <li>Under your app &rarr; <strong>Certificates &amp; secrets</strong> &rarr; <strong>New client secret</strong></li>
                                     <li class="mt-2">Set an expiry and note the date &mdash; you must rotate the secret before it expires or mail will stop working</li>
                                     <li class="mt-2">Copy the <strong>Value</strong> immediately &mdash; it is hidden after you navigate away</li>
@@ -652,45 +673,49 @@ require_once "includes/inc_all_admin.php";
                     </div>
 
                     <!-- Step 4 -->
-                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
-                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid var(--if-border-strong);">
+                        <div style="background:var(--if-bg);padding:.6rem 1rem;">
                             <h6 class="mb-0">
-                                <a href="#" data-toggle="collapse" data-target="#ms365Step4" aria-expanded="false" aria-controls="ms365Step4" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
-                                    <span class="badge badge-primary mr-2 px-2 py-1">4</span>
+                                <a href="#" data-bs-toggle="collapse" data-bs-target="#ms365Step4" aria-expanded="false" aria-controls="ms365Step4" class="collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge text-bg-primary me-2 px-2 py-1">4</span>
                                     <span>Fill In ITFlow Settings &amp; Connect</span>
-                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                    <i class="fas fa-chevron-down ms-auto"></i>
                                 </a>
                             </h6>
                         </div>
-                        <div id="ms365Step4" class="collapse" data-parent="#ms365GuideAccordion">
+                        <div id="ms365Step4" class="collapse" data-bs-parent="#ms365GuideAccordion">
                             <div style="padding:1rem 1.25rem;">
-                                <p class="mb-2 text-light">From your app's <strong>Overview</strong> page, copy the following into the IMAP settings form:</p>
-                                <table class="table table-sm mb-3" style="color:#e9ecef;border-color:#3d5166;">
+                                <div class="alert alert-info py-2 mb-3">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Using <strong>Admin &gt; Mailboxes</strong>? The Client ID / Secret / Tenant ID below still go on this page (shared across all mailboxes) &mdash; but the mailbox address and the <strong>Connect</strong> button live on the mailbox's own Add/Edit form instead of the fields shown here.
+                                </div>
+                                <p class="mb-2 text-muted">From your app's <strong>Overview</strong> page, copy the following into the IMAP settings form:</p>
+                                <table class="table table-sm table-striped mb-3">
                                     <thead>
-                                        <tr style="background:#111d2b;color:#fff;border-color:#3d5166;">
-                                            <th style="border-color:#3d5166;">ITFlow Field</th>
-                                            <th style="border-color:#3d5166;">Where to find it in Azure</th>
+                                        <tr>
+                                            <th>ITFlow Field</th>
+                                            <th>Where to find it in Azure</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr style="background:#162032;border-color:#3d5166;"><td style="border-color:#3d5166;">IMAP Provider</td><td style="border-color:#3d5166;">Set to <strong class="text-white">Microsoft 365 (OAuth)</strong></td></tr>
-                                        <tr style="background:#1a2a40;border-color:#3d5166;"><td style="border-color:#3d5166;">IMAP Username</td><td style="border-color:#3d5166;">The mailbox email to monitor (e.g. <code>support@company.com</code>)</td></tr>
-                                        <tr style="background:#162032;border-color:#3d5166;"><td style="border-color:#3d5166;">OAuth Client ID</td><td style="border-color:#3d5166;">App Overview &rarr; <strong class="text-white">Application (client) ID</strong></td></tr>
-                                        <tr style="background:#1a2a40;border-color:#3d5166;"><td style="border-color:#3d5166;">OAuth Client Secret</td><td style="border-color:#3d5166;">The value you copied in Step 3</td></tr>
-                                        <tr style="background:#162032;border-color:#3d5166;"><td style="border-color:#3d5166;">Tenant ID</td><td style="border-color:#3d5166;">App Overview &rarr; <strong class="text-white">Directory (tenant) ID</strong></td></tr>
+                                        <tr><td>IMAP Provider</td><td>Set to <strong>Microsoft 365 (OAuth)</strong></td></tr>
+                                        <tr><td>IMAP Username</td><td>The mailbox email to monitor (e.g. <code>support@company.com</code>)</td></tr>
+                                        <tr><td>OAuth Client ID</td><td>App Overview &rarr; <strong>Application (client) ID</strong></td></tr>
+                                        <tr><td>OAuth Client Secret</td><td>The value you copied in Step 3</td></tr>
+                                        <tr><td>Tenant ID</td><td>App Overview &rarr; <strong>Directory (tenant) ID</strong></td></tr>
                                     </tbody>
                                 </table>
-                                <p class="mb-1 text-light">Then:</p>
-                                <ol class="mb-0 pl-3 text-light">
+                                <p class="mb-1 text-muted">Then:</p>
+                                <ol class="mb-0 ps-3">
                                     <li>Click <strong>Save</strong> on the IMAP settings form</li>
                                     <li class="mt-2">Click <strong>Connect Microsoft 365</strong> &mdash; a Microsoft login window will open</li>
                                     <li class="mt-2">Sign in with the mailbox account (or the licensed user who has access to a shared mailbox)</li>
                                     <li class="mt-2">Grant consent &mdash; you'll be redirected back with a success message and tokens stored automatically</li>
                                 </ol>
                                 <div class="alert alert-danger mt-3 mb-0 py-2">
-                                    <i class="fas fa-times-circle mr-1"></i>
+                                    <i class="fas fa-times-circle me-1"></i>
                                     <strong>Error: AADSTS700016 &mdash; Application not found in directory?</strong>
-                                    <ul class="mt-2 mb-0 pl-4">
+                                    <ul class="mt-2 mb-0 ps-4">
                                         <li>The <strong>Client ID</strong> doesn't match any app in your tenant. Go back to Azure &rarr; App registrations &rarr; your app &rarr; <strong>Overview</strong>.</li>
                                         <li>Make sure you copied the <strong>Application (client) ID</strong> &mdash; <em>not</em> the Object ID (it's just below it and easy to grab by mistake).</li>
                                         <li>Confirm the app was registered in the <strong>same tenant</strong> as the account you're signing in with. If you have multiple tenants, check the directory switcher in the top-right of the Azure portal.</li>
@@ -701,28 +726,90 @@ require_once "includes/inc_all_admin.php";
                         </div>
                     </div>
 
-                    <!-- Step 5 — Shared Mailbox -->
-                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
-                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                    <!-- How Refresh Tokens Work -->
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid var(--if-border-strong);">
+                        <div style="background:var(--if-bg);padding:.6rem 1rem;">
                             <h6 class="mb-0">
-                                <a href="#" data-toggle="collapse" data-target="#ms365Step5" aria-expanded="false" aria-controls="ms365Step5" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
-                                    <span class="badge badge-info mr-2 px-2 py-1"><i class="fas fa-users"></i></span>
-                                    <span>Using a Shared Mailbox</span>
-                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                <a href="#" data-bs-toggle="collapse" data-bs-target="#ms365StepRefreshToken" aria-expanded="false" aria-controls="ms365StepRefreshToken" class="collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge text-bg-secondary me-2 px-2 py-1"><i class="fas fa-key"></i></span>
+                                    <span>How Refresh Tokens Work</span>
+                                    <i class="fas fa-chevron-down ms-auto"></i>
                                 </a>
                             </h6>
                         </div>
-                        <div id="ms365Step5" class="collapse" data-parent="#ms365GuideAccordion">
+                        <div id="ms365StepRefreshToken" class="collapse" data-bs-parent="#ms365GuideAccordion">
                             <div style="padding:1rem 1.25rem;">
-                                <p class="text-light">Shared mailboxes are supported. The OAuth token is obtained from a licensed user who has access to the shared mailbox.</p>
-                                <ol class="pl-3 mb-3 text-light">
+                                <p class="text-muted">A refresh token is what lets ITFlow keep polling a mailbox without you signing in again every hour. Clicking <strong>Connect Microsoft 365</strong> in Step 4 gets you one automatically &mdash; here's what that button actually does, and how to get one by hand if it can't run.</p>
+
+                                <p class="text-muted mb-1"><strong>The automatic way (normal path):</strong></p>
+                                <ol class="ps-3 mb-3">
+                                    <li>ITFlow opens Microsoft's consent screen at <code>login.microsoftonline.com/&lt;tenant&gt;/oauth2/v2.0/authorize</code>, requesting the <code>Mail.ReadWrite</code> and <code>offline_access</code> scopes.</li>
+                                    <li class="mt-2">You sign in and approve access. Microsoft redirects your browser back to <code>/admin/oauth_microsoft_mail_callback.php</code> with a short-lived <strong>authorization code</strong> in the URL.</li>
+                                    <li class="mt-2">ITFlow's server immediately exchanges that code for tokens by POSTing to Microsoft's token endpoint &mdash; this happens behind the scenes, you don't see it.</li>
+                                    <li class="mt-2">The response contains an <strong>access token</strong> (expires in ~1 hour) and a <strong>refresh token</strong> (long-lived). ITFlow encrypts both and stores them on the mailbox's row.</li>
+                                    <li class="mt-2">From then on, every poll silently trades the stored refresh token for a new access token whenever the old one's within 60 seconds of expiring.</li>
+                                </ol>
+                                <div class="alert alert-success py-2 mb-3">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    This is the only path most people need &mdash; the manual steps below exist purely as a diagnostic fallback.
+                                </div>
+
+                                <p class="text-muted mb-1"><strong>Manual / fallback (advanced):</strong> useful if the Connect button can't complete &mdash; e.g. ITFlow isn't reachable at its configured base URL yet, or you want to verify the app registration works before wiring it into ITFlow. This is the same exchange ITFlow does automatically, run by hand with <code>curl</code>.</p>
+                                <ol class="ps-3 mb-3">
+                                    <li>
+                                        Build this URL with your own Client ID, Tenant ID, and redirect URI, then open it in a browser:
+                                        <pre class="mt-2 mb-0 p-2 rounded" style="background:var(--if-bg);border:1px solid var(--if-border-strong);white-space:pre-wrap;word-break:break-word;font-size:.82rem;">https://login.microsoftonline.com/&lt;tenant_id&gt;/oauth2/v2.0/authorize?
+  client_id=&lt;client_id&gt;
+  &amp;response_type=code
+  &amp;redirect_uri=&lt;redirect_uri&gt;
+  &amp;response_mode=query
+  &amp;scope=offline_access openid profile https://graph.microsoft.com/Mail.ReadWrite
+  &amp;prompt=consent</pre>
+                                    </li>
+                                    <li class="mt-2">Sign in and approve the consent prompt. You'll land on your redirect URI with <code>?code=</code> followed by a long string in the address bar &mdash; copy that value. It's only valid for a few minutes.</li>
+                                    <li class="mt-2">
+                                        Exchange it for tokens:
+                                        <pre class="mt-2 mb-0 p-2 rounded" style="background:var(--if-bg);border:1px solid var(--if-border-strong);white-space:pre-wrap;word-break:break-word;font-size:.82rem;">curl -X POST https://login.microsoftonline.com/&lt;tenant_id&gt;/oauth2/v2.0/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=&lt;client_id&gt;" \
+  -d "client_secret=&lt;client_secret&gt;" \
+  -d "grant_type=authorization_code" \
+  -d "code=&lt;the code from step 2&gt;" \
+  -d "redirect_uri=&lt;redirect_uri&gt;" \
+  -d "scope=offline_access openid profile https://graph.microsoft.com/Mail.ReadWrite"</pre>
+                                    </li>
+                                    <li class="mt-2">The JSON response includes <code>"refresh_token"</code> and <code>"access_token"</code> fields. Paste the refresh token into the mailbox's stored credentials, or &mdash; for the legacy single-mailbox flow &mdash; into the <strong>Refresh Token</strong> field above.</li>
+                                </ol>
+                                <div class="alert alert-warning py-2 mb-0">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <strong>Treat it like a password.</strong> A refresh token grants ongoing mailbox access until it's revoked or expires from inactivity. Don't paste it anywhere outside ITFlow's own encrypted storage, and don't leave it in shell history.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 — Shared Mailbox -->
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid var(--if-border-strong);">
+                        <div style="background:var(--if-bg);padding:.6rem 1rem;">
+                            <h6 class="mb-0">
+                                <a href="#" data-bs-toggle="collapse" data-bs-target="#ms365Step5" aria-expanded="false" aria-controls="ms365Step5" class="collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge text-bg-info me-2 px-2 py-1"><i class="fas fa-users"></i></span>
+                                    <span>Using a Shared Mailbox</span>
+                                    <i class="fas fa-chevron-down ms-auto"></i>
+                                </a>
+                            </h6>
+                        </div>
+                        <div id="ms365Step5" class="collapse" data-bs-parent="#ms365GuideAccordion">
+                            <div style="padding:1rem 1.25rem;">
+                                <p class="text-muted">Shared mailboxes are supported. The OAuth token is obtained from a licensed user who has access to the shared mailbox.</p>
+                                <ol class="ps-3 mb-3">
                                     <li>In <strong>Exchange Admin Center</strong>, grant the licensed user <strong>Full Access</strong> to the shared mailbox</li>
                                     <li class="mt-2">Set <strong>IMAP Username</strong> to the <em>shared mailbox</em> address (e.g. <code>support@company.com</code>)</li>
                                     <li class="mt-2">When clicking <strong>Connect Microsoft 365</strong>, sign in with the <em>licensed user account</em>, not the shared mailbox itself</li>
                                     <li class="mt-2">ITFlow will access the shared mailbox using that user's token</li>
                                 </ol>
                                 <div class="alert alert-info py-2 mb-0">
-                                    <i class="fas fa-info-circle mr-1"></i>
+                                    <i class="fas fa-info-circle me-1"></i>
                                     To <strong>send from</strong> the shared mailbox address, also grant the licensed user <strong>Send As</strong> permission in Exchange Admin Center.
                                 </div>
                             </div>
@@ -730,19 +817,19 @@ require_once "includes/inc_all_admin.php";
                     </div>
 
                     <!-- Step 6 — Token Maintenance -->
-                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid #2d3f55;">
-                        <div style="background:#2d3f55;padding:.6rem 1rem;">
+                    <div class="mb-1 rounded overflow-hidden" style="border:1px solid var(--if-border-strong);">
+                        <div style="background:var(--if-bg);padding:.6rem 1rem;">
                             <h6 class="mb-0">
-                                <a href="#" data-toggle="collapse" data-target="#ms365Step6" aria-expanded="false" aria-controls="ms365Step6" class="text-white collapsed d-flex align-items-center" style="text-decoration:none;">
-                                    <span class="badge badge-secondary mr-2 px-2 py-1"><i class="fas fa-sync-alt"></i></span>
+                                <a href="#" data-bs-toggle="collapse" data-bs-target="#ms365Step6" aria-expanded="false" aria-controls="ms365Step6" class="collapsed d-flex align-items-center" style="text-decoration:none;">
+                                    <span class="badge text-bg-secondary me-2 px-2 py-1"><i class="fas fa-sync-alt"></i></span>
                                     <span>Token Maintenance</span>
-                                    <i class="fas fa-chevron-down ml-auto"></i>
+                                    <i class="fas fa-chevron-down ms-auto"></i>
                                 </a>
                             </h6>
                         </div>
-                        <div id="ms365Step6" class="collapse" data-parent="#ms365GuideAccordion">
+                        <div id="ms365Step6" class="collapse" data-bs-parent="#ms365GuideAccordion">
                             <div style="padding:1rem 1.25rem;">
-                                <ul class="pl-3 mb-0 text-light">
+                                <ul class="ps-3 mb-0">
                                     <li>The refresh token stays valid as long as ITFlow polls regularly. If idle for <strong>90 days</strong>, Microsoft invalidates it and you must click <strong>Connect Microsoft 365</strong> again.</li>
                                     <li class="mt-2">Your <strong>Client Secret</strong> has its own expiry date (set in Step 3). Rotate it in Azure before it expires and update the value here, then click <strong>Connect Microsoft 365</strong> again.</li>
                                     <li class="mt-2">Use <strong>Test OAuth Token Refresh</strong> (shown on this page when credentials are configured) to verify your tokens are working at any time.</li>
@@ -753,15 +840,22 @@ require_once "includes/inc_all_admin.php";
 
                 </div><!-- /accordion -->
             </div>
-            <div class="modal-footer py-2" style="border-color:#2d3f55;">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 <!-- /Microsoft 365 OAuth Setup Guide Modal -->
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-copy-ms365-uri');
+    if (!btn) return;
+    navigator.clipboard.writeText(document.getElementById('ms365GuideCallbackUri').value).then(function () {
+        btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+    });
+});
 (function(){
   function setDisabled(container, disabled){
     if(!container) return;

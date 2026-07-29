@@ -62,32 +62,43 @@ if (isset($_GET['stripe_create_pi'])) {
         exit("No balance outstanding");
     }
 
-    // Setup Stripe from payment_providers
-    $stripe_provider = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM payment_providers WHERE payment_provider_name = 'Stripe' LIMIT 1"));
+    // Setup payment provider (Stripe) from payment_providers via the factory
+    $stripe_provider = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT payment_provider_id FROM payment_providers WHERE payment_provider_name = 'Stripe' LIMIT 1"));
     if (!$stripe_provider) {
         exit("Stripe not enabled / configured");
     }
-    $stripe_secret_key = $stripe_provider['payment_provider_private_key'];
+    $provider_id = intval($stripe_provider['payment_provider_id']);
 
-    require_once '../plugins/stripe-php/init.php';
+    require_once '../includes/payment_provider_factory.php';
+    $provider = getPaymentProvider($provider_id);
 
     $pi_description = "ITFlow: $client_name payment of $invoice_currency_code $balance_to_pay for $invoice_prefix$invoice_number";
 
-    try {
-        \Stripe\Stripe::setApiKey($stripe_secret_key);
+    // Same intent arguments as before (card-only preserves exact prior behaviour).
+    $pi_args = [
+        'amount' => intval($balance_to_pay * 100), // Stripe expects cents
+        'currency' => $invoice_currency_code,
+        'description' => $pi_description,
+        'metadata' => [
+            'itflow_client_id' => $client_id,
+            'itflow_client_name' => $client_name,
+            'itflow_invoice_number' => $invoice_prefix . $invoice_number,
+            'itflow_invoice_id' => $invoice_id,
+        ],
+        'payment_method_types' => ['card'],
+    ];
 
-        $paymentIntent = \Stripe\PaymentIntent::create([
-            'amount' => intval($balance_to_pay * 100), // Stripe expects cents
-            'currency' => $invoice_currency_code,
-            'description' => $pi_description,
-            'metadata' => [
-                'itflow_client_id' => $client_id,
-                'itflow_client_name' => $client_name,
-                'itflow_invoice_number' => $invoice_prefix . $invoice_number,
-                'itflow_invoice_id' => $invoice_id,
-            ],
-            'payment_method_types' => ['card'],
-        ]);
+    try {
+        // A3 (Stripe ACH): offer bank/ACH alongside cards when the account
+        // supports it. Only an intent is created here (no charge yet), so if the
+        // Stripe account has not enabled us_bank_account we safely retry card-only.
+        try {
+            $ach_args = $pi_args;
+            $ach_args['payment_method_types'] = ['card', 'us_bank_account'];
+            $paymentIntent = $provider->createCheckout($ach_args);
+        } catch (Exception $eAch) {
+            $paymentIntent = $provider->createCheckout($pi_args);
+        }
 
         $output = [
             'clientSecret' => $paymentIntent->client_secret,

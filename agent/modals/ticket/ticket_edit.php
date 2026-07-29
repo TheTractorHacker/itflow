@@ -44,8 +44,8 @@ while ($row = mysqli_fetch_assoc($sql_additional_assets)) {
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-life-ring mr-2"></i>Ticket: <strong><?= "$ticket_prefix$ticket_number" ?></strong> - <?= $client_name ?></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-life-ring me-2"></i>Ticket: <strong><?= "$ticket_prefix$ticket_number" ?></strong> - <?= $client_name ?></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -57,14 +57,14 @@ ob_start();
         <?php if ($client_id) { ?>
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-details"><i class="fa fa-fw fa-life-ring mr-2"></i>Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-details"><i class="fa fa-fw fa-life-ring me-2"></i>Details</a>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-contacts"><i class="fa fa-fw fa-users mr-2"></i>Contact</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-contacts"><i class="fa fa-fw fa-users me-2"></i>Contact</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-assignment"><i class="fa fa-fw fa-desktop mr-2"></i>Assignment</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-assignment"><i class="fa fa-fw fa-desktop me-2"></i>Assignment</a>
             </li>
 
         </ul>
@@ -173,9 +173,9 @@ ob_start();
 
                 <?php if ($config_module_enable_accounting && lookupUserPermission("module_sales") >= 2) { ?>
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="billable" <?php if ($ticket_billable == 1) { echo "checked"; } ?> value="1" id="billableSwitch<?php echo $ticket_id; ?>">
-                        <label class="custom-control-label" for="billableSwitch<?php echo $ticket_id; ?>">Mark Billable</label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="billable" <?php if ($ticket_billable == 1) { echo "checked"; } ?> value="1" id="billableSwitch<?php echo $ticket_id; ?>">
+                        <label class="form-check-label" for="billableSwitch<?php echo $ticket_id; ?>">Mark Billable</label>
                     </div>
                 </div>
                 <?php } ?>
@@ -389,8 +389,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="edit_ticket" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save changes</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_ticket" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save changes</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 
 </form>

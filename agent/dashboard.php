@@ -49,11 +49,11 @@ $sql_years_select = mysqli_query($mysqli, "
      but success/warning/danger are reserved status colors (good / attention
      soon / attention now) while primary/info/secondary/pink are just
      identity hues for informational counts, never implying good or bad. */
-  .small-box.bg-primary, .small-box.bg-gradient-primary,
-  .small-box.bg-info, .small-box.bg-gradient-info,
-  .small-box.bg-success, .small-box.bg-gradient-success,
-  .small-box.bg-warning, .small-box.bg-gradient-warning,
-  .small-box.bg-danger, .small-box.bg-gradient-danger,
+  .small-box.bg-primary, .small-box.text-bg-primary,
+  .small-box.bg-info, .small-box.text-bg-info,
+  .small-box.bg-success, .small-box.text-bg-success,
+  .small-box.bg-warning, .small-box.text-bg-warning,
+  .small-box.bg-danger, .small-box.text-bg-danger,
   .small-box.bg-secondary, .small-box.bg-pink {
     color: #0b0b0b !important;
     border: 1px solid #e6e5e0;
@@ -83,13 +83,13 @@ $sql_years_select = mysqli_query($mysqli, "
   .small-box:hover .icon i { transform: none !important; }
 
   /* Identity hues - informational counts, no good/bad meaning */
-  .small-box.bg-primary, .small-box.bg-gradient-primary { background: rgba(42,120,214,.07) !important; border-left-color: #2a78d6; }
-  .small-box.bg-primary .icon, .small-box.bg-gradient-primary .icon { background: rgba(42,120,214,.16); }
-  .small-box.bg-primary .icon i, .small-box.bg-gradient-primary .icon i { color: #2a78d6; }
+  .small-box.bg-primary, .small-box.text-bg-primary { background: rgba(42,120,214,.07) !important; border-left-color: #2a78d6; }
+  .small-box.bg-primary .icon, .small-box.text-bg-primary .icon { background: rgba(42,120,214,.16); }
+  .small-box.bg-primary .icon i, .small-box.text-bg-primary .icon i { color: #2a78d6; }
 
-  .small-box.bg-info, .small-box.bg-gradient-info { background: rgba(27,175,122,.07) !important; border-left-color: #1baf7a; }
-  .small-box.bg-info .icon, .small-box.bg-gradient-info .icon { background: rgba(27,175,122,.16); }
-  .small-box.bg-info .icon i, .small-box.bg-gradient-info .icon i { color: #159763; }
+  .small-box.bg-info, .small-box.text-bg-info { background: rgba(27,175,122,.07) !important; border-left-color: #1baf7a; }
+  .small-box.bg-info .icon, .small-box.text-bg-info .icon { background: rgba(27,175,122,.16); }
+  .small-box.bg-info .icon i, .small-box.text-bg-info .icon i { color: #159763; }
 
   .small-box.bg-secondary { background: rgba(74,58,167,.06) !important; border-left-color: #4a3aa7; }
   .small-box.bg-secondary .icon { background: rgba(74,58,167,.14); }
@@ -103,17 +103,45 @@ $sql_years_select = mysqli_query($mysqli, "
      The number stays in primary ink regardless of tile color; a colored
      numeral is harder to read and the tint + icon + label already carry
      the meaning. */
-  .small-box.bg-success, .small-box.bg-gradient-success { background: rgba(12,163,12,.07) !important; border-left-color: #0ca30c; }
-  .small-box.bg-success .icon, .small-box.bg-gradient-success .icon { background: rgba(12,163,12,.16); }
-  .small-box.bg-success .icon i, .small-box.bg-gradient-success .icon i { color: #0ca30c; }
+  .small-box.bg-success, .small-box.text-bg-success { background: rgba(12,163,12,.07) !important; border-left-color: #0ca30c; }
+  .small-box.bg-success .icon, .small-box.text-bg-success .icon { background: rgba(12,163,12,.16); }
+  .small-box.bg-success .icon i, .small-box.text-bg-success .icon i { color: #0ca30c; }
 
-  .small-box.bg-warning, .small-box.bg-gradient-warning { background: rgba(250,178,25,.12) !important; border-left-color: #fab219; }
-  .small-box.bg-warning .icon, .small-box.bg-gradient-warning .icon { background: rgba(250,178,25,.22); }
-  .small-box.bg-warning .icon i, .small-box.bg-gradient-warning .icon i { color: #9c6b04; }
+  .small-box.bg-warning, .small-box.text-bg-warning { background: rgba(250,178,25,.12) !important; border-left-color: #fab219; }
+  .small-box.bg-warning .icon, .small-box.text-bg-warning .icon { background: rgba(250,178,25,.22); }
+  .small-box.bg-warning .icon i, .small-box.text-bg-warning .icon i { color: #9c6b04; }
 
-  .small-box.bg-danger, .small-box.bg-gradient-danger { background: rgba(208,59,59,.07) !important; border-left-color: #d03b3b; }
-  .small-box.bg-danger .icon, .small-box.bg-gradient-danger .icon { background: rgba(208,59,59,.16); }
-  .small-box.bg-danger .icon i, .small-box.bg-gradient-danger .icon i { color: #d03b3b; }
+  .small-box.bg-danger, .small-box.text-bg-danger { background: rgba(208,59,59,.07) !important; border-left-color: #d03b3b; }
+  .small-box.bg-danger .icon, .small-box.text-bg-danger .icon { background: rgba(208,59,59,.16); }
+  .small-box.bg-danger .icon i, .small-box.text-bg-danger .icon i { color: #d03b3b; }
+
+  /* "Needs attention" status strip: a NOC-style checklist, not another stat
+     tile. Items dim to near-invisible when clear so the eye jumps straight
+     to whatever is actually amber - the same "quiet unless it matters"
+     convention already used for sidebar active-states and table row accents. */
+  .dash-attention {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    background: var(--if-surface, #fff); border: 1px solid var(--if-border, #e3e9ea);
+    border-radius: var(--if-radius, 12px); padding: .65rem 1rem;
+  }
+  .dash-attention-label {
+    font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--if-muted, #5d6f76); white-space: nowrap; display: flex; align-items: center; gap: .4rem;
+  }
+  .dash-attention-items { display: flex; flex-wrap: wrap; gap: .5rem; flex: 1; }
+  .dash-attention-chip {
+    display: inline-flex; align-items: center; gap: .45rem; padding: .35rem .75rem;
+    border-radius: 999px; text-decoration: none; font-size: .82rem; font-weight: 500;
+    border: 1px solid var(--if-border-strong, #d3dbdc); color: var(--if-ink, #16232a);
+    background: var(--if-bg, #eef2f2); transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .dash-attention-chip:hover { transform: translateY(-1px); box-shadow: var(--if-shadow, 0 1px 2px rgba(20,35,42,.04)); text-decoration: none; color: var(--if-ink, #16232a); }
+  .dash-attention-chip .dash-attention-count { font-weight: 700; font-family: var(--if-mono, monospace); }
+  .dash-attention-chip.is-clear { opacity: .5; }
+  .dash-attention-chip.is-active {
+    border-color: rgba(217,119,6,.35); background: rgba(217,119,6,.1); color: #9a5b00;
+  }
+  :root[data-bs-theme="dark"] .dash-attention-chip.is-active { color: #f2b84b; }
 </style>
 
 
@@ -125,17 +153,53 @@ $dash_my_tickets = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*
 $dash_pending_invoices = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM invoices WHERE invoice_status = 'Unpaid'"))[0]);
 $dash_hour = intval(date('G'));
 $dash_greeting = $dash_hour < 12 ? 'Good morning' : ($dash_hour < 17 ? 'Good afternoon' : 'Good evening');
+
+// "Needs attention" signals - computed unconditionally (regardless of the
+// Financial/Technical toggles below) so the top-of-page status strip always
+// reflects reality. Cheap single-table counts, reused (not re-queried) by the
+// Technical section further down if it's enabled.
+$dash_unassigned_tickets = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE ticket_closed_at IS NULL AND (ticket_assigned_to IS NULL OR ticket_assigned_to = 0)"))[0]);
+$dash_expiring_domains = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM domains WHERE domain_expire IS NOT NULL AND domain_expire > CURRENT_DATE AND domain_expire < CURRENT_DATE + INTERVAL 30 DAY AND domain_archived_at IS NULL"))[0]);
+$dash_expiring_certificates = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM certificates WHERE certificate_expire IS NOT NULL AND certificate_expire > CURRENT_DATE AND certificate_expire < CURRENT_DATE + INTERVAL 30 DAY AND certificate_archived_at IS NULL"))[0]);
+
+$dash_attention_items = [
+    ['count' => $dash_unassigned_tickets,      'label' => 'Unassigned tickets',        'href' => 'tickets.php?assigned=0',                              'icon' => 'fa-user-slash'],
+    ['count' => $dash_pending_invoices,         'label' => 'Unpaid invoices',           'href' => 'invoices.php',                                        'icon' => 'fa-file-invoice-dollar'],
+    ['count' => $dash_expiring_domains,         'label' => 'Domains expiring (30d)',    'href' => 'domains.php?sort=domain_expire&order=ASC',            'icon' => 'fa-globe'],
+    ['count' => $dash_expiring_certificates,    'label' => 'Certificates expiring (30d)','href' => 'certificates.php?sort=certificate_expire&order=ASC',  'icon' => 'fa-lock'],
+];
+$dash_attention_total = array_sum(array_column($dash_attention_items, 'count'));
 ?>
 <div class="mb-3 d-flex align-items-center justify-content-between flex-wrap" style="gap:.5rem;">
     <div>
-        <h4 class="mb-0 font-weight-bold"><?= $dash_greeting ?>, <?= nullable_htmlentities($session_name) ?>!</h4>
+        <h4 class="mb-0 fw-bold"><?= $dash_greeting ?>, <?= nullable_htmlentities($session_name) ?>!</h4>
         <small class="text-muted"><?= date('l, F j, Y') ?></small>
     </div>
 </div>
+
+<div class="dash-attention mb-4">
+    <div class="dash-attention-label">
+        <?php if ($dash_attention_total === 0): ?>
+            <i class="fas fa-check-circle"></i> All clear
+        <?php else: ?>
+            <i class="fas fa-bolt"></i> Needs attention
+        <?php endif; ?>
+    </div>
+    <div class="dash-attention-items">
+        <?php foreach ($dash_attention_items as $dash_ai): ?>
+            <a href="<?= $dash_ai['href'] ?>" class="dash-attention-chip <?= $dash_ai['count'] > 0 ? 'is-active' : 'is-clear' ?>">
+                <i class="fas <?= $dash_ai['icon'] ?>"></i>
+                <span class="dash-attention-count"><?= $dash_ai['count'] ?></span>
+                <span class="dash-attention-text"><?= $dash_ai['label'] ?></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</div>
+
 <div class="row mb-4">
     <div class="col-6 col-md-3 mb-3">
         <a href="tickets.php" class="text-decoration-none">
-        <div class="small-box bg-gradient-primary mb-0">
+        <div class="small-box text-bg-primary bg-gradient mb-0">
             <div class="inner">
                 <h3><?= $dash_open_tickets ?></h3>
                 <p>Open Tickets</p>
@@ -146,7 +210,7 @@ $dash_greeting = $dash_hour < 12 ? 'Good morning' : ($dash_hour < 17 ? 'Good aft
     </div>
     <div class="col-6 col-md-3 mb-3">
         <a href="tickets.php?assigned_to=<?= $session_user_id ?>" class="text-decoration-none">
-        <div class="small-box bg-gradient-info mb-0">
+        <div class="small-box text-bg-info bg-gradient mb-0">
             <div class="inner">
                 <h3><?= $dash_my_tickets ?></h3>
                 <p>My Tickets</p>
@@ -157,7 +221,7 @@ $dash_greeting = $dash_hour < 12 ? 'Good morning' : ($dash_hour < 17 ? 'Good aft
     </div>
     <div class="col-6 col-md-3 mb-3">
         <a href="clients.php" class="text-decoration-none">
-        <div class="small-box bg-gradient-success mb-0">
+        <div class="small-box text-bg-success bg-gradient mb-0">
             <div class="inner">
                 <h3><?= $dash_active_clients ?></h3>
                 <p>Active Clients</p>
@@ -168,7 +232,7 @@ $dash_greeting = $dash_hour < 12 ? 'Good morning' : ($dash_hour < 17 ? 'Good aft
     </div>
     <div class="col-6 col-md-3 mb-3">
         <a href="invoices.php" class="text-decoration-none">
-        <div class="small-box bg-gradient-warning mb-0">
+        <div class="small-box text-bg-warning bg-gradient mb-0">
             <div class="inner">
                 <h3><?= $dash_pending_invoices ?></h3>
                 <p>Unpaid Invoices</p>
@@ -180,12 +244,12 @@ $dash_greeting = $dash_hour < 12 ? 'Good morning' : ($dash_hour < 17 ? 'Good aft
 </div>
 
 <div class="card card-body">
-    <form class="form-inline">
+    <form class="d-flex flex-wrap align-items-center gap-2">
         <input type="hidden" name="enable_financial" value="0">
         <input type="hidden" name="enable_technical" value="0">
 
-        <label for="year" class="mr-sm-2">Select Year:</label>
-        <select id="year" onchange="this.form.submit()" class="form-control mr-sm-3 col-sm-2 mb-3 mb-sm-0" name="year">
+        <label for="year" class="me-sm-2">Select Year:</label>
+        <select id="year" class="form-select me-sm-3 col-sm-2 mb-3 mb-sm-0 auto-submit-select" style="width:auto;" name="year">
             <?php while ($row = mysqli_fetch_assoc($sql_years_select)) {
                 $year_select = $row['all_years'];
                 if (empty($year_select)) {
@@ -199,16 +263,16 @@ $dash_greeting = $dash_hour < 12 ? 'Good morning' : ($dash_hour < 17 ? 'Good aft
         </select>
 
         <?php if ($session_user_role == 1 || ($session_user_role == 3 && $config_module_enable_accounting == 1)) { ?>
-            <div class="custom-control custom-switch mr-3">
-                <input type="checkbox" onchange="this.form.submit()" class="custom-control-input" id="customSwitch1" name="enable_financial" value="1" <?php if ($user_config_dashboard_financial_enable == 1) { echo "checked"; } ?>>
-                <label class="custom-control-label" for="customSwitch1">Financial</label>
+            <div class="form-check form-switch me-3">
+                <input type="checkbox" class="form-check-input auto-submit-select" id="customSwitch1" name="enable_financial" value="1" <?php if ($user_config_dashboard_financial_enable == 1) { echo "checked"; } ?>>
+                <label class="form-check-label" for="customSwitch1">Financial</label>
             </div>
         <?php } ?>
 
         <?php if ($session_user_role >= 2 && $config_module_enable_ticketing == 1) { ?>
-            <div class="custom-control custom-switch">
-                <input type="checkbox" onchange="this.form.submit()" class="custom-control-input" id="customSwitch2" name="enable_technical" value="1" <?php if ($user_config_dashboard_technical_enable == 1) { echo "checked"; } ?>>
-                <label class="custom-control-label" for="customSwitch2">Technical</label>
+            <div class="form-check form-switch">
+                <input type="checkbox" class="form-check-input auto-submit-select" id="customSwitch2" name="enable_technical" value="1" <?php if ($user_config_dashboard_technical_enable == 1) { echo "checked"; } ?>>
+                <label class="form-check-label" for="customSwitch2">Technical</label>
             </div>
         <?php } ?>
     </form>
@@ -470,7 +534,7 @@ if ($user_config_dashboard_financial_enable == 1) {
         <div class="col-md-12">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-area mr-2"></i>Cash Flow</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-area me-2"></i>Cash Flow</h3>
                     <div class="card-tools">
                         <a href="reports/income_summary.php" class="btn btn-tool">
                             <i class="fas fa-eye"></i>
@@ -491,7 +555,7 @@ if ($user_config_dashboard_financial_enable == 1) {
         <div class="col-lg-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie mr-2"></i>Income by Category <small>(Top 5)</small></h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie me-2"></i>Income by Category <small>(Top 5)</small></h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove">
                             <i class="fas fa-times"></i>
@@ -509,7 +573,7 @@ if ($user_config_dashboard_financial_enable == 1) {
         <div class="col-lg-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fa fa-fw fa-shopping-cart mr-2"></i>Expenses by Category <small>(Top 5)</small></h3>
+                    <h3 class="card-title"><i class="fa fa-fw fa-shopping-cart me-2"></i>Expenses by Category <small>(Top 5)</small></h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove">
                             <i class="fas fa-times"></i>
@@ -527,7 +591,7 @@ if ($user_config_dashboard_financial_enable == 1) {
         <div class="col-lg-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fa fa-fw fa-building mr-2"></i>Expenses by Vendor <small>(Top 5)</small></h3>
+                    <h3 class="card-title"><i class="fa fa-fw fa-building me-2"></i>Expenses by Vendor <small>(Top 5)</small></h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove">
                             <i class="fas fa-times"></i>
@@ -545,7 +609,7 @@ if ($user_config_dashboard_financial_enable == 1) {
         <div class="col-md-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fa fa-fw fa-piggy-bank mr-2"></i>Account Balances</h3>
+                    <h3 class="card-title"><i class="fa fa-fw fa-piggy-bank me-2"></i>Account Balances</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove">
                             <i class="fas fa-times"></i>
@@ -581,7 +645,7 @@ if ($user_config_dashboard_financial_enable == 1) {
                                         $balance = '0.00';
                                     }
                                     ?>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $balance, "$session_company_currency"); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $balance, "$session_company_currency"); ?></td>
                                 </tr>
                             <?php } ?>
                         </tbody>
@@ -593,7 +657,7 @@ if ($user_config_dashboard_financial_enable == 1) {
         <div class="col-md-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-credit-card mr-2"></i>Latest Income</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-credit-card me-2"></i>Latest Income</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove">
                             <i class="fas fa-times"></i>
@@ -607,7 +671,7 @@ if ($user_config_dashboard_financial_enable == 1) {
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Invoice</th>
-                                <th class="text-right">Amount</th>
+                                <th class="text-end">Amount</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -622,7 +686,7 @@ if ($user_config_dashboard_financial_enable == 1) {
                                     <td><?php echo $payment_date; ?></td>
                                     <td><?php echo $client_name; ?></td>
                                     <td><?php echo "$invoice_prefix$invoice_number"; ?></td>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $payment_amount, "$session_company_currency"); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $payment_amount, "$session_company_currency"); ?></td>
                                 </tr>
                             <?php } ?>
                         </tbody>
@@ -634,7 +698,7 @@ if ($user_config_dashboard_financial_enable == 1) {
         <div class="col-md-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-shopping-cart mr-2"></i>Latest Expenses</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-shopping-cart me-2"></i>Latest Expenses</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove">
                             <i class="fas fa-times"></i>
@@ -648,7 +712,7 @@ if ($user_config_dashboard_financial_enable == 1) {
                                 <th>Date</th>
                                 <th>Vendor</th>
                                 <th>Category</th>
-                                <th class="text-right">Amount</th>
+                                <th class="text-end">Amount</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -662,7 +726,7 @@ if ($user_config_dashboard_financial_enable == 1) {
                                     <td><?php echo $expense_date; ?></td>
                                     <td><?php echo $vendor_name; ?></td>
                                     <td><?php echo $category_name; ?></td>
-                                    <td class="text-right"><?php echo numfmt_format_currency($currency_format, $expense_amount, "$session_company_currency"); ?></td>
+                                    <td class="text-end"><?php echo numfmt_format_currency($currency_format, $expense_amount, "$session_company_currency"); ?></td>
                                 </tr>
                             <?php } ?>
                         </tbody>
@@ -674,7 +738,7 @@ if ($user_config_dashboard_financial_enable == 1) {
         <div class="col-md-12">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-route mr-2"></i>Trip Flow</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-route me-2"></i>Trip Flow</h3>
                     <div class="card-tools">
                         <a href="trips.php" class="btn btn-tool">
                             <i class="fas fa-eye"></i>
@@ -717,11 +781,9 @@ if ($user_config_dashboard_technical_enable == 1) {
     $sql_your_tickets = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS your_tickets FROM tickets WHERE ticket_closed_at IS NULL AND ticket_assigned_to = $session_user_id"));
     $your_tickets = $sql_your_tickets['your_tickets'];
 
-    $sql_domains_expiring = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(domain_id) AS expiring_domains FROM domains WHERE domain_expire IS NOT NULL AND domain_expire > CURRENT_DATE AND domain_expire < CURRENT_DATE + INTERVAL 30 DAY AND domain_archived_at IS NULL"));
-    $expiring_domains = $sql_domains_expiring['expiring_domains'];
-
-    $sql_certs_expiring = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(certificate_id) AS expiring_certs FROM certificates WHERE certificate_expire IS NOT NULL AND certificate_expire > CURRENT_DATE AND certificate_expire < CURRENT_DATE + INTERVAL 30 DAY AND certificate_archived_at IS NULL"));
-    $expiring_certificates = $sql_certs_expiring['expiring_certs'];
+    // Already computed unconditionally above (for the top-of-page attention strip) - reuse rather than re-query.
+    $expiring_domains = $dash_expiring_domains;
+    $expiring_certificates = $dash_expiring_certificates;
 
     $sql_your_tickets = mysqli_query($mysqli, "
         SELECT * FROM tickets
@@ -744,8 +806,7 @@ if ($user_config_dashboard_technical_enable == 1) {
     ");
 
     // Ticket metrics
-    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE ticket_closed_at IS NULL AND (ticket_assigned_to IS NULL OR ticket_assigned_to = 0)"));
-    $unassigned_tickets = intval($row['c']);
+    $unassigned_tickets = $dash_unassigned_tickets; // already computed above for the attention strip
 
     $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE DATE(ticket_created_at) = CURDATE()"));
     $tickets_opened_today = intval($row['c']);
@@ -932,7 +993,7 @@ if ($user_config_dashboard_technical_enable == 1) {
         <div class="col-md-12">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-line mr-2"></i>Tickets Opened vs Resolved <small>(<?php echo $year; ?>)</small></h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-line me-2"></i>Tickets Opened vs Resolved <small>(<?php echo $year; ?>)</small></h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
                     </div>
@@ -946,7 +1007,7 @@ if ($user_config_dashboard_technical_enable == 1) {
         <div class="col-lg-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie mr-2"></i>By Priority</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie me-2"></i>By Priority</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
                     </div>
@@ -960,7 +1021,7 @@ if ($user_config_dashboard_technical_enable == 1) {
         <div class="col-lg-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie mr-2"></i>By Status</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie me-2"></i>By Status</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
                     </div>
@@ -974,7 +1035,7 @@ if ($user_config_dashboard_technical_enable == 1) {
         <div class="col-lg-4">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie mr-2"></i>By Category</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-pie me-2"></i>By Category</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
                     </div>
@@ -989,7 +1050,7 @@ if ($user_config_dashboard_technical_enable == 1) {
         <div class="col-lg-6">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-users mr-2"></i>Open Tickets by Technician</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-users me-2"></i>Open Tickets by Technician</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
                     </div>
@@ -1020,7 +1081,7 @@ if ($user_config_dashboard_technical_enable == 1) {
     <!-- Past / Historical Ticket Metrics -->
     <div class="row">
         <div class="col-12">
-            <h5 class="mt-2 mb-3 text-muted"><i class="fas fa-fw fa-history mr-2"></i>Historical Tickets (<?php echo $year; ?>)</h5>
+            <h5 class="mt-2 mb-3 text-muted"><i class="fas fa-fw fa-history me-2"></i>Historical Tickets (<?php echo $year; ?>)</h5>
         </div>
 
         <div class="col-lg-4 col-6">
@@ -1057,7 +1118,7 @@ if ($user_config_dashboard_technical_enable == 1) {
         <div class="col-lg-6">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-user-check mr-2"></i>Resolved by Technician (<?php echo $year; ?>)</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-user-check me-2"></i>Resolved by Technician (<?php echo $year; ?>)</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
                     </div>
@@ -1087,7 +1148,7 @@ if ($user_config_dashboard_technical_enable == 1) {
         <div class="col-lg-6">
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-check-circle mr-2"></i>Recently Resolved</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-check-circle me-2"></i>Recently Resolved</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
                     </div>
@@ -1133,7 +1194,7 @@ if ($user_config_dashboard_technical_enable == 1) {
             <div class="col-12">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fa fa-fw fa-life-ring mr-2"></i>Your Open Tickets</h3>
+                        <h3 class="card-title"><i class="fa fa-fw fa-life-ring me-2"></i>Your Open Tickets</h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="remove">
                                 <i class="fas fa-times"></i>
@@ -1195,10 +1256,10 @@ if ($user_config_dashboard_technical_enable == 1) {
                                         $_sla_breached = $_sla_due < date('Y-m-d H:i:s');
                                         $_sla_color = $_sla_breached ? 'danger' : (strtotime($_sla_due) - time() < 7200 ? 'warning' : 'success');
                                         $_sla_label = $_sla_breached ? 'Breached' : 'OK';
-                                        $sla_badge = "<span class='badge badge-pill badge-$_sla_color'>$_sla_label</span>";
+                                        $sla_badge = "<span class='badge rounded-pill text-bg-$_sla_color'>$_sla_label</span>";
                                     }
                                 ?>
-                                    <tr class="<?php echo empty($ticket_updated_at) ? 'text-bold' : ''; ?>">
+                                    <tr class="<?php echo empty($ticket_updated_at) ? 'fw-bold' : ''; ?>">
                                         <td>
                                             <a class="text-dark"
                                                 href="ticket.php?ticket_id=<?= "$ticket_id$has_client" ?>"><?= "$ticket_prefix$ticket_number" ?>
@@ -1207,8 +1268,8 @@ if ($user_config_dashboard_technical_enable == 1) {
                                         <td><a href="ticket.php?ticket_id=<?= "$ticket_id$has_client" ?>"><?= $ticket_subject ?></a></td>
                                         <td><a href="tickets.php?client_id=<?php echo $client_id; ?>"><strong><?php echo $client_name; ?></strong></a></td>
                                         <td><?php echo $contact_display; ?></td>
-                                        <td><span class='p-2 badge badge-pill badge-<?php echo $ticket_priority_color; ?>'><?php echo $ticket_priority; ?></span></td>
-                                        <td><span class='badge badge-pill text-light p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span></td>
+                                        <td><span class='p-2 badge rounded-pill text-bg-<?php echo $ticket_priority_color; ?>'><?php echo $ticket_priority; ?></span></td>
+                                        <td><span class='badge rounded-pill <?php echo tagTextClass($ticket_status_color); ?> p-2' style="background-color: <?php echo $ticket_status_color; ?>"><?php echo $ticket_status_name; ?></span></td>
                                         <td><?php echo $sla_badge; ?></td>
                                         <td><?php echo $ticket_updated_at_display; ?></td>
                                     </tr>
@@ -1226,7 +1287,7 @@ if ($user_config_dashboard_technical_enable == 1) {
             <div class="col-12">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>Recent Automation Activity</h3>
+                        <h3 class="card-title"><i class="fas fa-fw fa-history me-2"></i>Recent Automation Activity</h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="remove">
                                 <i class="fas fa-times"></i>
@@ -1265,7 +1326,7 @@ if ($user_config_dashboard_technical_enable == 1) {
                                     <tr>
                                         <td><?php echo $ar_time_ago; ?></td>
                                         <td><?php echo $ar_rule_name; ?></td>
-                                        <td><span class="badge badge-info"><?php echo $ar_trigger; ?></span></td>
+                                        <td><span class="badge text-bg-info"><?php echo $ar_trigger; ?></span></td>
                                         <td>
                                             <?php if ($ar_ticket_id) { ?>
                                                 <a href="ticket.php?ticket_id=<?php echo $ar_ticket_id; ?>&client_id=<?php echo $ar_ticket_client_id; ?>">
@@ -1293,7 +1354,7 @@ if ($user_config_dashboard_technical_enable == 1) {
 
 <?php if ($user_config_dashboard_financial_enable == 1) { ?>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
     // Bootstrap-like defaults for Chart.js v4
     Chart.defaults.font.family = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
     Chart.defaults.color = '#292b2c';
@@ -1704,7 +1765,7 @@ if ($user_config_dashboard_technical_enable == 1) {
 <?php } ?>
 
 <?php if ($user_config_dashboard_technical_enable == 1) { ?>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 // TICKET FLOW (Opened vs Resolved)
 (function() {
     var ctx = document.getElementById('ticketFlowChart');

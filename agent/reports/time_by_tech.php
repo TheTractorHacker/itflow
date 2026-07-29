@@ -4,45 +4,10 @@ require_once "includes/inc_all_reports.php";
 
 enforceUserPermission('module_support');
 
-function secondsToTime($inputSeconds) {
-    $inputSeconds = floor($inputSeconds);
-
-    $secondsInAMinute = 60;
-    $secondsInAnHour = 60 * $secondsInAMinute;
-    $secondsInADay = 24 * $secondsInAnHour;
-
-    // Extract days
-    $days = floor($inputSeconds / $secondsInADay);
-
-    // Extract hours
-    $hourSeconds = $inputSeconds % $secondsInADay;
-    $hours = floor($hourSeconds / $secondsInAnHour);
-
-    // Extract minutes
-    $minuteSeconds = $hourSeconds % $secondsInAnHour;
-    $minutes = floor($minuteSeconds / $secondsInAMinute);
-
-    // Extract the remaining seconds
-    $remainingSeconds = $minuteSeconds % $secondsInAMinute;
-    $seconds = ceil($remainingSeconds);
-
-    // Format and return
-    $timeParts = [];
-    $sections = [
-        'day' => (int)$days,
-        'hour' => (int)$hours,
-        'minute' => (int)$minutes,
-        'second' => (int)$seconds,
-    ];
-
-    foreach ($sections as $name => $value){
-        if ($value > 0){
-            $timeParts[] = $value. ' '.$name.($value == 1 ? '' : 's');
-        }
-    }
-
-    return implode(', ', $timeParts);
-}
+// NOTE: secondsToTime() is now provided centrally by functions.php (added in the
+// reporting Wave 1). The local copy that used to live here was dead code (this page
+// renders time via SQL SEC_TO_TIME, never via secondsToTime) and its redeclaration
+// fataled the page once functions.php gained the shared helper — removed.
 
 if (isset($_GET['year'])) {
     $year = intval($_GET['year']);
@@ -74,14 +39,14 @@ $sql_users = mysqli_query($mysqli, "
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-life-ring mr-2"></i>Time Logged By Technician</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-life-ring me-2"></i>Time Logged By Technician</h3>
             <div class="card-tools">
-                <button type="button" class="btn btn-primary d-print-none" onclick="window.print();"><i class="fas fa-fw fa-print mr-2"></i>Print</button>
+                <button type="button" class="btn btn-primary d-print-none js-print-page"><i class="fas fa-fw fa-print me-2"></i>Print</button>
             </div>
         </div>
         <div class="card-body">
             <form class="mb-3">
-                <select onchange="this.form.submit()" class="form-control" name="year">
+                <select class="form-control auto-submit-select" name="year">
                     <?php
                     while ($row = mysqli_fetch_assoc($sql_ticket_years)) {
                         $ticket_year = intval($row['ticket_year']); ?>
@@ -92,7 +57,7 @@ $sql_users = mysqli_query($mysqli, "
 
             <div class="card card-dark mb-3">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-fw fa-chart-area mr-2"></i>Yearly (<?php echo $year; ?>)</h3>
+                    <h3 class="card-title"><i class="fas fa-fw fa-chart-area me-2"></i>Yearly (<?php echo $year; ?>)</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive-sm">
@@ -100,9 +65,9 @@ $sql_users = mysqli_query($mysqli, "
                             <thead>
                             <tr>
                                 <th>Technician</th>
-                                <th class="text-right">Tickets assigned</th>
-                                <th class="text-right">Tickets touched</th>
-                                <th class="text-right">Total time worked <i>(H:M:S)</i></th>
+                                <th class="text-end">Tickets assigned</th>
+                                <th class="text-end">Tickets touched</th>
+                                <th class="text-end">Total time worked <i>(H:M:S)</i></th>
                             </tr>
                             </thead>
                             <tbody>
@@ -156,9 +121,9 @@ $sql_users = mysqli_query($mysqli, "
 
                                 <tr>
                                     <td><?php echo $user_name; ?></td>
-                                    <td class="text-right"><?php echo $ticket_raised_count; ?></td>
-                                    <td class="text-right"><?php echo $tickets_touched; ?></td>
-                                    <td class="text-right"><?php echo $ticket_total_time_worked; ?></td>
+                                    <td class="text-end"><?php echo $ticket_raised_count; ?></td>
+                                    <td class="text-end"><?php echo $tickets_touched; ?></td>
+                                    <td class="text-end"><?php echo $ticket_total_time_worked; ?></td>
                                 </tr>
 
                                 <?php

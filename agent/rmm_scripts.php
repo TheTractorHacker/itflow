@@ -6,6 +6,20 @@ $categories = ['Maintenance', 'Repair', 'Inventory', 'Security', 'Software Insta
 $filter_cat  = sanitizeInput($_GET['category'] ?? '');
 $filter_q    = sanitizeInput($_GET['q'] ?? '');
 
+// Resolve the default RMM integration so sync labels name the real provider.
+$rmm_default_provider_name = 'RMM';
+if (!empty($config_rmm_default_integration_id)) {
+    $rmm_intg = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT name, type FROM rmm_integrations WHERE id=" . intval($config_rmm_default_integration_id) . " LIMIT 1"
+    ));
+    if ($rmm_intg) {
+        $rmm_default_provider_name = $rmm_intg['name'] ?: (
+            ['tactical_rmm' => 'Tactical RMM', 'level' => 'Level.io',
+             'action1' => 'Action1', 'sophos_central' => 'Sophos Central'][$rmm_intg['type']] ?? 'RMM'
+        );
+    }
+}
+
 // Handle add/edit/delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
     if (!validateCSRFToken($_POST['csrf_token'])) { flash_alert('Invalid CSRF token', 'danger'); redirect(); }
@@ -97,35 +111,35 @@ $sql_runs = mysqli_query($mysqli,
 ?>
 
 <div class="d-flex align-items-center mb-3">
-    <h4 class="mb-0 mr-auto"><i class="fas fa-code mr-2"></i>Script Library</h4>
+    <h4 class="mb-0 mr-auto"><i class="fas fa-code me-2"></i>Script Library</h4>
     <?php if (lookupUserPermission('module_rmm_scripts') >= 1): ?>
-    <button id="syncScriptsBtn" class="btn btn-info btn-sm mr-2" onclick="syncScripts()">
-        <i class="fas fa-cloud-download-alt mr-1"></i>Sync from Tactical RMM
+    <button id="syncScriptsBtn" class="btn btn-info btn-sm me-2 js-sync-scripts">
+        <i class="fas fa-cloud-download-alt me-1"></i>Sync from <?= nullable_htmlentities($rmm_default_provider_name) ?>
     </button>
-    <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#scriptModal" onclick="openNewScript()">
-        <i class="fas fa-plus mr-1"></i>New Script
+    <button class="btn btn-primary btn-sm js-open-new-script" data-bs-toggle="modal" data-bs-target="#scriptModal">
+        <i class="fas fa-plus me-1"></i>New Script
     </button>
     <?php endif; ?>
 </div>
 <div id="syncBar" class="alert alert-info d-none mb-3">
-    <i class="fas fa-spinner fa-spin mr-2"></i><span id="syncBarText">Syncing scripts...</span>
+    <i class="fas fa-spinner fa-spin me-2"></i><span id="syncBarText">Syncing scripts...</span>
 </div>
 
 <!-- Category + search filter bar -->
 <div class="card card-dark mb-2">
     <div class="card-body py-2">
         <form method="get" class="d-flex flex-wrap align-items-center" style="gap:6px">
-            <div class="btn-group btn-group-sm mr-2">
+            <div class="btn-group btn-group-sm me-2">
                 <a href="?<?= $filter_q ? 'q='.urlencode($filter_q) : '' ?>"
                    class="btn <?= !$filter_cat ? 'btn-secondary' : 'btn-outline-secondary' ?>">
-                    All <span class="badge badge-light ml-1"><?= $total_count ?></span>
+                    All <span class="badge text-bg-light ms-1"><?= $total_count ?></span>
                 </a>
                 <?php foreach ($categories as $cat): ?>
                 <a href="?category=<?= urlencode($cat) ?><?= $filter_q ? '&q='.urlencode($filter_q) : '' ?>"
                    class="btn <?= $filter_cat === $cat ? 'btn-secondary' : 'btn-outline-secondary' ?>">
                     <?= $cat ?>
                     <?php if (isset($cat_counts[$cat])): ?>
-                    <span class="badge badge-light ml-1"><?= $cat_counts[$cat] ?></span>
+                    <span class="badge text-bg-light ms-1"><?= $cat_counts[$cat] ?></span>
                     <?php endif; ?>
                 </a>
                 <?php endforeach; ?>
@@ -135,7 +149,7 @@ $sql_runs = mysqli_query($mysqli,
                    class="form-control form-control-sm" placeholder="Search scripts…" style="max-width:200px">
             <button type="submit" class="btn btn-sm btn-secondary"><i class="fas fa-search"></i></button>
             <?php if ($filter_cat || $filter_q): ?>
-            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times mr-1"></i>Clear</a>
+            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times me-1"></i>Clear</a>
             <?php endif; ?>
         </form>
     </div>
@@ -148,14 +162,14 @@ $sql_runs = mysqli_query($mysqli,
             <i class="fas fa-code fa-3x mb-3"></i>
             <p class="mb-1">No scripts found.</p>
             <?php if (!$filter_cat && !$filter_q): ?>
-            <p class="small">Click <strong>Sync from Tactical RMM</strong> to import your script library, or add scripts manually.</p>
+            <p class="small">Click <strong>Sync from <?= nullable_htmlentities($rmm_default_provider_name) ?></strong> to import your script library, or add scripts manually.</p>
             <?php endif; ?>
         </div>
         <?php else: ?>
         <table class="table table-sm table-hover mb-0">
             <thead class="text-muted border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
                 <tr>
-                    <th class="pl-3">Name</th>
+                    <th class="ps-3">Name</th>
                     <th>Category</th>
                     <th>Type</th>
                     <th>Runs</th>
@@ -171,19 +185,19 @@ $sql_runs = mysqli_query($mysqli,
                 $type_label = ['powershell'=>'PowerShell','cmd'=>'CMD','python'=>'Python','bash'=>'Bash'][$scr['script_type']] ?? $scr['script_type'];
             ?>
             <tr>
-                <td class="pl-3">
-                    <div class="font-weight-bold"><?= nullable_htmlentities($scr['name']) ?></div>
+                <td class="ps-3">
+                    <div class="fw-bold"><?= nullable_htmlentities($scr['name']) ?></div>
                     <?php if ($scr['description']): ?>
                     <div class="text-muted small"><?= nullable_htmlentities(substr($scr['description'], 0, 80)) ?></div>
                     <?php endif; ?>
                 </td>
-                <td><span class="badge badge-secondary"><?= nullable_htmlentities($scr['category']) ?></span></td>
+                <td><span class="badge text-bg-secondary"><?= nullable_htmlentities($scr['category']) ?></span></td>
                 <td class="small text-muted">
-                    <i class="fas <?= $type_icon ?> mr-1"></i><?= $type_label ?>
+                    <i class="fas <?= $type_icon ?> me-1"></i><?= $type_label ?>
                 </td>
                 <td class="small text-center">
                     <?php if ($scr['run_count'] > 0): ?>
-                    <span class="font-weight-bold"><?= intval($scr['run_count']) ?></span>
+                    <span class="fw-bold"><?= intval($scr['run_count']) ?></span>
                     <?php if ($scr['fail_count'] > 0): ?>
                     <span class="text-danger small"> (<?= intval($scr['fail_count']) ?> failed)</span>
                     <?php endif; ?>
@@ -193,28 +207,28 @@ $sql_runs = mysqli_query($mysqli,
                 </td>
                 <td class="small text-muted"><?= $scr['tactical_script_id'] ? intval($scr['tactical_script_id']) : '—' ?></td>
                 <td><?= $scr['enabled']
-                    ? '<span class="badge badge-success">Active</span>'
-                    : '<span class="badge badge-secondary">Disabled</span>' ?>
+                    ? '<span class="badge text-bg-success">Active</span>'
+                    : '<span class="badge text-bg-secondary">Disabled</span>' ?>
                 </td>
-                <td class="text-right pr-2" style="white-space:nowrap">
+                <td class="text-end pe-2" style="white-space:nowrap">
                     <?php if (lookupUserPermission('module_rmm_scripts') >= 1): ?>
-                    <button class="btn btn-xs btn-success mr-1" onclick='openRunModal(<?= json_encode(['id'=>$scr['id'],'name'=>$scr['name'],'tactical_script_id'=>$scr['tactical_script_id']], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'
+                    <button class="btn btn-xs btn-success me-1 js-open-run-modal" data-script='<?= json_encode(['id'=>$scr['id'],'name'=>$scr['name'],'tactical_script_id'=>$scr['tactical_script_id']], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>'
                             title="Run on Asset" <?= !$scr['tactical_script_id'] ? 'disabled title="No Tactical ID — sync scripts first"' : '' ?>>
                         <i class="fas fa-play"></i>
                     </button>
                     <?php if ($scr['script_body']): ?>
-                    <button class="btn btn-xs btn-dark mr-1" onclick='previewScript(<?= json_encode(['name'=>$scr['name'],'body'=>$scr['script_body'],'type'=>$scr['script_type']], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'
+                    <button class="btn btn-xs btn-dark me-1 js-preview-script" data-script='<?= json_encode(['name'=>$scr['name'],'body'=>$scr['script_body'],'type'=>$scr['script_type']], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>'
                             title="View Script">
                         <i class="fas fa-eye"></i>
                     </button>
                     <?php endif; ?>
-                    <button class="btn btn-xs btn-secondary mr-1" onclick='editScript(<?= json_encode($scr, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)' title="Edit">
+                    <button class="btn btn-xs btn-secondary me-1 js-edit-script" data-script='<?= json_encode($scr, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>' title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <form method="post" class="d-inline" onsubmit="return confirm('Delete this script?')">
+                    <form method="post" class="d-inline">
                         <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                         <input type="hidden" name="script_id" value="<?= $sid ?>">
-                        <button type="submit" name="delete_script" class="btn btn-xs btn-danger" title="Delete">
+                        <button type="submit" name="delete_script" class="btn btn-xs btn-danger confirm-link" title="Delete">
                             <i class="fas fa-trash"></i>
                         </button>
                     </form>
@@ -231,7 +245,7 @@ $sql_runs = mysqli_query($mysqli,
 <!-- Recent Runs -->
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
-        <h6 class="mb-0 mr-auto"><i class="fas fa-history mr-2"></i>Recent Script Runs</h6>
+        <h6 class="mb-0 mr-auto"><i class="fas fa-history me-2"></i>Recent Script Runs</h6>
     </div>
     <div class="card-body p-0">
     <?php if (mysqli_num_rows($sql_runs) === 0): ?>
@@ -240,7 +254,7 @@ $sql_runs = mysqli_query($mysqli,
     <table class="table table-sm table-hover mb-0">
         <thead class="text-muted border-bottom" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px">
             <tr>
-                <th class="pl-3">Script</th>
+                <th class="ps-3">Script</th>
                 <th>Asset</th>
                 <th>Run By</th>
                 <th>Status</th>
@@ -254,7 +268,7 @@ $sql_runs = mysqli_query($mysqli,
             $run_badge = ['completed'=>'success','failed'=>'danger','running'=>'warning','pending'=>'secondary'][$run['status']] ?? 'secondary';
         ?>
         <tr>
-            <td class="pl-3 small font-weight-bold"><?= nullable_htmlentities($run['sname'] ?? 'Manual') ?></td>
+            <td class="ps-3 small fw-bold"><?= nullable_htmlentities($run['sname'] ?? 'Manual') ?></td>
             <td class="small">
                 <a href="/agent/asset_details.php?asset_id=<?= intval($run['asset_id']) ?>">
                     <?= nullable_htmlentities($run['asset_name']) ?>
@@ -288,10 +302,10 @@ $sql_runs = mysqli_query($mysqli,
 <!-- Script Add/Edit Modal -->
 <div class="modal fade" id="scriptModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark">
+        <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="scriptModalTitle">New Script</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
             </div>
             <form method="post">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -338,15 +352,15 @@ $sql_runs = mysqli_query($mysqli,
                         <label class="text-muted small">Script Body <small class="text-muted">(stored for reference; execution happens via Tactical)</small></label>
                         <textarea class="form-control form-control-sm" name="script_body" id="s_body" rows="8" style="font-family:monospace;font-size:12px"></textarea>
                     </div>
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="s_enabled" name="enabled" value="1" checked>
-                        <label class="custom-control-label" for="s_enabled">Enabled</label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="s_enabled" name="enabled" value="1" checked>
+                        <label class="form-check-label" for="s_enabled">Enabled</label>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" name="save_script" class="btn btn-primary btn-sm">
-                        <i class="fas fa-check mr-1"></i>Save
+                        <i class="fas fa-check me-1"></i>Save
                     </button>
                 </div>
             </form>
@@ -357,10 +371,10 @@ $sql_runs = mysqli_query($mysqli,
 <!-- Script Preview Modal -->
 <div class="modal fade" id="previewModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark">
+        <div class="modal-content">
             <div class="modal-header py-2">
                 <h6 class="modal-title mb-0" id="previewModalTitle"></h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body p-0">
                 <pre id="previewBody" style="background:#111;color:#e0e0e0;font-size:12px;margin:0;padding:16px;max-height:500px;overflow-y:auto;border-radius:0 0 4px 4px"></pre>
@@ -372,10 +386,10 @@ $sql_runs = mysqli_query($mysqli,
 <!-- Run on Asset Modal -->
 <div class="modal fade" id="runModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content bg-dark">
+        <div class="modal-content">
             <div class="modal-header py-2">
-                <h6 class="modal-title mb-0"><i class="fas fa-play mr-2"></i>Run Script on Asset</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <h6 class="modal-title mb-0"><i class="fas fa-play me-2"></i>Run Script on Asset</h6>
+                <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <p class="text-muted small mb-2">Script: <strong id="runScriptName"></strong></p>
@@ -393,18 +407,29 @@ $sql_runs = mysqli_query($mysqli,
                 <div id="runModalMsg" class="mt-2"></div>
             </div>
             <div class="modal-footer py-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success btn-sm" onclick="runScriptNow()">
-                    <i class="fas fa-play mr-1"></i>Run Now
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success btn-sm js-run-script-now">
+                    <i class="fas fa-play me-1"></i>Run Now
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 const CSRF = '<?= $_SESSION['csrf_token'] ?>';
 let _runScriptId = 0;
+
+// Delegated wiring (CSP forbids inline onclick= attributes).
+document.addEventListener('click', function (e) {
+    var el;
+    if ((el = e.target.closest('.js-sync-scripts'))) { syncScripts(); return; }
+    if ((el = e.target.closest('.js-open-new-script'))) { openNewScript(); return; }
+    if ((el = e.target.closest('.js-open-run-modal'))) { openRunModal(JSON.parse(el.dataset.script)); return; }
+    if ((el = e.target.closest('.js-preview-script'))) { previewScript(JSON.parse(el.dataset.script)); return; }
+    if ((el = e.target.closest('.js-edit-script'))) { editScript(JSON.parse(el.dataset.script)); return; }
+    if ((el = e.target.closest('.js-run-script-now'))) { runScriptNow(); return; }
+});
 
 function openNewScript() {
     document.getElementById('scriptModalTitle').textContent = 'New Script';
@@ -445,7 +470,7 @@ function runScriptNow() {
     const linkId = document.getElementById('runAssetSelect').value;
     if (!linkId) { document.getElementById('runModalMsg').innerHTML = '<div class="alert alert-warning p-2 small">Please select an asset.</div>'; return; }
     const msg = document.getElementById('runModalMsg');
-    msg.innerHTML = '<div class="text-muted small"><i class="fas fa-spinner fa-spin mr-1"></i>Running…</div>';
+    msg.innerHTML = '<div class="text-muted small"><i class="fas fa-spinner fa-spin me-1"></i>Running…</div>';
     fetch('/agent/post/rmm_script_run.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -469,7 +494,7 @@ function syncScripts() {
     btn.disabled = true;
     bar.classList.remove('d-none');
     bar.className = bar.className.replace(/alert-\w+/g, 'alert') + ' alert-info';
-    txt.textContent = 'Importing scripts from Tactical RMM...';
+    txt.textContent = 'Importing scripts from <?= htmlspecialchars($rmm_default_provider_name, ENT_QUOTES) ?>...';
     fetch('/agent/post/rmm_sync.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -477,7 +502,7 @@ function syncScripts() {
     }).then(r => r.json()).then(d => {
         btn.disabled = false;
         if (d.success) {
-            txt.textContent = `Sync complete: ${d.imported} new, ${d.updated} updated (${d.total} total from Tactical).`;
+            txt.textContent = `Sync complete: ${d.imported} new, ${d.updated} updated (${d.total} total from <?= htmlspecialchars($rmm_default_provider_name, ENT_QUOTES) ?>).`;
             bar.classList.replace('alert-info', 'alert-success');
             setTimeout(() => location.reload(), 2000);
         } else {

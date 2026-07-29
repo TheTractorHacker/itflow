@@ -6,8 +6,8 @@ $contract_statuses = ['Active', 'Pending', 'Expired', 'Cancelled'];
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-file-contract mr-2"></i>New Contract</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fa fa-fw fa-file-contract me-2"></i>New Contract</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -81,7 +81,7 @@ ob_start();
         </div>
 
         <hr>
-        <h6 class="text-uppercase text-muted mb-3" style="font-size:11px;letter-spacing:.6px;"><i class="fas fa-stopwatch mr-1"></i>SLA Response &amp; Resolution Times <small>(hours, 0 = no SLA)</small></h6>
+        <h6 class="text-uppercase text-muted mb-3" style="font-size:11px;letter-spacing:.6px;"><i class="fas fa-stopwatch me-1"></i>SLA Response &amp; Resolution Times <small>(hours, 0 = no SLA)</small></h6>
         <div class="table-responsive">
             <table class="table table-sm table-bordered mb-2">
                 <thead class="thead-light">
@@ -89,17 +89,17 @@ ob_start();
                 </thead>
                 <tbody>
                     <tr>
-                        <td><span class="badge badge-success">Low</span></td>
+                        <td><span class="badge text-bg-success">Low</span></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_low_response" placeholder="e.g. 8"></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_low_resolution" placeholder="e.g. 48"></td>
                     </tr>
                     <tr>
-                        <td><span class="badge badge-warning text-dark">Medium</span></td>
+                        <td><span class="badge text-bg-warning text-dark">Medium</span></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_medium_response" placeholder="e.g. 4"></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_medium_resolution" placeholder="e.g. 24"></td>
                     </tr>
                     <tr>
-                        <td><span class="badge badge-danger">High</span></td>
+                        <td><span class="badge text-bg-danger">High</span></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_high_response" placeholder="e.g. 1"></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_high_resolution" placeholder="e.g. 4"></td>
                     </tr>
@@ -113,8 +113,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_contract" class="btn btn-primary"><i class="fa fa-check mr-2"></i>Create Contract</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_contract" class="btn btn-primary"><i class="fa fa-check me-2"></i>Create Contract</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 <?php require_once '../../../includes/modal_footer.php'; ?>

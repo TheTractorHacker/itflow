@@ -2,9 +2,9 @@
 require_once "includes/inc_all_admin.php";
  ?>
 
-    <div class="card card-dark">
+    <div class="card">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-life-ring mr-2"></i>Ticket Settings</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-life-ring me-2"></i>Ticket Settings</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
@@ -31,32 +31,31 @@ require_once "includes/inc_all_admin.php";
                 </div>
 
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="config_ticket_email_parse" <?php if($config_ticket_email_parse == 1){ echo "checked"; } ?> value="1" id="emailToTicketParseSwitch">
-                        <label class="custom-control-label" for="emailToTicketParseSwitch">Email-to-ticket parsing <small class="text-secondary">(cron_ticket_email_parser.php must also be added to cron and run every few mins)</small></label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="config_ticket_email_parse" <?php if($config_ticket_email_parse == 1){ echo "checked"; } ?> value="1" id="emailToTicketParseSwitch">
+                        <label class="form-check-label" for="emailToTicketParseSwitch">Email-to-ticket parsing <small class="text-secondary">(cron_ticket_email_parser.php must also be added to cron and run every few mins)</small></label>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="config_ticket_email_parse_unknown_senders" <?php if($config_ticket_email_parse_unknown_senders == 1){ echo "checked"; } ?> value="1" id="emailToTicketAnonParseSwitch" <?php if($config_ticket_email_parse == 0){ echo "disabled"; } ?>>
-                        <label class="custom-control-label" for="emailToTicketAnonParseSwitch">Create tickets for emails from unknown senders/domains <small class="text-secondary">(Enable to ensure all emails automatically create tickets)</small></label>
-                    </div>
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="fas fa-info-circle me-1"></i>
+                    "Create tickets for emails from unknown senders/domains" is now configured per-mailbox &mdash; see <a href="mailbox.php" class="alert-link">Admin &gt; Mailboxes</a> &gt; [mailbox] &gt; Parse unknown senders.
+                    <button type="button" class="close" data-bs-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
 
                 <?php if ($config_module_enable_accounting) { ?>
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="config_ticket_default_billable" <?php if ($config_ticket_default_billable == 1) { echo "checked"; } ?> value="1" id="ticketBillableSwitch">
-                        <label class="custom-control-label" for="ticketBillableSwitch">Default to Billable <small class="text-secondary">(This will check the billable box on all new tickets)</small></label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="config_ticket_default_billable" <?php if ($config_ticket_default_billable == 1) { echo "checked"; } ?> value="1" id="ticketBillableSwitch">
+                        <label class="form-check-label" for="ticketBillableSwitch">Default to Billable <small class="text-secondary">(This will check the billable box on all new tickets)</small></label>
                     </div>
                 </div>
                 <?php } ?>
 
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="config_ticket_timer_autostart" <?php if ($config_ticket_timer_autostart == 1) { echo "checked"; } ?> value="1" id="ticketTimerSwitch">
-                        <label class="custom-control-label" for="ticketTimerSwitch">Autostart Ticket Timer <small class="text-secondary">(This option will control if the timer starts automatically or manually)</small></label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="config_ticket_timer_autostart" <?php if ($config_ticket_timer_autostart == 1) { echo "checked"; } ?> value="1" id="ticketTimerSwitch">
+                        <label class="form-check-label" for="ticketTimerSwitch">Autostart Ticket Timer <small class="text-secondary">(This option will control if the timer starts automatically or manually)</small></label>
                     </div>
                 </div>
 
@@ -95,19 +94,19 @@ require_once "includes/inc_all_admin.php";
                 </div>
                 <div class="form-group">
                 <label>Kanban Settings</label>
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="config_ticket_ordering" <?php if ($config_ticket_ordering == 1) { echo "checked"; } ?> value="1" id="ticketOrderingSwitch">
-                        <label class="custom-control-label" for="ticketOrderingSwitch">Allow ticket ordering within its column<small class="text-secondary"> (unchecked = order by priority and id)</small></label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="config_ticket_ordering" <?php if ($config_ticket_ordering == 1) { echo "checked"; } ?> value="1" id="ticketOrderingSwitch">
+                        <label class="form-check-label" for="ticketOrderingSwitch">Allow ticket ordering within its column<small class="text-secondary"> (unchecked = order by priority and id)</small></label>
                     </div>
-                    <div class="custom-control custom-switch">
-                    <input type="checkbox" class="custom-control-input" name="config_ticket_moving_columns" <?php if ($config_ticket_moving_columns == 1) { echo "checked"; } ?> value="1" id="ticketMovingColumnsSwitch">
-                        <label class="custom-control-label" for="ticketMovingColumnsSwitch">Allow moving columns</label>
+                    <div class="form-check form-check form-switch">
+                    <input type="checkbox" class="form-check-input" name="config_ticket_moving_columns" <?php if ($config_ticket_moving_columns == 1) { echo "checked"; } ?> value="1" id="ticketMovingColumnsSwitch">
+                        <label class="form-check-label" for="ticketMovingColumnsSwitch">Allow moving columns</label>
                     </div>
                 </div>
 
                 <hr>
 
-                <button type="submit" name="edit_ticket_settings" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+                <button type="submit" name="edit_ticket_settings" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
 
             </form>
         </div>

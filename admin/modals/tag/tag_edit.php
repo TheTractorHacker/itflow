@@ -33,9 +33,9 @@ if ($tag_type == 1) {
 
 ob_start();
 ?>
-<div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-tag mr-2"></i><?= $tag_type_display ?> Tag: <strong><?php echo $tag_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+<div class="modal-header">
+    <h5 class="modal-title"><i class="fas fa-fw fa-tag me-2"></i><?= $tag_type_display ?> Tag: <strong><?php echo $tag_name; ?></strong></h5>
+    <button type="button" class="close" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -77,7 +77,7 @@ ob_start();
         .tag-color-custom input[type=color] { position: absolute; top: -4px; left: -4px; width: 40px; height: 40px; opacity: 0; cursor: pointer; }
         </style>
 
-        <script>
+        <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
         (function(){
             var swatches = document.querySelectorAll('.tag-color-swatch[data-color]');
             var hiddenInput = document.getElementById('tag_color_value');
@@ -114,8 +114,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_tag" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save changes</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_tag" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save changes</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

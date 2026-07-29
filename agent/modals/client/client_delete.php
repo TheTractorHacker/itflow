@@ -8,9 +8,9 @@
                     <h6 class="mb-4 text-secondary">Do you really want to <b>delete <i><?php echo $client_name; ?></i> and ALL associated data</b>? This includes <i><?php echo $client_name; ?></i>'s documents, tickets, files, payments, invoices, logs, etc.<br>See <a href="https://forum.itflow.org/d/1147-deleting-a-client-deletes-payments" target="_blank">this</a> forum post.<br><br>This process cannot be undone.</h6>
                     <div class="form-group">
                         <input type="hidden" id="clientName<?php echo $client_id ?>" value="<?php echo $client_name; ?>">
-                        <input class="form-control" type="text" id="clientNameProvided<?php echo $client_id ?>" onkeyup="validateClientNameDelete(<?php echo $client_id ?>)" placeholder="Type '<?php echo $client_name; ?>' to confirm data deletion">
+                        <input class="form-control js-validate-client-delete" type="text" id="clientNameProvided<?php echo $client_id ?>" data-client-id="<?php echo $client_id ?>" placeholder="Type '<?php echo $client_name; ?>' to confirm data deletion">
                     </div>
-                    <button type="button" class="btn btn-outline-secondary btn-lg px-5 mr-4" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-secondary btn-lg px-5 me-4" data-bs-dismiss="modal">Cancel</button>
                     <a class="btn btn-danger btn-lg px-5 disabled" id="clientDeleteButton<?php echo $client_id ?>" href="post.php?delete_client=<?php echo $client_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">Yes, Delete!</a>
                 </div>
             </div>

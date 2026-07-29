@@ -3,8 +3,8 @@
 <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-dark">
-                <h5 class="modal-title"><i class="fas fa-fw fa-file-invoice mr-2"></i>Add Unbilled Ticket to Invoice</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fas fa-fw fa-file-invoice me-2"></i>Add Unbilled Ticket to Invoice</h5>
+                <button type="button" class="close text-white" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -27,13 +27,13 @@
 
                             switch ($ticket_status) {
                                 case 'Closed':
-                                    $ticket_status_class = 'badge-dark';
+                                    $ticket_status_class = 'text-bg-dark';
                                     break;
                                 case 'Auto Close':
-                                    $ticket_status_class = 'badge-warning';
+                                    $ticket_status_class = 'text-bg-warning';
                                     break;
                                 default:
-                                    $ticket_status_class = 'badge-secondary';
+                                    $ticket_status_class = 'text-bg-secondary';
                                     break;
                             }
 
@@ -42,7 +42,7 @@
                             <tr>
                                 <td>
                                     <a href="ticket.php?ticket_id=<?php echo $ticket_id; ?>">
-                                        <span class="badge badge-pill <?php echo $ticket_status_class?> p-3"><?php echo "$ticket_prefix$ticket_number"; ?></span>
+                                        <span class="badge rounded-pill <?php echo $ticket_status_class?> p-3"><?php echo "$ticket_prefix$ticket_number"; ?></span>
                                     </a>
                                 </td>
                                 <td><?php echo $ticket_subject ?></td>

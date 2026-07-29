@@ -2,10 +2,15 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support', 2);
+
 $charge_id = intval($_GET['charge_id'] ?? 0);
 
-$row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM ticket_charges WHERE charge_id = $charge_id LIMIT 1"));
+$row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM ticket_charges LEFT JOIN tickets ON ticket_id = charge_ticket_id WHERE charge_id = $charge_id LIMIT 1"));
 if (!$row) { echo '<div class="p-3 text-danger">Charge not found.</div>'; require_once '../../../includes/modal_footer.php'; exit; }
+
+$client_id   = intval($row['ticket_client_id']);
+enforceClientAccess($client_id);
 
 $ticket_id   = intval($row['charge_ticket_id']);
 $charge_name = nullable_htmlentities($row['charge_name']);
@@ -21,8 +26,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-edit mr-2"></i>Edit Charge</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fas fa-fw fa-edit me-2"></i>Edit Charge</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -42,7 +47,7 @@ ob_start();
         <div class="form-group">
             <label>Labor Type</label>
             <div class="d-flex flex-wrap" id="edit_labor_type_btns">
-                <button type="button" class="btn btn-sm lt-btn mr-1 mb-1 <?= $charge_labor_type_id == 0 ? 'active' : '' ?> btn-outline-secondary" data-id="0" data-rate="0" data-name="">
+                <button type="button" class="btn btn-sm lt-btn me-1 mb-1 <?= $charge_labor_type_id == 0 ? 'active' : '' ?> btn-outline-secondary" data-id="0" data-rate="0" data-name="">
                     Custom
                 </button>
                 <?php foreach ($lt_rows as $lt) {
@@ -52,7 +57,7 @@ ob_start();
                     $lt_color = nullable_htmlentities($lt['labor_type_color']);
                     $is_active = $lt_id === $charge_labor_type_id;
                 ?>
-                <button type="button" class="btn btn-sm lt-btn mr-1 mb-1 <?= $is_active ? 'active' : '' ?>"
+                <button type="button" class="btn btn-sm lt-btn me-1 mb-1 <?= $is_active ? 'active' : '' ?>"
                         data-id="<?= $lt_id ?>"
                         data-rate="<?= $lt_rate ?>"
                         data-name="<?= $lt_name ?>"
@@ -125,12 +130,12 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_ticket_charge" class="btn btn-primary"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_ticket_charge" class="btn btn-primary"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(function() {
     function recalcTotal() {
         var qty   = parseFloat($('#charge_quantity').val()) || 0;

@@ -41,8 +41,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class='fas fa-fw fa-key mr-2'></i>Editing credential: <strong><?php echo $credential_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class='fas fa-fw fa-key me-2'></i>Editing credential: <strong><?php echo $credential_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -54,16 +54,16 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-credential-details<?php echo $credential_id; ?>">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-credential-details<?php echo $credential_id; ?>">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-credential-relation<?php echo $credential_id; ?>">Relation</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-credential-relation<?php echo $credential_id; ?>">Relation</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-credential-notes<?php echo $credential_id; ?>">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-credential-notes<?php echo $credential_id; ?>">Notes</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-credential-history<?php echo $credential_id; ?>">History</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-credential-history<?php echo $credential_id; ?>">History</a>
             </li>
         </ul>
 
@@ -271,7 +271,7 @@ ob_start();
                 <?php
                 $sql_history = mysqli_query($mysqli, "SELECT * FROM credential_history WHERE history_credential_id = $credential_id ORDER BY history_created_at DESC LIMIT 100");
                 if (mysqli_num_rows($sql_history) == 0) { ?>
-                    <p class="text-muted text-center mt-3"><i class="fas fa-history mr-2"></i>No changes recorded yet.</p>
+                    <p class="text-muted text-center mt-3"><i class="fas fa-history me-2"></i>No changes recorded yet.</p>
                 <?php } else { ?>
                 <table class="table table-sm table-borderless mt-2">
                     <thead class="text-secondary">
@@ -305,8 +305,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_credential" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_credential" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

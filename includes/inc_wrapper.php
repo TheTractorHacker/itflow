@@ -1,6 +1,6 @@
- <!-- Content Wrapper. Contains page content -->
-    <div class="content-wrapper">
+ <!-- App Main. Contains page content (AdminLTE 4) -->
+    <main class="app-main">
 
       <!-- Main content -->
-      <div class="content mt-3 p-0 px-md-2">
+      <div class="app-content pt-3 px-md-2">
         <div class="container-fluid">

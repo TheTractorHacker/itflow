@@ -16,9 +16,9 @@ if ($session_contact_primary == 0 && !$session_contact_is_technical_contact) {
 $assets_sql = mysqli_query($mysqli, "SELECT * FROM assets LEFT JOIN contacts ON asset_contact_id = contact_id WHERE asset_client_id = $session_client_id AND asset_archived_at IS NULL ORDER BY asset_type ASC, asset_name ASC");
 ?>
 
-    <div class="row">
+    <div class="row mb-4">
         <div class="col">
-            <h3><i class="fas fa-fw fa-desktop mr-2"></i>Assets</h3>
+            <h3><i class="fas fa-fw fa-desktop me-2"></i>Assets</h3>
         </div>
     </div>
 
@@ -82,7 +82,7 @@ $assets_sql = mysqli_query($mysqli, "SELECT * FROM assets LEFT JOIN contacts ON 
                         <td><span class="badge badge-<?php echo $asset_status == 'Active' ? 'success' : 'secondary'; ?>"><?php echo $asset_status; ?></span></td>
                         <td>
                             <?php if ($asset_uri_client) { ?>
-                            <i class="fa fa-fw fa-link text-secondary mr-1"></i><a href="<?php echo $asset_uri_client; ?>" target="_blank" title="<?php echo $asset_uri_client; ?>"><?php echo truncate($asset_uri_client, 40); ?></a>
+                            <i class="fa fa-fw fa-link text-secondary me-1"></i><a href="<?php echo $asset_uri_client; ?>" target="_blank" title="<?php echo $asset_uri_client; ?>"><?php echo truncate($asset_uri_client, 40); ?></a>
                             <?php } else { ?>
                             -
                         <?php } ?>

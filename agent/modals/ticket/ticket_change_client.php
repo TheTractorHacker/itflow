@@ -10,6 +10,8 @@ $ticket_prefix = nullable_htmlentities($row['ticket_prefix']);
 $ticket_number = intval($row['ticket_number']);
 $client_id = intval($row['ticket_client_id']);
 
+enforceClientAccess($client_id);
+
 // Generate the HTML form content using output buffering.
 ob_start();
 
@@ -17,10 +19,10 @@ ob_start();
 
 <div class="modal-header bg-dark">
     <h5 class="modal-title">
-        <i class="fa fa-fw fa-people-carry mr-2"></i>
+        <i class="fa fa-fw fa-people-carry me-2"></i>
         Change <?php echo "$ticket_prefix$ticket_number"; ?> to another client
     </h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 
 <form action="post.php" method="post" autocomplete="off">
@@ -64,10 +66,10 @@ ob_start();
 
     <div class="modal-footer">
         <button type="submit" name="change_client_ticket" class="btn btn-primary text-bold">
-            <i class="fa fa-check mr-2"></i>Change
+            <i class="fa fa-check me-2"></i>Change
         </button>
-        <button type="button" class="btn btn-light" data-dismiss="modal">
-            <i class="fa fa-times mr-2"></i>Cancel
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            <i class="fa fa-times me-2"></i>Cancel
         </button>
     </div>
 </form>

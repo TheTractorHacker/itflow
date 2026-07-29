@@ -27,10 +27,11 @@ while ($s = mysqli_fetch_assoc($sql_scripts)) {
 }
 
 $trigger_labels = [
-    'schedule'      => 'Scheduled check',
-    'rmm_alert'     => 'New RMM alert',
-    'asset_offline' => 'Asset offline',
-    'asset_online'  => 'Asset online',
+    'schedule'       => 'Scheduled check',
+    'ticket_created' => 'Ticket created',
+    'rmm_alert'      => 'New RMM alert',
+    'asset_offline'  => 'Asset offline',
+    'asset_online'   => 'Asset online',
 ];
 
 $field_labels = [
@@ -40,6 +41,8 @@ $field_labels = [
     'assigned_to'    => 'Assigned to (user ID)',
     'idle_hours'     => 'Hours since last reply',
     'category'       => 'Ticket category',
+    'subject'        => 'Ticket subject',
+    'details'        => 'Ticket body',
     'sla_response_breached'   => 'SLA response breached (1/0)',
     'sla_resolution_breached' => 'SLA resolution breached (1/0)',
     'severity'       => 'Alert severity',
@@ -61,6 +64,7 @@ $action_labels = [
     'assign_to'                => 'Assign to user ID',
     'set_status'               => 'Set status ID',
     'add_note'                 => 'Add automation note',
+    'ai_triage'                => 'AI triage (suggest)',
     'notify_assignee'          => 'Notify assigned tech',
     'close_ticket'             => 'Close ticket',
     'add_worksheet'            => 'Add worksheet from template',
@@ -97,21 +101,21 @@ function ticket_automation_actions(array $rule): array {
 }
 ?>
 
-<div class="card card-dark">
+<div class="card">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-robot mr-2"></i>Ticket Automation Rules</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-robot me-2"></i>Ticket Automation Rules</h3>
         <div class="card-tools">
-            <a href="ticket_automation_log.php" class="btn btn-secondary mr-2">
-                <i class="fas fa-history mr-2"></i>Run Log
+            <a href="ticket_automation_log.php" class="btn btn-secondary me-2">
+                <i class="fas fa-history me-2"></i>Run Log
             </a>
             <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/ticket_automation/add_rule.php">
-                <i class="fas fa-plus mr-2"></i>New Rule
+                <i class="fas fa-plus me-2"></i>New Rule
             </button>
         </div>
     </div>
     <div class="card-body p-0">
         <div class="alert alert-info mx-3 mt-3">
-            <i class="fas fa-info-circle mr-2"></i>
+            <i class="fas fa-info-circle me-2"></i>
             Rules run automatically each time cron executes. Schedule cron at <code>cron/cron.php</code> every 15–60 minutes.
         </div>
         <table class="table table-hover mb-0">
@@ -123,7 +127,7 @@ function ticket_automation_actions(array $rule): array {
                     <th>Conditions</th>
                     <th>Actions</th>
                     <th>Status</th>
-                    <th class="text-right">Actions</th>
+                    <th class="text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -147,7 +151,7 @@ function ticket_automation_actions(array $rule): array {
                         <strong><?php echo $name; ?></strong>
                     </td>
                     <td>
-                        <span class="badge badge-info"><?php echo $trigger_labels[$trigger] ?? $trigger; ?></span>
+                        <span class="badge text-bg-info"><?php echo $trigger_labels[$trigger] ?? nullable_htmlentities($trigger); ?></span>
                     </td>
                     <td>
                         <?php foreach (ticket_automation_conditions($rule) as $cond):
@@ -160,8 +164,8 @@ function ticket_automation_actions(array $rule): array {
                             }
                         ?>
                             <div class="mb-1">
-                                <span class="badge badge-secondary"><?php echo $field_labels[$field] ?? $field; ?></span>
-                                <span><?php echo $op_labels[$op] ?? $op; ?></span>
+                                <span class="badge text-bg-secondary"><?php echo $field_labels[$field] ?? nullable_htmlentities($field); ?></span>
+                                <span><?php echo $op_labels[$op] ?? nullable_htmlentities($op); ?></span>
                                 <code><?php echo $display_val; ?></code>
                             </div>
                         <?php endforeach; ?>
@@ -179,7 +183,7 @@ function ticket_automation_actions(array $rule): array {
                             }
                         ?>
                             <div class="mb-1">
-                                <span class="badge badge-primary"><?php echo $action_labels[$action] ?? $action; ?></span>
+                                <span class="badge text-bg-primary"><?php echo $action_labels[$action] ?? nullable_htmlentities($action); ?></span>
                                 <?php if ($display_aval !== ''): ?>
                                     <code><?php echo $display_aval; ?></code>
                                 <?php endif; ?>
@@ -188,19 +192,18 @@ function ticket_automation_actions(array $rule): array {
                     </td>
                     <td>
                         <?php if ($enabled): ?>
-                            <span class="badge badge-success">Enabled</span>
+                            <span class="badge text-bg-success">Enabled</span>
                         <?php else: ?>
-                            <span class="badge badge-secondary">Disabled</span>
+                            <span class="badge text-bg-secondary">Disabled</span>
                         <?php endif; ?>
                     </td>
-                    <td class="text-right">
+                    <td class="text-end">
                         <a href="post.php?toggle=<?php echo $rule_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>"
                            class="btn btn-sm btn-<?php echo $enabled ? 'warning' : 'success'; ?>">
                             <?php echo $enabled ? 'Disable' : 'Enable'; ?>
                         </a>
                         <a href="post.php?delete=<?php echo $rule_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>"
-                           class="btn btn-sm btn-danger"
-                           onclick="return confirm('Delete this rule?')">
+                           class="btn btn-sm btn-danger confirm-link">
                             <i class="fas fa-trash"></i>
                         </a>
                     </td>

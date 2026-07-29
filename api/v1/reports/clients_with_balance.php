@@ -4,6 +4,8 @@ defined('FROM_API') || die();
 
 api_require_module_permission($mysqli, $api_user_id, 'module_financial');
 
+$client_scope = api_client_scope_sql('clients.client_id');
+
 $sql = mysqli_query($mysqli, "
     SELECT
         clients.client_id,
@@ -20,6 +22,7 @@ $sql = mysqli_query($mysqli, "
         FROM payments
         GROUP BY payment_invoice_id
     ) AS payments ON invoices.invoice_id = payments.payment_invoice_id
+    WHERE $client_scope
     GROUP BY clients.client_id, clients.client_name
     HAVING balance > 0
     ORDER BY balance DESC

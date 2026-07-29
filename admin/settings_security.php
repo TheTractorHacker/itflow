@@ -11,7 +11,7 @@ $vault_unsynced_users = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT 
 
 <div class="card card-dark">
     <div class="card-header py-3">
-        <h3 class="card-title"><i class="fas fa-fw fa-key mr-2"></i>Vault Encryption</h3>
+        <h3 class="card-title"><i class="fas fa-fw fa-key me-2"></i>Vault Encryption</h3>
     </div>
     <div class="card-body">
 
@@ -24,12 +24,12 @@ $vault_unsynced_users = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT 
 
         <?php if ($vault_canonical_key_set) { ?>
         <p>
-            <i class="fas fa-fw fa-check-circle text-success mr-1"></i>
+            <i class="fas fa-fw fa-check-circle text-success me-1"></i>
             Canonical vault key established<?php if ($vault_canonical_key_set_at) { ?> on <?php echo nullable_htmlentities($vault_canonical_key_set_at); ?><?php } ?>.
         </p>
         <?php } else { ?>
         <p>
-            <i class="fas fa-fw fa-exclamation-circle text-warning mr-1"></i>
+            <i class="fas fa-fw fa-exclamation-circle text-warning me-1"></i>
             No canonical vault key has been established yet.
         </p>
         <?php } ?>
@@ -43,8 +43,8 @@ $vault_unsynced_users = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT 
 
         <form action="post.php" method="post" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
-            <button type="submit" name="establish_canonical_vault_key" class="btn btn-secondary" onclick="return confirm('This will (re)establish the canonical vault key from your current session. Continue?');">
-                <i class="fas fa-key mr-2"></i><?php echo $vault_canonical_key_set ? "Re-establish from my session" : "Establish from my session"; ?>
+            <button type="submit" name="establish_canonical_vault_key" class="btn btn-secondary confirm-link">
+                <i class="fas fa-key me-2"></i><?php echo $vault_canonical_key_set ? "Re-establish from my session" : "Establish from my session"; ?>
             </button>
         </form>
 
@@ -53,7 +53,7 @@ $vault_unsynced_users = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT 
 
 <div class="card card-dark">
     <div class="card-header py-3">
-        <h3 class="card-title"><i class="fas fa-fw fa-shield-alt mr-2"></i>Security</h3>
+        <h3 class="card-title"><i class="fas fa-fw fa-shield-alt me-2"></i>Security</h3>
     </div>
     <div class="card-body">
         <form action="post.php" method="post" autocomplete="off">
@@ -65,9 +65,9 @@ $vault_unsynced_users = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT 
             </div>
 
             <div class="form-group">
-                <div class="custom-control custom-switch">
-                    <input type="checkbox" class="custom-control-input" name="config_login_key_required" <?php if ($config_login_key_required == 1) { echo "checked"; } ?> value="1" id="customSwitch1">
-                    <label class="custom-control-label" for="customSwitch1">Require a login key to access the technician login page?</label>
+                <div class="form-check form-check form-switch">
+                    <input type="checkbox" class="form-check-input" name="config_login_key_required" <?php if ($config_login_key_required == 1) { echo "checked"; } ?> value="1" id="customSwitch1">
+                    <label class="form-check-label" for="customSwitch1">Require a login key to access the technician login page?</label>
                 </div>
             </div>
 
@@ -116,7 +116,7 @@ $vault_unsynced_users = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT 
 
             <hr>
 
-            <button type="submit" name="edit_security_settings" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+            <button type="submit" name="edit_security_settings" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
 
         </form>
     </div>

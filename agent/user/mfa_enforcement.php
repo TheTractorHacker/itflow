@@ -59,7 +59,7 @@ $data = "otpauth://totp/ITFlow:$session_email?secret=$token";
             <?php if (!empty($company_logo)) { ?>
                 <img alt="<?= nullable_htmlentities($company_name)?> logo" height="110" width="380" class="img-fluid" src="<?php echo "../../uploads/settings/$company_logo"; ?>">
             <?php } else { ?>
-                <span class="text-primary text-bold"><i class="fas fa-paper-plane mr-2"></i>IT</span>Flow
+                <span class="text-primary text-bold"><i class="fas fa-paper-plane me-2"></i>IT</span>Flow
             <?php } ?>
         </div>
 
@@ -72,10 +72,10 @@ $data = "otpauth://totp/ITFlow:$session_email?secret=$token";
                 <form action="post.php" method="post" autocomplete="off">
                     <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
 
-                    <img src='../../plugins/barcode/barcode.php?f=png&s=qr&d=<?php echo $data; ?>' data-toggle="tooltip" title="Scan QR code into your MFA App">
+                    <img src='../../plugins/barcode/barcode.php?f=png&s=qr&d=<?php echo $data; ?>' data-bs-toggle="tooltip" title="Scan QR code into your MFA App">
 
                     <p>
-                        <small data-toggle="tooltip" title="Can't Scan? Copy and paste this code into your app"><?php echo $token; ?></small>
+                        <small data-bs-toggle="tooltip" title="Can't Scan? Copy and paste this code into your app"><?php echo $token; ?></small>
                         <button type="button" class='btn btn-sm clipboardjs' data-clipboard-text='<?php echo $token; ?>'><i class='far fa-copy text-secondary'></i></button>
                     </p>
 
@@ -88,7 +88,7 @@ $data = "otpauth://totp/ITFlow:$session_email?secret=$token";
                         </div>
                     </div>
 
-                    <button type="submit" name="enable_mfa" class="btn btn-primary btn-block mb-3"><i class="fa fa-check mr-2"></i>Enable MFA</button>
+                    <button type="submit" name="enable_mfa" class="btn btn-primary btn-block mb-3"><i class="fa fa-check me-2"></i>Enable MFA</button>
                 </form>
 
             </div>
@@ -105,7 +105,7 @@ $data = "otpauth://totp/ITFlow:$session_email?secret=$token";
     <!-- Custom js-->
     <script src="../../plugins/clipboardjs/clipboard.min.js"></script>
 
-    <script>
+    <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 
     // Slide alert up after 4 secs
     $("#alert").fadeTo(5000, 500).slideUp(500, function(){
@@ -149,7 +149,7 @@ $data = "otpauth://totp/ITFlow:$session_email?secret=$token";
 
     // Enable Popovers
     $(function () {
-        $('[data-toggle="popover"]').popover()
+        $('[data-bs-toggle="popover"]').popover()
     });
 
     </script>

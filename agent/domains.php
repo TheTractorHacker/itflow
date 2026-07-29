@@ -73,16 +73,16 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fa fa-fw fa-globe mr-2"></i>Domains</h3>
+        <h3 class="card-title mt-2"><i class="fa fa-fw fa-globe me-2"></i>Domains</h3>
         <div class="card-tools">
             <div class="btn-group">
-                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/domain/domain_add.php?<?= $client_url ?>"><i class="fas fa-plus mr-2"></i>New Domain</button>
+                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/domain/domain_add.php?<?= $client_url ?>"><i class="fas fa-plus me-2"></i>New Domain</button>
                 <?php if ($num_rows[0] > 0) { ?>
-                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                     <div class="dropdown-menu">
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/domain/domain_export.php?<?= $client_url ?>">
-                            <i class="fa fa-fw fa-download mr-2"></i>Export
+                            <i class="fa fa-fw fa-download me-2"></i>Export
                         </a>
                     </div>
                 <?php } ?>
@@ -111,7 +111,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 <?php } else { ?>
                 <div class="col-md-2">
                     <div class="input-group mb-3 mb-md-0">
-                        <select class="form-control select2" name="client" onchange="this.form.submit()">
+                        <select class="form-control select2 auto-submit-select" name="client">
                             <option value="" <?php if ($client == "") { echo "selected"; } ?>>- All Clients -</option>
 
                             <?php
@@ -138,30 +138,30 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 <?php } ?>
 
                 <div class="col-md-6">
-                    <div class="btn-group float-right">
+                    <div class="btn-group float-end">
                         <a href="?<?php echo $client_url; ?>archived=<?php if($archived == 1){ echo 0; } else { echo 1; } ?>"
                             class="btn btn-<?php if($archived == 1){ echo "primary"; } else { echo "default"; } ?>">
-                            <i class="fa fa-fw fa-archive mr-2"></i>Archived
+                            <i class="fa fa-fw fa-archive me-2"></i>Archived
                         </a>
-                        <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                            <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
+                        <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                             </button>
                             <div class="dropdown-menu">
                                 <?php if ($archived) { ?>
                                 <button class="dropdown-item text-info"
                                     type="submit" form="bulkActions" name="bulk_restore_domains">
-                                    <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                    <i class="fas fa-fw fa-redo me-2"></i>Restore
                                 </button>
                                 <div class="dropdown-divider"></div>
                                 <button class="dropdown-item text-danger text-bold"
                                     type="submit" form="bulkActions" name="bulk_delete_domains">
-                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                 </button>
                                 <?php } else { ?>
                                 <button class="dropdown-item text-danger confirm-link"
                                     type="submit" form="bulkActions" name="bulk_archive_domains">
-                                    <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                    <i class="fas fa-fw fa-archive me-2"></i>Archive
                                 </button>
                                 <?php } ?>
                             </div>
@@ -184,7 +184,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     <tr>
                         <td class="checkbox-column">
                             <div class="form-check">
-                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox" onclick="checkAll(this)">
+                                <input class="form-check-input" id="selectAllCheckbox" type="checkbox">
                             </div>
                         </td>
                         <th>
@@ -295,7 +295,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     data-modal-size="lg"
                                     data-modal-url="modals/domain/domain_edit.php?<?= $client_url ?>&id=<?= $domain_id ?>">
                                     <div class="media">
-                                        <i class="fa fa-fw fa-2x fa-globe mr-3"></i>
+                                        <i class="fa fa-fw fa-2x fa-globe me-3"></i>
                                         <div class="media-body">
                                             <div><?php echo $domain_name; ?></div>
                                             <div><small class="text-secondary"><?php echo $domain_description; ?></small></div>
@@ -318,29 +318,29 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <?php } ?>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-size="lg"
                                             data-modal-url="modals/domain/domain_edit.php?<?= $client_url ?>&id=<?= $domain_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <?php if ($session_user_role == 3) { ?>
                                             <?php if ($domain_archived_at) { ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-info confirm-link" href="post.php?restore_domain=<?php echo $domain_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                                <i class="fas fa-fw fa-redo me-2"></i>Restore
                                             </a>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_domain=<?php echo $domain_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                                             </a>
                                             <?php } else { ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-danger confirm-link" href="post.php?archive_domain=<?php echo $domain_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                <i class="fas fa-fw fa-archive me-2"></i>Archive
                                             </a>
                                             <?php } ?>
                                         <?php } ?>

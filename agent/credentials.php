@@ -181,31 +181,31 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fa fa-fw fa-key mr-2"></i>Credentials</h3>
+        <h3 class="card-title mt-2"><i class="fa fa-fw fa-key me-2"></i>Credentials</h3>
         <div class="card-tools">
             <?php if (lookupUserPermission("module_credential") >= 2) { ?>
                 <div class="btn-group">
                 <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/credential/credential_add.php?<?= $client_url ?>folder_id=<?= $get_folder_id ?>" <?php if (!isset($_COOKIE['user_encryption_session_key'])) { echo 'disabled title="Credential encryption is not set up for your account. Ask an administrator to reset your password under Admin > Users to enable this."'; } ?>>
-                    <i class="fas fa-plus mr-2"></i>New Credential
+                    <i class="fas fa-plus me-2"></i>New Credential
                 </button>
-                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                 <div class="dropdown-menu">
                     <?php if ($client_url) { ?>
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                         data-modal-url="modals/folder/folder_add.php?client_id=<?= $client_id ?>&current_folder_id=<?= $get_folder_id ?>&folder_location=2">
-                        <i class="fa fa-fw fa-folder-plus mr-2"></i>New Folder
+                        <i class="fa fa-fw fa-folder-plus me-2"></i>New Folder
                     </a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                         data-modal-url="modals/credential/credential_import.php?<?= $client_url ?>">
-                        <i class="fa fa-fw fa-upload mr-2"></i>Import
+                        <i class="fa fa-fw fa-upload me-2"></i>Import
                     </a>
                     <div class="dropdown-divider"></div>
                     <?php } ?>
                     <?php if ($num_rows[0] > 0) { ?>
                         <a class="dropdown-item text-dark ajax-modal" href="#"
                             data-modal-url="modals/credential/credential_export.php?<?= $client_url ?>">
-                            <i class="fa fa-fw fa-download mr-2"></i>Export
+                            <i class="fa fa-fw fa-download me-2"></i>Export
                         </a>
                     <?php } ?>
                 </div>
@@ -216,7 +216,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
     <div class="card-body">
         <?php if (!isset($_COOKIE['user_encryption_session_key'])) { ?>
             <div class="alert alert-warning">
-                <i class="fas fa-fw fa-lock mr-2"></i>Credential vault is locked for this session - sign in with your password to view, copy, or add credentials.
+                <i class="fas fa-fw fa-lock me-2"></i>Credential vault is locked for this session - sign in with your password to view, copy, or add credentials.
             </div>
         <?php } ?>
         <form autocomplete="off">
@@ -238,7 +238,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                 <div class="col-md-3">
                     <div class="input-group mb-3 mb-md-0">
-                        <select onchange="this.form.submit()" class="form-control select2" name="tags[]" data-placeholder="- Select Tags -" multiple>
+                        <select class="form-control select2 auto-submit-select" name="tags[]" data-placeholder="- Select Tags -" multiple>
 
                             <?php
                             $sql_tags_filter = mysqli_query($mysqli, "
@@ -265,7 +265,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 <?php if ($client_url) { ?>
                 <div class="col-md-2">
                     <div class="input-group mb-3 mb-md-0">
-                        <select class="form-control select2" name="location" onchange="this.form.submit()">
+                        <select class="form-control select2 auto-submit-select" name="location">
                             <option value="">- All Asset Locations -</option>
 
                             <?php
@@ -285,7 +285,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 <?php } else { ?>
                 <div class="col-md-2">
                     <div class="input-group mb-3 mb-md-0">
-                        <select class="form-control select2" name="client" onchange="this.form.submit()">
+                        <select class="form-control select2 auto-submit-select" name="client">
                             <option value="" <?php if ($client == "") { echo "selected"; } ?>>- All Clients -</option>
 
                             <?php
@@ -312,55 +312,55 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 <?php } ?>
 
                 <div class="col-md-3">
-                    <div class="btn-group float-right">
+                    <div class="btn-group float-end">
                         <a href="?<?php echo $client_url; ?>folder_id=<?= $get_folder_id ?>&archived=<?php if($archived == 1){ echo 0; } else { echo 1; } ?>"
                             class="btn btn-<?php if($archived == 1){ echo "primary"; } else { echo "default"; } ?>">
-                            <i class="fa fa-fw fa-archive mr-2"></i>Archived
+                            <i class="fa fa-fw fa-archive me-2"></i>Archived
                         </a>
-                        <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                            <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
+                        <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                             </button>
                             <div class="dropdown-menu">
                                 <?php if ($client_url) { ?>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/credential/credential_bulk_move.php?client_id=<?= $client_id ?>&current_folder_id=<?= $get_folder_id ?>"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-exchange-alt mr-2"></i>Move
+                                    <i class="fas fa-fw fa-exchange-alt me-2"></i>Move
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <?php } ?>
                                 <button class="dropdown-item"
                                     type="submit" form="bulkActions" name="bulk_favorite_credentials">
-                                    <i class="fas fa-fw fa-star text-warning mr-2"></i>Favorite
+                                    <i class="fas fa-fw fa-star text-warning me-2"></i>Favorite
                                 </button>
                                 <div class="dropdown-divider"></div>
                                 <button class="dropdown-item"
                                     type="submit" form="bulkActions" name="bulk_unfavorite_credentials">
-                                    <i class="far fa-fw fa-star mr-2"></i>Unfavorite
+                                    <i class="far fa-fw fa-star me-2"></i>Unfavorite
                                 </button>
                                 <?php if ($archived) { ?>
                                 <div class="dropdown-divider"></div>
                                 <button class="dropdown-item text-info"
                                     type="submit" form="bulkActions" name="bulk_restore_credentials">
-                                    <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                    <i class="fas fa-fw fa-redo me-2"></i>Restore
                                 </button>
                                 <div class="dropdown-divider"></div>
                                 <button class="dropdown-item text-danger text-bold"
                                     type="submit" form="bulkActions" name="bulk_delete_credentials">
-                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                 </button>
                                 <?php } else { ?>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item ajax-modal" href="#"
                                     data-modal-url="modals/credential/credential_bulk_assign_tags.php"
                                     data-bulk="true">
-                                    <i class="fas fa-fw fa-tags mr-2"></i>Assign Tags
+                                    <i class="fas fa-fw fa-tags me-2"></i>Assign Tags
                                 </a>
                                     <div class="dropdown-divider"></div>
                                 <button class="dropdown-item text-danger confirm-link"
                                     type="submit" form="bulkActions" name="bulk_archive_credentials">
-                                    <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                    <i class="fas fa-fw fa-archive me-2"></i>Archive
                                 </button>
                                 <?php } ?>
                             </div>
@@ -393,27 +393,27 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                 <?php if ($row_index == 0) { ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $get_folder_id == 0 ? 'active' : '' ?>" href="?client_id=<?= $client_id ?>&folder_id=0&archived=<?= $archived ?>">
-                        <i class="fas fa-fw fa-folder mr-1"></i>Root
-                        <?php if (($credential_folder_counts[0] ?? 0) > 0) { ?><span class="badge badge-pill badge-dark ml-1"><?= $credential_folder_counts[0] ?></span><?php } ?>
+                        <i class="fas fa-fw fa-folder me-1"></i>Root
+                        <?php if (($credential_folder_counts[0] ?? 0) > 0) { ?><span class="badge rounded-pill text-bg-dark ms-1"><?= $credential_folder_counts[0] ?></span><?php } ?>
                     </a>
                 </li>
                 <?php } ?>
                 <?php foreach ($subfolders as $subfolder) { ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $active_child_id == $subfolder['folder_id'] ? 'active' : '' ?>" href="?client_id=<?= $client_id ?>&folder_id=<?= $subfolder['folder_id'] ?>&archived=<?= $archived ?>">
-                        <i class="fas fa-fw fa-folder mr-1"></i><?= $subfolder['folder_name'] ?>
-                        <?php if ($subfolder['count'] > 0) { ?><span class="badge badge-pill badge-dark ml-1"><?= $subfolder['count'] ?></span><?php } ?>
+                        <i class="fas fa-fw fa-folder me-1"></i><?= $subfolder['folder_name'] ?>
+                        <?php if ($subfolder['count'] > 0) { ?><span class="badge rounded-pill text-bg-dark ms-1"><?= $subfolder['count'] ?></span><?php } ?>
                     </a>
                 </li>
                 <?php } ?>
                 <?php if (lookupUserPermission("module_credential") >= 2 && $active_child_id) { ?>
                 <li class="nav-item ml-auto">
                     <div class="dropdown">
-                        <a class="nav-link" href="#" data-toggle="dropdown"><i class="fas fa-ellipsis-v text-secondary"></i></a>
+                        <a class="nav-link" href="#" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v text-secondary"></i></a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item ajax-modal" href="#"
                                data-modal-url="modals/folder/folder_rename.php?id=<?= $active_child_id ?>">
-                                <i class="fas fa-fw fa-edit mr-2"></i>Rename Folder
+                                <i class="fas fa-fw fa-edit me-2"></i>Rename Folder
                             </a>
                             <?php
                             $folder_is_empty = ($session_user_role == 3)
@@ -422,7 +422,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             if ($folder_is_empty) { ?>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_folder=<?php echo $active_child_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete Folder
+                                    <i class="fas fa-fw fa-trash me-2"></i>Delete Folder
                                 </a>
                             <?php } ?>
                         </div>
@@ -443,7 +443,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         <tr>
                             <td class="bg-light checkbox-column">
                                 <div class="form-check">
-                                    <input class="form-check-input" id="selectAllCheckbox" type="checkbox" onclick="checkAll(this)">
+                                    <input class="form-check-input" id="selectAllCheckbox" type="checkbox">
                                 </div>
                             </td>
                             <th>
@@ -498,7 +498,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             if (empty($credential_otp_secret)) {
                                 $otp_display = "-";
                             } else {
-                                $otp_display = "<span onmouseenter='showOTPViaCredentialID($credential_id)'><i class='far fa-clock'></i> <span id='otp_$credential_id'><i>Hover..</i></span></span>";
+                                $otp_display = "<span class='otp-reveal-trigger' data-credential-id='$credential_id'><i class='far fa-clock'></i> <span id='otp_$credential_id'><i>Hover..</i></span></span>";
                             }
                             $credential_note = nullable_htmlentities($row['credential_note']);
                             $credential_created_at = nullable_htmlentities($row['credential_created_at']);
@@ -527,12 +527,12 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 }
 
                                 $credential_tag_id_array[] = $credential_tag_id;
-                                $credential_tag_name_display_array[] = "<a href='credentials.php?$client_url tags[]=$credential_tag_id'><span class='badge " . tagTextClass($credential_tag_color) . " p-1 mr-1' style='background-color: $credential_tag_color;'><i class='fa fa-fw fa-$credential_tag_icon mr-2'></i>$credential_tag_name</span></a>";
+                                $credential_tag_name_display_array[] = "<a href='credentials.php?$client_url tags[]=$credential_tag_id'><span class='badge " . tagTextClass($credential_tag_color) . " p-1 me-1' style='background-color: $credential_tag_color;'><i class='fa fa-fw fa-$credential_tag_icon me-2'></i>$credential_tag_name</span></a>";
                             }
                             $credential_tags_display = implode('', $credential_tag_name_display_array);
 
                             if ($credential_contact_id) {
-                                $credential_contact_display = "<a href='#' class='mr-2 mb-1 badge badge-pill badge-dark p-2 ajax-modal' title='$contact_name'
+                                $credential_contact_display = "<a href='#' class='me-2 mb-1 badge rounded-pill text-bg-dark p-2 ajax-modal' title='$contact_name'
                                     data-modal-size='lg'
                                     data-modal-url='modals/contact/contact_details.php?id=$credential_contact_id'>
                                     <i class='fas fa-fw fa-user'></i></a>";
@@ -541,7 +541,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             }
 
                             if ($credential_asset_id) {
-                                $credential_asset_display = "<a href='#' class='mr-2 mb-1 badge badge-pill badge-secondary p-2 ajax-modal' title='$asset_name' data-toggle=''
+                                $credential_asset_display = "<a href='#' class='me-2 mb-1 badge rounded-pill text-bg-secondary p-2 ajax-modal' title='$asset_name' data-toggle=''
                                     data-modal-size='lg'
                                     data-modal-url='modals/asset/asset_details.php?id=$credential_asset_id'>
                                     <i class='fas fa-fw fa-desktop'></i></a>";
@@ -589,7 +589,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     <a class="text-dark ajax-modal" href="#"
                                         data-modal-url="modals/credential/credential_view.php?id=<?= $credential_id ?>">
                                         <div class="media">
-                                            <i class="fa fa-fw fa-2x fa-key mr-3"></i>
+                                            <i class="fa fa-fw fa-2x fa-key me-3"></i>
                                             <div class="media-body">
                                                 <div><?php echo $credential_name; ?> <?php if ($credential_favorite) { echo "<i class='fas fa-fw fa-star text-warning' title='Favorite'></i>"; } ?></div>
                                                 <div><small class="text-secondary"><?php echo $credential_description; ?></small></div>
@@ -606,7 +606,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 <td class="text-nowrap"><?php echo $credential_username_display; ?></td>
                                 <td class="text-nowrap">
                                     <div class="d-flex align-items-center">
-                                        <button class="btn p-0" type="button" data-toggle="popover" data-trigger="focus" data-placement="top" data-content="<?php echo $credential_password; ?>"><i class="fas fa-2x fa-ellipsis-h text-secondary"></i><i class="fas fa-2x fa-ellipsis-h text-secondary"></i></button><button class="btn btn-sm clipboardjs" type="button" data-clipboard-text="<?php echo $credential_password; ?>"><i class="far fa-copy text-secondary"></i></button>
+                                        <button class="btn p-0" type="button" data-bs-toggle="popover" data-trigger="focus" data-placement="top" data-content="<?php echo $credential_password; ?>"><i class="fas fa-2x fa-ellipsis-h text-secondary"></i><i class="fas fa-2x fa-ellipsis-h text-secondary"></i></button><button class="btn btn-sm clipboardjs" type="button" data-clipboard-text="<?php echo $credential_password; ?>"><i class="far fa-copy text-secondary"></i></button>
                                     </div>
                                 </td>
                                 <td class="text-nowrap"><?php echo $otp_display; ?></td>
@@ -615,7 +615,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     <?php echo "$credential_contact_display$credential_asset_display"; ?>
                                     <?php if (mysqli_num_rows($sql_shared) > 0) { ?>
                                         <div class="media" title="Expires <?php echo $item_expire_at_human; ?>">
-                                            <i class="fas fa-link mr-2 mt-1"></i>
+                                            <i class="fas fa-link me-2 mt-1"></i>
                                             <div class="media-body">Shared
                                                 <br>
                                                 <small class="text-secondary"><?php echo $item_recipient; ?></small>
@@ -630,7 +630,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                     <div class="btn-group">
                                         <?php if ( !empty($credential_uri) || !empty($credential_uri_2) ) { ?>
                                         <div class="dropdown text-center">
-                                            <button class="btn btn-default btn-sm" type="button" data-toggle="dropdown" data-display="static">
+                                            <button class="btn btn-default btn-sm" type="button" data-bs-toggle="dropdown" data-display="static">
                                                 <i class="fa fa-fw fa-external-link-alt"></i>
                                             </button>
                                             <div class="dropdown-menu">
@@ -649,42 +649,42 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                         </div>
                                         <?php } ?>
                                         <div class="dropdown text-center">
-                                            <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown" data-display="static">
+                                            <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" data-display="static">
                                                 <i class="fas fa-ellipsis-h"></i>
                                             </button>
                                             <div class="dropdown-menu">
                                                 <a class="dropdown-item ajax-modal" href="#"
                                                     data-modal-url="modals/credential/credential_edit.php?id=<?= $credential_id ?>">
-                                                    <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                                    <i class="fas fa-fw fa-edit me-2"></i>Edit
                                                 </a>
                                                 <?php if (lookupUserPermission("module_credential") >= 2) { ?>
                                                 <a class="dropdown-item ajax-modal" href="#"
                                                     data-modal-url="modals/credential/credential_move.php?id=<?= $credential_id ?>">
-                                                    <i class="fas fa-fw fa-exchange-alt mr-2"></i>Move
+                                                    <i class="fas fa-fw fa-exchange-alt me-2"></i>Move
                                                 </a>
                                                 <?php } ?>
                                                 <div class="dropdown-divider"></div>
                                                 <?php if ($client_url) { ?>
-                                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'Credential', $credential_id"; ?>)">
-                                                    <i class="fas fa-fw fa-share mr-2"></i>Share
+                                                <a class="dropdown-item share-link-trigger" href="#" data-bs-toggle="modal" data-bs-target="#shareModal" data-client-id="<?php echo $client_id; ?>" data-item-type="Credential" data-item-ref-id="<?php echo $credential_id; ?>">
+                                                    <i class="fas fa-fw fa-share me-2"></i>Share
                                                 </a>
                                                 <?php } ?>
                                                 <?php  if (lookupUserPermission("module_credential") >= 2) { ?>
                                                     <?php if ($credential_archived_at) { ?>
                                                         <div class="dropdown-divider"></div>
                                                         <a class="dropdown-item text-info confirm-link" href="post.php?restore_credential=<?php echo $credential_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                            <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                                            <i class="fas fa-fw fa-redo me-2"></i>Restore
                                                         </a>
                                                         <?php if (lookupUserPermission("module_credential") >= 3) { ?>
                                                             <div class="dropdown-divider"></div>
                                                             <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_credential=<?php echo $credential_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                                <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                                <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                         <?php } ?>
                                                         </a>
                                                     <?php } else { ?>
                                                         <div class="dropdown-divider"></div>
                                                         <a class="dropdown-item text-danger confirm-link" href="post.php?archive_credential=<?php echo $credential_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                            <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                            <i class="fas fa-fw fa-archive me-2"></i>Archive
                                                         </a>
                                                     <?php } ?>
                                                 <?php } ?>
@@ -711,9 +711,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 <!-- Include script to get TOTP code via the login ID -->
 <script src="js/credential_show_otp_via_id.js"></script>
 <script src="../js/bulk_actions.js"></script>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(function () {
-    $('[data-toggle="popover"]').popover();
+    $('[data-bs-toggle="popover"]').popover();
 });
 </script>
 

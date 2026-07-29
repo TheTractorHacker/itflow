@@ -112,20 +112,79 @@ function initDocBuilder(editor) {
     }
 }
 
-$(document).ready(function() {
+// Auto-submit filter selects/checkboxes app-wide. These used to be ~50 separate
+// inline onchange="this.form.submit()" attributes across every list/report page -
+// silently blocked by this app's strict CSP (no unsafe-inline), so every filter
+// dropdown in the app did nothing when changed. One delegated listener replaces
+// all of them; mark any auto-submitting control with the auto-submit-select class.
+document.addEventListener('change', function (e) {
+    var el = e.target.closest ? e.target.closest('.auto-submit-select') : null;
+    if (el && el.form) {
+        el.form.submit();
+    }
+});
+
+// Report date-range filters: editing the From/To date manually should flip the
+// paired "canned range" select (Today/This Week/etc) to "custom" so it stops
+// silently reporting a canned range while showing a hand-picked one.
+document.addEventListener('change', function (e) {
+    var el = e.target.closest ? e.target.closest('.js-canned-date-input') : null;
+    if (!el) { return; }
+    var target = document.getElementById(el.dataset.cannedTarget);
+    if (target) { target.value = 'custom'; }
+});
+
+// "Select all" checkbox that toggles every .<data-target-class> checkbox within
+// the same .tab-pane (software license assignment, etc).
+document.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('.js-select-all-in-tab-pane') : null;
+    if (!el) { return; }
+    var pane = el.closest('.tab-pane');
+    if (!pane) { return; }
+    pane.querySelectorAll('.' + el.dataset.targetClass).forEach(function (cb) { cb.checked = el.checked; });
+});
+
+// Plain native confirm() gate for delete links nested inside another modal,
+// where .confirm-link's own modal-on-modal stacking doesn't work.
+document.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('.js-confirm-native') : null;
+    if (el && !confirm(el.dataset.confirmMessage || 'Are you sure?')) {
+        e.preventDefault();
+    }
+});
+
+// Force-uppercase as-you-type (client abbreviation field, etc).
+document.addEventListener('input', function (e) {
+    if (e.target.closest && e.target.closest('.js-uppercase-input')) {
+        e.target.value = e.target.value.toUpperCase();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
     // Prevents resubmit on forms
     if (window.history.replaceState) {
         window.history.replaceState(null, null, window.location.href);
     }
 
-    // Slide alert up after 4 secs
-    $("#alert").fadeTo(5000, 500).slideUp(500, function() {
-        $("#alert").slideUp(500);
-    });
+    // Slide alert up after 4 secs (jQuery kept as a coexistence shim)
+    if (window.jQuery) {
+        jQuery("#alert").fadeTo(5000, 500).slideUp(500, function() {
+            jQuery("#alert").slideUp(500);
+        });
+    }
 
-    // Initialize Select2 Elements
-    $('.select2').select2({
-        theme: 'bootstrap4',
+    // Initialize select boxes (Tom Select replaces Select2)
+    document.querySelectorAll('.select2').forEach(function (el) {
+        if (el.tomselect) { return; }
+        var opts = {
+            plugins: el.multiple ? ['remove_button'] : [],
+            allowEmptyOption: true,
+            // Keep the browser's native option order rather than re-sorting
+            sortField: { field: '$order' }
+        };
+        var ph = el.getAttribute('data-placeholder');
+        if (ph) { opts.placeholder = ph; }
+        try { new TomSelect(el, opts); } catch (err) { /* noop */ }
     });
 
     // Initialize TinyMCE
@@ -419,6 +478,88 @@ $(document).ready(function() {
         }
     });
 
+    // Initialize TinyMCE for the email signature editor. Deliberately separate from
+    // .tinymceTicket above - that toolbar has no font size or clear-formatting control
+    // (fine for short ticket replies), but a signature often gets pasted in from
+    // Outlook/Word with inconsistent inline font sizes that need fixing, so this one
+    // gets real sizing/formatting/paste-cleanup tools instead.
+    tinymce.init({
+        selector: '.tinymceSignature',
+        browser_spellcheck: true,
+        // Unlike .tinymceTicket, this stays enabled - pasted signatures (Outlook/Word)
+        // often bring empty spacer rows/cells along, and right-click > table row/column
+        // controls is the most direct way to clean those out.
+        contextmenu: 'link image table',
+        resize: true,
+        min_height: 150,
+        max_height: 500,
+        promotion: false,
+        branding: false,
+        menubar: false,
+        statusbar: false,
+        toolbar: [
+            { name: 'fonts', items: ['fontfamily', 'fontsize'] },
+            { name: 'formatting', items: ['bold', 'italic', 'underline', 'forecolor'] },
+            { name: 'align', items: ['alignleft', 'aligncenter', 'alignright'] },
+            { name: 'clear', items: ['removeformat'] },
+            { name: 'table', items: ['tableinsertrowbefore', 'tableinsertrowafter', 'tabledeleterow', 'tabledeletecol', 'tabledelete'] },
+            { name: 'insert', items: ['link', 'image'] },
+            { name: 'history', items: ['undo', 'redo'] },
+            { name: 'code', items: ['code'] },
+        ],
+        mobile: {
+            menubar: false,
+            toolbar: [
+                { name: 'fonts', items: ['fontfamily', 'fontsize'] },
+                { name: 'formatting', items: ['bold', 'italic', 'underline', 'forecolor'] },
+                { name: 'clear', items: ['removeformat'] },
+                { name: 'table', items: ['tabledeleterow', 'tabledeletecol'] },
+                { name: 'insert', items: ['link', 'image'] },
+                { name: 'code', items: ['code'] },
+            ],
+        },
+        convert_urls: false,
+        content_style: 'body{font-family:Arial,Helvetica,sans-serif;font-size:13px;}',
+        // Strip Word/Outlook cruft (mso-* styles, conditional comments, stray <font> tags)
+        // on paste so a pasted signature starts from something the toolbar can actually control.
+        paste_remove_styles_if_webkit: true,
+        paste_webkit_styles: 'none',
+        paste_word_valid_elements: 'p,br,span,strong,b,em,i,u,a[href],img[src|alt|width|height],table,tr,td,th,tbody,thead',
+        font_size_formats: '8pt 9pt 10pt 11pt 12pt 14pt 16pt 18pt 24pt 36pt',
+        plugins: 'link image lists table code',
+        license_key: 'gpl',
+        // The single biggest reason pasted Outlook/Word signatures "can't be resized": every
+        // word/line carries its own explicit inline font-size/font-family, which then fights
+        // the toolbar's font-size control (it sets a wrapping style, but the more specific
+        // nested style underneath still wins visually). Strip those two properties - and
+        // legacy <font size/face> tags - on the way in, so what lands in the editor is plain
+        // text you can actually resize/style with the toolbar. Bold/italic/color/links/images
+        // are left alone.
+        paste_preprocess: function (plugin, args) {
+            // &quot; (an HTML entity for a literal quote inside style="...") itself contains
+            // a semicolon, which breaks a naive split(';') mid-entity - decode before
+            // splitting, re-encode before reinserting into the attribute.
+            function decodeQuotes(s) { return s.replace(/&quot;/gi, '"'); }
+            function encodeQuotes(s) { return s.replace(/"/g, '&quot;'); }
+
+            args.content = args.content
+                .replace(/<font[^>]*>/gi, '<span>')
+                .replace(/<\/font>/gi, '</span>')
+                .replace(/style\s*=\s*"([^"]*)"/gi, function (match, styleStr) {
+                    var kept = decodeQuotes(styleStr).split(';').filter(function (rule) {
+                        var prop = rule.split(':')[0].trim().toLowerCase();
+                        return prop
+                            && prop.indexOf('font-size') !== 0
+                            && prop.indexOf('font-family') !== 0
+                            && prop.indexOf('line-height') !== 0
+                            && prop.indexOf('mso-') !== 0
+                            && prop !== 'font';
+                    }).join(';');
+                    return kept.trim() ? 'style="' + encodeQuotes(kept) + '"' : '';
+                });
+        },
+    });
+
     // Initialize TinyMCE Redact-only
     tinymce.init({
         selector: '.tinymceRedact',
@@ -482,122 +623,277 @@ $(document).ready(function() {
         }
     });
 
-    // DateTime
-    $('.datetimepicker').datetimepicker();
-
-    // Data Input Mask
-    $('[data-mask]').inputmask();
-
-    // ClipboardJS fix for Bootstrap modals
-    $.fn.modal.Constructor.prototype._enforceFocus = function() {};
-
-    // Tooltip
-    $('button').tooltip({
-        trigger: 'click',
-        placement: 'bottom'
+    // ---- Date/time pickers (Tempus Dominus 6) ----
+    document.querySelectorAll('.datetimepicker').forEach(function (el) {
+        try { new tempusDominus.TempusDominus(el); } catch (err) { /* noop */ }
     });
 
-    function setTooltip(btn, message) {
-        $(btn).tooltip('hide')
-            .attr('data-original-title', message)
-            .tooltip('show');
+    // ---- Input masks (vanilla Inputmask 5) ----
+    if (window.Inputmask) {
+        Inputmask().mask(document.querySelectorAll('[data-mask]'));
     }
 
-    function hideTooltip(btn) {
-        setTimeout(function() {
-            $(btn).tooltip('hide');
-        }, 1000);
+    // ---- Tooltips & popovers (Bootstrap 5) ----
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        bootstrap.Tooltip.getOrCreateInstance(el);
+    });
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
+        bootstrap.Popover.getOrCreateInstance(el, { container: 'body' });
+    });
+
+    // ---- Clipboard copy with BS5 tooltip feedback ----
+    if (window.ClipboardJS) {
+        var clipboard = new ClipboardJS('.clipboardjs');
+        var flashTooltip = function (el, message) {
+            var tip = bootstrap.Tooltip.getOrCreateInstance(el, { trigger: 'manual', placement: 'bottom', title: message });
+            tip.setContent({ '.tooltip-inner': message });
+            tip.show();
+            setTimeout(function () { tip.hide(); }, 1000);
+        };
+        clipboard.on('success', function (e) { flashTooltip(e.trigger, 'Copied!'); e.clearSelection(); });
+        clipboard.on('error', function (e) { flashTooltip(e.trigger, 'Failed!'); });
     }
 
-    // Clipboard
-    var clipboard = new ClipboardJS('.clipboardjs');
-
-    clipboard.on('success', function(e) {
-        setTooltip(e.trigger, 'Copied!');
-        hideTooltip(e.trigger);
+    // ---- Tables (simple-datatables) ----
+    document.querySelectorAll('.dataTables').forEach(function (el) {
+        try { new simpleDatatables.DataTable(el, { searchable: true, perPageSelect: [10, 25, 50, 100] }); } catch (err) { /* noop */ }
     });
 
-    clipboard.on('error', function(e) {
-        setTooltip(e.trigger, 'Failed!');
-        hideTooltip(e.trigger);
-    });
+    // ---- Date-range filter (#dateFilter) via Litepicker (replaces daterangepicker/date_filter.js) ----
+    initDateRangeFilter();
 
-    // Enable Popovers
-    $(function() {
-        $('[data-toggle="popover"]').popover();
-    });
+    // ---- .table-responsive dropdown reparent so menus aren't clipped (BS5, vanilla) ----
+    initTableResponsiveDropdowns();
 
-    // Data Tables
-    new DataTable('.dataTables');
+    // ---- BS4 -> BS5 attribute coexistence shims for un-ported markup ----
+    initLegacyBootstrapShims();
 
-    // Dropdowns inside a .table-responsive get clipped by its scroll container, and
-    // Popper's flip only swaps left/right for dropleft/dropright menus - it won't flip
-    // to open upward, so a menu near the bottom of the page can render off-screen and
-    // force a page scroll to reach it. Reparent the menu to <body> while open and
-    // position it manually (viewport-aware, flips up if there's no room below).
-    $(document).on('show.bs.dropdown', '.table-responsive .dropdown', function() {
-        var $dropdown = $(this);
-        var $menu = $dropdown.children('.dropdown-menu').first();
-        var $toggle = $dropdown.find('[data-toggle="dropdown"]').first();
-
-        if (!$menu.length || !$toggle.length) {
-            return;
-        }
-
-        var $placeholder = $('<span style="display:none"></span>').insertAfter($menu);
-        $dropdown.data('trf-placeholder', $placeholder);
-        $dropdown.data('trf-menu', $menu);
-        // Reverse pointer so click handlers on items inside the menu (which now sees
-        // $item.closest('.dropdown') fail, since the menu no longer lives under the
-        // original .dropdown while open) can still find their way back to it.
-        $menu.data('trf-dropdown', $dropdown);
-
-        $menu.appendTo('body').css({
-            position: 'fixed',
-            margin: 0,
-            maxHeight: '70vh',
-            overflowY: 'auto',
-            zIndex: 1071
-        });
-    });
-
-    $(document).on('shown.bs.dropdown', '.table-responsive .dropdown', function() {
-        var $dropdown = $(this);
-        var $menu = $dropdown.data('trf-menu');
-        var $toggle = $dropdown.find('[data-toggle="dropdown"]').first();
-
-        if (!$menu || !$menu.length || !$toggle.length) {
-            return;
-        }
-
-        var rect = $toggle[0].getBoundingClientRect();
-        var menuHeight = $menu.outerHeight();
-        var menuWidth = $menu.outerWidth();
-
-        var top = rect.bottom;
-        if (top + menuHeight > $(window).height()) {
-            top = Math.max(rect.top - menuHeight, 8);
-        }
-
-        var left = rect.right - menuWidth;
-        if (left < 8) {
-            left = Math.min(rect.left, $(window).width() - menuWidth - 8);
-        }
-
-        $menu.css({ top: top + 'px', left: left + 'px' });
-    });
-
-    $(document).on('hidden.bs.dropdown', '.table-responsive .dropdown', function() {
-        var $dropdown = $(this);
-        var $menu = $dropdown.data('trf-menu');
-        var $placeholder = $dropdown.data('trf-placeholder');
-
-        if ($menu && $menu.length && $placeholder && $placeholder.length) {
-            $menu.css({ position: '', margin: '', maxHeight: '', overflowY: '', zIndex: '', top: '', left: '' });
-            $placeholder.replaceWith($menu);
-        }
-
-        $dropdown.removeData('trf-menu');
-        $dropdown.removeData('trf-placeholder');
-    });
+    // ---- toastr fallback (BS5 toasts) + password show/hide toggle ----
+    initToastrShim();
+    initPasswordToggles();
+    initButtonGroupToggle();
+    initPrintButtons();
 });
+
+/* ============================================================
+   Helpers (hoisted; called from the DOMContentLoaded block above)
+   ============================================================ */
+
+// Litepicker range picker bound to #dateFilter, writing #canned_date/#dtf/#dtt
+// and auto-submitting — mirrors the semantics of the old date_filter.js.
+function initDateRangeFilter() {
+    var input = document.getElementById('dateFilter');
+    if (!input || !window.Litepicker) { return; }
+
+    var cannedEl = document.getElementById('canned_date');
+    var dtfEl = document.getElementById('dtf');
+    var dttEl = document.getElementById('dtt');
+
+    var hasValues = (dtfEl && dttEl && dtfEl.value && dttEl.value) ||
+                    (cannedEl && cannedEl.value && cannedEl.value !== '');
+    if (!hasValues) {
+        if (cannedEl) { cannedEl.value = 'alltime'; }
+        if (dtfEl) { dtfEl.value = '1970-01-01'; }
+        if (dttEl) { dttEl.value = '2099-12-31'; }
+    }
+
+    function setDisplay(start, end) {
+        if (start === '1970-01-01' && end === '2099-12-31') {
+            input.value = 'All Time';
+        } else {
+            input.value = start + ' — ' + end;
+        }
+    }
+    setDisplay((dtfEl && dtfEl.value) || '1970-01-01', (dttEl && dttEl.value) || '2099-12-31');
+
+    /* eslint-disable no-new */
+    new Litepicker({
+        element: input,
+        singleMode: false,
+        numberOfMonths: 2,
+        numberOfColumns: 2,
+        format: 'YYYY-MM-DD',
+        firstDay: 1,
+        startDate: (dtfEl && dtfEl.value) || null,
+        endDate: (dttEl && dttEl.value) || null,
+        setup: function (picker) {
+            picker.on('selected', function (d1, d2) {
+                var s = d1.format('YYYY-MM-DD');
+                var e = d2.format('YYYY-MM-DD');
+                if (cannedEl) { cannedEl.value = 'custom'; }
+                if (dtfEl) { dtfEl.value = s; }
+                if (dttEl) { dttEl.value = e; }
+                setDisplay(s, e);
+                if (input.form) { input.form.submit(); }
+            });
+        }
+    });
+}
+
+// Dropdowns inside a .table-responsive scroll container get clipped. BS5's Popper
+// flips but can't escape the ancestor's overflow, so reparent the menu to <body>
+// on show (before BS5 creates its Popper) and restore it on hide.
+function initTableResponsiveDropdowns() {
+    document.addEventListener('show.bs.dropdown', function (e) {
+        var toggle = e.target;
+        if (!toggle || !toggle.closest) { return; }
+        var dropdown = toggle.closest('.dropdown');
+        if (!dropdown || !dropdown.closest('.table-responsive')) { return; }
+        var menu = dropdown.querySelector(':scope > .dropdown-menu');
+        if (!menu) { return; }
+
+        var placeholder = document.createComment('trf-menu');
+        menu.parentNode.insertBefore(placeholder, menu.nextSibling);
+        menu.style.maxHeight = '70vh';
+        menu.style.overflowY = 'auto';
+        toggle._trfMenu = menu;
+        menu._trfPlaceholder = placeholder;
+        document.body.appendChild(menu);
+    });
+
+    document.addEventListener('hidden.bs.dropdown', function (e) {
+        var toggle = e.target;
+        var menu = toggle && toggle._trfMenu;
+        if (menu && menu._trfPlaceholder && menu._trfPlaceholder.parentNode) {
+            menu.style.position = '';
+            menu.style.inset = '';
+            menu.style.transform = '';
+            menu.style.margin = '';
+            menu.style.maxHeight = '';
+            menu.style.overflowY = '';
+            menu._trfPlaceholder.parentNode.insertBefore(menu, menu._trfPlaceholder);
+            menu._trfPlaceholder.remove();
+            menu._trfPlaceholder = null;
+            toggle._trfMenu = null;
+        }
+    });
+}
+
+// Keep un-ported (BS4-attribute) markup functional during the migration sweep.
+// Only fires for legacy attributes that BS5 no longer recognizes.
+function initLegacyBootstrapShims() {
+    document.addEventListener('click', function (e) {
+        var el = e.target.closest && e.target.closest(
+            '[data-dismiss="modal"], [data-toggle="modal"], [data-toggle="dropdown"], [data-toggle="tab"], [data-toggle="pill"], [data-toggle="collapse"]'
+        );
+        if (!el || el.getAttribute('data-bs-toggle') || el.getAttribute('data-bs-dismiss')) { return; }
+
+        // Legacy modal dismiss
+        if (el.matches('[data-dismiss="modal"]')) {
+            var modalEl = el.closest('.modal');
+            if (modalEl && window.bootstrap) { bootstrap.Modal.getOrCreateInstance(modalEl).hide(); }
+            return;
+        }
+        if (!window.bootstrap) { return; }
+        var targetSel = el.getAttribute('data-target') || el.getAttribute('href');
+
+        if (el.matches('[data-toggle="modal"]') && targetSel) {
+            var m = document.querySelector(targetSel);
+            if (m) { e.preventDefault(); bootstrap.Modal.getOrCreateInstance(m).show(); }
+        } else if (el.matches('[data-toggle="dropdown"]')) {
+            e.preventDefault();
+            bootstrap.Dropdown.getOrCreateInstance(el).toggle();
+        } else if ((el.matches('[data-toggle="tab"]') || el.matches('[data-toggle="pill"]'))) {
+            e.preventDefault();
+            bootstrap.Tab.getOrCreateInstance(el).show();
+        } else if (el.matches('[data-toggle="collapse"]') && targetSel) {
+            var c = document.querySelector(targetSel);
+            if (c) { e.preventDefault(); bootstrap.Collapse.getOrCreateInstance(c).toggle(); }
+        }
+    });
+}
+
+// Minimal toastr-compatible fallback backed by BS5 toasts, used only if the real
+// toastr (jQuery plugin) isn't present. Keeps window.toastr.{success,error,info,warning}.
+function initToastrShim() {
+    if (window.toastr) { return; }
+    var container;
+    function ensureContainer() {
+        if (container) { return container; }
+        container = document.createElement('div');
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '1090';
+        document.body.appendChild(container);
+        return container;
+    }
+    function show(message, title, variant) {
+        if (!window.bootstrap) { return; }
+        var wrap = document.createElement('div');
+        wrap.className = 'toast align-items-center text-bg-' + variant + ' border-0';
+        wrap.setAttribute('role', 'alert');
+        var inner = document.createElement('div');
+        inner.className = 'd-flex';
+        var body = document.createElement('div');
+        body.className = 'toast-body';
+        body.textContent = (title ? title + ': ' : '') + (message || '');
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-close btn-close-white me-2 m-auto';
+        btn.setAttribute('data-bs-dismiss', 'toast');
+        inner.appendChild(body);
+        inner.appendChild(btn);
+        wrap.appendChild(inner);
+        ensureContainer().appendChild(wrap);
+        var t = bootstrap.Toast.getOrCreateInstance(wrap, { delay: 4000 });
+        wrap.addEventListener('hidden.bs.toast', function () { wrap.remove(); });
+        t.show();
+    }
+    window.toastr = {
+        success: function (m, t) { show(m, t, 'success'); },
+        error:   function (m, t) { show(m, t, 'danger'); },
+        info:    function (m, t) { show(m, t, 'info'); },
+        warning: function (m, t) { show(m, t, 'warning'); }
+    };
+}
+
+// Bootstrap 5 dropped the BS4 data-toggle="buttons" radio/checkbox-styled-as-
+// button-group plugin entirely (no data-bs-toggle equivalent exists) - this
+// shim restores the "clicking a label toggles which one looks active" behavior
+// for every .js-btn-group-toggle group app-wide (reply-type toggles, theme
+// picker, permission-level pickers, etc).
+function initButtonGroupToggle() {
+    document.addEventListener('change', function (e) {
+        var input = e.target;
+        if (input.type !== 'radio' && input.type !== 'checkbox') { return; }
+        var group = input.closest('.js-btn-group-toggle');
+        if (!group) { return; }
+        group.querySelectorAll('label.btn').forEach(function (label) {
+            label.classList.remove('active');
+        });
+        var label = input.closest('label.btn');
+        if (label) { label.classList.add('active'); }
+    });
+}
+
+// Delegated listener for .js-print-page (CSP forbids inline onclick="window.print();").
+function initPrintButtons() {
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.js-print-page')) { window.print(); }
+    });
+}
+
+// Vanilla password show/hide toggle for [data-toggle="password"] (was the
+// bootstrap-show-password jQuery plugin). Toggles the sibling input's type.
+function initPasswordToggles() {
+    document.addEventListener('click', function (e) {
+        var toggle = e.target.closest && e.target.closest('[data-toggle="password"]');
+        if (!toggle) { return; }
+        e.preventDefault();
+        var input = null;
+        var group = toggle.closest('.input-group');
+        if (group) { input = group.querySelector('input[type="password"], input[type="text"][data-pw]'); }
+        if (!input && toggle.previousElementSibling && toggle.previousElementSibling.tagName === 'INPUT') {
+            input = toggle.previousElementSibling;
+        }
+        if (!input) { return; }
+        var icon = toggle.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            input.setAttribute('data-pw', '1');
+            if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+        } else {
+            input.type = 'password';
+            if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+        }
+    });
+}

@@ -8,10 +8,10 @@ session_start();
 
 require_once "../includes/inc_set_timezone.php"; // Must be included after session_start to work
 
-if (isset($_GET['accept_quote'], $_GET['url_key'])) {
+if (isset($_POST['accept_quote'], $_POST['url_key'])) {
 
-    $quote_id = intval($_GET['accept_quote']);
-    $url_key = sanitizeInput($_GET['url_key']);
+    $quote_id = intval($_POST['accept_quote']);
+    $url_key = sanitizeInput($_POST['url_key']);
 
     // Select only the necessary fields
     $sql = mysqli_query($mysqli, "SELECT quote_prefix, quote_number, client_name, client_id FROM quotes LEFT JOIN clients ON quote_client_id = client_id WHERE quote_id = $quote_id AND quote_url_key = '$url_key'");
@@ -73,10 +73,10 @@ if (isset($_GET['accept_quote'], $_GET['url_key'])) {
 
 }
 
-if (isset($_GET['decline_quote'], $_GET['url_key'])) {
+if (isset($_POST['decline_quote'], $_POST['url_key'])) {
 
-    $quote_id = intval($_GET['decline_quote']);
-    $url_key = sanitizeInput($_GET['url_key']);
+    $quote_id = intval($_POST['decline_quote']);
+    $url_key = sanitizeInput($_POST['url_key']);
 
     // Select only the necessary fields
     $sql = mysqli_query($mysqli, "SELECT quote_prefix, quote_number, client_name, client_id FROM quotes LEFT JOIN clients ON quote_client_id = client_id WHERE quote_id = $quote_id AND quote_url_key = '$url_key'");
@@ -137,10 +137,10 @@ if (isset($_GET['decline_quote'], $_GET['url_key'])) {
 
 }
 
-if (isset($_GET['reopen_ticket'], $_GET['url_key'])) {
+if (isset($_POST['reopen_ticket'], $_POST['url_key'])) {
 
-    $ticket_id = intval($_GET['ticket_id']);
-    $url_key = sanitizeInput($_GET['url_key']);
+    $ticket_id = intval($_POST['ticket_id']);
+    $url_key = sanitizeInput($_POST['url_key']);
 
     // Select only the necessary fields
     $sql = mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $ticket_id AND ticket_url_key = '$url_key' AND ticket_resolved_at IS NOT NULL AND ticket_closed_at IS NULL");
@@ -164,10 +164,10 @@ if (isset($_GET['reopen_ticket'], $_GET['url_key'])) {
 
 }
 
-if (isset($_GET['close_ticket'], $_GET['url_key'])) {
+if (isset($_POST['close_ticket'], $_POST['url_key'])) {
 
-    $ticket_id = intval($_GET['ticket_id']);
-    $url_key = sanitizeInput($_GET['url_key']);
+    $ticket_id = intval($_POST['ticket_id']);
+    $url_key = sanitizeInput($_POST['url_key']);
 
     // Select only the necessary fields
     $sql = mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $ticket_id AND ticket_url_key = '$url_key' AND ticket_resolved_at IS NOT NULL AND ticket_closed_at IS NULL");
@@ -191,11 +191,11 @@ if (isset($_GET['close_ticket'], $_GET['url_key'])) {
     }
 }
 
-if (isset($_GET['add_ticket_feedback'], $_GET['url_key'])) {
+if (isset($_POST['add_ticket_feedback'], $_POST['url_key'])) {
 
-    $ticket_id = intval($_GET['ticket_id']);
-    $url_key = sanitizeInput($_GET['url_key']);
-    $feedback = sanitizeInput($_GET['feedback']);
+    $ticket_id = intval($_POST['ticket_id']);
+    $url_key = sanitizeInput($_POST['url_key']);
+    $feedback = sanitizeInput($_POST['feedback']);
 
     // Select only the necessary fields
     $sql = mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $ticket_id AND ticket_url_key = '$url_key' AND ticket_closed_at IS NOT NULL");
@@ -803,7 +803,7 @@ if (isset($_POST['sign_outtake'], $_POST['outtake_sign_token'])) {
     $result = signOuttakeForm($mysqli, $outtake_id, $signed_name, $signature);
 
     if (!$result['ok']) {
-        echo "<script>alert(" . json_encode($result['error']) . "); history.back();</script>";
+        echo "<script nonce=\"" . htmlspecialchars($csp_nonce ?? '') . "\">alert(" . json_encode($result['error']) . "); history.back();</script>";
         exit;
     }
 
@@ -825,7 +825,7 @@ if (isset($_POST['sign_worksheet'], $_POST['worksheet_sign_token'])) {
     $sql = mysqli_query($mysqli, "SELECT tw.worksheet_id, tw.worksheet_template_id, tw.worksheet_ticket_id FROM ticket_worksheets tw WHERE tw.worksheet_sign_token = '$token' AND tw.worksheet_is_outtake = 1 AND tw.worksheet_signed_at IS NULL LIMIT 1");
 
     if (mysqli_num_rows($sql) !== 1) {
-        echo "<script>alert('This form has already been signed or the link is invalid.'); history.back();</script>";
+        echo "<script nonce=\"" . htmlspecialchars($csp_nonce ?? '') . "\">alert('This form has already been signed or the link is invalid.'); history.back();</script>";
         exit;
     }
 
@@ -840,7 +840,7 @@ if (isset($_POST['sign_worksheet'], $_POST['worksheet_sign_token'])) {
         $fid = intval($f['field_id']);
         $key = "field_$fid";
         $val = isset($_POST[$key]) ? sanitizeInput($_POST[$key]) : '';
-        if ($f['field_type'] === 'signature' && !empty($val)) {
+        if ($f['field_type'] === 'signature' && !empty($val) && preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,[A-Za-z0-9+\/=]+$/', $val)) {
             $main_sig = $val;
         }
         $existing = mysqli_fetch_row(mysqli_query($mysqli, "SELECT response_id FROM ticket_worksheet_responses WHERE response_worksheet_id = $worksheet_id AND response_field_id = $fid LIMIT 1"));

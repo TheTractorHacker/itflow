@@ -504,6 +504,9 @@ if (isset($_GET['mark_quote_sent'])) {
 
     logAction("Quote", "Sent", "$session_name marked quote $quote_prefix$quote_number as sent", $client_id, $quote_id);
 
+    // Quote finalized (-> Sent): enqueue a one-way push to the accounting provider.
+    enqueueAccountingSync($mysqli, 'quote', $quote_id);
+
     flash_alert("Quote marked sent");
 
     redirect();
@@ -647,6 +650,9 @@ if (isset($_GET['email_quote'])) {
     if ($quote_status == 'Draft') {
         mysqli_query($mysqli,"UPDATE quotes SET quote_status = 'Sent' WHERE quote_id = $quote_id");
     }
+
+    // Quote finalized (emailed / -> Sent): enqueue a one-way push to accounting.
+    enqueueAccountingSync($mysqli, 'quote', $quote_id);
 
     redirect();
 

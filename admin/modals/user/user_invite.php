@@ -7,7 +7,7 @@ ob_start();
 ?>
 <div class="modal-header bg-dark">
     <h5 class="modal-title"><i class="fas fa-fw fa-user-plus"></i>Invite User</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -40,8 +40,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="invite_user" class="btn btn-primary text-bold"><i class="fas fa-paper-plane mr-2"></i>Send Invite</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="invite_user" class="btn btn-primary text-bold"><i class="fas fa-paper-plane me-2"></i>Send Invite</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

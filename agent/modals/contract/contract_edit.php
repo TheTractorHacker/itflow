@@ -1,14 +1,21 @@
 <?php
 require_once '../../../includes/modal_header.php';
+enforceUserPermission('module_contracts');
+
 $contract_id = intval($_GET['contract_id']);
 $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM contracts WHERE contract_id = $contract_id LIMIT 1"));
+if (!$row) { echo '<div class="p-3 text-danger">Contract not found.</div>'; require_once '../../../includes/modal_footer.php'; exit; }
+
+$client_id = intval($row['contract_client_id']);
+if ($client_id) enforceClientAccess();
+
 $contract_types = ['Managed Services', 'Fully Managed', 'Partially Managed', 'Break/Fix', 'Block Hours', 'Project', 'SLA', 'Other'];
 $contract_statuses = ['Active', 'Pending', 'Expired', 'Cancelled'];
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-edit mr-2"></i>Edit Contract</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fa fa-fw fa-edit me-2"></i>Edit Contract</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -70,7 +77,7 @@ ob_start();
         </div>
 
         <hr>
-        <h6 class="text-uppercase text-muted mb-3" style="font-size:11px;letter-spacing:.6px;"><i class="fas fa-stopwatch mr-1"></i>SLA Response &amp; Resolution Times <small>(hours, 0 = no SLA)</small></h6>
+        <h6 class="text-uppercase text-muted mb-3" style="font-size:11px;letter-spacing:.6px;"><i class="fas fa-stopwatch me-1"></i>SLA Response &amp; Resolution Times <small>(hours, 0 = no SLA)</small></h6>
         <div class="table-responsive">
             <table class="table table-sm table-bordered mb-2">
                 <thead class="thead-light">
@@ -78,17 +85,17 @@ ob_start();
                 </thead>
                 <tbody>
                     <tr>
-                        <td><span class="badge badge-success">Low</span></td>
+                        <td><span class="badge text-bg-success">Low</span></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_low_response" value="<?= intval($row['contract_sla_low_response_time']) ?: '' ?>"></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_low_resolution" value="<?= intval($row['contract_sla_low_resolution_time']) ?: '' ?>"></td>
                     </tr>
                     <tr>
-                        <td><span class="badge badge-warning text-dark">Medium</span></td>
+                        <td><span class="badge text-bg-warning text-dark">Medium</span></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_medium_response" value="<?= intval($row['contract_sla_medium_response_time']) ?: '' ?>"></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_medium_resolution" value="<?= intval($row['contract_sla_medium_resolution_time']) ?: '' ?>"></td>
                     </tr>
                     <tr>
-                        <td><span class="badge badge-danger">High</span></td>
+                        <td><span class="badge text-bg-danger">High</span></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_high_response" value="<?= intval($row['contract_sla_high_response_time']) ?: '' ?>"></td>
                         <td><input type="number" min="0" step="1" class="form-control form-control-sm" name="sla_high_resolution" value="<?= intval($row['contract_sla_high_resolution_time']) ?: '' ?>"></td>
                     </tr>
@@ -102,8 +109,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_contract" class="btn btn-primary"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_contract" class="btn btn-primary"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 <?php require_once '../../../includes/modal_footer.php'; ?>

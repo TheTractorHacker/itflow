@@ -37,16 +37,15 @@ if (isset($_GET['delete_saved_payment'])) {
 
     $private_key = $row['payment_provider_private_key'];
 
-    // Separate logic for each Payment Provider
-    if ($payment_provider_name == 'Stripe') {
+    // Detach the saved method at the payment provider (Stripe, etc.) via the factory
+    if ($provider_id) {
 
         try {
-            // Initialize stripe
-            require_once '../plugins/stripe-php/init.php';
-            $stripe = new \Stripe\StripeClient($private_key);
+            require_once '../includes/payment_provider_factory.php';
+            $provider = getPaymentProvider($provider_id);
 
             // Detach PM
-            $stripe->paymentMethods->detach($payment_method, []);
+            $provider->removeSavedMethod($payment_method);
 
         } catch (Exception $e) {
             $error = $e->getMessage();

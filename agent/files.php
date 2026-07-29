@@ -90,7 +90,7 @@ function display_folders($parent_folder_id, $client_id, $indent = 0, $render_roo
         echo '/';
 
         if ($num_root_items > 0) {
-            echo "<span class='badge badge-pill badge-dark float-right mt-1'>$num_root_items</span>";
+            echo "<span class='badge rounded-pill text-bg-dark float-end mt-1'>$num_root_items</span>";
         }
 
         echo '</a>';
@@ -168,11 +168,11 @@ function display_folders($parent_folder_id, $client_id, $indent = 0, $render_roo
         if ($subfolder_count > 0) {
             $is_expanded = $folders_expanded || $on_active_path;
 
-            echo '<i class="fas fa-chevron-' . ($is_expanded ? 'down' : 'right') . ' text-muted ml-2"></i>';
+            echo '<i class="fas fa-chevron-' . ($is_expanded ? 'down' : 'right') . ' text-muted ms-2"></i>';
         }
 
         if ($num_total > 0) {
-            echo "<span class='badge badge-pill badge-dark float-right mt-1'>$num_total</span>";
+            echo "<span class='badge rounded-pill text-bg-dark float-end mt-1'>$num_total</span>";
         }
 
         echo '</a>';
@@ -181,18 +181,18 @@ function display_folders($parent_folder_id, $client_id, $indent = 0, $render_roo
         echo '<div class="col-2">';
         ?>
         <div class="dropdown">
-            <button class="btn btn-sm" type="button" data-toggle="dropdown">
+            <button class="btn btn-sm" type="button" data-bs-toggle="dropdown">
                 <i class="fas fa-ellipsis-v"></i>
             </button>
             <div class="dropdown-menu">
                 <a class="dropdown-item ajax-modal" href="#"
                    data-modal-url="modals/folder/folder_rename.php?id=<?= $folder_id ?>">
-                    <i class="fas fa-fw fa-edit mr-2"></i>Rename
+                    <i class="fas fa-fw fa-edit me-2"></i>Rename
                 </a>
                 <?php if ($session_user_role == 3 && $num_total == 0 && $subfolder_count == 0) { ?>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_folder=<?php echo $folder_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                     </a>
                 <?php } ?>
             </div>
@@ -431,33 +431,33 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
 <div class="card card-dark">
 
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fa fa-fw fa-folder mr-2"></i>Files</h3>
+        <h3 class="card-title mt-2"><i class="fa fa-fw fa-folder me-2"></i>Files</h3>
 
         <div class="card-tools">
 
             <div class="btn-group">
-                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
-                    <i class="fas fa-fw fa-plus mr-2"></i>New
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-fw fa-plus me-2"></i>New
                 </button>
                 <div class="dropdown-menu dropdown-menu-right">
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                        data-modal-url="modals/file/file_upload.php?client_id=<?= $client_id ?>&folder_id=<?= $get_folder_id ?>">
-                        <i class="fas fa-fw fa-cloud-upload-alt mr-2"></i>Upload File
+                        <i class="fas fa-fw fa-cloud-upload-alt me-2"></i>Upload File
                     </a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                         data-modal-url="modals/document/document_add.php?client_id=<?= $client_id ?>&folder_id=<?= $get_folder_id ?>"
                         data-modal-size="lg">
-                        <i class="fas fa-fw fa-file-alt mr-2"></i>Document
+                        <i class="fas fa-fw fa-file-alt me-2"></i>Document
                     </a>
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                         data-modal-url="modals/document/document_add_from_template.php?client_id=<?= $client_id ?>&folder_id=<?= $get_folder_id ?>">
-                        <i class="fas fa-fw fa-file mr-2"></i>Document from Template
+                        <i class="fas fa-fw fa-file me-2"></i>Document from Template
                     </a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-dark ajax-modal" href="#"
                        data-modal-url="modals/folder/folder_add.php?client_id=<?= $client_id ?>&current_folder_id=<?= $get_folder_id ?>">
-                        <i class="fa fa-fw fa-folder-plus mr-2"></i>Folder
+                        <i class="fa fa-fw fa-folder-plus me-2"></i>Folder
                     </a>
                 </div>
             </div>
@@ -518,7 +518,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                             </div>
                         </div>
                         <div class="col-md-7">
-                            <div class="float-right">
+                            <div class="float-end">
                                 <div class="btn-group">
                                     <a href="?<?php echo $url_query_strings_sort; ?>&view=0&folder_id=<?php echo $get_folder_id; ?>" class="btn <?php if($view == 0){ echo "btn-primary"; } else { echo "btn-outline-secondary"; } ?>" title="List View"><i class="fas fa-list-ul"></i></a>
                                     <a href="?<?php echo $url_query_strings_sort; ?>&view=1&folder_id=<?php echo $get_folder_id; ?>" class="btn <?php if($view == 1){ echo "btn-primary"; } else { echo "btn-outline-secondary"; } ?>" title="Grid View"><i class="fas fa-th-large"></i></a>
@@ -526,36 +526,36 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                 <div class="btn-group">
                                     <a href="?<?php echo $url_query_strings_sort; ?>&archived=<?php if($archived == 1){ echo 0; } else { echo 1; } ?>"
                                         class="btn btn-<?php if($archived == 1){ echo "primary"; } else { echo "default"; } ?>">
-                                        <i class="fa fa-fw fa-archive mr-2"></i>Archived
+                                        <i class="fa fa-fw fa-archive me-2"></i>Archived
                                     </a>
                                 </div>
                                 <div class="btn-group">
-                                    <div class="dropdown ml-2" id="bulkActionButton" hidden>
-                                        <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                            <i class="fas fa-fw fa-layer-group mr-2"></i>Bulk Action (<span id="selectedCount">0</span>)
+                                    <div class="dropdown ms-2" id="bulkActionButton" hidden>
+                                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-fw fa-layer-group me-2"></i>Bulk Action (<span id="selectedCount">0</span>)
                                         </button>
                                         <div class="dropdown-menu">
                                             <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/file/file_bulk_move.php?client_id=<?= $client_id ?>&current_folder_id=<?= $get_folder_id ?>"
                                             data-bulk="true">
-                                                <i class="fas fa-fw fa-exchange-alt mr-2"></i>Move Files
+                                                <i class="fas fa-fw fa-exchange-alt me-2"></i>Move Files
                                             </a>
                                             <?php if ($archived) { ?>
                                             <div class="dropdown-divider"></div>
                                             <button class="dropdown-item text-info"
                                                 type="submit" form="bulkActions" name="bulk_restore_files">
-                                                <i class="fas fa-fw fa-redo mr-2"></i>Restore Files
+                                                <i class="fas fa-fw fa-redo me-2"></i>Restore Files
                                             </button>
                                             <div class="dropdown-divider"></div>
                                             <button class="dropdown-item text-danger text-bold"
                                                 type="submit" form="bulkActions" name="bulk_delete_files">
-                                                <i class="fas fa-fw fa-trash mr-2"></i>Delete Files
+                                                <i class="fas fa-fw fa-trash me-2"></i>Delete Files
                                             </button>
                                             <?php } else { ?>
                                             <div class="dropdown-divider"></div>
                                             <button class="dropdown-item text-danger"
                                                 type="submit" form="bulkActions" name="bulk_archive_files">
-                                                <i class="fas fa-fw fa-archive mr-2"></i>Archive Files
+                                                <i class="fas fa-fw fa-archive me-2"></i>Archive Files
                                             </button>
                                             <?php } ?>
                                         </div>
@@ -571,7 +571,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item">
                             <a href="?client_id=<?php echo $client_id; ?>&folder_id=0&archived=<?= $archived ?>">
-                                <i class="fas fa-fw fa-folder mr-2"></i>Root
+                                <i class="fas fa-fw fa-folder me-2"></i>Root
                             </a>
                         </li>
                         <?php foreach ($folder_path as $folder) {
@@ -579,7 +579,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                             $bread_crumb_folder_name = $folder['folder_name']; ?>
                             <li class="breadcrumb-item">
                                 <a href="?client_id=<?= $client_id ?>&folder_id=<?= $bread_crumb_folder_id ?>&archived=<?= $archived ?>&folders_expanded=<?= $folders_expanded ?>">
-                                    <i class="fas fa-fw fa-folder-open mr-2"></i><?php echo $bread_crumb_folder_name; ?>
+                                    <i class="fas fa-fw fa-folder-open me-2"></i><?php echo $bread_crumb_folder_name; ?>
                                 </a>
                             </li>
                         <?php } ?>
@@ -614,48 +614,48 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
 
                             <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6 mb-3 text-center">
 
-                                <a href="#" onclick="openModal(<?php echo count($files)-1; ?>)">
+                                <a href="#" class="js-open-file-modal" data-file-index="<?php echo count($files)-1; ?>">
                                     <img class="img-thumbnail" src="<?php echo "../uploads/clients/$client_id/$file_reference_name"; ?>" alt="<?php echo $file_reference_name ?>">
                                 </a>
 
                                 <div>
-                                    <div class="dropdown float-right">
-                                        <button class="btn btn-link btn-sm" type="button" data-toggle="dropdown">
+                                    <div class="dropdown float-end">
+                                        <button class="btn btn-link btn-sm" type="button" data-bs-toggle="dropdown">
                                             <i class="fas fa-ellipsis-v"></i>
                                         </button>
                                         <div class="dropdown-menu">
                                             <a class="dropdown-item" href="<?php echo "../uploads/clients/$client_id/$file_reference_name"; ?>" download="<?php echo $file_name; ?>">
-                                                <i class="fas fa-fw fa-cloud-download-alt mr-2"></i>Download
+                                                <i class="fas fa-fw fa-cloud-download-alt me-2"></i>Download
                                             </a>
-                                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'File', $file_id"; ?>)">
-                                                <i class="fas fa-fw fa-share mr-2"></i>Share
+                                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'File', $file_id"; ?>)">
+                                                <i class="fas fa-fw fa-share me-2"></i>Share
                                             </a>
                                             <a class="dropdown-item ajax-modal" href="#"
                                                data-modal-url="modals/file/file_rename.php?id=<?= $file_id ?>">
-                                                <i class="fas fa-fw fa-edit mr-2"></i>Rename
+                                                <i class="fas fa-fw fa-edit me-2"></i>Rename
                                             </a>
                                             <a class="dropdown-item ajax-modal" href="#"
                                                data-modal-url="modals/file/file_move.php?id=<?= $file_id ?>">
-                                                <i class="fas fa-fw fa-exchange-alt mr-2"></i>Move
+                                                <i class="fas fa-fw fa-exchange-alt me-2"></i>Move
                                             </a>
-                                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#linkAssetToFileModal<?php echo $file_id; ?>">
-                                                <i class="fas fa-fw fa-desktop mr-2"></i>Link Asset
+                                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#linkAssetToFileModal<?php echo $file_id; ?>">
+                                                <i class="fas fa-fw fa-desktop me-2"></i>Link Asset
                                             </a>
                                             <?php if ($file_archived_at) { ?>
                                                 <div class="dropdown-divider"></div>
                                                 <a class="dropdown-item text-info" href="post.php?restore_file=<?= $file_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                    <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                                    <i class="fas fa-fw fa-redo me-2"></i>Restore
                                                 </a>
                                                 <?php if ($session_user_role == 3) { ?>
                                                     <div class="dropdown-divider"></div>
-                                                    <a class="dropdown-item text-danger text-bold" href="#" data-toggle="modal" data-target="#deleteFileModal" onclick="populateFileDeleteModal(<?php echo "$file_id , '$file_name'" ?>)">
-                                                        <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                    <a class="dropdown-item text-danger text-bold" href="#" data-bs-toggle="modal" data-bs-target="#deleteFileModal" onclick="populateFileDeleteModal(<?php echo "$file_id , '$file_name'" ?>)">
+                                                        <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                     </a>
                                                 <?php } ?>
                                             <?php } else { ?>
                                                 <div class="dropdown-divider"></div>
                                                 <a class="dropdown-item text-danger confirm-link" href="post.php?archive_file=<?= $file_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                    <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                    <i class="fas fa-fw fa-archive me-2"></i>Archive
                                                 </a>
                                             <?php } ?>
                                         </div>
@@ -668,7 +668,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                             require "modals/file/file_view.php";
                         }
                         ?>
-                        <script>
+                        <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
                             var files = <?php echo json_encode($files); ?>;
                             var currentIndex = 0;
                         </script>
@@ -685,7 +685,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                 <tr>
                                     <td class="bg-light checkbox-column">
                                         <div class="form-check">
-                                            <input class="form-check-input" id="selectAllCheckbox" type="checkbox" onclick="checkAll(this)">
+                                            <input class="form-check-input" id="selectAllCheckbox" type="checkbox">
                                         </div>
                                     </td>
                                     <th>
@@ -758,7 +758,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                             <td>
                                                 <a href="<?php echo "../uploads/clients/$client_id/$file_reference_name"; ?>" target="_blank">
                                                     <div class="media">
-                                                        <i class="fa fa-fw fa-2x fa-<?php echo $file_icon; ?> text-dark mr-3"></i>
+                                                        <i class="fa fa-fw fa-2x fa-<?php echo $file_icon; ?> text-dark me-3"></i>
                                                         <div class="media-body">
                                                             <p>
                                                                 <?php echo basename($file_name); ?>
@@ -778,7 +778,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                             <td>
                                                 <?php if ($file_shared) { ?>
                                                     <div class="media" title="Expires <?php echo $item_expire_at_human; ?>">
-                                                        <i class="fas fa-link mr-2 mt-1"></i>
+                                                        <i class="fas fa-link me-2 mt-1"></i>
                                                         <div class="media-body">Shared
                                                             <br>
                                                             <small class="text-secondary"><?php echo $item_recipient; ?></small>
@@ -788,42 +788,42 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                             </td>
                                             <td>
                                                 <div class="dropdown dropleft text-center">
-                                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                                         <i class="fas fa-ellipsis-h"></i>
                                                     </button>
                                                     <div class="dropdown-menu">
                                                         <a class="dropdown-item" href="<?php echo "../uploads/clients/$client_id/$file_reference_name"; ?>" download="<?php echo $file_name; ?>">
-                                                            <i class="fas fa-fw fa-cloud-download-alt mr-2"></i>Download
+                                                            <i class="fas fa-fw fa-cloud-download-alt me-2"></i>Download
                                                         </a>
-                                                        <a class="dropdown-item" href="#" data-toggle="modal" data-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'File', $file_id"; ?>)">
-                                                            <i class="fas fa-fw fa-share mr-2"></i>Share
+                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'File', $file_id"; ?>)">
+                                                            <i class="fas fa-fw fa-share me-2"></i>Share
                                                         </a>
                                                         <a class="dropdown-item ajax-modal" href="#"
                                                            data-modal-url="modals/file/file_rename.php?id=<?= $file_id ?>">
-                                                            <i class="fas fa-fw fa-edit mr-2"></i>Rename
+                                                            <i class="fas fa-fw fa-edit me-2"></i>Rename
                                                         </a>
                                                         <a class="dropdown-item ajax-modal" href="#"
                                                            data-modal-url="modals/file/file_move.php?id=<?= $file_id ?>">
-                                                            <i class="fas fa-fw fa-exchange-alt mr-2"></i>Move
+                                                            <i class="fas fa-fw fa-exchange-alt me-2"></i>Move
                                                         </a>
-                                                        <a class="dropdown-item" href="#" data-toggle="modal" data-target="#linkAssetToFileModal<?php echo $file_id; ?>">
-                                                            <i class="fas fa-fw fa-desktop mr-2"></i>Link Asset
+                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#linkAssetToFileModal<?php echo $file_id; ?>">
+                                                            <i class="fas fa-fw fa-desktop me-2"></i>Link Asset
                                                         </a>
                                                         <?php if ($file_archived_at) { ?>
                                                             <div class="dropdown-divider"></div>
                                                             <a class="dropdown-item text-info" href="post.php?restore_file=<?= $file_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                                <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                                                <i class="fas fa-fw fa-redo me-2"></i>Restore
                                                             </a>
                                                             <?php if ($session_user_role == 3) { ?>
                                                                 <div class="dropdown-divider"></div>
-                                                                <a class="dropdown-item text-danger text-bold" href="#" data-toggle="modal" data-target="#deleteFileModal" onclick="populateFileDeleteModal(<?php echo "$file_id , '$file_name'" ?>)">
-                                                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                                <a class="dropdown-item text-danger text-bold" href="#" data-bs-toggle="modal" data-bs-target="#deleteFileModal" onclick="populateFileDeleteModal(<?php echo "$file_id , '$file_name'" ?>)">
+                                                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                                 </a>
                                                             <?php } ?>
                                                         <?php } else { ?>
                                                             <div class="dropdown-divider"></div>
                                                             <a class="dropdown-item text-danger confirm-link" href="post.php?archive_file=<?= $file_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                                <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                                <i class="fas fa-fw fa-archive me-2"></i>Archive
                                                             </a>
                                                         <?php } ?>
                                                     </div>
@@ -862,7 +862,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                         }
                                         ?>
                                         <tr>
-                                            <td class="bg-light pr-0">
+                                            <td class="bg-light pe-0">
                                                 <div class="form-check">
                                                     <input class="form-check-input bulk-select" type="checkbox" name="document_ids[]" value="<?php echo $document_id ?>">
                                                 </div>
@@ -870,7 +870,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                             <td>
                                                 <a href="document_details.php?client_id=<?php echo $client_id; ?>&document_id=<?php echo $document_id; ?>">
                                                     <div class="media">
-                                                        <i class="fa fa-fw fa-2x fa-file-alt text-dark mr-3"></i>
+                                                        <i class="fa fa-fw fa-2x fa-file-alt text-dark me-3"></i>
                                                         <div class="media-body">
                                                             <p>
                                                                 <?php echo $document_name; ?>
@@ -890,7 +890,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                             <td>
                                                 <?php if ($doc_shared) { ?>
                                                     <div class="media" title="Expires <?php echo $item_expire_at_human; ?>">
-                                                        <i class="fas fa-link mr-2 mt-1"></i>
+                                                        <i class="fas fa-link me-2 mt-1"></i>
                                                         <div class="media-body">Shared
                                                             <br>
                                                             <small class="text-secondary"><?php echo $item_recipient; ?></small>
@@ -900,49 +900,49 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
                                             </td>
                                             <td>
                                                 <div class="dropdown dropleft text-center">
-                                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                                         <i class="fas fa-ellipsis-h"></i>
                                                     </button>
                                                     <div class="dropdown-menu">
                                                         <a class="dropdown-item ajax-modal" href="#"
                                                            data-modal-size="lg"
                                                            data-modal-url="modals/document/document_view.php?id=<?= $document_id ?>">
-                                                            <i class="fas fa-fw fa-eye mr-2"></i>Quick View
+                                                            <i class="fas fa-fw fa-eye me-2"></i>Quick View
                                                         </a>
                                                         <div class="dropdown-divider"></div>
                                                         <a class="dropdown-item ajax-modal" href="#"
                                                            data-modal-size="lg"
                                                            data-modal-url="modals/document/document_edit.php?id=<?= $document_id ?>">
-                                                            <i class="fas fa-fw fa-pencil-alt mr-2"></i>Edit
+                                                            <i class="fas fa-fw fa-pencil-alt me-2"></i>Edit
                                                         </a>
                                                         <div class="dropdown-divider"></div>
-                                                        <a class="dropdown-item" href="#" data-toggle="modal" data-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'Document', $document_id"; ?>)">
-                                                            <i class="fas fa-fw fa-share mr-2"></i>Share
+                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#shareModal" onclick="populateShareModal(<?php echo "$client_id, 'Document', $document_id"; ?>)">
+                                                            <i class="fas fa-fw fa-share me-2"></i>Share
                                                         </a>
                                                         <div class="dropdown-divider"></div>
                                                         <a class="dropdown-item ajax-modal" href="#"
                                                            data-modal-url="modals/document/document_rename.php?id=<?= $document_id ?>">
-                                                            <i class="fas fa-fw fa-pencil-alt mr-2"></i>Rename
+                                                            <i class="fas fa-fw fa-pencil-alt me-2"></i>Rename
                                                         </a>
                                                         <a class="dropdown-item ajax-modal" href="#"
                                                            data-modal-url="modals/document/document_move.php?id=<?= $document_id ?>">
-                                                            <i class="fas fa-fw fa-exchange-alt mr-2"></i>Move
+                                                            <i class="fas fa-fw fa-exchange-alt me-2"></i>Move
                                                         </a>
                                                         <?php if ($document_archived_at) { ?>
                                                             <div class="dropdown-divider"></div>
                                                             <a class="dropdown-item text-info" href="post.php?restore_document=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                                <i class="fas fa-fw fa-redo mr-2"></i>Restore
+                                                                <i class="fas fa-fw fa-redo me-2"></i>Restore
                                                             </a>
                                                             <?php if ($session_user_role == 3) { ?>
                                                                 <div class="dropdown-divider"></div>
                                                                 <a class="dropdown-item text-danger text-bold" href="post.php?delete_document=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                                    <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                                                    <i class="fas fa-fw fa-trash me-2"></i>Delete
                                                                 </a>
                                                             <?php } ?>
                                                         <?php } else { ?>
                                                             <div class="dropdown-divider"></div>
                                                             <a class="dropdown-item text-danger" href="post.php?archive_document=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                                                <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                                                <i class="fas fa-fw fa-archive me-2"></i>Archive
                                                             </a>
                                                         <?php } ?>
                                                     </div>
@@ -967,7 +967,7 @@ $num_root_items = intval($row_root_files['num']) + intval($row_root_docs['num'])
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 function openModal(index) {
     currentIndex = index;
     updateModalContent();
@@ -988,6 +988,13 @@ function prevFile() {
     currentIndex = (currentIndex - 1 + files.length) % files.length;
     updateModalContent();
 }
+
+document.addEventListener('click', function (e) {
+    var el;
+    if ((el = e.target.closest('.js-open-file-modal'))) { openModal(parseInt(el.dataset.fileIndex, 10)); return; }
+    if (e.target.closest('.js-prev-file')) { prevFile(); return; }
+    if (e.target.closest('.js-next-file')) { nextFile(); }
+});
 </script>
 
 <script src="../js/bulk_actions.js"></script>

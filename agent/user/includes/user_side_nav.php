@@ -3,7 +3,7 @@
 
     <a class="brand-link pb-1 mt-1" href="/agent/<?php echo $config_start_page ?>">
         <p class="h5">
-            <i class="nav-icon fas fa-arrow-left ml-3 mr-2"></i> 
+            <i class="nav-icon fas fa-arrow-left ms-3 me-2"></i> 
             <span class="brand-text">
                 Back | <strong>Account</strong>
             </span>

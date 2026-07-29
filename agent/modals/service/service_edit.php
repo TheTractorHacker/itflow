@@ -17,6 +17,7 @@ $service_created_at = nullable_htmlentities($row['service_created_at']);
 $service_updated_at = nullable_htmlentities($row['service_updated_at']);
 $service_review_due = nullable_htmlentities($row['service_review_due']);
 $client_id = intval($row['service_client_id']);
+enforceClientAccess($client_id);
 
 // Associated Assets (and their credentials/networks/locations)
 $sql_assets = mysqli_query(
@@ -85,8 +86,8 @@ $sql_docs = mysqli_query(
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title text-white"><i class="fa fa-fw fa-stream mr-2"></i>Editing service: <strong><?php echo $service_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title text-white"><i class="fa fa-fw fa-stream me-2"></i>Editing service: <strong><?php echo $service_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span aria-hidden="true">&times;</span>
     </button>
 </div>
@@ -99,13 +100,13 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-overview<?php echo $service_id ?>">Overview</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-overview<?php echo $service_id ?>">Overview</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-general<?php echo $service_id ?>">General</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-general<?php echo $service_id ?>">General</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-assets<?php echo $service_id ?>">Assets</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-assets<?php echo $service_id ?>">Assets</a>
             </li>
         </ul>
 
@@ -349,8 +350,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_service" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_service" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

@@ -8,8 +8,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-project-diagram mr-2"></i>New Project</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-project-diagram me-2"></i>New Project</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -105,13 +105,54 @@ ob_start();
         </div>
 
 
-        <div class="form-group">
-            <label>Date Due <strong class="text-danger">*</strong></label>
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text"><i class="fa fa-fw fa-calendar"></i></span>
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label>Start Date</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-calendar"></i></span>
+                    </div>
+                    <input type="date" class="form-control" name="start_date">
                 </div>
-                <input type="date" class="form-control" name="due_date" required>
+            </div>
+            <div class="form-group col-md-6">
+                <label>Date Due <strong class="text-danger">*</strong></label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-calendar-check"></i></span>
+                    </div>
+                    <input type="date" class="form-control" name="due_date" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                <label>Est. Hours</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-clock"></i></span>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="form-control" name="estimated_hours" placeholder="0">
+                </div>
+            </div>
+            <div class="form-group col-md-4">
+                <label>Budget</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-dollar-sign"></i></span>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="form-control" name="budget_amount" placeholder="0.00">
+                </div>
+            </div>
+            <div class="form-group col-md-4">
+                <label>Rate / hr</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-tags"></i></span>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="form-control" name="hourly_rate" placeholder="0.00">
+                </div>
             </div>
         </div>
 
@@ -141,12 +182,12 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_project" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_project" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $('#project_template_id').on('change', function () {
     const contractTemplateId = $(this).find(':selected').data('contract-template-id');
     const contractSelect = $('select[name="contract_template_id"]');

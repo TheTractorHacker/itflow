@@ -14,3 +14,16 @@ function showOTPViaCredentialID(credential_id) {
         }
     );
 }
+
+// Delegated wiring (CSP forbids inline onmouseenter= attributes): any
+// .otp-reveal-trigger[data-credential-id] fetches/reveals its TOTP token on
+// hover. mouseover bubbles (unlike mouseenter) so we emulate mouseenter
+// semantics here by ignoring moves between the trigger's own children.
+document.addEventListener('mouseover', function (e) {
+    var trigger = e.target.closest('.otp-reveal-trigger');
+    if (!trigger) return;
+    var related = e.relatedTarget;
+    if (related && trigger.contains(related)) return;
+    var credentialId = trigger.dataset.credentialId;
+    if (credentialId) showOTPViaCredentialID(credentialId);
+});

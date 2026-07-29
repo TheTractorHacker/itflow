@@ -16,15 +16,18 @@ $quote_expire = nullable_htmlentities($row['quote_expire']);
 $quote_discount = floatval($row['quote_discount_amount']);
 $quote_created_at = nullable_htmlentities($row['quote_created_at']);
 $quote_category_id = intval($row['quote_category_id']);
+$client_id = intval($row['client_id']);
 $client_name = nullable_htmlentities($row['client_name']);
+
+enforceClientAccess($client_id);
 
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title text-white"><i class="fas fa-fw fa-comment-dollar mr-2"></i>Editing quote: <span class="text-bold"><?php echo "$quote_prefix$quote_number"; ?></span> - <span class="text"><?php echo $client_name; ?></span></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title text-white"><i class="fas fa-fw fa-comment-dollar me-2"></i>Editing quote: <span class="text-bold"><?php echo "$quote_prefix$quote_number"; ?></span> - <span class="text"><?php echo $client_name; ?></span></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -105,8 +108,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_quote" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_quote" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

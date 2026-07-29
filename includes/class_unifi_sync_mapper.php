@@ -141,6 +141,31 @@ class UnifiSyncMapper {
                 }
             }
 
+            // shortname is known to lag for newly-released Cloud Gateway SKUs,
+            // and productLine ("network") is shared by APs/switches/gateways
+            // alike, so if neither resolved a specific type, fall back to
+            // `model` (the marketing name, e.g. "UCG-Max", "UDM-SE") which
+            // Ubiquiti populates more reliably/promptly for new hardware.
+            if ($asset_type === 'Network Device') {
+                $raw_model = strtoupper((string) ($device['model'] ?? ''));
+                if ($raw_model !== '') {
+                    foreach (self::TYPE_MAP as $prefix => $label) {
+                        if ($raw_model === $prefix || str_starts_with($raw_model, $prefix)) {
+                            $asset_type = $label;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // isConsole is a positive, naming-independent signal from the Site
+            // Manager API that this device IS the site's console/gateway.
+            // Trust it outright — it forces the classification even if
+            // shortname/model/productLine gave no usable signal above.
+            if (!empty($device['isConsole'])) {
+                $asset_type = 'Firewall/Router';
+            }
+
             $name       = (string) ($device['name'] ?? $device['mac'] ?? 'Unknown');
             $model      = (string) ($device['model'] ?? $device['shortname'] ?? '');
             // MAC comes without colons from v1 API (e.g. "F4E2C6C23F13")

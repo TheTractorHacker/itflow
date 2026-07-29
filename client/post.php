@@ -626,7 +626,7 @@ if (isset($_GET['add_payment_by_provider'])) {
     $row = mysqli_fetch_assoc($sql);
 
     $public_key = sanitizeInput($row['payment_provider_public_key']);
-    $private_key = sanitizeInput($row['payment_provider_private_key']);
+    $private_key = sanitizeInput(decryptSetting($row['payment_provider_private_key'] ?? ''));
     $account_id = intval($row['payment_provider_account']);
     $expense_category_id = intval($row['payment_provider_expense_category']);
     $expense_vendor_id = intval($row['payment_provider_expense_vendor']);
@@ -794,7 +794,7 @@ if (isset($_POST['create_stripe_customer'])) {
     }
 
     $stripe_provider_id = intval($stripe_provider['payment_provider_id']);
-    $stripe_secret_key = nullable_htmlentities($stripe_provider['payment_provider_private_key']);
+    $stripe_secret_key = nullable_htmlentities(decryptSetting($stripe_provider['payment_provider_private_key'] ?? ''));
 
     if (empty($stripe_secret_key)) {
         flash_alert("Stripe credentials missing. Please contact support.", 'danger');
@@ -885,7 +885,7 @@ if (isset($_GET['create_stripe_checkout'])) {
     }
 
     $stripe_provider_id = intval($stripe_provider['payment_provider_id']);
-    $stripe_secret_key = nullable_htmlentities($stripe_provider['payment_provider_private_key']);
+    $stripe_secret_key = nullable_htmlentities(decryptSetting($stripe_provider['payment_provider_private_key'] ?? ''));
 
     if (empty($stripe_secret_key)) {
         http_response_code(400);
@@ -954,7 +954,7 @@ if (isset($_GET['stripe_save_card'])) {
     }
 
     $stripe_provider_id = intval($stripe_provider['payment_provider_id']);
-    $stripe_secret_key = nullable_htmlentities($stripe_provider['payment_provider_private_key']);
+    $stripe_secret_key = nullable_htmlentities(decryptSetting($stripe_provider['payment_provider_private_key'] ?? ''));
 
     if (empty($stripe_secret_key)) {
         flash_alert("Stripe credentials missing.", 'danger');
@@ -1087,7 +1087,7 @@ if (isset($_GET['delete_saved_payment'])) {
     }
 
     $stripe_provider_id = intval($stripe_provider['payment_provider_id']);
-    $stripe_secret_key = nullable_htmlentities($stripe_provider['payment_provider_private_key']);
+    $stripe_secret_key = nullable_htmlentities(decryptSetting($stripe_provider['payment_provider_private_key'] ?? ''));
 
     if (empty($stripe_secret_key)) {
         flash_alert("Stripe credentials are missing.", 'danger');
@@ -1176,6 +1176,14 @@ if (isset($_POST['set_recurring_payment'])) {
     // Get Recurring Invoice Info for logging and alerting
     $sql = mysqli_query($mysqli, "SELECT * FROM recurring_invoices WHERE recurring_invoice_id = $recurring_invoice_id AND recurring_invoice_client_id = $session_client_id");
     $row = mysqli_fetch_assoc($sql);
+
+    // Ownership check: reject outright instead of falling through to the DELETE/INSERT
+    // below with an attacker-supplied recurring_invoice_id belonging to another client.
+    if (!$row) {
+        flash_alert("Recurring Invoice not found", 'error');
+        redirect();
+    }
+
     $recurring_invoice_prefix = sanitizeInput($row['recurring_invoice_prefix']);
     $recurring_invoice_number = intval($row['recurring_invoice_number']);
     $recurring_invoice_currency_code = sanitizeInput($row['recurring_invoice_currency_code']);

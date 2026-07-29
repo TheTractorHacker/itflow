@@ -5,6 +5,7 @@
 ob_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/includes/redirect_if_setup_enabled.php';
 require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/includes/webauthn.php';
 ob_end_clean();

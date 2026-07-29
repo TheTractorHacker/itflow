@@ -6,9 +6,9 @@ $ALL_EVENTS = ['ticket.created', 'ticket.replied', 'ticket.assigned', 'ticket.st
 
 <div class="card card-dark">
     <div class="card-header py-3 d-flex align-items-center">
-        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-satellite-dish mr-2"></i>Webhooks</h3>
+        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-satellite-dish me-2"></i>Webhooks</h3>
         <button class="btn btn-primary btn-sm ajax-modal" data-modal-url="modals/webhook/webhook_add.php">
-            <i class="fas fa-plus mr-1"></i>Add Webhook
+            <i class="fas fa-plus me-1"></i>Add Webhook
         </button>
     </div>
     <div class="card-body p-0">
@@ -52,27 +52,26 @@ $ALL_EVENTS = ['ticket.created', 'ticket.replied', 'ticket.assigned', 'ticket.st
                         <td class="text-truncate" style="max-width:220px;" title="<?= $wurl ?>"><?= $wurl ?></td>
                         <td>
                             <?php foreach ($wevents as $ev) {
-                                echo '<span class="badge badge-secondary mr-1">' . htmlspecialchars($ev) . '</span>';
+                                echo '<span class="badge text-bg-secondary me-1">' . htmlspecialchars($ev) . '</span>';
                             } ?>
                         </td>
                         <td>
                             <?= $wenabled
-                                ? '<span class="badge badge-success">Enabled</span>'
-                                : '<span class="badge badge-secondary">Disabled</span>' ?>
+                                ? '<span class="badge text-bg-success">Enabled</span>'
+                                : '<span class="badge text-bg-secondary">Disabled</span>' ?>
                         </td>
                         <td>
-                            <span class="badge badge-success" title="Delivered (7d)"><?= $delivered ?></span>
-                            <?php if ($pending > 0) { ?><span class="badge badge-warning" title="Pending"><?= $pending ?></span><?php } ?>
-                            <?php if ($failed > 0) { ?><span class="badge badge-danger" title="Failed"><?= $failed ?></span><?php } ?>
+                            <span class="badge text-bg-success" title="Delivered (7d)"><?= $delivered ?></span>
+                            <?php if ($pending > 0) { ?><span class="badge text-bg-warning" title="Pending"><?= $pending ?></span><?php } ?>
+                            <?php if ($failed > 0) { ?><span class="badge text-bg-danger" title="Failed"><?= $failed ?></span><?php } ?>
                         </td>
-                        <td class="text-right">
+                        <td class="text-end">
                             <button class="btn btn-sm btn-light ajax-modal"
                                     data-modal-url="modals/webhook/webhook_edit.php?id=<?= $wid ?>">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <a href="post.php?delete_webhook=<?= $wid ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                               class="btn btn-sm btn-danger"
-                               onclick="return confirm('Delete this webhook?')">
+                               class="btn btn-sm btn-danger confirm-link">
                                 <i class="fas fa-trash"></i>
                             </a>
                         </td>
@@ -87,7 +86,7 @@ $ALL_EVENTS = ['ticket.created', 'ticket.replied', 'ticket.assigned', 'ticket.st
 <?php if (isset($sql_wh) && mysqli_num_rows($sql_wh) > 0) { ?>
 <div class="card card-dark mt-3">
     <div class="card-header py-2">
-        <h3 class="card-title"><i class="fas fa-fw fa-list mr-2"></i>Delivery Log <small class="text-secondary ml-2">(last 100 entries)</small></h3>
+        <h3 class="card-title"><i class="fas fa-fw fa-list me-2"></i>Delivery Log <small class="text-secondary ms-2">(last 100 entries)</small></h3>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm table-striped table-borderless mb-0">
@@ -102,9 +101,9 @@ $ALL_EVENTS = ['ticket.created', 'ticket.replied', 'ticket.assigned', 'ticket.st
                  ORDER BY wq.queue_id DESC LIMIT 100");
             while ($lrow = mysqli_fetch_assoc($sql_log)) {
                 $status_badge = match($lrow['queue_status']) {
-                    'delivered' => '<span class="badge badge-success">delivered</span>',
-                    'failed'    => '<span class="badge badge-danger">failed</span>',
-                    default     => '<span class="badge badge-warning">pending</span>',
+                    'delivered' => '<span class="badge text-bg-success">delivered</span>',
+                    'failed'    => '<span class="badge text-bg-danger">failed</span>',
+                    default     => '<span class="badge text-bg-warning">pending</span>',
                 };
                 ?>
                 <tr>

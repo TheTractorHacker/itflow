@@ -19,9 +19,9 @@ $num_rows = mysqli_num_rows($sql);
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-balance-scale mr-2"></i>Taxes</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-balance-scale me-2"></i>Taxes</h3>
         <div class="card-tools">
-            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/tax/tax_add.php"><i class="fas fa-plus mr-2"></i>New Tax</button>
+            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/tax/tax_add.php"><i class="fas fa-plus me-2"></i>New Tax</button>
         </div>
     </div>
     <div class="card-body">
@@ -61,17 +61,17 @@ $num_rows = mysqli_num_rows($sql);
                         <td><?php echo "$tax_percent%"; ?></td>
                         <td>
                             <div class="dropdown dropleft text-center">
-                                <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-h"></i>
                                 </button>
                                 <div class="dropdown-menu">
                                     <a class="dropdown-item ajax-modal" href="#"
                                         data-modal-url="modals/tax/tax_edit.php?id=<?= $tax_id ?>">
-                                        <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                        <i class="fas fa-fw fa-edit me-2"></i>Edit
                                     </a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item text-danger confirm-link" href="post.php?archive_tax=<?php echo $tax_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token'] ?>">
-                                        <i class="fas fa-fw fa-archive mr-2"></i>Archive
+                                        <i class="fas fa-fw fa-archive me-2"></i>Archive
                                     </a>
                                 </div>
                             </div>

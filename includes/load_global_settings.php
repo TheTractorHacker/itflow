@@ -113,12 +113,17 @@ $config_module_enable_accounting = intval($row['config_module_enable_accounting'
 $config_module_enable_ticket_charges = intval($row['config_module_enable_ticket_charges'] ?? 1);
 $config_module_enable_kb = intval($row['config_module_enable_kb'] ?? 0);
 $config_module_enable_live_chat = intval($row['config_module_enable_live_chat'] ?? 0);
+$config_module_enable_payroll = intval($row['config_module_enable_payroll'] ?? 0);
+$config_payroll_overtime_threshold_hours = floatval($row['config_payroll_overtime_threshold_hours'] ?? 40.00);
+$config_payroll_overtime_multiplier = floatval($row['config_payroll_overtime_multiplier'] ?? 1.50);
+$config_payroll_default_pay_frequency = (string) ($row['config_payroll_default_pay_frequency'] ?? 'biweekly');
 $config_client_portal_enable = intval($row['config_client_portal_enable']);
 
 // RMM Integration (Syncro-Beta)
 $config_module_enable_rmm = intval($row['config_module_enable_rmm'] ?? 0);
 $config_rmm_default_integration_id = intval($row['config_rmm_default_integration_id'] ?? 0);
 $config_rmm_auto_ticket_severities = sanitizeInput($row['config_rmm_auto_ticket_severities'] ?? '');
+$config_rmm_prefer_tactical = intval($row['config_rmm_prefer_tactical'] ?? 1);
 
 // UniFi Integration (Syncro-Beta)
 $config_module_enable_unifi = intval($row['config_module_enable_unifi'] ?? 0);
@@ -150,9 +155,18 @@ $config_time_format = "g:i A";
 
 // Theme
 $config_theme = $row['config_theme'];
+// Appearance customizer (per-company): optional custom accent hex + card radius override + default dark mode
+$config_theme_accent_custom = $row['config_theme_accent_custom'] ?? null;   // #RRGGBB, overrides the preset accent when set
+$config_theme_card_radius = $row['config_theme_card_radius'] ?? null;       // e.g. "14px", overrides --card-radius when set
+$config_theme_dark_default = intval($row['config_theme_dark_default'] ?? 0); // company-wide default dark mode (per-user pref can opt into dark)
 
 // Telemetry
 $config_telemetry = intval($row['config_telemetry']);
+
+// AI
+$config_ai_enable = intval($row['config_ai_enable'] ?? 1);
+$config_ai_max_input_chars = intval($row['config_ai_max_input_chars'] ?? 12000);
+$config_ai_timeout_seconds = intval($row['config_ai_timeout_seconds'] ?? 25);
 
 // Destructive Deletes
 $config_destructive_deletes_enable = intval($row['config_destructive_deletes_enable']);

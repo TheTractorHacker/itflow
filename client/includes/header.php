@@ -10,7 +10,7 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="<?= (!empty($config_theme_dark_default)) ? 'dark' : 'light' ?>">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -28,30 +28,33 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
     <!-- Font Awesome -->
     <link rel="stylesheet" href="/plugins/fontawesome-free/css/all.min.css">
 
-    <!-- Theme style -->
-    <link rel="stylesheet" href="/plugins/adminlte/css/adminlte.min.css">
+    <!-- Core stack: Bootstrap 5.3 + AdminLTE 4 -->
+    <link rel="stylesheet" href="/plugins/bootstrap5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/plugins/adminlte4/css/adminlte.min.css">
 
-    <!-- Custom -->
+    <!-- Theme: BS5 bridge (maps BS vars -> Alga tokens) THEN the custom theme -->
+    <link rel="stylesheet" href="/css/itflow_bs5_bridge.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_bs5_bridge.css') ?>">
     <link rel="stylesheet" href="/css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
+    <link rel="stylesheet" href="/css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
 
 </head>
 
 <!-- Navbar -->
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark client-portal-nav">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark client-portal-nav" data-bs-theme="dark">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="index.php">
             <?php if ($session_company_logo) { ?>
-                <img height="28" class="mr-2" src="<?php echo "/uploads/settings/$session_company_logo"; ?>" alt="">
+                <img height="28" class="me-2" src="<?php echo "/uploads/settings/$session_company_logo"; ?>" alt="">
             <?php } ?>
             <?php echo nullable_htmlentities($session_company_name); ?>
         </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav mr-auto">
+            <ul class="navbar-nav me-auto">
                 <li class="nav-item <?php if (basename($_SERVER['PHP_SELF']) == "index.php") {echo "active";} ?>">
                     <a class="nav-link" href="/client/index.php">Home</a>
                 </li>
@@ -67,7 +70,7 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
 
                 <?php if (($session_contact_primary == 1 || $session_contact_is_billing_contact) && $config_module_enable_accounting == 1) { ?>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?php echo in_array(basename($_SERVER['PHP_SELF']), ['invoices.php', 'quotes.php', 'autopay.php']) ? 'active' : ''; ?>" href="#" id="navbarDropdown1" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle <?php echo in_array(basename($_SERVER['PHP_SELF']), ['invoices.php', 'quotes.php', 'autopay.php']) ? 'active' : ''; ?>" href="#" id="navbarDropdown1" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Finance
                         </a>
                         <div class="dropdown-menu" aria-labelledby="navbarDropdown1">
@@ -81,7 +84,7 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
 
                 <?php if ($config_module_enable_itdoc && ($session_contact_primary == 1 || $session_contact_is_technical_contact)) { ?>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?php echo in_array(basename($_SERVER['PHP_SELF']), ['documents.php', 'contacts.php', 'domains.php', 'certificates.php', 'contracts.php']) ? 'active' : ''; ?>" href="#" id="navbarDropdown2" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle <?php echo in_array(basename($_SERVER['PHP_SELF']), ['documents.php', 'contacts.php', 'domains.php', 'certificates.php', 'contracts.php']) ? 'active' : ''; ?>" href="#" id="navbarDropdown2" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Technical
                         </a>
                         <div class="dropdown-menu" aria-labelledby="navbarDropdown2">
@@ -123,13 +126,13 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
 
             <ul class="nav navbar-nav pull-right">
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                         <?php echo stripslashes(nullable_htmlentities($session_contact_name)); ?>
                     </a>
                     <div class="dropdown-menu">
-                        <a class="dropdown-item" href="/client/profile.php"><i class="fas fa-fw fa-user mr-2"></i>Account</a>
+                        <a class="dropdown-item" href="/client/profile.php"><i class="fas fa-fw fa-user me-2"></i>Account</a>
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="/client/post.php?logout"><i class="fas fa-fw fa-sign-out-alt mr-2"></i>Sign out</a>
+                        <a class="dropdown-item" href="/client/post.php?logout"><i class="fas fa-fw fa-sign-out-alt me-2"></i>Sign out</a>
                     </div>
                 </li>
             </ul>
@@ -145,11 +148,11 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
     <div class="card welcome-banner border-0 shadow-sm mb-4">
         <div class="card-body d-flex align-items-center">
             <?php if (!empty($session_contact_photo)) { ?>
-                <img src="/uploads/clients/<?= $session_client_id ?>/<?= $session_contact_photo ?>" alt="" height="56" width="56" class="rounded-circle mr-3">
+                <img src="/uploads/clients/<?= $session_client_id ?>/<?= $session_contact_photo ?>" alt="" height="56" width="56" class="rounded-circle me-3">
             <?php } else { ?>
-                <span class="fa-stack fa-3x mr-3">
+                <span class="fa-stack fa-3x me-3">
                     <i class="fa fa-circle fa-stack-2x text-primary"></i>
-                    <span class="fa-stack-1x text-white font-weight-bold"><?php echo $session_contact_initials; ?></span>
+                    <span class="fa-stack-1x text-white fw-bold"><?php echo $session_contact_initials; ?></span>
                 </span>
             <?php } ?>
             <div>
@@ -168,7 +171,7 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
         ?>
         <div class="alert alert-<?php echo $_SESSION['alert_type']; ?>" id="alert">
             <?php echo nullable_htmlentities($_SESSION['alert_message']); ?>
-            <button class='close' data-dismiss='alert'>&times;</button>
+            <button class='close' data-bs-dismiss='alert'>&times;</button>
         </div>
         <?php
 

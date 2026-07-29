@@ -15,14 +15,16 @@ $sql = mysqli_query($mysqli, "SELECT * FROM projects WHERE project_id = $project
 
 $row = mysqli_fetch_assoc($sql);
 $project_name = nullable_htmlentities($row['project_name']);
+$project_client_id = intval($row['project_client_id']);
+enforceClientAccess($project_client_id);
 
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-life-ring mr-2"></i>Link open ticket(s) to project: <strong><?php echo $project_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-life-ring me-2"></i>Link open ticket(s) to project: <strong><?php echo $project_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -60,8 +62,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="link_ticket_to_project" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Link Ticket(s)</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="link_ticket_to_project" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Link Ticket(s)</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

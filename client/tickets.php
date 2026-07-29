@@ -42,9 +42,9 @@ $total_tickets = intval($row['total_tickets']);
 
 ?>
 
-<div class="row">
+<div class="row mb-4">
     <div class="col">
-        <h3><i class="fas fa-fw fa-ticket-alt mr-2"></i>Tickets</h3>
+        <h3><i class="fas fa-fw fa-ticket-alt me-2"></i>Tickets</h3>
     </div>
 </div>
 <div class="row">
@@ -99,7 +99,7 @@ $total_tickets = intval($row['total_tickets']);
                                 <td>
                                     <a href="ticket.php?id=<?php echo $ticket_id; ?>"><?php echo $ticket_subject; ?></a>
                                 </td>
-                                <td><span class="badge badge-secondary"><?php echo $ticket_status; ?></span></td>
+                                <td><span class="badge text-bg-secondary"><?php echo $ticket_status; ?></span></td>
                             </tr>
                         <?php
                         }
@@ -114,7 +114,7 @@ $total_tickets = intval($row['total_tickets']);
 
     <div class="col-md-3">
 
-        <a href="ticket_add.php" class="btn btn-primary btn-block mb-3"><i class="fas fa-fw fa-plus mr-1"></i>New Ticket</a>
+        <a href="ticket_add.php" class="btn btn-primary btn-block mb-3"><i class="fas fa-fw fa-plus me-1"></i>New Ticket</a>
 
         <div class="card card-outline card-secondary">
             <div class="card-header">
@@ -122,19 +122,19 @@ $total_tickets = intval($row['total_tickets']);
             </div>
             <div class="list-group list-group-flush">
                 <a href="?status=Open" class="list-group-item d-flex justify-content-between align-items-center <?php echo $status == 'Open' ? 'active' : ''; ?>">
-                    Open <span class="badge badge-danger"><?php echo $total_tickets_open ?></span>
+                    Open <span class="badge text-bg-danger"><?php echo $total_tickets_open ?></span>
                 </a>
                 <a href="?status=Closed" class="list-group-item d-flex justify-content-between align-items-center <?php echo $status == 'Closed' ? 'active' : ''; ?>">
-                    Closed <span class="badge badge-success"><?php echo $total_tickets_closed ?></span>
+                    Closed <span class="badge text-bg-success"><?php echo $total_tickets_closed ?></span>
                 </a>
                 <a href="?status=%" class="list-group-item d-flex justify-content-between align-items-center <?php echo $status == '%' ? 'active' : ''; ?>">
-                    All <span class="badge badge-secondary"><?php echo $total_tickets ?></span>
+                    All <span class="badge text-bg-secondary"><?php echo $total_tickets ?></span>
                 </a>
             </div>
         </div>
 
         <?php if ($session_contact_primary == 1 || $session_contact_is_technical_contact) { ?>
-            <a href="ticket_view_all.php" class="btn btn-dark btn-block"><i class="fas fa-fw fa-users mr-1"></i>All Company Tickets</a>
+            <a href="ticket_view_all.php" class="btn btn-dark btn-block mt-3"><i class="fas fa-fw fa-users me-1"></i>All Company Tickets</a>
         <?php } ?>
 
     </div>

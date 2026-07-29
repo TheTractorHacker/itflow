@@ -18,15 +18,15 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
 
 <div class="row">
     <div class="col">
-        <h3><i class="fas fa-file-alt mr-2"></i>Documents</h3>
+        <h3><i class="fas fa-file-alt me-2"></i>Documents</h3>
     </div>
     <div class="col-auto">
         <div class="btn-group">
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#uploadDocumentModal">
-                <i class="fas fa-plus mr-2"></i>New Document
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
+                <i class="fas fa-plus me-2"></i>New Document
             </button>
-            <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#uploadFileDocumentModal">
-                <i class="fas fa-upload mr-2"></i>Upload File
+            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#uploadFileDocumentModal">
+                <i class="fas fa-upload me-2"></i>Upload File
             </button>
         </div>
     </div>
@@ -64,7 +64,7 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
                 <tr>
                     <td>
                         <a href="document.php?id=<?php echo $document_id?>">
-                            <i class="fas fa-file-alt mr-2"></i>
+                            <i class="fas fa-file-alt me-2"></i>
                             <?php
                             if (!empty($folder_name)) {
                                 echo "$folder_name / ";
@@ -93,10 +93,10 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
 <!-- New Document Modal -->
 <div class="modal" id="uploadDocumentModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark">
+        <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fa fa-fw fa-file-alt mr-2"></i>Create New Document</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fa fa-fw fa-file-alt me-2"></i>Create New Document</h5>
+                <button type="button" class="close" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -129,8 +129,8 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
                     </div>
                 </div>
                 <div class="modal-footer bg-white">
-                    <button type="submit" name="client_add_document" class="btn btn-primary"><i class="fa fa-check mr-2"></i>Create Document</button>
-                    <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+                    <button type="submit" name="client_add_document" class="btn btn-primary"><i class="fa fa-check me-2"></i>Create Document</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
                 </div>
             </form>
         </div>
@@ -140,10 +140,10 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
 <!-- Upload File Document Modal -->
 <div class="modal" id="uploadFileDocumentModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content bg-dark">
+        <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fa fa-fw fa-upload mr-2"></i>Upload Document File</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fa fa-fw fa-upload me-2"></i>Upload Document File</h5>
+                <button type="button" class="close" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -178,8 +178,8 @@ $documents_sql = mysqli_query($mysqli, "SELECT document_id, document_name, docum
                     </div>
                 </div>
                 <div class="modal-footer bg-white">
-                    <button type="submit" name="client_upload_document" class="btn btn-primary"><i class="fa fa-upload mr-2"></i>Upload Document</button>
-                    <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+                    <button type="submit" name="client_upload_document" class="btn btn-primary"><i class="fa fa-upload me-2"></i>Upload Document</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
                 </div>
             </form>
         </div>

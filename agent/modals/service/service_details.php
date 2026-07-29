@@ -16,14 +16,15 @@ $service_created_at = nullable_htmlentities($row['service_created_at']);
 $service_updated_at = nullable_htmlentities($row['service_updated_at']);
 $service_review_due = nullable_htmlentities($row['service_review_due']);
 $client_id = intval($row['service_client_id']);
+enforceClientAccess($client_id);
 
 // Service Importance
 if ($service_importance == "High") {
-    $service_importance_display = "<span class='p-2 badge badge-danger'>$service_importance</span>";
+    $service_importance_display = "<span class='p-2 badge text-bg-danger'>$service_importance</span>";
 } elseif ($service_importance == "Medium") {
-    $service_importance_display = "<span class='p-2 badge badge-warning'>$service_importance</span>";
+    $service_importance_display = "<span class='p-2 badge text-bg-warning'>$service_importance</span>";
 } elseif ($service_importance == "Low") {
-    $service_importance_display = "<span class='p-2 badge badge-info'>$service_importance</span>";
+    $service_importance_display = "<span class='p-2 badge text-bg-info'>$service_importance</span>";
 } else {
     $service_importance_display = "-";
 }
@@ -92,8 +93,8 @@ $sql_docs = mysqli_query(
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title text-white"><i class="fa fa-fw fa-stream mr-2"></i><?php echo $service_name; ?></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title text-white"><i class="fa fa-fw fa-stream me-2"></i><?php echo $service_name; ?></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -107,14 +108,14 @@ ob_start();
                 <b>Description:</b> <?php echo $service_description; ?> <br>
                 <b>Backup Info:</b> <?php echo $service_backup; ?> <br><br>
 
-                <h5><i class="fas fa-fw fa-sticky-note mr-2"></i>Notes</h5>
+                <h5><i class="fas fa-fw fa-sticky-note me-2"></i>Notes</h5>
                 <div style="white-space: pre-line"><?php echo $service_notes; ?></div>
                 <hr>
 
                 <!-- Assets -->
                 <?php
                 if (mysqli_num_rows($sql_assets) > 0) {
-                    echo "<h5><i class='fas fa-fw fa-desktop mr-2'></i>Assets</h5><ul>";
+                    echo "<h5><i class='fas fa-fw fa-desktop me-2'></i>Assets</h5><ul>";
                     mysqli_data_seek($sql_assets, 0);
                     while ($row = mysqli_fetch_assoc($sql_assets)) {
                         $asset_id = intval($row['asset_id']);
@@ -139,7 +140,7 @@ ob_start();
                     }
                     $networks = array_unique($networks);
                     if (!empty($networks)) {
-                        echo "<h5><i class='fas fa-fw fa-network-wired mr-2'></i>Networks</h5><ul>";
+                        echo "<h5><i class='fas fa-fw fa-network-wired me-2'></i>Networks</h5><ul>";
                         foreach ($networks as $network) {
                             $network_parts = explode(":", $network);
                             $network_name = $network_parts[0];
@@ -163,7 +164,7 @@ ob_start();
                     }
                     $location_names = array_unique($location_names);
                     if (!empty($location_names)) {
-                        echo "<h5><i class='fas fa-fw fa-map-marker-alt mr-2'></i>Locations</h5><ul>";
+                        echo "<h5><i class='fas fa-fw fa-map-marker-alt me-2'></i>Locations</h5><ul>";
                         foreach ($location_names as $location) {
                             echo "<li><a href='locations.php?client_id=$client_id&q=$location'>$location</a></li>";
                         }
@@ -175,7 +176,7 @@ ob_start();
                 <!-- Domains -->
                 <?php
                 if (mysqli_num_rows($sql_domains) > 0) {
-                    echo "<h5><i class='fas fa-fw fa-globe mr-2'></i>Domains</h5><ul>";
+                    echo "<h5><i class='fas fa-fw fa-globe me-2'></i>Domains</h5><ul>";
                     mysqli_data_seek($sql_domains, 0);
                     while ($row = mysqli_fetch_assoc($sql_domains)) {
                         if (!empty($row['domain_name'])) {
@@ -190,7 +191,7 @@ ob_start();
                 <!-- Certificates -->
                 <?php
                 if (mysqli_num_rows($sql_certificates) > 0) {
-                    echo "<h5><i class='fas fa-fw fa-lock mr-2'></i>Certificates</h5><ul>";
+                    echo "<h5><i class='fas fa-fw fa-lock me-2'></i>Certificates</h5><ul>";
                     mysqli_data_seek($sql_certificates, 0);
                     while ($row = mysqli_fetch_assoc($sql_certificates)) {
                         if (!empty($row['certificate_name'])) {
@@ -215,7 +216,7 @@ ob_start();
                 <!-- Vendors -->
                 <?php
                 if (mysqli_num_rows($sql_vendors) > 0) {
-                    echo "<h5><i class='fas fa-fw fa-building mr-2'></i>Vendors</h5><ul>";
+                    echo "<h5><i class='fas fa-fw fa-building me-2'></i>Vendors</h5><ul>";
                     mysqli_data_seek($sql_vendors, 0);
                     while ($row = mysqli_fetch_assoc($sql_vendors)) {
                         $vendor_id = intval($row['vendor_id']);
@@ -229,7 +230,7 @@ ob_start();
                 <!-- Contacts -->
                 <?php
                 if (mysqli_num_rows($sql_contacts) > 0) {
-                    echo "<h5><i class='fas fa-fw fa-users mr-2'></i>Contacts</h5><ul>";
+                    echo "<h5><i class='fas fa-fw fa-users me-2'></i>Contacts</h5><ul>";
                     mysqli_data_seek($sql_contacts, 0);
                     while ($row = mysqli_fetch_assoc($sql_contacts)) {
                         $contact_id = intval($row['contact_id']);
@@ -243,7 +244,7 @@ ob_start();
                 <!-- Credentials -->
                 <?php
                 if (mysqli_num_rows($sql_assets) > 0 || mysqli_num_rows($sql_credentials) > 0) {
-                    echo "<h5><i class='fas fa-fw fa-key mr-2'></i>Credentials</h5><ul>";
+                    echo "<h5><i class='fas fa-fw fa-key me-2'></i>Credentials</h5><ul>";
                     // Credentials linked to assets
                     mysqli_data_seek($sql_assets, 0);
                     while ($row = mysqli_fetch_assoc($sql_assets)) {
@@ -281,7 +282,7 @@ ob_start();
                 }
                 $urls = array_unique($urls);
                 if (!empty($urls)) {
-                    echo "<h5><i class='fas fa-fw fa-link mr-2'></i>URLs</h5><ul>";
+                    echo "<h5><i class='fas fa-fw fa-link me-2'></i>URLs</h5><ul>";
                     foreach ($urls as $url) {
                         $label = htmlspecialchars(parse_url($url, PHP_URL_HOST) ?: $url);
                         echo "<li><a href='$url' target='_blank'>$label</a></li>";
@@ -293,7 +294,7 @@ ob_start();
                 <!-- Documents -->
                 <?php
                 if (mysqli_num_rows($sql_docs) > 0) {
-                    echo "<h5><i class='fas fa-fw fa-file-alt mr-2'></i>Documents</h5><ul>";
+                    echo "<h5><i class='fas fa-fw fa-file-alt me-2'></i>Documents</h5><ul>";
                     mysqli_data_seek($sql_docs, 0);
                     while ($row = mysqli_fetch_assoc($sql_docs)) {
                         $document_id = intval($row['document_id']);

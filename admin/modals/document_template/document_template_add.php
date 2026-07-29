@@ -6,9 +6,9 @@ ob_start();
 
 ?>
 
-<div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-file-alt mr-2"></i>Creating Document Template</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+<div class="modal-header">
+    <h5 class="modal-title"><i class="fa fa-fw fa-file-alt me-2"></i>Creating Document Template</h5>
+    <button type="button" class="close" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -27,7 +27,7 @@ ob_start();
                 <input type="text" class="form-control" id="aiPrompt" placeholder="e.g. 'A network troubleshooting guide for junior technicians'">
                 <div class="input-group-append">
                     <button class="btn btn-info" type="button" id="generateAIContent">
-                        <i class="fa fa-fw fa-magic mr-1"></i>Generate with AI
+                        <i class="fa fa-fw fa-magic me-1"></i>Generate with AI
                     </button>
                 </div>
             </div>
@@ -46,13 +46,13 @@ ob_start();
 
     <div class="modal-footer">
 
-        <button type="submit" name="add_document_template" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save template</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_document_template" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save template</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
 
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(document).ready(function(){
 
     $('#generateAIContent').on('click', function(){
@@ -78,7 +78,7 @@ $(document).ready(function(){
                 alert('Error generating content. Please try again.');
             },
             complete: function() {
-                $('#generateAIContent').prop('disabled', false).html('<i class="fa fa-fw fa-magic mr-1"></i>Generate with AI');
+                $('#generateAIContent').prop('disabled', false).html('<i class="fa fa-fw fa-magic me-1"></i>Generate with AI');
             }
         });
     });

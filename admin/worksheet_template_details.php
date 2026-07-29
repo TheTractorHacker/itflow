@@ -19,10 +19,10 @@ $sql_fields = mysqli_query($mysqli, "SELECT * FROM worksheet_template_fields WHE
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clipboard-list mr-2"></i><?= $tmpl_name ?></h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clipboard-list me-2"></i><?= $tmpl_name ?></h3>
         <div class="card-tools">
-            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/worksheet_template/worksheet_field_add.php?template_id=<?= $template_id ?>"><i class="fas fa-plus mr-2"></i>Add Field</button>
-            <a href="worksheet_template.php" class="btn btn-secondary ml-2"><i class="fas fa-arrow-left mr-1"></i>Back</a>
+            <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/worksheet_template/worksheet_field_add.php?template_id=<?= $template_id ?>"><i class="fas fa-plus me-2"></i>Add Field</button>
+            <a href="worksheet_template.php" class="btn btn-secondary ms-2"><i class="fas fa-arrow-left me-1"></i>Back</a>
         </div>
     </div>
     <div class="card-body">
@@ -41,13 +41,13 @@ $sql_fields = mysqli_query($mysqli, "SELECT * FROM worksheet_template_fields WHE
                         <label>Description</label>
                         <input type="text" class="form-control" name="worksheet_template_description" value="<?= $tmpl_desc ?>">
                     </div>
-                    <button type="submit" name="edit_worksheet_template" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save</button>
+                    <button type="submit" name="edit_worksheet_template" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save</button>
                 </form>
             </div>
         </div>
 
         <hr>
-        <h5>Fields <small class="text-muted ml-2" style="font-size:13px;"><i class="fas fa-grip-vertical mr-1"></i>Drag rows to reorder</small></h5>
+        <h5>Fields <small class="text-muted ms-2" style="font-size:13px;"><i class="fas fa-grip-vertical me-1"></i>Drag rows to reorder</small></h5>
         <div class="table-responsive">
             <table class="table table-sm table-bordered table-hover" id="fields-table">
                 <thead>
@@ -72,7 +72,7 @@ $sql_fields = mysqli_query($mysqli, "SELECT * FROM worksheet_template_fields WHE
                 <tr data-id="<?= $fid ?>">
                     <td class="text-center text-muted" style="cursor:grab;"><i class="fas fa-grip-vertical"></i></td>
                     <td><?= $fname ?></td>
-                    <td><span class="badge badge-secondary"><?= $ftype ?></span></td>
+                    <td><span class="badge text-bg-secondary"><?= $ftype ?></span></td>
                     <td><small><?= $fopts ?></small></td>
                     <td><?= $freq ? '<i class="fas fa-check text-success"></i>' : '-' ?></td>
                     <td class="text-center">
@@ -88,7 +88,7 @@ $sql_fields = mysqli_query($mysqli, "SELECT * FROM worksheet_template_fields WHE
 </div>
 
 <script src="../plugins/SortableJS/Sortable.min.js"></script>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 Sortable.create(document.getElementById('fields-sortable'), {
     handle: 'td:first-child',
     animation: 150,

@@ -6,19 +6,21 @@ $client_id = intval($_GET['client_id'] ?? 0);
 $contact_id = intval($_GET['contact_id'] ?? 0);
 $asset_id = intval($_GET['asset_id'] ?? 0);
 
+if ($client_id) enforceClientAccess($client_id);
+
 ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-calendar-check mr-2"></i>New Recurring Ticket</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-calendar-check me-2"></i>New Recurring Ticket</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
     <?php if (isset($client_id)) { ?>
-           <input type="hidden" name="client_id" value="<?php echo $client_id; ?>>">
+           <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">
     <?php } ?>
     <input type="hidden" name="billable" value="0">
 
@@ -26,18 +28,18 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-add-details"><i class="fa fa-fw fa-life-ring mr-2"></i>Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-add-details"><i class="fa fa-fw fa-life-ring me-2"></i>Details</a>
             </li>
             <?php if (!$contact_id) { ?>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-add-contacts"><i class="fa fa-fw fa-users mr-2"></i>Contact</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-add-contacts"><i class="fa fa-fw fa-users me-2"></i>Contact</a>
             </li>
             <?php } ?>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-add-schedule"><i class="fa fa-fw fa-building mr-2"></i>Schedule</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-add-schedule"><i class="fa fa-fw fa-building me-2"></i>Schedule</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-add-assets"><i class="fa fa-fw fa-desktop mr-2"></i>Assets</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-add-assets"><i class="fa fa-fw fa-desktop me-2"></i>Assets</a>
             </li>
         </ul>
 
@@ -126,9 +128,9 @@ ob_start();
 
                 <?php if ($config_module_enable_accounting) { ?>
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="billable" <?php if ($config_ticket_default_billable == 1) { echo "checked"; } ?> value="1" id="billable">
-                        <label class="custom-control-label" for="billable">Mark Billable</label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="billable" <?php if ($config_ticket_default_billable == 1) { echo "checked"; } ?> value="1" id="billable">
+                        <label class="form-check-label" for="billable">Mark Billable</label>
                     </div>
                 </div>
                 <?php } ?>
@@ -336,8 +338,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_recurring_ticket" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_recurring_ticket" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

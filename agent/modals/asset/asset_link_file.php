@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support');
+
 $asset_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM assets
@@ -12,6 +14,7 @@ $sql = mysqli_query($mysqli, "SELECT * FROM assets
 $row = mysqli_fetch_assoc($sql);
 $asset_name = nullable_htmlentities($row['asset_name']);
 $client_id = intval($row['asset_client_id']);
+enforceClientAccess($client_id);
 
 // Generate the HTML form content using output buffering.
 ob_start();
@@ -19,8 +22,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-paperclip mr-2"></i>Link File to <strong><?php echo $asset_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-paperclip me-2"></i>Link File to <strong><?php echo $asset_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -64,8 +67,8 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="link_asset_to_file" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Link</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="link_asset_to_file" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Link</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

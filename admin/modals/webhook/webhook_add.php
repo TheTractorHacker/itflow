@@ -6,8 +6,8 @@ $ALL_EVENTS = ['ticket.created','ticket.replied','ticket.assigned','ticket.statu
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title text-white"><i class="fas fa-fw fa-satellite-dish mr-2"></i>Add Webhook</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title text-white"><i class="fas fa-fw fa-satellite-dish me-2"></i>Add Webhook</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 
 <form action="post.php" method="post">
@@ -32,24 +32,24 @@ ob_start();
         <div class="form-group">
             <label>Subscribe to Events <span class="text-danger">*</span></label>
             <?php foreach ($ALL_EVENTS as $ev) { ?>
-            <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" id="ev_add_<?= $ev ?>" name="webhook_events[]" value="<?= $ev ?>">
-                <label class="custom-control-label" for="ev_add_<?= $ev ?>"><code><?= $ev ?></code></label>
+            <div class="form-check form-check">
+                <input type="checkbox" class="form-check-input" id="ev_add_<?= $ev ?>" name="webhook_events[]" value="<?= $ev ?>">
+                <label class="form-check-label" for="ev_add_<?= $ev ?>"><code><?= $ev ?></code></label>
             </div>
             <?php } ?>
         </div>
 
         <div class="form-group">
-            <div class="custom-control custom-switch">
-                <input type="checkbox" class="custom-control-input" id="webhook_enabled_add" name="webhook_enabled" value="1" checked>
-                <label class="custom-control-label" for="webhook_enabled_add">Enabled</label>
+            <div class="form-check form-check form-switch">
+                <input type="checkbox" class="form-check-input" id="webhook_enabled_add" name="webhook_enabled" value="1" checked>
+                <label class="form-check-label" for="webhook_enabled_add">Enabled</label>
             </div>
         </div>
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_webhook" class="btn btn-primary"><i class="fas fa-check mr-1"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+        <button type="submit" name="add_webhook" class="btn btn-primary"><i class="fas fa-check me-1"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
     </div>
 </form>
 <?php

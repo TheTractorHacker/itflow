@@ -119,6 +119,54 @@ while ($row = mysqli_fetch_assoc($result)) {
     $ical .= "END:VEVENT\r\n";
 }
 
+// Fetch this user's appointments from the modern multi-entry "Appointment"
+// feature (ticket_schedules — used by the ticket detail page's Schedule
+// section and the mobile app), which the legacy ticket_schedule columns above
+// never capture since that flow no longer writes to them.
+$result_ts = mysqli_query($mysqli,
+    "SELECT s.schedule_id, s.schedule_start, s.schedule_end, s.schedule_onsite, s.schedule_notes,
+            t.ticket_id, t.ticket_prefix, t.ticket_number, t.ticket_subject, t.ticket_priority,
+            c.client_name,
+            l.location_address
+     FROM ticket_schedules s
+     JOIN tickets t ON t.ticket_id = s.schedule_ticket_id
+     LEFT JOIN clients c ON t.ticket_client_id = c.client_id
+     LEFT JOIN contacts co ON t.ticket_contact_id = co.contact_id
+     LEFT JOIN locations l ON co.contact_location_id = l.location_id
+     WHERE s.schedule_archived_at IS NULL
+       AND t.ticket_archived_at IS NULL
+       AND s.schedule_start >= '$cutoff'
+       AND s.schedule_tech_id = $user_id
+     ORDER BY s.schedule_start ASC"
+);
+
+while ($row = mysqli_fetch_assoc($result_ts)) {
+    $tid = intval($row['ticket_id']);
+    $sid = intval($row['schedule_id']);
+    $start = ical_dt($row['schedule_start']);
+    $end   = $row['schedule_end'] ? ical_dt($row['schedule_end']) : $start;
+    $uid   = 'schedule-' . $sid . '@' . $config_base_url;
+
+    $summary = $row['ticket_prefix'] . $row['ticket_number'] . ': ' . $row['ticket_subject'];
+    if ($row['client_name']) $summary .= ' - ' . $row['client_name'];
+
+    $url  = 'https://' . $config_base_url . '/agent/ticket.php?ticket_id=' . $tid;
+    $desc = ($row['schedule_notes'] ? $row['schedule_notes'] . '\n' : '') . $url;
+    $loc  = $row['location_address'] ?: ($row['schedule_onsite'] ? 'Onsite' : 'Remote');
+
+    $ical .= "BEGIN:VEVENT\r\n";
+    $ical .= ical_fold("UID:" . $uid);
+    $ical .= ical_fold("DTSTAMP;TZID=$tz_id:" . $now_stamp);
+    $ical .= ical_fold("DTSTART;TZID=$tz_id:" . $start);
+    $ical .= ical_fold("DTEND;TZID=$tz_id:" . $end);
+    $ical .= ical_fold("SUMMARY:"     . ical_escape($summary));
+    $ical .= ical_fold("DESCRIPTION:" . ical_escape($desc));
+    $ical .= ical_fold("LOCATION:"    . ical_escape($loc));
+    $ical .= "URL:" . $url . "\r\n";
+    if ($row['ticket_priority'] == 'High') $ical .= "PRIORITY:1\r\n";
+    $ical .= "END:VEVENT\r\n";
+}
+
 $ical .= "END:VCALENDAR\r\n";
 
 header('Content-Type: text/calendar; charset=utf-8');

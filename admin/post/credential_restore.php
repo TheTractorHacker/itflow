@@ -130,6 +130,18 @@ if (isset($_POST['upload_backup'])) {
         }
     }
 
+    // The staging tables above are rebuilt straight from the uploaded mysqldump, so we
+    // can't add an ownership column to them without rewriting every INSERT tuple. Instead,
+    // track who currently owns the staged backup in a small dedicated table so that only
+    // the admin who uploaded it can browse/restore from it (see admin/credential_restore.php
+    // and the restore_credential handler below).
+    mysqli_query($mysqli, "DROP TABLE IF EXISTS `credential_restore_staging_meta`");
+    mysqli_query($mysqli, "CREATE TABLE `credential_restore_staging_meta` (
+        uploaded_by_user_id INT NOT NULL,
+        uploaded_at DATETIME NOT NULL
+    )");
+    mysqli_query($mysqli, "INSERT INTO `credential_restore_staging_meta` (uploaded_by_user_id, uploaded_at) VALUES (" . intval($session_user_id) . ", NOW())");
+
     $_SESSION['credential_restore_backup_name'] = $_FILES['backup_zip']['name'];
 
     logAction("Credential", "Restore", "$session_name uploaded a backup (" . sanitizeInput($_FILES['backup_zip']['name']) . ") for the Credential Restore tool");
@@ -143,6 +155,16 @@ if (isset($_POST['upload_backup'])) {
 if (isset($_POST['restore_credential'])) {
 
     validateCSRFToken($_POST['csrf_token']);
+
+    // Only the admin who uploaded the currently-staged backup may restore from it -
+    // otherwise any admin could restore/overwrite credentials from a backup someone
+    // else uploaded, just by guessing a credential_id and a master key.
+    $staging_owner_result = mysqli_query($mysqli, "SELECT uploaded_by_user_id FROM credential_restore_staging_meta LIMIT 1");
+    $staging_owner = $staging_owner_result ? mysqli_fetch_assoc($staging_owner_result) : false;
+    if (!$staging_owner || intval($staging_owner['uploaded_by_user_id']) !== intval($session_user_id)) {
+        flash_alert("No backup uploaded by you is currently staged. Please upload a backup first.", "error");
+        redirect();
+    }
 
     $credential_id = intval($_POST['credential_id']);
     $master_key = (string) ($_POST['master_key'] ?? '');

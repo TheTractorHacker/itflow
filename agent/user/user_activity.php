@@ -17,13 +17,13 @@ $sql_activity = mysqli_query($mysqli,
 <!-- Recent Sign-ins -->
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title"><i class="fas fa-fw fa-sign-in-alt mr-2"></i>Recent Sign-ins</h3>
+        <h3 class="card-title"><i class="fas fa-fw fa-sign-in-alt me-2"></i>Recent Sign-ins</h3>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm table-borderless table-hover mb-0">
             <thead class="text-muted small border-bottom">
                 <tr>
-                    <th class="pl-3">When</th>
+                    <th class="ps-3">When</th>
                     <th>Device</th>
                     <th>Browser</th>
                     <th>IP Address</th>
@@ -46,11 +46,11 @@ $sql_activity = mysqli_query($mysqli,
                 elseif (stripos($log_ua, 'ipad') !== false || stripos($log_ua, 'tablet') !== false) $os_icon = 'tablet-alt';
                 ?>
                 <tr>
-                    <td class="pl-3">
+                    <td class="ps-3">
                         <span title="<?= $log_date ?>"><?= $time_ago ?></span>
                         <div class="text-muted" style="font-size:11px;"><?= $log_date ?></div>
                     </td>
-                    <td><i class="fas fa-fw fa-<?= $os_icon ?> text-secondary mr-1"></i><?= $log_os ?></td>
+                    <td><i class="fas fa-fw fa-<?= $os_icon ?> text-secondary me-1"></i><?= $log_os ?></td>
                     <td><?= $log_browser ?></td>
                     <td><code class="text-secondary"><?= $log_ip ?></code></td>
                 </tr>
@@ -64,7 +64,7 @@ $sql_activity = mysqli_query($mysqli,
     <?php if ($session_is_admin) { ?>
     <div class="card-footer py-2">
         <a href="../../admin/audit_log.php?q=<?= urlencode("$session_name successfully logged in") ?>" class="text-sm">
-            <i class="fas fa-external-link-alt mr-1"></i>Full audit log
+            <i class="fas fa-external-link-alt me-1"></i>Full audit log
         </a>
     </div>
     <?php } ?>
@@ -73,13 +73,13 @@ $sql_activity = mysqli_query($mysqli,
 <!-- Recent Activity -->
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>Recent Activity</h3>
+        <h3 class="card-title"><i class="fas fa-fw fa-history me-2"></i>Recent Activity</h3>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm table-borderless table-hover mb-0">
             <thead class="text-muted small border-bottom">
                 <tr>
-                    <th class="pl-3" style="width:140px;">When</th>
+                    <th class="ps-3" style="width:140px;">When</th>
                     <th style="width:130px;">Type</th>
                     <th>Description</th>
                 </tr>
@@ -106,9 +106,9 @@ $sql_activity = mysqli_query($mysqli,
                 [$icon, $color] = $icon_map[$log_action] ?? ['circle', 'text-secondary'];
                 ?>
                 <tr>
-                    <td class="pl-3 text-muted small" title="<?= $log_date ?>"><?= $time_ago ?></td>
+                    <td class="ps-3 text-muted small" title="<?= $log_date ?>"><?= $time_ago ?></td>
                     <td>
-                        <i class="fas fa-fw fa-<?= $icon ?> <?= $color ?> mr-1"></i>
+                        <i class="fas fa-fw fa-<?= $icon ?> <?= $color ?> me-1"></i>
                         <span class="small"><?= $log_type ?></span>
                     </td>
                     <td class="text-muted small"><?= $log_desc ?></td>
@@ -123,7 +123,7 @@ $sql_activity = mysqli_query($mysqli,
     <?php if ($session_is_admin) { ?>
     <div class="card-footer py-2">
         <a href="../../admin/audit_log.php?q=<?= urlencode($session_name) ?>" class="text-sm">
-            <i class="fas fa-external-link-alt mr-1"></i>Full audit log
+            <i class="fas fa-external-link-alt me-1"></i>Full audit log
         </a>
     </div>
     <?php } ?>

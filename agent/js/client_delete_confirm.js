@@ -7,3 +7,7 @@ function validateClientNameDelete(client_id) {
         document.getElementById("clientDeleteButton" + client_id).className = "btn btn-danger btn-lg px-5 disabled";
     }
 }
+document.addEventListener('keyup', function (e) {
+    var el = e.target.closest && e.target.closest('.js-validate-client-delete');
+    if (el) { validateClientNameDelete(el.dataset.clientId); }
+});

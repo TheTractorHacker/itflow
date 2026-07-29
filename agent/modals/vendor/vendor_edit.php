@@ -7,6 +7,14 @@ $vendor_id = intval($_GET['id']);
 $sql = mysqli_query($mysqli, "SELECT * FROM vendors WHERE vendor_id = $vendor_id LIMIT 1");
 
 $row = mysqli_fetch_assoc($sql);
+$client_id = intval($row['vendor_client_id']);
+if ($client_id) {
+    enforceUserPermission('module_client', 2);
+    enforceClientAccess($client_id);
+} else {
+    enforceUserPermission('module_financial', 2);
+}
+
 $vendor_name = nullable_htmlentities($row['vendor_name']);
 $vendor_description = nullable_htmlentities($row['vendor_description']);
 $vendor_account_number = nullable_htmlentities($row['vendor_account_number']);
@@ -27,8 +35,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-building mr-2"></i>Editing vendor: <strong><?php echo $vendor_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-building me-2"></i>Editing vendor: <strong><?php echo $vendor_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -39,13 +47,13 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-details<?php echo $vendor_id; ?>">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-details<?php echo $vendor_id; ?>">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-support<?php echo $vendor_id; ?>">Support</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-support<?php echo $vendor_id; ?>">Support</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-notes<?php echo $vendor_id; ?>">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-notes<?php echo $vendor_id; ?>">Notes</a>
             </li>
         </ul>
 
@@ -198,7 +206,7 @@ ob_start();
                     <textarea class="form-control" rows="12" placeholder="Enter some notes" name="notes"><?php echo $vendor_notes; ?></textarea>
                 </div>
 
-                <p class="text-muted text-right">Vendor ID: <?= $vendor_id ?></p>
+                <p class="text-muted text-end">Vendor ID: <?= $vendor_id ?></p>
 
             </div>
 
@@ -206,8 +214,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_vendor" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_vendor" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

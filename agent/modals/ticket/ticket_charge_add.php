@@ -5,6 +5,8 @@ require_once '../../../includes/modal_header.php';
 $ticket_id = intval($_GET['ticket_id'] ?? 0);
 $client_id = intval($_GET['client_id'] ?? 0);
 
+if ($client_id) enforceClientAccess($client_id);
+
 $client_rate = 0.00;
 if ($client_id) {
     $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT client_rate FROM clients WHERE client_id = $client_id LIMIT 1"));
@@ -15,8 +17,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-plus-circle mr-2"></i>Add Charge</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fas fa-fw fa-plus-circle me-2"></i>Add Charge</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -36,7 +38,7 @@ ob_start();
         <div class="form-group">
             <label>Labor Type <small class="text-muted">(optional)</small></label>
             <div class="d-flex flex-wrap" id="labor_type_btns">
-                <button type="button" class="btn btn-sm btn-outline-secondary lt-btn active mr-2 mb-2" data-id="0" data-rate="0" data-name="">
+                <button type="button" class="btn btn-sm btn-outline-secondary lt-btn active me-2 mb-2" data-id="0" data-rate="0" data-name="">
                     Custom
                 </button>
                 <?php foreach ($lt_rows as $lt) {
@@ -45,7 +47,7 @@ ob_start();
                     $lt_rate  = floatval($lt['labor_type_rate']);
                     $lt_color = nullable_htmlentities($lt['labor_type_color']);
                 ?>
-                <button type="button" class="btn btn-sm lt-btn mr-2 mb-2"
+                <button type="button" class="btn btn-sm lt-btn me-2 mb-2"
                         data-id="<?= $lt_id ?>"
                         data-rate="<?= $lt_rate ?>"
                         data-name="<?= $lt_name ?>"
@@ -139,12 +141,12 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_ticket_charge" class="btn btn-primary"><i class="fas fa-check mr-2"></i>Add Charge</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_ticket_charge" class="btn btn-primary"><i class="fas fa-check me-2"></i>Add Charge</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(function() {
     function recalcTotal() {
         var qty   = parseFloat($('#charge_quantity').val()) || 0;

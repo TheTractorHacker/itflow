@@ -130,6 +130,11 @@ if (isset($_POST['restore'])) {
     @set_time_limit(0);
     if (function_exists('ini_set')) { @ini_set('memory_limit', '1024M'); }
 
+    // Hardened zip-restore validation helpers (safeExtractZip, hasDangerousExtension,
+    // contentLooksExecutable, extractUploadsZipWithValidationReport) - used below to
+    // validate uploads.zip (extension + content type + boundary), not just zip-slip.
+    require_once __DIR__ . '/setup_functions.php';
+
     // ---------- Minimal helpers (scoped) ----------
     if (!function_exists('deleteDir')) {
         function deleteDir($dir) {
@@ -284,17 +289,6 @@ if (isset($_POST['restore'])) {
         die("Failed to open uploads.zip in backup.");
     }
 
-    // Zip-slip guard (inner)
-    for ($i = 0; $i < $uploads->numFiles; $i++) {
-        $name = $uploads->getNameIndex($i);
-        if ($name === false) continue;
-        if (strpos($name, '..') !== false || preg_match('#^(?:/|\\\\|[a-zA-Z]:[\\\\/])#', $name)) {
-            $uploads->close();
-            deleteDir($tempDir);
-            die("Invalid file path in uploads.zip.");
-        }
-    }
-
     // Ensure uploads dir exists then clean it
     if (!is_dir($uploadDir)) {
         if (!mkdir($uploadDir, 0750, true)) {
@@ -311,13 +305,20 @@ if (isset($_POST['restore'])) {
         }
     }
 
-    // Extract uploads.zip directly into /uploads (your original, working behavior)
-    if (!$uploads->extractTo($uploadDir)) {
-        $uploads->close();
-        deleteDir($tempDir);
-        die("Failed to extract uploads.zip into uploads directory.");
-    }
+    // Extract uploads.zip into /uploads with full validation - boundary/zip-slip,
+    // dangerous file extensions, and executable/script content are all checked before
+    // anything is written (see setup/setup_functions.php). Replaces the old inline
+    // check that only caught zip-slip and let any file type through.
+    $extractResult = extractUploadsZipWithValidationReport($uploads, $uploadDir);
     $uploads->close();
+
+    if (!$extractResult['ok']) {
+        deleteDir($tempDir);
+        $reasons = array_map(function ($issue) {
+            return htmlspecialchars($issue['path'], ENT_QUOTES, 'UTF-8') . ': ' . htmlspecialchars($issue['reason'], ENT_QUOTES, 'UTF-8');
+        }, $extractResult['issues'] ?? []);
+        die("uploads.zip failed validation and was not restored:<br>" . implode("<br>", array_slice($reasons, 0, 25)));
+    }
 
     // Verify uploads isn’t empty
     $hasFiles = false;
@@ -364,8 +365,13 @@ if (isset($_POST['restore'])) {
 }
 
 if (isset($_POST['add_user'])) {
-    $user_count = mysqli_num_rows(mysqli_query($mysqli,"SELECT COUNT(*) FROM users"));
-    if ($user_count < 0) {
+    // mysqli_num_rows() on a SELECT COUNT(*) result is always 1 (one aggregate row is
+    // always returned, however many users exist) - this guard never actually fired.
+    // Fetch the real count instead, and treat this as the primary gate against creating
+    // a second admin on an already-populated instance, independent of config_enable_setup
+    // (which some deployments never get around to flipping off after install).
+    $user_count = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM users"))[0]);
+    if ($user_count > 0) {
         $_SESSION['alert_message'] = "Users already exist in the database. Clear them to reconfigure here.";
         header("Location: ?company");
         exit;
@@ -599,12 +605,12 @@ if (isset($_POST['add_company_settings'])) {
     mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'WiFi', category_type = 'network_interface', category_order = 8"); // 8
 
     // Asset statuses
-    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Ready to Deploy', category_description = 'Asset is configured and ready to be assigned', category_type = 'asset_status', category_order = 1"); // 1
-    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Deployed', category_description = 'Asset is actively in use and assigned to a client or location', category_type = 'asset_status', category_order = 2"); // 2
-    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Out for Repair', category_description = 'Asset has been sent out for servicing or repair', category_type = 'asset_status', category_order = 3"); // 3
-    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Lost', category_description = 'Asset location is unknown and cannot be accounted for', category_type = 'asset_status', category_order = 4"); // 4
-    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Stolen', category_description = 'Asset has been reported stolen', category_type = 'asset_status', category_order = 5"); // 5
-    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Retired', category_description = 'Asset has been decommissioned and is no longer in service', category_type = 'asset_status', category_order = 6"); // 6
+    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Ready to Deploy', category_description = 'Asset is configured and ready to be assigned', category_type = 'asset_status', category_color = '#0dcaf0', category_order = 1"); // 1
+    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Deployed', category_description = 'Asset is actively in use and assigned to a client or location', category_type = 'asset_status', category_color = '#198754', category_order = 2"); // 2
+    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Out for Repair', category_description = 'Asset has been sent out for servicing or repair', category_type = 'asset_status', category_color = '#fd7e14', category_order = 3"); // 3
+    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Lost', category_description = 'Asset location is unknown and cannot be accounted for', category_type = 'asset_status', category_color = '#dc3545', category_order = 4"); // 4
+    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Stolen', category_description = 'Asset has been reported stolen', category_type = 'asset_status', category_color = '#dc3545', category_order = 5"); // 5
+    mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Retired', category_description = 'Asset has been decommissioned and is no longer in service', category_type = 'asset_status', category_color = '#6c757d', category_order = 6"); // 6
 
     // Contact note types
     mysqli_query($mysqli, "INSERT INTO categories SET category_name = 'Call', category_description = 'Phone call with a client or contact', category_icon = 'fa-phone-alt', category_type = 'contact_note_type', category_order = 1"); // 1

@@ -35,3 +35,7 @@ function fetchSSL(type)
         }
     );
 }
+document.addEventListener('click', function (e) {
+    var el = e.target.closest && e.target.closest('.js-fetch-ssl');
+    if (el) { fetchSSL(el.dataset.fetchSslType); }
+});

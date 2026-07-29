@@ -67,7 +67,7 @@ if (isset($_GET['delete_custom_link'])) {
 
     logAction("Custom Link", "Delete", "$session_name deleted custom link $custom_link_name -> $custom_link_uri");
 
-    flash_alert("Custom Link <strong>$name</strong> deleted", 'error');
+    flash_alert("Custom Link <strong>$custom_link_name</strong> deleted", 'error');
 
     redirect();
 

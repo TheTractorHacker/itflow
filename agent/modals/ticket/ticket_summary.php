@@ -10,7 +10,7 @@ ob_start();
 
 <div class="modal-header bg-dark">
     <h5 class="modal-title" id="summaryModalTitle">Ticket Summary</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -20,7 +20,7 @@ ob_start();
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(function() {
     $.ajax({
         url: 'ajax.php?ai_ticket_summary',

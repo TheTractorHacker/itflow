@@ -17,9 +17,9 @@ if ($session_contact_primary == 0 && !$session_contact_is_billing_contact) {
 $invoices_sql = mysqli_query($mysqli, "SELECT * FROM invoices WHERE invoice_client_id = $session_client_id AND invoice_status != 'Draft' ORDER BY invoice_date DESC");
 ?>
 
-<div class="row">
+<div class="row mb-4">
     <div class="col">
-        <h3><i class="fas fa-fw fa-file-invoice-dollar mr-2"></i>Invoices</h3>
+        <h3><i class="fas fa-fw fa-file-invoice-dollar me-2"></i>Invoices</h3>
     </div>
 </div>
 <div class="row">
@@ -67,7 +67,7 @@ $invoices_sql = mysqli_query($mysqli, "SELECT * FROM invoices WHERE invoice_clie
 
                 $now = time();
                 if (($invoice_status == "Sent" || $invoice_status == "Partial" || $invoice_status == "Viewed") && strtotime($invoice_due) + 86400 < $now) {
-                    $overdue_color = "text-danger font-weight-bold";
+                    $overdue_color = "text-danger fw-bold";
                 } else {
                     $overdue_color = "";
                 }

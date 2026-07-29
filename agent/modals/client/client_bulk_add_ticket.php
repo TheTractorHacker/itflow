@@ -12,8 +12,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-life-ring mr-2"></i>New Tickets for <strong><?= $count ?></strong> Client(s)</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-life-ring me-2"></i>New Tickets for <strong><?= $count ?></strong> Client(s)</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -123,9 +123,9 @@ ob_start();
 
         <?php if ($config_module_enable_accounting) { ?>
         <div class="form-group">
-            <div class="custom-control custom-switch">
-                <input type="checkbox" class="custom-control-input" name="bulk_billable" <?php if ($config_ticket_default_billable == 1) { echo "checked"; } ?> value="1" id="billableSwitch">
-                <label class="custom-control-label" for="billableSwitch">Billable</label>
+            <div class="form-check form-check form-switch">
+                <input type="checkbox" class="form-check-input" name="bulk_billable" <?php if ($config_ticket_default_billable == 1) { echo "checked"; } ?> value="1" id="billableSwitch">
+                <label class="form-check-label" for="billableSwitch">Billable</label>
             </div>
         </div>
         <?php } ?>
@@ -133,8 +133,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="bulk_add_client_ticket" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="bulk_add_client_ticket" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

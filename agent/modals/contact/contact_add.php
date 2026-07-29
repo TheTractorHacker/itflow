@@ -17,8 +17,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-user-plus mr-2"></i>New Contact</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-user-plus me-2"></i>New Contact</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -29,16 +29,16 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-details"><i class="fas fa-fw fa-user mr-2"></i>Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-details"><i class="fas fa-fw fa-user me-2"></i>Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-photo"><i class="fas fa-fw fa-image mr-2"></i>Photo</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-photo"><i class="fas fa-fw fa-image me-2"></i>Photo</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-access"><i class="fas fa-fw fa-lock mr-2"></i>Access</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-access"><i class="fas fa-fw fa-lock me-2"></i>Access</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-notes"><i class="fas fa-fw fa-edit mr-2"></i>Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-notes"><i class="fas fa-fw fa-edit me-2"></i>Notes</a>
             </li>
         </ul>
 
@@ -229,7 +229,7 @@ ob_start();
                                     <span class="input-group-text"><i class="fa fa-fw fa-eye"></i></span>
                                 </div>
                                 <div class="input-group-append">
-                                    <button type="button" class="btn btn-default" onclick="generatePassword()">
+                                    <button type="button" class="btn btn-default generatePasswordBtn">
                                         <i class="fa fa-fw fa-question"></i>
                                     </button>
                                 </div>
@@ -243,27 +243,27 @@ ob_start();
 
                     <div class="col-md-4">
                         <div class="form-group">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="contactImportantCheckbox" name="contact_important" value="1">
-                                <label class="custom-control-label" for="contactImportantCheckbox">Important</label>
+                            <div class="form-check form-check">
+                                <input type="checkbox" class="form-check-input" id="contactImportantCheckbox" name="contact_important" value="1">
+                                <label class="form-check-label" for="contactImportantCheckbox">Important</label>
                                 <p class="text-secondary"><small>Pin Top</small></p>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="contactBillingCheckbox" name="contact_billing" value="1">
-                                <label class="custom-control-label" for="contactBillingCheckbox">Billing</label>
+                            <div class="form-check form-check">
+                                <input type="checkbox" class="form-check-input" id="contactBillingCheckbox" name="contact_billing" value="1">
+                                <label class="form-check-label" for="contactBillingCheckbox">Billing</label>
                                 <p class="text-secondary"><small>Receives Invoices</small></p>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="contactTechnicalCheckbox" name="contact_technical" value="1">
-                                <label class="custom-control-label" for="contactTechnicalCheckbox">Technical</label>
+                            <div class="form-check form-check">
+                                <input type="checkbox" class="form-check-input" id="contactTechnicalCheckbox" name="contact_technical" value="1">
+                                <label class="form-check-label" for="contactTechnicalCheckbox">Technical</label>
                                 <p class="text-secondary"><small>Access </small></p>
                             </div>
                         </div>
@@ -311,12 +311,12 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_contact" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_contact" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 <!-- JavaScript to Show/Hide Password Form Group -->
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 
 function generatePassword() {
     jQuery.get(
@@ -329,6 +329,8 @@ function generatePassword() {
         }
     );
 }
+
+$(document).on('click', '.generatePasswordBtn', generatePassword);
 
 $(document).ready(function() {
     $('.authMethod').on('change', function() {
@@ -344,7 +346,7 @@ $(document).ready(function() {
 });
 </script>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
     // Checks contact emails
     function contact_email_check() {
         var email = document.getElementById("contact_email").value;

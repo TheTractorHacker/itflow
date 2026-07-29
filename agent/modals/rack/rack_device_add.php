@@ -2,6 +2,8 @@
 
 require_once '../../../includes/modal_header.php';
 
+enforceUserPermission('module_support', 2);
+
 $rack_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM racks WHERE rack_id = $rack_id LIMIT 1");
@@ -10,12 +12,14 @@ $row = mysqli_fetch_assoc($sql);
 $rack_name = nullable_htmlentities($row['rack_name']);
 $client_id = intval($row['rack_client_id']);
 
+enforceClientAccess();
+
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-server mr-2"></i>Adding Device to Rack <strong><?php echo $rack_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-server me-2"></i>Adding Device to Rack <strong><?php echo $rack_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -80,8 +84,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_rack_unit" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Add to Rack</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_rack_unit" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Add to Rack</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

@@ -36,7 +36,7 @@ function push_notification_categories(): array {
         'system' => [
             'label' => 'System & Admin',
             'icon'  => 'fas fa-cogs',
-            'types' => ['Cron', 'Cron-Mail-Queue', 'Mail', 'Master Key', 'Settings', 'Update', 'Share Viewed'],
+            'types' => ['Cron', 'Cron-Mail-Queue', 'Mail', 'Master Key', 'Settings', 'Update', 'Share Viewed', 'Integration'],
         ],
     ];
 }

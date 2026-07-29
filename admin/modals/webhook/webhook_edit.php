@@ -12,8 +12,8 @@ $cur_events = array_map('trim', explode(',', $wh['webhook_events']));
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title text-white"><i class="fas fa-fw fa-satellite-dish mr-2"></i>Edit Webhook</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title text-white"><i class="fas fa-fw fa-satellite-dish me-2"></i>Edit Webhook</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 
 <form action="post.php" method="post">
@@ -39,26 +39,26 @@ ob_start();
         <div class="form-group">
             <label>Subscribe to Events <span class="text-danger">*</span></label>
             <?php foreach ($ALL_EVENTS as $ev) { ?>
-            <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" id="ev_edit_<?= $ev ?>" name="webhook_events[]" value="<?= $ev ?>"
+            <div class="form-check form-check">
+                <input type="checkbox" class="form-check-input" id="ev_edit_<?= $ev ?>" name="webhook_events[]" value="<?= $ev ?>"
                     <?= in_array($ev, $cur_events) ? 'checked' : '' ?>>
-                <label class="custom-control-label" for="ev_edit_<?= $ev ?>"><code><?= $ev ?></code></label>
+                <label class="form-check-label" for="ev_edit_<?= $ev ?>"><code><?= $ev ?></code></label>
             </div>
             <?php } ?>
         </div>
 
         <div class="form-group">
-            <div class="custom-control custom-switch">
-                <input type="checkbox" class="custom-control-input" id="webhook_enabled_edit" name="webhook_enabled" value="1"
+            <div class="form-check form-check form-switch">
+                <input type="checkbox" class="form-check-input" id="webhook_enabled_edit" name="webhook_enabled" value="1"
                     <?= intval($wh['webhook_enabled']) ? 'checked' : '' ?>>
-                <label class="custom-control-label" for="webhook_enabled_edit">Enabled</label>
+                <label class="form-check-label" for="webhook_enabled_edit">Enabled</label>
             </div>
         </div>
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_webhook" class="btn btn-primary"><i class="fas fa-check mr-1"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+        <button type="submit" name="edit_webhook" class="btn btn-primary"><i class="fas fa-check me-1"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
     </div>
 </form>
 <?php

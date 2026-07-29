@@ -35,6 +35,10 @@ class TacticalRmmClient {
         return $this->request('POST', $endpoint, $body);
     }
 
+    private function patch(string $endpoint, array $body = []): array {
+        return $this->request('PATCH', $endpoint, $body);
+    }
+
     private function request(string $method, string $endpoint, array $body = []): array {
         $url = $this->base_url . $endpoint;
         $ch  = curl_init($url);
@@ -50,6 +54,12 @@ class TacticalRmmClient {
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+        } elseif ($method !== 'GET') {
+            // PATCH / PUT / DELETE — send the JSON body via a custom verb.
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+            if ($body) {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+            }
         }
         $raw    = curl_exec($ch);
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -168,6 +178,73 @@ class TacticalRmmClient {
         ]);
     }
 
+    /**
+     * Fetch the result of a previously-queued script run from the agent's
+     * command history (GET /agents/{agent_id}/history/). Matches the stored
+     * job/task id against each history entry; if no job id is available it
+     * falls back to the most recent script-run entry (best effort).
+     *
+     * Returns:
+     *   ['found' => false]                                   — no result yet
+     *   ['found' => true, 'stdout' => .., 'stderr' => .., 'retcode' => int|null]
+     */
+    public function getScriptRunResult(string $agent_id, string $job_id): array {
+        try {
+            $history = $this->get('/agents/' . urlencode($agent_id) . '/history/');
+        } catch (RuntimeException $e) {
+            return ['found' => false];
+        }
+        if (!is_array($history)) {
+            return ['found' => false];
+        }
+
+        $best_fallback = null;   // most-recent script-run entry, used if job_id can't match
+        foreach ($history as $h) {
+            if (!is_array($h)) continue;
+
+            $hid = (string) ($h['id'] ?? $h['pk'] ?? '');
+            if ($job_id !== '' && $hid === (string) $job_id) {
+                return $this->parseHistoryEntry($h);
+            }
+
+            // Track a fallback: the first entry that carries script results.
+            if ($best_fallback === null && !empty($h['script_results'])) {
+                $best_fallback = $h;
+            }
+        }
+
+        // No job_id match — return the most recent script result if we found one
+        // and no job id was stored to match against.
+        if ($job_id === '' && $best_fallback !== null) {
+            return $this->parseHistoryEntry($best_fallback);
+        }
+        return ['found' => false];
+    }
+
+    private function parseHistoryEntry(array $h): array {
+        $sr      = $h['script_results'] ?? [];
+        $stdout  = '';
+        $stderr  = '';
+        $retcode = null;
+        if (is_array($sr)) {
+            $stdout  = (string) ($sr['stdout'] ?? '');
+            $stderr  = (string) ($sr['stderr'] ?? '');
+            if (array_key_exists('retcode', $sr) && $sr['retcode'] !== null) {
+                $retcode = intval($sr['retcode']);
+            }
+        }
+        // Plain command runs store their output in "results" instead.
+        if ($stdout === '' && !empty($h['results'])) {
+            $stdout = is_array($h['results']) ? json_encode($h['results']) : (string) $h['results'];
+        }
+        return [
+            'found'   => true,
+            'stdout'  => $stdout,
+            'stderr'  => $stderr,
+            'retcode' => $retcode,
+        ];
+    }
+
 
     // -----------------------------------------------------------------------
     // Check management
@@ -251,6 +328,124 @@ class TacticalRmmClient {
         $parsed = parse_url($this->base_url);
         $host   = $parsed['scheme'] . '://' . $parsed['host'];
         return $host . '/mesh/action.ashx?nodeid=' . urlencode($mesh_node_id) . '&arg=remotedesktop';
+    }
+
+    /**
+     * Resolve the remote-connect URL for an agent. Prefers a MeshCentral
+     * one-time login link (control session) so the technician doesn't have to
+     * log in to Tactical RMM or MeshCentral; falls back to the persistent mesh
+     * action URL when a node id is exposed, then to Tactical's Take Control.
+     *
+     * @param string $agent_id Tactical agent id
+     * @param string $mode     '' / 'tactical' (default) or 'mesh'
+     * @return array ['url' => string, 'type' => string]
+     */
+    public function buildRemoteUrl(string $agent_id, string $mode = ''): array {
+        $mesh = $this->getAgentMesh($agent_id);
+        if (!empty($mesh['control'])) {
+            return ['url' => $mesh['control'], 'type' => 'meshcentral'];
+        }
+        // Explicit MeshCentral request with a resolvable node id → persistent URL.
+        if ($mode === 'mesh') {
+            $node_id = $mesh['node_id'] ?? $mesh['meshnode'] ?? '';
+            if (!empty($node_id)) {
+                return ['url' => $this->buildMeshUrl((string) $node_id), 'type' => 'meshcentral'];
+            }
+        }
+        return ['url' => $this->buildDeviceUrl($agent_id), 'type' => 'tactical'];
+    }
+
+    // -----------------------------------------------------------------------
+    // Live actions
+    // -----------------------------------------------------------------------
+
+    /**
+     * Reboot an agent now. POST /agents/{id}/reboot/
+     * Returns the raw API response; throws RuntimeException on failure.
+     */
+    public function reboot(string $agent_id): array {
+        return $this->post('/agents/' . urlencode($agent_id) . '/reboot/', []);
+    }
+
+    // -----------------------------------------------------------------------
+    // Alert write-back (vendor-side ack/resolve)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Acknowledge an alert at Tactical RMM. Tactical has no dedicated
+     * "acknowledged" state, so the closest vendor-side equivalent is to snooze
+     * the alert — mark it seen and quiet re-alerting for a day. PATCH
+     * /alerts/{id}/. Throws RuntimeException on failure so the caller can log
+     * it (the local ITFlow ack still stands).
+     */
+    public function ackAlert(string $alert_id): array {
+        return $this->patch('/alerts/' . urlencode($alert_id) . '/', [
+            'snoozed'      => true,
+            'snooze_until' => gmdate('Y-m-d\TH:i:s\Z', time() + 86400),
+        ]);
+    }
+
+    /**
+     * Resolve an alert at Tactical RMM. PATCH /alerts/{id}/ with resolved=true.
+     * Throws RuntimeException on failure so the caller can log it (the local
+     * ITFlow resolve still stands).
+     */
+    public function resolveAlert(string $alert_id): array {
+        return $this->patch('/alerts/' . urlencode($alert_id) . '/', [
+            'resolved'    => true,
+            'resolved_on' => gmdate('Y-m-d\TH:i:s\Z'),
+        ]);
+    }
+
+    /**
+     * Run a raw command on an agent. POST /agents/{id}/cmd/
+     * Tactical runs the command and returns its stdout as a plain string
+     * (surfaced by request() as ['message' => output]).
+     *
+     * @param string $shell 'cmd' or 'powershell'
+     */
+    public function runCommand(string $agent_id, string $cmd, string $shell = 'cmd', int $timeout = 30): array {
+        $shell = in_array($shell, ['cmd', 'powershell'], true) ? $shell : 'cmd';
+        return $this->post('/agents/' . urlencode($agent_id) . '/cmd/', [
+            'shell'   => $shell,
+            'cmd'     => $cmd,
+            'timeout' => $timeout,
+            'custom_shell' => null,
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Patch / Windows Update management
+    // -----------------------------------------------------------------------
+
+    /**
+     * List Windows Updates known to an agent. GET /winupdate/{id}/
+     * Returns the full list (installed + pending); callers filter on
+     * the 'installed' flag for pending updates. Best-effort — [] on error.
+     */
+    public function getAgentPatches(string $agent_id): array {
+        try {
+            $result = $this->get('/winupdate/' . urlencode($agent_id) . '/');
+            return is_array($result) ? $result : [];
+        } catch (RuntimeException $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Queue a Windows Update scan on an agent. POST /winupdate/{id}/scan/
+     */
+    public function scanPatches(string $agent_id): array {
+        return $this->post('/winupdate/' . urlencode($agent_id) . '/scan/', []);
+    }
+
+    /**
+     * Install pending Windows Updates on an agent. POST /winupdate/{id}/install/
+     * Tactical installs all approved/pending updates for the agent; the optional
+     * $guids argument is accepted for API symmetry but not required by Tactical.
+     */
+    public function installPatches(string $agent_id, array $guids = []): array {
+        return $this->post('/winupdate/' . urlencode($agent_id) . '/install/', []);
     }
 
     public function getIntegrationId(): int {

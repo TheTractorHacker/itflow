@@ -4,7 +4,7 @@ require_once "includes/inc_all_admin.php";
 
     <div class="card card-dark">
         <div class="card-header py-3">
-            <h3 class="card-title"><i class="fas fa-fw fa-file-invoice mr-2"></i>Invoice Settings</h3>
+            <h3 class="card-title"><i class="fas fa-fw fa-file-invoice me-2"></i>Invoice Settings</h3>
         </div>
         <div class="card-body">
             <form action="post.php" method="post" autocomplete="off">
@@ -40,18 +40,18 @@ require_once "includes/inc_all_admin.php";
                 <h5>Show Tax ID On Invoices</h5>
 
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="config_invoice_show_tax_id" <?php if ($config_invoice_show_tax_id == 1) { echo "checked"; } ?> value="1" id="customSwitch1">
-                        <label class="custom-control-label" for="customSwitch1">Show Tax ID</label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="config_invoice_show_tax_id" <?php if ($config_invoice_show_tax_id == 1) { echo "checked"; } ?> value="1" id="customSwitch1">
+                        <label class="form-check-label" for="customSwitch1">Show Tax ID</label>
                     </div>
                 </div>
 
                 <h5>Invoice Late Fees</h5>
 
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="config_invoice_late_fee_enable" <?php if ($config_invoice_late_fee_enable == 1) { echo "checked"; } ?> value="1" id="customSwitch2">
-                        <label class="custom-control-label" for="customSwitch2">Enable Late Fee</label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="config_invoice_late_fee_enable" <?php if ($config_invoice_late_fee_enable == 1) { echo "checked"; } ?> value="1" id="customSwitch2">
+                        <label class="form-check-label" for="customSwitch2">Enable Late Fee</label>
                     </div>
                 </div>
 
@@ -104,7 +104,7 @@ require_once "includes/inc_all_admin.php";
 
                 <hr>
 
-                <button type="submit" name="edit_invoice_settings" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
+                <button type="submit" name="edit_invoice_settings" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
 
             </form>
         </div>

@@ -379,6 +379,8 @@ if (mysqli_num_rows($sql_recurring_tickets) > 0) {
         $ticket_subject = sanitizeInput($row['ticket_subject']);
         $ticket_details = mysqli_real_escape_string($mysqli, $row['ticket_details']);
 
+        $ticket_from = resolveTicketFromIdentity($id);
+
         $data = [];
 
         // Notify client by email their ticket has been raised, if general notifications are turned on & there is a valid contact email
@@ -388,8 +390,8 @@ if (mysqli_num_rows($sql_recurring_tickets) > 0) {
             $email_body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>A ticket regarding \"$ticket_subject\" has been automatically created for you.<br><br>--------------------------------<br>$ticket_details--------------------------------<br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: Open<br>Portal: https://$config_base_url/client/ticket.php?id=$id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
 
             $email = [
-                    'from' => $config_ticket_from_email,
-                    'from_name' => $config_ticket_from_name,
+                    'from' => $ticket_from['email'],
+                    'from_name' => $ticket_from['name'],
                     'recipient' => $contact_email,
                     'recipient_name' => $contact_name,
                     'subject' => $email_subject,
@@ -407,10 +409,10 @@ if (mysqli_num_rows($sql_recurring_tickets) > 0) {
             $email_body = "Hello, <br><br>This is a notification that a recurring (scheduled) ticket has been raised in ITFlow. <br>Ticket: $ticket_prefix$ticket_number<br>Client: $client_name<br>Priority: $priority<br>Link: https://$config_base_url/agent/ticket.php?ticket_id=$id$client_uri <br><br>--------------------------------<br><br><b>$ticket_subject</b><br>$ticket_details";
 
             $email = [
-                    'from' => $config_ticket_from_email,
-                    'from_name' => $config_ticket_from_name,
+                    'from' => $ticket_from['email'],
+                    'from_name' => $ticket_from['name'],
                     'recipient' => $config_ticket_new_ticket_notification_email,
-                    'recipient_name' => $config_ticket_from_name,
+                    'recipient_name' => $ticket_from['name'],
                     'subject' => $email_subject,
                     'body' => $email_body
             ];
@@ -508,9 +510,11 @@ while ($row = mysqli_fetch_assoc($sql_resolved_tickets_to_close)) {
             $email_subject = "Ticket closed - [$ticket_prefix$ticket_number] - $ticket_subject | (do not reply)";
             $email_body = "Hello $contact_name,<br><br>Your ticket regarding \"$ticket_subject\" has been automatically closed after a period of inactivity. <br><br> We hope the request/issue was resolved to your satisfaction, please provide your feedback <a href='https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key'>here</a>. <br>If you need further assistance, please raise a new ticket using the below details. Please do not reply to this email. <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$config_base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
 
+            $ticket_from = resolveTicketFromIdentity($ticket_id);
+
             $email = [
-                'from' => $config_ticket_from_email,
-                'from_name' => $config_ticket_from_name,
+                'from' => $ticket_from['email'],
+                'from_name' => $ticket_from['name'],
                 'recipient' => $contact_email,
                 'recipient_name' => $contact_name,
                 'subject' => $email_subject,
@@ -869,17 +873,21 @@ while ($row = mysqli_fetch_assoc($sql_recurring_payments)) {
         $cpp_row = mysqli_fetch_assoc($cpp_query);
         $stripe_customer_id = $cpp_row ? sanitizeInput($cpp_row['payment_provider_client']) : '';
 
-        // Stripe
-        if ($provider_name === "Stripe") {
+        // Charge via the configured payment provider (Stripe, etc.) through the factory
+        require_once __DIR__ . '/../includes/payment_provider_factory.php';
+        $provider = getPaymentProvider($provider_id);
+        if ($provider->supports('charge_saved_method')) {
             if ($provider_private_key && $stripe_customer_id && $stripe_payment_method_id) {
-                require_once __DIR__ . '/../plugins/stripe-php/init.php';
-                $stripe = new \Stripe\StripeClient($provider_private_key);
 
                 $balance_to_pay = round($invoice_amount, 2);
                 $pi_description = "ITFlow: $client_name payment of $recurring_payment_currency_code $balance_to_pay for $invoice_prefix$invoice_number";
 
+                // Stable for one minute so an overlapping/retried cron run collapses into a
+                // single Stripe charge instead of billing the card twice for the same invoice.
+                $idempotency_key = md5("cron_autopay_stripe_{$invoice_id}_{$recurring_payment_saved_payment_id}_" . intdiv(time(), 60));
+
                 try {
-                    $payment_intent = $stripe->paymentIntents->create([
+                    $payment_intent = $provider->chargeSavedMethod([
                         'amount' => intval($balance_to_pay * 100),
                         'currency' => $recurring_payment_currency_code,
                         'customer' => $stripe_customer_id,
@@ -893,7 +901,7 @@ while ($row = mysqli_fetch_assoc($sql_recurring_payments)) {
                             'itflow_invoice_number' => $invoice_prefix . $invoice_number,
                             'itflow_invoice_id' => $invoice_id,
                         ]
-                    ]);
+                    ], $idempotency_key);
 
                     $pi_id = sanitizeInput($payment_intent->id);
                     $pi_date = date('Y-m-d', $payment_intent->created);
@@ -968,9 +976,9 @@ while ($row = mysqli_fetch_assoc($sql_recurring_payments)) {
                     mysqli_query($mysqli, "INSERT INTO history SET history_status = 'Payment failed', history_description = 'Stripe autopay failed: Status {$payment_intent->status}', history_invoice_id = $invoice_id");
                     logAction("Invoice", "Payment", "Failed auto Payment for invoice $invoice_prefix$invoice_number. Stripe PI status: {$payment_intent->status}", $client_id, $invoice_id);
                 }
-            } // End if Stripe creds and IDs
-        } // End if Stripe provider
-        // Add other provider logic here as needed
+            } // End if creds and IDs present
+        } // End if provider supports charging saved methods
+        // Additional providers are handled through the factory / interface
     } else {
         // Handle Non-payment-provider autopay
         mysqli_query($mysqli, "INSERT INTO payments SET payment_date = CURDATE(), payment_amount = $invoice_amount, payment_currency_code = '$recurring_payment_currency_code', payment_account_id = $recurring_payment_account_id, payment_method = '$recurring_payment_method', payment_reference = 'Paid via AutoPay', payment_invoice_id = $invoice_id");
@@ -1462,6 +1470,7 @@ mysqli_query($mysqli, "DELETE FROM webhook_queue WHERE queue_status IN ('deliver
  */
 
 require_once dirname(__DIR__) . '/includes/automation_functions.php';
+require_once dirname(__DIR__) . '/includes/sla_functions.php'; // slaStatus() for SLA %-consumed escalation conditions
 
 $automation_rules = [];
 $sql_rules = mysqli_query($mysqli,
@@ -1504,6 +1513,11 @@ if (!empty($automation_rules)) {
             $idle_hours = round((time() - strtotime($idle_since)) / 3600, 1);
 
             $now_str = date('Y-m-d H:i:s');
+            // SLA %-consumed for tiered escalation rules. slaStatus() derives pct from
+            // the stored (business-hours-aware) due dates; the calendar arg is unused so
+            // we pass [] to avoid a per-ticket policy/calendar lookup in the cron loop.
+            // 'none' state (no due date) reports 0 so a "greater_than" rule never fires.
+            $sla_st = slaStatus($ticket, []);
             $context = [
                 'age_hours'               => $age_hours,
                 'priority'                => $priority,
@@ -1516,6 +1530,8 @@ if (!empty($automation_rules)) {
                 'asset_id'                => intval($ticket['ticket_asset_id']),
                 'sla_response_breached'   => (!empty($ticket['ticket_sla_response_due']) && empty($ticket['ticket_first_response_at']) && $ticket['ticket_sla_response_due'] < $now_str) ? 1 : 0,
                 'sla_resolution_breached' => (!empty($ticket['ticket_sla_resolution_due']) && $ticket['ticket_sla_resolution_due'] < $now_str) ? 1 : 0,
+                'sla_response_pct'        => ($sla_st['response']['pct']   === null) ? 0 : $sla_st['response']['pct'],
+                'sla_resolution_pct'      => ($sla_st['resolution']['pct'] === null) ? 0 : $sla_st['resolution']['pct'],
             ];
 
             foreach ($schedule_rules as $rule) {
@@ -1692,6 +1708,33 @@ if ($config_module_enable_rmm && !empty($config_rmm_auto_ticket_severities)) {
         }
     }
 }
+
+/*
+ * ###############################################################################################################
+ *  ACCOUNTING SYNC (QuickBooks Online one-way push)
+ * ###############################################################################################################
+ */
+
+$config_module_enable_accounting = intval($settings_row['config_module_enable_accounting'] ?? 0);
+
+if ($config_module_enable_accounting) {
+    require_once dirname(__DIR__) . '/cron/accounting_sync.php';
+}
+
+/*
+ * ###############################################################################################################
+ *  ANALYTICS DELIVERY (daily metrics rollup + scheduled/emailed reports)
+ * ###############################################################################################################
+ */
+
+// Upsert yesterday's + today's ticket-flow snapshot into ticket_metrics_daily.
+require_once dirname(__DIR__) . '/cron/metrics_rollup.php';
+
+// Render + enqueue any report_schedules that are due.
+require_once dirname(__DIR__) . '/cron/report_scheduler.php';
+
+// Fire due CRM follow-up reminders (activity_reminder_at) to the activity owner.
+require_once dirname(__DIR__) . '/cron/crm_reminders.php';
 
 // Send Alert to inform Cron was run
 appNotify("Cron", "Cron successfully executed", "/admin/audit_log.php");

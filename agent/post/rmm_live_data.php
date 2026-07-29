@@ -14,10 +14,14 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/rmm_client_factory.php';
 
 header('Content-Type: application/json');
 
+if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
+    echo json_encode(['success' => false, 'error' => 'Invalid CSRF token']); exit;
+}
+
 $link_id = intval($_POST['link_id'] ?? 0);
 $type    = sanitizeInput($_POST['type'] ?? '');
 
-if (!$link_id || !in_array($type, ['software', 'services', 'wmi'])) {
+if (!$link_id || !in_array($type, ['software', 'services', 'wmi', 'checks', 'patches'])) {
     echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
     exit;
 }
@@ -47,6 +51,17 @@ try {
         $data = $client->getAgentServices($agent_id);
     } elseif ($type === 'wmi') {
         $data = $client->getAgentWmi($agent_id);
+    } elseif ($type === 'checks') {
+        // Tactical: agent checks (pass/fail/value). Level: monitors (best-effort).
+        if (method_exists($client, 'getAgentChecks')) {
+            $data = $client->getAgentChecks($agent_id);
+        } elseif (method_exists($client, 'getDeviceMonitors')) {
+            $data = $client->getDeviceMonitors($agent_id);
+        } else {
+            $data = [];
+        }
+    } elseif ($type === 'patches') {
+        $data = method_exists($client, 'getAgentPatches') ? $client->getAgentPatches($agent_id) : [];
     }
 
     echo json_encode(['success' => true, 'data' => $data]);

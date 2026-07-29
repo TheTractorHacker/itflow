@@ -12,12 +12,17 @@ for ($m = 1; $m <= 12; $m++) {
 }
 $month_cols_sql = implode(",\n        ", $month_cols);
 
+// A legacy API key deliberately restricted to one client ($api_key_client_id) must never
+// see another client's (or the whole company's) expense totals - an unrestricted key keeps
+// the same company-wide behavior as the classic web report.
+$client_join = !empty($api_key_client_id) ? " AND e.expense_client_id = " . intval($api_key_client_id) : '';
+
 $sql = mysqli_query($mysqli,
     "SELECT c.category_id, c.category_name,
         $month_cols_sql,
         SUM(e.expense_amount) AS total
      FROM categories c
-     LEFT JOIN expenses e ON e.expense_category_id = c.category_id AND YEAR(e.expense_date) = $year
+     LEFT JOIN expenses e ON e.expense_category_id = c.category_id AND YEAR(e.expense_date) = $year$client_join
      WHERE c.category_type = 'Expense'
      GROUP BY c.category_id, c.category_name
      ORDER BY c.category_name ASC"

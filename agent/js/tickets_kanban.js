@@ -125,4 +125,10 @@ $(document).ready(function () {
     function isTouchDevice() {
         return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     }
+
+    // Double-click a card to open its ticket.
+    document.addEventListener('dblclick', function (e) {
+        const card = e.target.closest('.js-open-ticket');
+        if (card) { window.location.href = 'ticket.php?ticket_id=' + card.dataset.ticketId; }
+    });
 });

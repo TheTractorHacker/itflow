@@ -156,9 +156,21 @@ class LevelRmmClient {
 
     public function getAlerts(bool $resolved = false): array {
         try {
-            $param  = $resolved ? '' : '?status=active';
-            $result = $this->get('/alerts' . $param);
-            return $result['data'] ?? [];
+            $all      = [];
+            $page     = 1;
+            $per_page = 100;
+            $status   = $resolved ? '' : '&status=active';
+            do {
+                $result = $this->get("/alerts?per_page=$per_page&page=$page" . $status);
+                $items  = $result['data'] ?? [];
+                foreach ($items as $alert) {
+                    $all[] = $alert;
+                }
+                $meta = $result['meta'] ?? [];
+                $more = !empty($meta['next_page']) || !empty($meta['next_cursor']);
+                $page++;
+            } while ($more && count($items) >= $per_page);
+            return $all;
         } catch (RuntimeException $e) { return []; }
     }
 
@@ -167,6 +179,20 @@ class LevelRmmClient {
             $result = $this->get('/alerts?device_id=' . urlencode($agent_id));
             return $result['data'] ?? [];
         } catch (RuntimeException $e) { return []; }
+    }
+
+    /**
+     * Level.io's public v2 API is read-only for alerts — there is no documented
+     * endpoint to acknowledge or resolve an alert. These throw a clear message
+     * (mirroring reboot()/runCommand()) so the caller logs it and the local
+     * ITFlow action still succeeds.
+     */
+    public function ackAlert(string $alert_id): array {
+        throw new RuntimeException('Level.io does not support acknowledging alerts via the API. Acknowledge the alert from the Level web app.');
+    }
+
+    public function resolveAlert(string $alert_id): array {
+        throw new RuntimeException('Level.io does not support resolving alerts via the API. Resolve the alert from the Level web app.');
     }
 
     // -----------------------------------------------------------------------
@@ -194,6 +220,81 @@ class LevelRmmClient {
         return 'https://app.level.io/device/' . urlencode($agent_id);
     }
 
+    /**
+     * Resolve the remote-connect URL for a Level device. Level opens remote
+     * sessions from its own web app, so this simply returns the device URL.
+     *
+     * @return array ['url' => string, 'type' => string]
+     */
+    public function buildRemoteUrl(string $agent_id, string $mode = ''): array {
+        return ['url' => $this->buildDeviceUrl($agent_id), 'type' => 'level'];
+    }
+
+    /**
+     * Fetch a script run's result by job id. Level.io's v2 API does not
+     * currently expose per-run script stdout/return-code keyed by a job id,
+     * so this is a best-effort stub that reports "not found".
+     *
+     * TODO: When Level exposes a run-result endpoint (e.g. GET
+     * /v2/devices/{id}/scripts/runs/{job_id}), fetch stdout/retcode here and
+     * return ['found' => true, 'stdout' => .., 'stderr' => .., 'retcode' => ..].
+     */
+    public function getScriptRunResult(string $agent_id, string $job_id): array {
+        return ['found' => false];
+    }
+
+    // -----------------------------------------------------------------------
+    // Monitoring (Level's "monitor" concept)
+    //
+    // Level.io's public v2 API does not currently expose a monitors endpoint
+    // (GET /v2/monitors and /v2/devices/{id}/monitors both return 404 as of
+    // this writing). These are best-effort: they probe the endpoint and return
+    // [] cleanly when it is absent, so the UI renders a "not supported" state.
+    //
+    // TODO: When Level exposes monitors, map each result to the shape used by
+    // the Monitoring tab: ['name','status'(passing/failing),'more_info'].
+    // -----------------------------------------------------------------------
+
+    public function getMonitors(): array {
+        try {
+            $result = $this->get('/monitors?per_page=100');
+            return $result['data'] ?? [];
+        } catch (RuntimeException $e) {
+            return [];
+        }
+    }
+
+    public function getDeviceMonitors(string $agent_id): array {
+        try {
+            $result = $this->get('/devices/' . urlencode($agent_id) . '/monitors');
+            return $result['data'] ?? [];
+        } catch (RuntimeException $e) {
+            return [];
+        }
+    }
+
+    // Level's public API does not expose per-device patch/OS-update status.
+    // TODO: implement when Level publishes a patch endpoint.
+    public function getAgentPatches(string $agent_id): array {
+        return [];
+    }
+
+    // -----------------------------------------------------------------------
+    // Live actions
+    //
+    // Level.io drives remote reboots and command execution through its own web
+    // app / scripts, not the public REST API, so these throw a clear message
+    // rather than silently failing.
+    // -----------------------------------------------------------------------
+
+    public function reboot(string $agent_id): array {
+        throw new RuntimeException('Level.io does not support remote reboot via the API. Reboot the device from the Level web app.');
+    }
+
+    public function runCommand(string $agent_id, string $cmd, string $shell = 'cmd', int $timeout = 30): array {
+        throw new RuntimeException('Level.io does not support running raw commands via the API. Use a Level script instead.');
+    }
+
     public function getIntegrationId(): int {
         return $this->integration_id;
     }
@@ -215,6 +316,51 @@ class LevelRmmClient {
         // Map Level role to a readable OS/type hint
         $platform    = $dev['platform'] ?? '';
 
+        // Coerce any scalar-or-array value to a plain string.
+        $flat = function ($v): string {
+            if (is_array($v))  return implode(', ', array_filter(array_map('strval', $v)));
+            if (is_bool($v))   return $v ? '1' : '0';
+            return (string) ($v ?? '');
+        };
+
+        // Hardware details may be nested under a "hardware"/"system" object or
+        // live at the top level depending on the Level payload — be defensive.
+        $hw  = is_array($dev['hardware'] ?? null) ? $dev['hardware'] : [];
+        $sys = is_array($dev['system'] ?? null)   ? $dev['system']   : [];
+
+        $cpu          = $flat($dev['cpu']          ?? $hw['cpu']          ?? $hw['processor']     ?? $dev['processor'] ?? '');
+        $ram          = $flat($dev['memory']       ?? $dev['ram']        ?? $hw['memory']        ?? $hw['ram']        ?? $hw['total_memory'] ?? '');
+        $serial       = $flat($dev['serial_number'] ?? $dev['serial']    ?? $hw['serial_number'] ?? $hw['serial']     ?? '');
+        $manufacturer = $flat($dev['manufacturer'] ?? $hw['manufacturer'] ?? $hw['vendor']       ?? '');
+        $model        = $flat($dev['model']        ?? $hw['model']       ?? '') ?: ($dev['role'] ?? '');
+        $os_name      = $flat($dev['operating_system'] ?? $dev['os']     ?? $sys['os']           ?? $platform);
+        $os_version   = $flat($dev['os_version']   ?? $dev['operating_system_version'] ?? $sys['os_version'] ?? '');
+        $logged_user  = $flat($dev['last_user']    ?? $dev['logged_in_user'] ?? $dev['last_logged_in_user'] ?? $dev['current_user'] ?? '');
+        $agent_ver    = $flat($dev['agent_version'] ?? $dev['version']    ?? '');
+
+        // IP addresses may be a list or a single string.
+        $ips_raw = $dev['ip_addresses'] ?? $dev['ips'] ?? $dev['ip_address'] ?? $dev['local_ips'] ?? [];
+        $local_ips = is_array($ips_raw) ? $ips_raw : array_filter(array_map('trim', explode(',', (string) $ips_raw)));
+
+        // Build a wmi_detail.network_config array so the mapper can persist
+        // interfaces and match assets by MAC, mirroring the Tactical shape.
+        $ifaces = $dev['network_interfaces'] ?? $dev['interfaces'] ?? $dev['nics'] ?? [];
+        $nics   = [];
+        if (is_array($ifaces)) {
+            foreach ($ifaces as $if) {
+                if (!is_array($if)) continue;
+                $mac = $if['mac_address'] ?? $if['mac'] ?? $if['MACAddress'] ?? '';
+                $ip  = $if['ip_addresses'] ?? $if['ip_address'] ?? $if['ip'] ?? $if['IPAddress'] ?? null;
+                if (empty($mac) && empty($ip)) continue;
+                $nics[] = [
+                    'MACAddress'  => $mac,
+                    'IPAddress'   => is_array($ip) ? $ip : ($ip !== null && $ip !== '' ? [$ip] : null),
+                    'Description' => $if['name'] ?? $if['description'] ?? '',
+                ];
+            }
+        }
+        $wmi_detail = $nics ? ['network_config' => $nics] : (is_array($dev['wmi_detail'] ?? null) ? $dev['wmi_detail'] : []);
+
         return [
             'id'               => $dev['id'] ?? '',
             'agent_id'         => $dev['id'] ?? '',
@@ -222,19 +368,26 @@ class LevelRmmClient {
             'description'      => $dev['notes'] ?? '',
             'status'           => $online ? 'online' : 'offline',
             'last_seen'        => $dev['last_seen'] ?? null,
-            'logged_in_user'   => '',
-            'operating_system' => $platform,
-            'os_version'       => '',
+            'logged_in_user'   => $logged_user,
+            'operating_system' => $os_name,
+            'os_version'       => $os_version,
             'plat'             => $platform,
-            'manufacturer'     => '',
-            'model'            => $dev['role'] ?? '',
-            'cpu'              => '',
-            'ram'              => '',
-            'serial_number'    => '',
-            'local_ips'        => [],
+            'manufacturer'     => $manufacturer,
+            'model'            => $model,
+            'cpu'              => $cpu,
+            'ram'              => $ram,
+            'serial_number'    => $serial,
+            'agent_version'    => $agent_ver,
+            'local_ips'        => $local_ips,
+            'wmi_detail'       => $wmi_detail,
             'tags'             => $dev['tags'] ?? [],
             'group_name'       => $dev['group_name'] ?? '',
             'display_name'     => $display,
+            // Live-health hints the asset mapper persists onto asset_rmm_links.
+            // Level exposes maintenance mode and last reboot time but not live
+            // CPU/RAM/disk usage percentages, so those stay NULL.
+            'maintenance_mode' => !empty($dev['maintenance_mode']) ? 1 : 0,
+            'last_reboot_time' => $dev['last_reboot_time'] ?? $dev['last_reboot'] ?? null,
             '_provider'        => 'level',
             '_raw'             => $dev,
         ];

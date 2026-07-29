@@ -31,7 +31,7 @@ function fmt_age(?int $ts): string {
     <div class="card-body">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h4 class="mb-1"><i class="fas fa-database mr-2 text-primary"></i>System Backup</h4>
+                <h4 class="mb-1"><i class="fas fa-database me-2 text-primary"></i>System Backup</h4>
                 <p class="text-muted mb-0 small">
                     <?php if ($last_backup): ?>
                         Last backup <?= fmt_age($last_backup) ?> &middot;
@@ -43,12 +43,12 @@ function fmt_age(?int $ts): string {
             </div>
             <div class="col-md-6 text-md-right mt-3 mt-md-0">
                 <a href="post.php?backup_download_fresh=1&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                   class="btn btn-primary mr-2">
-                    <i class="fas fa-download mr-2"></i>Download Backup
+                   class="btn btn-primary me-2">
+                    <i class="fas fa-download me-2"></i>Download Backup
                 </a>
                 <a href="post.php?backup_save=1&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                    class="btn btn-outline-secondary">
-                    <i class="fas fa-save mr-2"></i>Save to Server
+                    <i class="fas fa-save me-2"></i>Save to Server
                 </a>
                 <p class="text-muted mt-2 mb-0" style="font-size:11px;">
                     Download streams to your browser. Save to Server stores it in history below.
@@ -61,23 +61,23 @@ function fmt_age(?int $ts): string {
             <div class="col-4">
                 <div class="border-right py-2">
                     <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Last Manual</div>
-                    <div class="font-weight-bold mt-1"><?= fmt_age($last_manual ? filemtime($last_manual) : null) ?></div>
+                    <div class="fw-bold mt-1"><?= fmt_age($last_manual ? filemtime($last_manual) : null) ?></div>
                 </div>
             </div>
             <div class="col-4">
                 <div class="border-right py-2">
                     <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Last Auto</div>
-                    <div class="font-weight-bold mt-1"><?= fmt_age($last_auto ? filemtime($last_auto) : null) ?></div>
+                    <div class="fw-bold mt-1"><?= fmt_age($last_auto ? filemtime($last_auto) : null) ?></div>
                 </div>
             </div>
             <div class="col-4">
                 <div class="py-2">
                     <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Auto-Schedule</div>
-                    <div class="font-weight-bold mt-1">
+                    <div class="fw-bold mt-1">
                         <?php if ($config_backup_auto_enabled): ?>
-                            <span class="text-success"><i class="fas fa-check-circle mr-1"></i><?= ucfirst($config_backup_frequency) ?></span>
+                            <span class="text-success"><i class="fas fa-check-circle me-1"></i><?= ucfirst($config_backup_frequency) ?></span>
                         <?php else: ?>
-                            <span class="text-muted"><i class="fas fa-pause-circle mr-1"></i>Off</span>
+                            <span class="text-muted"><i class="fas fa-pause-circle me-1"></i>Off</span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -93,18 +93,18 @@ function fmt_age(?int $ts): string {
     <div class="col-lg-7 mb-3 mb-lg-0">
         <div class="card card-dark h-100">
             <div class="card-header py-2">
-                <h3 class="card-title"><i class="fas fa-fw fa-calendar-alt mr-2"></i>Scheduled Backups</h3>
+                <h3 class="card-title"><i class="fas fa-fw fa-calendar-alt me-2"></i>Scheduled Backups</h3>
             </div>
             <div class="card-body">
                 <form action="post.php" method="post">
                     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
                     <div class="form-group mb-3">
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="backup_auto"
+                        <div class="form-check form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="backup_auto"
                                    name="config_backup_auto_enabled" value="1"
                                    <?= $config_backup_auto_enabled ? 'checked' : '' ?>>
-                            <label class="custom-control-label" for="backup_auto">
+                            <label class="form-check-label" for="backup_auto">
                                 Enable automatic backups via cron
                             </label>
                         </div>
@@ -133,7 +133,7 @@ function fmt_age(?int $ts): string {
                     </div>
 
                     <button type="submit" name="save_backup_settings" class="btn btn-primary btn-sm">
-                        <i class="fas fa-check mr-1"></i>Save Schedule
+                        <i class="fas fa-check me-1"></i>Save Schedule
                     </button>
                 </form>
             </div>
@@ -144,7 +144,7 @@ function fmt_age(?int $ts): string {
     <div class="col-lg-5">
         <div class="card card-dark h-100">
             <div class="card-header py-2">
-                <h3 class="card-title"><i class="fas fa-fw fa-key mr-2"></i>Encryption Key Backup</h3>
+                <h3 class="card-title"><i class="fas fa-fw fa-key me-2"></i>Encryption Key Backup</h3>
             </div>
             <div class="card-body">
                 <p class="text-muted small mb-3">
@@ -158,7 +158,7 @@ function fmt_age(?int $ts): string {
                                autocomplete="new-password" required>
                         <div class="input-group-append">
                             <button class="btn btn-sm btn-warning" type="submit" name="backup_master_key">
-                                <i class="fas fa-key mr-1"></i>Reveal
+                                <i class="fas fa-key me-1"></i>Reveal
                             </button>
                         </div>
                     </div>
@@ -171,9 +171,9 @@ function fmt_age(?int $ts): string {
 <!-- ── Backup history ─────────────────────────────────────────────────────── -->
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-history mr-2"></i>Backup History</h3>
+        <h3 class="card-title mr-auto"><i class="fas fa-fw fa-history me-2"></i>Backup History</h3>
         <?php if ($total > 0): ?>
-            <span class="badge badge-secondary"><?= $total ?> backup<?= $total !== 1 ? 's' : '' ?></span>
+            <span class="badge text-bg-secondary"><?= $total ?> backup<?= $total !== 1 ? 's' : '' ?></span>
         <?php endif; ?>
     </div>
     <div class="card-body p-0">
@@ -187,7 +187,7 @@ function fmt_age(?int $ts): string {
         <table class="table table-sm table-borderless table-hover mb-0">
             <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;" class="text-muted border-bottom">
                 <tr>
-                    <th class="pl-3" style="width:36px;"></th>
+                    <th class="ps-3" style="width:36px;"></th>
                     <th>Filename</th>
                     <th style="width:80px;">Type</th>
                     <th style="width:80px;">Size</th>
@@ -203,32 +203,31 @@ function fmt_age(?int $ts): string {
                 $bdate   = date('Y-m-d H:i', $bmtime);
                 $bago    = timeAgo(date('Y-m-d H:i:s', $bmtime));
                 $btype   = str_contains($bbase, '_auto') ? 'Auto' : 'Manual';
-                $bbadge  = $btype === 'Auto' ? 'badge-success' : 'badge-primary';
+                $bbadge  = $btype === 'Auto' ? 'text-bg-success' : 'text-bg-primary';
                 $bmb     = $bsize >= 1048576 ? round($bsize / 1048576, 1) . ' MB'
                                              : round($bsize / 1024, 0) . ' KB';
                 $is_newest = ($i === 0);
             ?>
                 <tr <?= $is_newest ? 'class="table-active"' : '' ?>>
-                    <td class="pl-3 text-center">
+                    <td class="ps-3 text-center">
                         <i class="fas fa-file-archive text-secondary"></i>
                     </td>
                     <td>
                         <span class="small font-monospace"><?= htmlspecialchars($bbase) ?></span>
-                        <?= $is_newest ? '<span class="badge badge-light ml-1">latest</span>' : '' ?>
+                        <?= $is_newest ? '<span class="badge text-bg-light ms-1">latest</span>' : '' ?>
                     </td>
                     <td><span class="badge <?= $bbadge ?>"><?= $btype ?></span></td>
                     <td class="text-muted small"><?= $bmb ?></td>
                     <td class="text-muted small" title="<?= $bdate ?>"><?= $bago ?></td>
-                    <td class="pr-3 text-right">
+                    <td class="pe-3 text-end">
                         <a href="post.php?backup_serve=<?= urlencode($bbase) ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
                            class="btn btn-xs btn-outline-primary"
                            title="Download">
                             <i class="fas fa-download"></i>
                         </a>
                         <a href="post.php?backup_delete=<?= urlencode($bbase) ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                           class="btn btn-xs btn-outline-danger ml-1"
-                           title="Delete"
-                           onclick="return confirm('Delete <?= htmlspecialchars($bbase, ENT_QUOTES) ?>?')">
+                           class="btn btn-xs btn-outline-danger ms-1 confirm-link"
+                           title="Delete">
                             <i class="fas fa-trash"></i>
                         </a>
                     </td>

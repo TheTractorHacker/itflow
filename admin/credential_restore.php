@@ -19,10 +19,26 @@ if (isset($_POST['decrypt_with_master_key'])) {
     $decrypted = $master_key !== '';
 }
 
+// The staging tables are shared/global (rebuilt from whatever backup was last
+// uploaded), so only the admin who uploaded the currently-staged backup is allowed
+// to see it's loaded/browse it - otherwise any admin could browse and restore
+// another admin's uploaded backup by just opening this page. Ownership is tracked
+// in credential_restore_staging_meta, written by the upload_backup POST handler.
 $backup_loaded = false;
 $check = mysqli_query($mysqli, "SHOW TABLES LIKE 'credential_restore_staging'");
 if ($check && mysqli_num_rows($check) > 0) {
-    $backup_loaded = true;
+    $meta_check = mysqli_query($mysqli, "SHOW TABLES LIKE 'credential_restore_staging_meta'");
+    $staging_owner_user_id = null;
+    if ($meta_check && mysqli_num_rows($meta_check) > 0) {
+        $meta_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT uploaded_by_user_id FROM credential_restore_staging_meta LIMIT 1"));
+        if ($meta_row) {
+            $staging_owner_user_id = intval($meta_row['uploaded_by_user_id']);
+        }
+    }
+
+    if ($staging_owner_user_id !== null && $staging_owner_user_id === intval($session_user_id)) {
+        $backup_loaded = true;
+    }
 }
 
 $results = [];
@@ -66,7 +82,7 @@ if ($decrypted && $backup_loaded) {
 
 <div class="card card-dark">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-fw fa-history mr-2"></i>Credential Restore</h3>
+        <h3 class="card-title"><i class="fas fa-fw fa-history me-2"></i>Credential Restore</h3>
     </div>
     <div class="card-body">
 
@@ -80,33 +96,33 @@ if ($decrypted && $backup_loaded) {
 
         <form method="post" action="post.php" enctype="multipart/form-data" class="form-inline mb-3">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-            <div class="input-group mr-2 mb-2">
+            <div class="input-group me-2 mb-2">
                 <input type="file" name="backup_zip" class="form-control" accept=".zip" required>
             </div>
-            <button type="submit" name="upload_backup" class="btn btn-secondary mb-2"><i class="fas fa-upload mr-1"></i>Load Backup</button>
+            <button type="submit" name="upload_backup" class="btn btn-secondary mb-2"><i class="fas fa-upload me-1"></i>Load Backup</button>
         </form>
 
         <?php if ($backup_loaded) { ?>
         <p class="text-muted">
-            <i class="fas fa-fw fa-check-circle text-success mr-1"></i>
+            <i class="fas fa-fw fa-check-circle text-success me-1"></i>
             Backup loaded<?php if (!empty($_SESSION['credential_restore_backup_name'])) { ?>: <code><?php echo nullable_htmlentities($_SESSION['credential_restore_backup_name']); ?></code><?php } ?>
         </p>
         <?php } else { ?>
-        <p class="text-muted"><i class="fas fa-fw fa-exclamation-circle text-warning mr-1"></i>No backup loaded yet.</p>
+        <p class="text-muted"><i class="fas fa-fw fa-exclamation-circle text-warning me-1"></i>No backup loaded yet.</p>
         <?php } ?>
 
         <form method="post" action="credential_restore.php" class="form-inline mb-3">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-            <div class="input-group mr-2 mb-2">
+            <div class="input-group me-2 mb-2">
                 <input type="password" name="master_key" class="form-control" placeholder="Old master key" value="<?php echo nullable_htmlentities($master_key); ?>" required <?php echo $backup_loaded ? '' : 'disabled'; ?>>
             </div>
-            <button type="submit" name="decrypt_with_master_key" class="btn btn-primary mb-2" <?php echo $backup_loaded ? '' : 'disabled'; ?>><i class="fas fa-unlock mr-1"></i>Decrypt</button>
+            <button type="submit" name="decrypt_with_master_key" class="btn btn-primary mb-2" <?php echo $backup_loaded ? '' : 'disabled'; ?>><i class="fas fa-unlock me-1"></i>Decrypt</button>
         </form>
 
         <?php if ($decrypted) { ?>
 
         <form method="get" class="form-inline mb-3">
-            <div class="input-group mr-2 mb-2">
+            <div class="input-group me-2 mb-2">
                 <input type="search" name="q" class="form-control" placeholder="Search name / username / client" value="<?php echo nullable_htmlentities($q); ?>">
                 <div class="input-group-append">
                     <button class="btn btn-dark"><i class="fa fa-search"></i></button>
@@ -151,18 +167,18 @@ if ($decrypted && $backup_loaded) {
                         </td>
                         <td>
                             <?php if ($row['live_credential_id']) { ?>
-                                <span class="badge badge-secondary">Exists (#<?php echo intval($row['live_credential_id']); ?>)</span>
+                                <span class="badge text-bg-secondary">Exists (#<?php echo intval($row['live_credential_id']); ?>)</span>
                             <?php } else { ?>
-                                <span class="badge badge-warning">Missing live</span>
+                                <span class="badge text-bg-warning">Missing live</span>
                             <?php } ?>
                         </td>
                         <td>
                             <?php if ($row['decrypted_password'] !== false && $row['decrypted_username'] !== false) { ?>
-                            <form method="post" action="post.php" onsubmit="return confirm('Restore this credential into the live vault?');">
+                            <form method="post" action="post.php">
                                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                                 <input type="hidden" name="master_key" value="<?php echo nullable_htmlentities($master_key); ?>">
                                 <input type="hidden" name="credential_id" value="<?php echo intval($row['credential_id']); ?>">
-                                <button type="submit" name="restore_credential" class="btn btn-sm btn-outline-success"><i class="fas fa-undo mr-1"></i>Restore</button>
+                                <button type="submit" name="restore_credential" class="btn btn-sm btn-outline-success confirm-link"><i class="fas fa-undo me-1"></i>Restore</button>
                             </form>
                             <?php } ?>
                         </td>

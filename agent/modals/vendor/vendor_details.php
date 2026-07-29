@@ -7,14 +7,22 @@ $vendor_id = intval($_GET['id']);
 $sql = mysqli_query($mysqli, "SELECT * FROM vendors WHERE vendor_id = $vendor_id LIMIT 1");
 
 $row = mysqli_fetch_assoc($sql);
+$client_id = intval($row['vendor_client_id']);
+if ($client_id) {
+    enforceUserPermission('module_client');
+    enforceClientAccess($client_id);
+} else {
+    enforceUserPermission('module_financial');
+}
+
 $name = sanitizeInput($row['vendor_name']);
 $description = sanitizeInput($row['vendor_description']);
 $account_number = sanitizeInput($row['vendor_account_number']);
 $contact_name = sanitizeInput($row['vendor_contact_name']);
 $phone = preg_replace("/[^0-9]/", '',$row['vendor_phone']);
 $extension = preg_replace("/[^0-9]/", '',$row['vendor_extension']);
-$email = sanitizeInput($row['vendor_email']);
-$website = sanitizeInput($row['vendor_website']);
+$email = nullable_htmlentities($row['vendor_email']);
+$website = nullable_htmlentities($row['vendor_website']);
 $hours = sanitizeInput($row['vendor_hours']);
 $sla = sanitizeInput($row['vendor_sla']);
 $code = sanitizeInput($row['vendor_code']);
@@ -26,13 +34,13 @@ ob_start();
 
 <div class="modal-header bg-dark text-white">
     <div class="d-flex align-items-center">
-        <i class="fas fa-fw fa-building fa-2x mr-3"></i>
+        <i class="fas fa-fw fa-building fa-2x me-3"></i>
         <div>
             <h5 class="modal-title mb-0"><?php echo $name; ?></h5>
             <div class="text-muted"><?php echo getFallback($description); ?></div>
         </div>
     </div>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -42,7 +50,7 @@ ob_start();
     <!-- Vendor Info Card -->
     <div class="card mb-3 shadow-sm rounded">
         <div class="card-body">
-            <h6 class="text-secondary"><i class="fas fa-info-circle mr-2"></i>Vendor Details</h6>
+            <h6 class="text-secondary"><i class="fas fa-info-circle me-2"></i>Vendor Details</h6>
             <div class="row">
                 <div class="col-sm-6">
                     <div><strong>Account Number:</strong> <?php echo getFallback($account_number); ?></div>
@@ -60,7 +68,7 @@ ob_start();
     <!-- Contact Info Card -->
     <div class="card mb-3 shadow-sm rounded">
         <div class="card-body">
-            <h6 class="text-secondary"><i class="fas fa-user mr-2"></i>Contact Information</h6>
+            <h6 class="text-secondary"><i class="fas fa-user me-2"></i>Contact Information</h6>
             <div class="row">
                 <div class="col-sm-6">
                     <div><strong>Contact Name:</strong> <?php echo getFallback($contact_name); ?></div>
@@ -76,7 +84,7 @@ ob_start();
     <!-- Notes Card -->
     <div class="card mb-3 shadow-sm rounded">
         <div class="card-body">
-            <h6 class="text-secondary"><i class="fas fa-sticky-note mr-2"></i>Notes</h6>
+            <h6 class="text-secondary"><i class="fas fa-sticky-note me-2"></i>Notes</h6>
             <div>
                 <?php echo getFallback($notes); ?>
             </div>

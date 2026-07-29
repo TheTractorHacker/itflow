@@ -1,7 +1,12 @@
 node_modules
 config.php
+config/
+.beta_db_pw
+keystore_base64.txt
+.claude/
 
 uploads/favicon.ico
+uploads/contracts/*
 uploads/clients/*
 !uploads/clients/index.php
 uploads/custom/*

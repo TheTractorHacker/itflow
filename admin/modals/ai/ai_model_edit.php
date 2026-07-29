@@ -18,8 +18,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-robot mr-2"></i>Editing: <strong><?php echo $model_name; ?></strong></h5>
-    <button type="button" class="close text-light" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-robot me-2"></i>Editing: <strong><?php echo $model_name; ?></strong></h5>
+    <button type="button" class="close text-light" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -44,7 +44,7 @@ ob_start();
                             $ai_provider_name = nullable_htmlentities($row['ai_provider_name']);
 
                         ?>
-                        <option <?php if ($ai_provider_id = $ai_model_ai_provider_id) { echo "selected"; } ?> value="<?php echo $ai_provider_id; ?>"><?php echo $ai_provider_name; ?></option>
+                        <option <?php if ($ai_provider_id == $ai_model_ai_provider_id) { echo "selected"; } ?> value="<?php echo $ai_provider_id; ?>"><?php echo $ai_provider_name; ?></option>
                     <?php } ?>
                 </select>
             </div>
@@ -80,8 +80,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_ai_model" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_ai_model" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

@@ -16,12 +16,12 @@ if ($session_contact_primary == 0 && !$session_contact_is_technical_contact) {
 $contacts_sql = mysqli_query($mysqli, "SELECT contact_id, contact_name, contact_email, contact_primary, contact_technical, contact_billing FROM contacts WHERE contact_client_id = $session_client_id AND contacts.contact_archived_at IS NULL ORDER BY contact_created_at");
 ?>
 
-    <div class="row">
+    <div class="row mb-4">
         <div class="col">
-            <h3><i class="fas fa-fw fa-address-book mr-2"></i>Contacts</h3>
+            <h3><i class="fas fa-fw fa-address-book me-2"></i>Contacts</h3>
         </div>
-        <div class="col offset-6 text-right">
-            <a href="contact_add.php" class="btn btn-primary" role="button"><i class="fas fa-plus mr-2"></i>New Contact</a>
+        <div class="col offset-6 text-end">
+            <a href="contact_add.php" class="btn btn-primary" role="button"><i class="fas fa-plus me-2"></i>New Contact</a>
         </div>
     </div>
 
@@ -72,7 +72,7 @@ $contacts_sql = mysqli_query($mysqli, "SELECT contact_id, contact_name, contact_
                     <tr>
                         <td><a href="contact_edit.php?id=<?php echo $contact_id?>"><?php echo $contact_name ?></a></td>
                         <td><?php echo $contact_email; ?></td>
-                        <td><span class="badge badge-secondary"><?php echo $contact_roles_display ?></span></td>
+                        <td><span class="badge text-bg-secondary"><?php echo $contact_roles_display ?></span></td>
                     </tr>
 
                 <?php } ?>

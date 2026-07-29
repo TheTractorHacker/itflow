@@ -11,9 +11,9 @@ $sql_clients = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients
 ob_start();
 ?>
 
-<div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-copy mr-2"></i>Apply Template: <?= $name ?></h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+<div class="modal-header">
+    <h5 class="modal-title"><i class="fa fa-fw fa-copy me-2"></i>Apply Template: <?= $name ?></h5>
+    <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 
 <form action="post.php" method="post" autocomplete="off">
@@ -55,15 +55,15 @@ ob_start();
 
     <div class="modal-footer">
         <button type="submit" name="apply_contract_template" class="btn btn-primary text-bold">
-            <i class="fa fa-check mr-2"></i>Apply to Selected Clients
+            <i class="fa fa-check me-2"></i>Apply to Selected Clients
         </button>
-        <button type="button" class="btn btn-light" data-dismiss="modal">
-            <i class="fa fa-times mr-2"></i>Cancel
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            <i class="fa fa-times me-2"></i>Cancel
         </button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 document.getElementById('select_all_clients').addEventListener('change', function() {
     var checked = this.checked;
     document.querySelectorAll('.client-checkbox').forEach(function(cb) { cb.checked = checked; });

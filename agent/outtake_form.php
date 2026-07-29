@@ -40,6 +40,12 @@ $signature  = $row['outtake_signature'];
 $ticket_id  = intval($row['outtake_ticket_id']);
 $client_id  = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id"))[0]);
 
+// Confirm the requesting agent has access to the client that actually owns
+// this outtake form's ticket, regardless of any client_id passed in the URL.
+if ($client_id) {
+    enforceClientAccess($client_id);
+}
+
 // Ticket replies for "comments" section
 $sql_replies = mysqli_query($mysqli, "SELECT tr.ticket_reply, tr.ticket_reply_type, tr.ticket_reply_created_at, u.user_name, co.contact_name
     FROM ticket_replies tr
@@ -59,10 +65,10 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-file-signature mr-2"></i>Outtake Form — <?= $ticket_num ?>: <?= $subject ?></h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-file-signature me-2"></i>Outtake Form — <?= $ticket_num ?>: <?= $subject ?></h3>
         <div class="card-tools">
             <a href="ticket.php?ticket_id=<?= $ticket_id ?><?= $client_id ? '&client_id='.$client_id : '' ?>" class="btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left mr-1"></i>Back to Ticket
+                <i class="fas fa-arrow-left me-1"></i>Back to Ticket
             </a>
         </div>
     </div>
@@ -70,14 +76,14 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
 
         <?php if ($signed_at) { ?>
         <div class="alert alert-success">
-            <i class="fas fa-check-circle mr-2"></i>Signed by <strong><?= $signed_nm ?></strong> on <?= date('M j, Y g:i A', strtotime($signed_at)) ?>
+            <i class="fas fa-check-circle me-2"></i>Signed by <strong><?= $signed_nm ?></strong> on <?= date('M j, Y g:i A', strtotime($signed_at)) ?>
             <?php if ($signature) { ?><br><img src="<?= $signature ?>" style="max-height:80px;border:1px solid #ccc;border-radius:4px;background:#fff;display:block;margin-top:8px;"><?php } ?>
         </div>
         <?php } else { ?>
         <div class="alert alert-warning">
             <div class="d-flex align-items-start flex-wrap">
                 <div class="flex-grow-1">
-                    <i class="fas fa-clock mr-2"></i><strong>Awaiting customer signature.</strong>
+                    <i class="fas fa-clock me-2"></i><strong>Awaiting customer signature.</strong>
                     <?php if ($ot_token) { ?>
                     <div class="mt-1" style="font-size:12px;word-break:break-all;color:#856404;"><?= $sign_url ?></div>
                     <?php } ?>
@@ -90,17 +96,17 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
                         <input type="hidden" name="ticket_id" value="<?= $ticket_id ?>">
                         <input type="hidden" name="client_id" value="<?= $client_id ?>">
                         <button type="submit" name="send_outtake_email" class="btn btn-primary" title="Email signing link to <?= $contact_email ?>">
-                            <i class="fas fa-envelope mr-1"></i>Email Link to <?= $contact_email ?>
+                            <i class="fas fa-envelope me-1"></i>Email Link to <?= $contact_email ?>
                         </button>
                     </form>
                     <?php } elseif ($ot_token) { ?>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText('<?= $sign_url ?>').then(()=>alert('Link copied!'))">
-                        <i class="fas fa-copy mr-1"></i>Copy Link
+                    <button class="btn btn-outline-secondary btn-sm js-copy-outtake-link" data-url="<?= $sign_url ?>">
+                        <i class="fas fa-copy me-1"></i>Copy Link
                     </button>
                     <?php } ?>
-                    <button type="button" class="btn btn-success" title="Sign now in-person"
-                        onclick="openOuttakeSignModal(<?= $outtake_id ?>, <?= $ticket_id ?>, <?= $client_id ?: 0 ?>)">
-                        <i class="fas fa-pen-nib mr-1"></i>Sign In-Person
+                    <button type="button" class="btn btn-success js-sign-outtake" title="Sign now in-person"
+                        data-outtake-id="<?= $outtake_id ?>" data-ticket-id="<?= $ticket_id ?>" data-client-id="<?= $client_id ?: 0 ?>">
+                        <i class="fas fa-pen-nib me-1"></i>Sign In-Person
                     </button>
                 </div>
             </div>
@@ -119,7 +125,7 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
                         <label><strong>Tech Notes / Work Summary</strong> <small class="text-secondary">(visible on the outtake form)</small></label>
                         <textarea class="form-control" name="outtake_tech_notes" rows="5" placeholder="Describe the work completed, parts used, recommendations..."><?= $tech_notes ?></textarea>
                     </div>
-                    <button type="submit" name="save_outtake_notes" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Notes</button>
+                    <button type="submit" name="save_outtake_notes" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Notes</button>
                 </form>
 
                 <!-- Ticket Replies Preview -->
@@ -148,7 +154,7 @@ $sign_url = "https://$config_base_url/guest/outtake_sign.php?token=$ot_token";
                             <tr><td class="text-secondary">Client</td><td><?= $client_nm ?></td></tr>
                             <?php if ($contact_nm) { ?><tr><td class="text-secondary">Contact</td><td><?= $contact_nm ?></td></tr><?php } ?>
                             <tr><td class="text-secondary">Subject</td><td><?= $subject ?></td></tr>
-                            <tr><td class="text-secondary">Status</td><td><?= $signed_at ? '<span class="badge badge-success">Signed</span>' : '<span class="badge badge-warning text-dark">Unsigned</span>' ?></td></tr>
+                            <tr><td class="text-secondary">Status</td><td><?= $signed_at ? '<span class="badge text-bg-success">Signed</span>' : '<span class="badge text-bg-warning text-dark">Unsigned</span>' ?></td></tr>
                         </table>
                     </div>
                 </div>

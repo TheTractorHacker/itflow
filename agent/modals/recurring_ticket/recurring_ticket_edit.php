@@ -8,6 +8,7 @@ $sql = mysqli_query($mysqli, "SELECT * FROM recurring_tickets WHERE recurring_ti
 
 $row = mysqli_fetch_assoc($sql);
 $client_id = intval($row['recurring_ticket_client_id']);
+enforceClientAccess($client_id);
 $recurring_ticket_subject = nullable_htmlentities($row['recurring_ticket_subject']);
 $recurring_ticket_details = nullable_htmlentities($row['recurring_ticket_details']);
 $recurring_ticket_priority = nullable_htmlentities($row['recurring_ticket_priority']);
@@ -32,8 +33,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-calendar-check mr-2"></i>Editing Recurring Ticket: <strong><?php echo $recurring_ticket_subject; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-calendar-check me-2"></i>Editing Recurring Ticket: <strong><?php echo $recurring_ticket_subject; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -46,16 +47,16 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-edit-details"><i class="fa fa-fw fa-life-ring mr-2"></i>Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-edit-details"><i class="fa fa-fw fa-life-ring me-2"></i>Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-edit-contacts"><i class="fa fa-fw fa-users mr-2"></i>Contact</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-edit-contacts"><i class="fa fa-fw fa-users me-2"></i>Contact</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-edit-schedule"><i class="fa fa-fw fa-building mr-2"></i>Schedule</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-edit-schedule"><i class="fa fa-fw fa-building me-2"></i>Schedule</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-edit-assets"><i class="fa fa-fw fa-desktop mr-2"></i>Assets</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-edit-assets"><i class="fa fa-fw fa-desktop me-2"></i>Assets</a>
             </li>
         </ul>
 
@@ -142,11 +143,11 @@ ob_start();
                 </div>
 
                 <div class="form-group <?php if (!$config_module_enable_accounting) { echo 'd-none'; } ?>">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="editTicketBillable" name="billable"
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="editTicketBillable" name="billable"
                             <?php if ($recurring_ticket_billable == 1) { echo "checked"; } ?> value="1"
                         >
-                        <label class="custom-control-label" for="editTicketBillable">Mark Billable</label>
+                        <label class="form-check-label" for="editTicketBillable">Mark Billable</label>
                     </div>
                 </div>
 
@@ -285,8 +286,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_recurring_ticket" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_recurring_ticket" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

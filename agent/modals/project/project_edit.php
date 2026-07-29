@@ -20,6 +20,14 @@ $project_completed_at_display = date("Y-m-d", strtotime($project_completed_at));
 $project_archived_at = nullable_htmlentities($row['project_archived_at']);
 $client_id = intval($row['project_client_id']);
 $project_manager = intval($row['project_manager']);
+$project_start = nullable_htmlentities($row['project_start']);
+$project_estimated_hours = $row['project_estimated_hours'] !== null ? floatval($row['project_estimated_hours']) : '';
+$project_budget_amount = $row['project_budget_amount'] !== null ? floatval($row['project_budget_amount']) : '';
+$project_hourly_rate = $row['project_hourly_rate'] !== null ? floatval($row['project_hourly_rate']) : '';
+
+if ($client_id) {
+    enforceClientAccess($client_id);
+}
 
 // Generate the HTML form content using output buffering.
 ob_start();
@@ -27,9 +35,9 @@ ob_start();
 
 <div class="modal-header bg-dark">
     <h5 class="modal-title">
-        <i class="fas fa-fw fa-project-diagram mr-2"></i>Editing Project: <strong><?php echo $project_name; ?></strong>
+        <i class="fas fa-fw fa-project-diagram me-2"></i>Editing Project: <strong><?php echo $project_name; ?></strong>
     </h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -55,13 +63,53 @@ ob_start();
                 <input type="text" class="form-control" name="description" placeholder="Description" value="<?php echo $project_description; ?>">
             </div>
         </div>
-        <div class="form-group">
-            <label>Date Due <strong class="text-danger">*</strong></label>
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text"><i class="fa fa-fw fa-calendar"></i></span>
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label>Start Date</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-calendar"></i></span>
+                    </div>
+                    <input type="date" class="form-control" name="start_date" value="<?php echo $project_start; ?>">
                 </div>
-                <input type="date" class="form-control" name="due_date" value="<?php echo $project_due; ?>" required>
+            </div>
+            <div class="form-group col-md-6">
+                <label>Date Due <strong class="text-danger">*</strong></label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-calendar-check"></i></span>
+                    </div>
+                    <input type="date" class="form-control" name="due_date" value="<?php echo $project_due; ?>" required>
+                </div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                <label>Est. Hours</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-clock"></i></span>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="form-control" name="estimated_hours" value="<?php echo $project_estimated_hours; ?>" placeholder="0">
+                </div>
+            </div>
+            <div class="form-group col-md-4">
+                <label>Budget</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-dollar-sign"></i></span>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="form-control" name="budget_amount" value="<?php echo $project_budget_amount; ?>" placeholder="0.00">
+                </div>
+            </div>
+            <div class="form-group col-md-4">
+                <label>Rate / hr</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fa fa-fw fa-tags"></i></span>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="form-control" name="hourly_rate" value="<?php echo $project_hourly_rate; ?>" placeholder="0.00">
+                </div>
             </div>
         </div>
         <div class="form-group">
@@ -108,10 +156,10 @@ ob_start();
     </div>
     <div class="modal-footer">
         <button type="submit" name="edit_project" class="btn btn-primary text-bold">
-            <i class="fas fa-check mr-2"></i>Save
+            <i class="fas fa-check me-2"></i>Save
         </button>
-        <button type="button" class="btn btn-light" data-dismiss="modal">
-            <i class="fa fa-times mr-2"></i>Cancel
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            <i class="fa fa-times me-2"></i>Cancel
         </button>
     </div>
 </form>

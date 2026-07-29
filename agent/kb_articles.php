@@ -79,13 +79,13 @@ if (isset($kb_groups['Uncategorized'])) {
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-book mr-2"></i>Knowledge Base</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-book me-2"></i>Knowledge Base</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-secondary ajax-modal" data-modal-url="modals/kb_category/kb_category_manage.php">
-                <i class="fas fa-folder mr-2"></i>Categories
+                <i class="fas fa-folder me-2"></i>Categories
             </button>
             <button type="button" class="btn btn-primary ajax-modal" data-modal-size="lg" data-modal-url="modals/kb_article/kb_article_add.php<?php if (isset($client_id)) { echo "?client_id=$client_id"; } ?>">
-                <i class="fas fa-plus mr-2"></i>New Article
+                <i class="fas fa-plus me-2"></i>New Article
             </button>
         </div>
     </div>
@@ -105,7 +105,7 @@ if (isset($kb_groups['Uncategorized'])) {
                     </div>
                 </div>
                 <div class="col-auto mb-2">
-                    <select class="form-control select2" name="filter_category_id" onchange="this.form.submit()" data-placeholder="All Categories" style="width: 200px">
+                    <select class="form-control select2 auto-submit-select" name="filter_category_id" data-placeholder="All Categories" style="width: 200px">
                         <option value="">- All Categories -</option>
                         <option value="0" <?php if ($filter_category_id === 0) { echo "selected"; } ?>>Uncategorized</option>
                         <?php
@@ -119,7 +119,7 @@ if (isset($kb_groups['Uncategorized'])) {
                 </div>
                 <?php if (!isset($client_id)) { ?>
                     <div class="col-auto mb-2">
-                        <select class="form-control select2" name="filter_client_id" onchange="this.form.submit()" data-placeholder="All Articles" style="width: 220px">
+                        <select class="form-control select2 auto-submit-select" name="filter_client_id" data-placeholder="All Articles" style="width: 220px">
                             <option value="">- All Articles -</option>
                             <option value="0" <?php if ($filter_client_id === 0) { echo "selected"; } ?>>Central (Company-wide)</option>
                             <?php
@@ -142,7 +142,7 @@ if (isset($kb_groups['Uncategorized'])) {
         <?php } ?>
 
         <?php foreach ($kb_groups as $group_name => $articles) { ?>
-            <h5 class="mt-3 mb-3"><i class="fas fa-fw fa-folder text-secondary mr-2"></i><?= nullable_htmlentities($group_name) ?></h5>
+            <h5 class="mt-3 mb-3"><i class="fas fa-fw fa-folder text-secondary me-2"></i><?= nullable_htmlentities($group_name) ?></h5>
             <div class="row">
                 <?php foreach ($articles as $row) {
                     $kb_article_id = intval($row['kb_article_id']);
@@ -174,31 +174,31 @@ if (isset($kb_groups['Uncategorized'])) {
                             <div class="card-footer d-flex align-items-center justify-content-between bg-white">
                                 <div>
                                     <?php if ($kb_article_client_id == 0) { ?>
-                                        <span class="badge badge-info">Central</span>
+                                        <span class="badge text-bg-info">Central</span>
                                     <?php } else { ?>
-                                        <span class="badge badge-secondary"><?= $kb_article_client_name ?></span>
+                                        <span class="badge text-bg-secondary"><?= $kb_article_client_name ?></span>
                                     <?php } ?>
                                     <?php if ($kb_article_client_visible == 1) { ?>
-                                        <i class="fas fa-fw fa-check text-success" data-toggle="tooltip" title="Visible in client portal"></i>
+                                        <i class="fas fa-fw fa-check text-success" data-bs-toggle="tooltip" title="Visible in client portal"></i>
                                     <?php } else { ?>
-                                        <i class="fas fa-fw fa-eye-slash text-muted" data-toggle="tooltip" title="Hidden from client portal"></i>
+                                        <i class="fas fa-fw fa-eye-slash text-muted" data-bs-toggle="tooltip" title="Hidden from client portal"></i>
                                     <?php } ?>
-                                    <small class="text-secondary ml-1"><?= nullable_htmlentities(date('M j, Y', strtotime($kb_article_updated_at))) ?></small>
+                                    <small class="text-secondary ms-1"><?= nullable_htmlentities(date('M j, Y', strtotime($kb_article_updated_at))) ?></small>
                                 </div>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" data-bs-toggle="dropdown" data-boundary="window">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item" href="<?= $kb_article_url ?>">
-                                            <i class="fas fa-fw fa-eye mr-2"></i>View
+                                            <i class="fas fa-fw fa-eye me-2"></i>View
                                         </a>
                                         <a class="dropdown-item ajax-modal" href="#" data-modal-size="lg" data-modal-url="modals/kb_article/kb_article_edit.php?id=<?= $kb_article_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_kb_article=<?= $kb_article_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash me-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>
@@ -218,3 +218,14 @@ if (isset($kb_groups['Uncategorized'])) {
 
 <?php
 require_once "../includes/footer.php";
+?>
+
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '', ENT_QUOTES) ?>">
+// The category/client filter selects used to rely on an inline onchange="this.form.submit()"
+// attribute, which this app's CSP (script-src with a nonce, no unsafe-inline) silently blocks.
+document.querySelectorAll('.auto-submit-select').forEach(function (select) {
+    select.addEventListener('change', function () {
+        select.form.submit();
+    });
+});
+</script>

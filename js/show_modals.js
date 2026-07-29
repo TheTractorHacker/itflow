@@ -1,8 +1,9 @@
-$(document).ready(function () {
-    $('.modal').each(function () {
-        const modalId = `#${$(this).attr('id')}`;
-        if (window.location.href.indexOf(modalId) !== -1) {
-            $(modalId).modal('show');
+// Auto-open a modal when its id is present in the URL (Bootstrap 5 / vanilla)
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.modal').forEach(function (modalEl) {
+        if (!modalEl.id) { return; }
+        if (window.location.href.indexOf('#' + modalEl.id) !== -1) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
         }
     });
 });

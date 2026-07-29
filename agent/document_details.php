@@ -85,7 +85,7 @@ $page_title = $row['document_name'];
         ?>
         <li class="breadcrumb-item">
             <a href="files.php?client_id=<?php echo $client_id; ?>&folder_id=<?php echo $bread_crumb_folder_id; ?>">
-                <i class="fas fa-fw fa-folder-open mr-2"></i><?php echo $bread_crumb_folder_name; ?>
+                <i class="fas fa-fw fa-folder-open me-2"></i><?php echo $bread_crumb_folder_name; ?>
             </a>
         </li>
         <?php
@@ -94,7 +94,7 @@ $page_title = $row['document_name'];
     <li class="breadcrumb-item active">
         <i class="fas fa-file"></i> <?php echo $document_name; ?>
         <?php if (!empty($document_archived_at)) {
-            echo "<span class='text-danger ml-2'>(ARCHIVED on $document_archived_at)</span>";
+            echo "<span class='text-danger ms-2'>(ARCHIVED on $document_archived_at)</span>";
         } ?>
     </li>
 </ol>
@@ -112,7 +112,7 @@ $page_title = $row['document_name'];
                         <?php } ?>
                     </div>
                     <div class="col">
-                        <div class="float-right">
+                        <div class="float-end">
                             <div>
                                 Date:
                                 <strong><?= date('Y-m-d', strtotime($document_updated_at)); ?></strong>
@@ -183,25 +183,25 @@ $page_title = $row['document_name'];
     <div class="col-md-3 d-print-none">
         <div class="row">
             <div class="col-12 mb-3">
-                <button type="button" class="btn btn-primary ajax-modal mr-1"
+                <button type="button" class="btn btn-primary ajax-modal me-1"
                     data-modal-size="lg"
                     data-modal-url="modals/document/document_edit.php?id=<?= $document_id ?>">
                     <i class="fas fa-fw fa-edit" title="Edit"></i>
                 </button>
-                <button type="button" class="btn btn-secondary mr-1" data-toggle="modal" data-target="#shareModal"
+                <button type="button" class="btn btn-secondary me-1" data-bs-toggle="modal" data-bs-target="#shareModal"
                     onclick="populateShareModal(<?= "$client_id, 'Document', $document_id"; ?>)">
                     <i class="fas fa-fw fa-share" title="Share"></i>
                 </button>
-                <a class="btn btn-success mr-1" href="post.php?export_document=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class='fas fa-fw fa-file-pdf' title="PDF Export"></i></a>
-                <button type="button" class="btn btn-secondary mr-4" onclick="window.print();"><i class="fas fa-fw fa-print" title="Print"></i></button>
-                <a class="btn btn-warning mr-1 confirm-link" href="post.php?archive_document=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" title="Archive"><i class='fas fa-fw fa-archive'></i></a>
+                <a class="btn btn-success me-1" href="post.php?export_document=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"><i class='fas fa-fw fa-file-pdf' title="PDF Export"></i></a>
+                <button type="button" class="btn btn-secondary me-4 js-print-page"><i class="fas fa-fw fa-print" title="Print"></i></button>
+                <a class="btn btn-warning me-1 confirm-link" href="post.php?archive_document=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" title="Archive"><i class='fas fa-fw fa-archive'></i></a>
                 <a class="btn btn-danger confirm-link" href="post.php?delete_document=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>&from=document_details" title="Delete"><i class='fas fa-fw fa-trash-alt'></i></a>
             </div>
         </div>
         <div class="card card-body bg-light">
-            <h5 class="mb-3"><i class="fas fa-tags mr-2"></i>Related Items</h5>
+            <h5 class="mb-3"><i class="fas fa-tags me-2"></i>Related Items</h5>
             <h6>
-                <i class="fas fa-fw fa-paperclip text-secondary mr-2"></i>Files
+                <i class="fas fa-fw fa-paperclip text-secondary me-2"></i>Files
                 <button type="button" class="btn btn-link btn-sm ajax-modal"
                     data-modal-url="modals/document/document_link_file.php?document_id=<?= $document_id ?>">
                     <i class="fas fa-fw fa-plus"></i>
@@ -224,17 +224,17 @@ $page_title = $row['document_name'];
                 $linked_files[] = $file_id;
 
                 ?>
-                <div class="ml-2">
+                <div class="ms-2">
                     <a href="files.php?client_id=<?= $client_id ?>&folder_id=<?= $folder_id ?>&q=<?= $file_name ?>" target="_blank"><?= $file_name ?></a>
                     <a class="confirm-link" href="post.php?unlink_file_from_document&file_id=<?= $file_id ?>&document_id=<?= $document_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                        <i class="fas fa-fw fa-unlink text-secondary float-right" title="Unlink File"></i>
+                        <i class="fas fa-fw fa-unlink text-secondary float-end" title="Unlink File"></i>
                     </a>
                 </div>
                 <?php
                 }
                 ?>
             <h6>
-                <i class="fas fa-fw fa-users text-secondary mt-3 mr-2"></i>Contacts
+                <i class="fas fa-fw fa-users text-secondary mt-3 me-2"></i>Contacts
                 <button type="button" class="btn btn-link btn-sm ajax-modal"
                     data-modal-url="modals/document/document_link_contact.php?document_id=<?= $document_id ?>">
                     <i class="fas fa-fw fa-plus"></i>
@@ -256,12 +256,12 @@ $page_title = $row['document_name'];
                 $linked_contacts[] = $contact_id;
 
                 ?>
-                <div class="ml-2">
+                <div class="ms-2">
                     <a class="ajax-modal" href="#"
                         data-modal-size="lg"
                         data-modal-url="modals/contact/contact_details.php?id=<?= $contact_id ?>">
                         <?php echo $contact_name; ?></a>
-                    <a class="confirm-link float-right" href="post.php?unlink_contact_from_document&contact_id=<?php echo $contact_id; ?>&document_id=<?php echo $document_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                    <a class="confirm-link float-end" href="post.php?unlink_contact_from_document&contact_id=<?php echo $contact_id; ?>&document_id=<?php echo $document_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                         <i class="fas fa-fw fa-unlink text-secondary" title="Unlink Contact"></i>
                     </a>
                 </div>
@@ -269,7 +269,7 @@ $page_title = $row['document_name'];
                 }
                 ?>
             <h6>
-                <i class="fas fa-fw fa-laptop text-secondary mr-2 mt-3"></i>Assets
+                <i class="fas fa-fw fa-laptop text-secondary me-2 mt-3"></i>Assets
                 <button type="button" class="btn btn-link btn-sm ajax-modal" data-modal-url="modals/document/document_link_asset.php?document_id=<?= $document_id ?>">
                     <i class="fas fa-fw fa-plus"></i>
                 </button>
@@ -290,13 +290,13 @@ $page_title = $row['document_name'];
                 $linked_assets[] = $asset_id;
 
                 ?>
-                <div class="ml-2">
+                <div class="ms-2">
                     <a class="ajax-modal" href="#"
                         data-modal-size="lg"
                         data-modal-url="modals/asset/asset_details.php?id=<?= $asset_id ?>">
                         <?php echo $asset_name; ?>
                     </a>
-                    <a class="confirm-link float-right" href="post.php?unlink_asset_from_document&asset_id=<?php echo $asset_id; ?>&document_id=<?php echo $document_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                    <a class="confirm-link float-end" href="post.php?unlink_asset_from_document&asset_id=<?php echo $asset_id; ?>&document_id=<?php echo $document_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                         <i class="fas fa-fw fa-unlink text-secondary" title="Unlink Asset"></i>
                     </a>
                 </div>
@@ -304,7 +304,7 @@ $page_title = $row['document_name'];
             }
             ?>
             <h6>
-                <i class="fas fa-fw fa-cube text-secondary mr-2 mt-3"></i>Licenses
+                <i class="fas fa-fw fa-cube text-secondary me-2 mt-3"></i>Licenses
                 <button type="button" class="btn btn-link btn-sm ajax-modal"
                     data-modal-url="modals/document/document_link_software.php?document_id=<?= $document_id ?>">
                     <i class="fas fa-fw fa-plus"></i>
@@ -326,9 +326,9 @@ $page_title = $row['document_name'];
                 $linked_software[] = $software_id;
 
                 ?>
-                <div class="ml-2">
+                <div class="ms-2">
                     <a href="software.php?client_id=<?php echo $client_id; ?>&q=<?php echo $software_name; ?>" target="_blank"><?php echo $software_name; ?></a>
-                    <a class="confirm-link float-right" href="post.php?unlink_software_from_document&software_id=<?php echo $software_id; ?>&document_id=<?php echo $document_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                    <a class="confirm-link float-end" href="post.php?unlink_software_from_document&software_id=<?php echo $software_id; ?>&document_id=<?php echo $document_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                         <i class="fas fa-fw fa-unlink text-secondary" title="Unlink License"></i>
                     </a>
                 </div>
@@ -336,7 +336,7 @@ $page_title = $row['document_name'];
                 }
                 ?>
             <h6>
-                <i class="fas fa-fw fa-building text-secondary mr-2 mt-3"></i>Vendors
+                <i class="fas fa-fw fa-building text-secondary me-2 mt-3"></i>Vendors
                 <button type="button" class="btn btn-link btn-sm ajax-modal"
                     data-modal-url="modals/document/document_link_vendor.php?document_id=<?= $document_id ?>">
                     <i class="fas fa-fw fa-plus"></i>
@@ -358,11 +358,11 @@ $page_title = $row['document_name'];
                 $associated_vendors[] = $vendor_id;
 
                 ?>
-                <div class="ml-2">
+                <div class="ms-2">
                     <a class="ajax-modal" href="#" data-modal-url="modals/vendor/vendor_details.php?id=<?= $vendor_id ?>">
                         <?php echo $vendor_name; ?>
                     </a>
-                    <a class="confirm-link float-right" href="post.php?unlink_vendor_from_document&vendor_id=<?php echo $vendor_id; ?>&document_id=<?php echo $document_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                    <a class="confirm-link float-end" href="post.php?unlink_vendor_from_document&vendor_id=<?php echo $vendor_id; ?>&document_id=<?php echo $document_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                         <i class="fas fa-fw fa-unlink text-secondary" title="Unlink Vendor"></i>
                     </a>
                 </div>
@@ -373,9 +373,9 @@ $page_title = $row['document_name'];
 
         <?php if ($config_client_portal_enable) { ?>
             <div class="card card-body bg-light">
-                <h6><i class="fas fa-handshake mr-2"></i>Portal Collaboration</h6>
+                <h6><i class="fas fa-handshake me-2"></i>Portal Collaboration</h6>
                 <div class="mt-1">
-                    <i class="fa fa-fw fa-eye<?php if (!$document_client_visible) { echo '-slash'; } ?> text-secondary mr-2"></i>Document is
+                    <i class="fa fa-fw fa-eye<?php if (!$document_client_visible) { echo '-slash'; } ?> text-secondary me-2"></i>Document is
                     <a class="ajax-modal" href="#"
                         data-modal-url="modals/document/document_edit_visibility.php?document_id=<?= $document_id ?>">
                         <?php
@@ -391,7 +391,7 @@ $page_title = $row['document_name'];
         <?php } ?>
 
         <div class="card card-body bg-light">
-            <h6><i class="fas fa-history mr-2"></i>Revisions</h6>
+            <h6><i class="fas fa-history me-2"></i>Revisions</h6>
             <?php
 
             $sql_document_versions = mysqli_query($mysqli, "SELECT * FROM document_versions
@@ -409,13 +409,13 @@ $page_title = $row['document_name'];
 
                 ?>
                 <div class="mt-1 <?php if($document_id === $document_version_id){ echo "text-bold"; } ?>">
-                    <i class="fas fa-fw fa-history text-secondary mr-2"></i>
+                    <i class="fas fa-fw fa-history text-secondary me-2"></i>
                     <a class="ajax-modal" href="#"
                         data-modal-size="lg"
                         data-modal-url="modals/document/document_version_view.php?id=<?= $document_version_id ?>">
                         <?php echo "$document_version_created_date | $document_version_author"; ?>
                     </a>
-                    <a class="confirm-link float-right" href="post.php?delete_document_version=<?php echo $document_version_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
+                    <a class="confirm-link float-end" href="post.php?delete_document_version=<?php echo $document_version_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                         <i class="fas fa-fw fa-trash-alt text-secondary"></i>
                     </a>
                 </div>

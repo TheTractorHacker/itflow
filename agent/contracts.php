@@ -32,11 +32,11 @@ $warn_date = date('Y-m-d', strtotime('+45 days'));
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-file-contract mr-2"></i>Contracts</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-file-contract me-2"></i>Contracts</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-primary ajax-modal"
                 data-modal-url="modals/contract/contract_add.php?<?= $client_url ?>">
-                <i class="fas fa-plus"></i><span class="d-none d-lg-inline ml-2">New Contract</span>
+                <i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-2">New Contract</span>
             </button>
         </div>
     </div>
@@ -89,8 +89,8 @@ $warn_date = date('Y-m-d', strtotime('+45 days'));
 
                     $renewal_class = '';
                     if ($crenewal) {
-                        if ($crenewal < $today) $renewal_class = 'text-danger font-weight-bold';
-                        elseif ($crenewal <= $warn_date) $renewal_class = 'text-warning font-weight-bold';
+                        if ($crenewal < $today) $renewal_class = 'text-danger fw-bold';
+                        elseif ($crenewal <= $warn_date) $renewal_class = 'text-warning fw-bold';
                     }
                 ?>
                 <tr>
@@ -102,14 +102,14 @@ $warn_date = date('Y-m-d', strtotime('+45 days'));
                     <td><?= $cstatus ?></td>
                     <td><?= $cvalue ?></td>
                     <td><?= $cfreq ?: '-' ?></td>
-                    <td><?= $has_sla ? '<span class="badge badge-info"><i class="fas fa-stopwatch mr-1"></i>SLA</span>' : '-' ?></td>
+                    <td><?= $has_sla ? '<span class="badge text-bg-info"><i class="fas fa-stopwatch me-1"></i>SLA</span>' : '-' ?></td>
                     <td><?= $cstart ?: '-' ?></td>
                     <td><?= $cend ?: '-' ?></td>
                     <td class="<?= $renewal_class ?>">
                         <?php if ($crenewal) {
                             echo $crenewal;
-                            if ($crenewal < $today) echo " <span class='badge badge-danger'>Expired</span>";
-                            elseif ($crenewal <= $warn_date) echo " <span class='badge badge-warning text-dark'>Due Soon</span>";
+                            if ($crenewal < $today) echo " <span class='badge text-bg-danger'>Expired</span>";
+                            elseif ($crenewal <= $warn_date) echo " <span class='badge text-bg-warning text-dark'>Due Soon</span>";
                         } else { echo '-'; } ?>
                     </td>
                     <td class="text-center">
@@ -118,11 +118,11 @@ $warn_date = date('Y-m-d', strtotime('+45 days'));
                             title="Documents">
                             <i class="fas fa-file-pdf"></i>
                         </a>
-                        <a href="#" class="btn btn-sm btn-secondary ajax-modal ml-1"
+                        <a href="#" class="btn btn-sm btn-secondary ajax-modal ms-1"
                             data-modal-url="modals/contract/contract_edit.php?contract_id=<?= $cid ?>">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <a href="post.php?delete_contract=<?= $cid ?>&client_id=<?= $cclient_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-sm btn-danger confirm-link ml-1">
+                        <a href="post.php?delete_contract=<?= $cid ?>&client_id=<?= $cclient_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" class="btn btn-sm btn-danger confirm-link ms-1">
                             <i class="fas fa-trash"></i>
                         </a>
                     </td>

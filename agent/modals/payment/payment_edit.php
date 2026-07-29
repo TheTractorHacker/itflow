@@ -4,7 +4,9 @@ require_once '../../../includes/modal_header.php';
 
 $payment_id = intval($_GET['id']);
 
-$sql = mysqli_query($mysqli, "SELECT * FROM payments WHERE payment_id = $payment_id LIMIT 1");
+$sql = mysqli_query($mysqli, "SELECT * FROM payments
+    LEFT JOIN invoices ON payment_invoice_id = invoice_id
+    WHERE payment_id = $payment_id LIMIT 1");
 
 $row = mysqli_fetch_assoc($sql);
 $payment_date = nullable_htmlentities($row['payment_date']);
@@ -12,13 +14,15 @@ $payment_method = nullable_htmlentities($row['payment_method']);
 $payment_amount = floatval($row['payment_amount']);
 $payment_reference = nullable_htmlentities($row['payment_reference']);
 $payment_account_id = intval($row['payment_account_id']);
+$client_id = intval($row['invoice_client_id']);
+enforceClientAccess($client_id);
 
 ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-credit-card mr-2"></i>Edit Payment</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-credit-card me-2"></i>Edit Payment</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -137,8 +141,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="edit_payment" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Save Changes</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_payment" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Save Changes</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

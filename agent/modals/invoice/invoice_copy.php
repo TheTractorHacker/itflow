@@ -7,6 +7,8 @@ $invoice_id = intval($_GET['id']);
 $sql = mysqli_query($mysqli, "SELECT * FROM invoices LEFT JOIN clients ON invoice_client_id = client_id WHERE invoice_id = $invoice_id LIMIT 1");
 
 $row = mysqli_fetch_assoc($sql);
+$client_id = intval($row['invoice_client_id']);
+enforceClientAccess($client_id);
 $invoice_prefix = nullable_htmlentities($row['invoice_prefix']);
 $invoice_number = intval($row['invoice_number']);
 $client_name = nullable_htmlentities($row['client_name']);
@@ -16,8 +18,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-copy mr-2"></i>Copying invoice: <strong><?php echo "$invoice_prefix$invoice_number"; ?></strong> - <?php echo $client_name; ?></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-copy me-2"></i>Copying invoice: <strong><?php echo "$invoice_prefix$invoice_number"; ?></strong> - <?php echo $client_name; ?></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -39,8 +41,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_invoice_copy" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Copy</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_invoice_copy" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Copy</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

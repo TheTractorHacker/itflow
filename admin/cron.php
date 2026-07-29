@@ -45,14 +45,13 @@ $script_base = '/usr/bin/php /var/www/itflow.foleyit.com/cron/';
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clock mr-2"></i>Cron Manager</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clock me-2"></i>Cron Manager</h3>
         <div class="card-tools">
             <form action="/admin/post.php" method="POST" class="d-inline">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                 <input type="hidden" name="run_cron_now" value="1">
-                <button type="submit" class="btn btn-success btn-sm"
-                        onclick="return confirm('Run cron now? This may take a moment.')">
-                    <i class="fas fa-play mr-1"></i>Run Now
+                <button type="submit" class="btn btn-success btn-sm confirm-link">
+                    <i class="fas fa-play me-1"></i>Run Now
                 </button>
             </form>
         </div>
@@ -61,7 +60,7 @@ $script_base = '/usr/bin/php /var/www/itflow.foleyit.com/cron/';
 
         <?php if ($last_run): ?>
         <div class="alert alert-info mb-3">
-            <i class="fas fa-info-circle mr-2"></i>
+            <i class="fas fa-info-circle me-2"></i>
             Last successful run: <strong><?= nullable_htmlentities($last_run['app_log_created_at']) ?></strong>
         </div>
         <?php endif; ?>
@@ -72,7 +71,7 @@ $script_base = '/usr/bin/php /var/www/itflow.foleyit.com/cron/';
             <input type="hidden" name="save_cron_schedule" value="1">
             <div class="form-group">
                 <label><strong>Main Cron Schedule</strong>
-                    <small class="text-muted ml-1">(cron/cron.php — runs ticket automation, invoices, reminders, backups, etc.)</small>
+                    <small class="text-muted ms-1">(cron/cron.php — runs ticket automation, invoices, reminders, backups, etc.)</small>
                 </label>
                 <div class="input-group">
                     <select name="cron_preset" class="form-control" id="cronPreset">
@@ -88,7 +87,7 @@ $script_base = '/usr/bin/php /var/www/itflow.foleyit.com/cron/';
                     </select>
                     <div class="input-group-append">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save mr-1"></i>Save Schedule
+                            <i class="fas fa-save me-1"></i>Save Schedule
                         </button>
                     </div>
                 </div>
@@ -105,7 +104,7 @@ $script_base = '/usr/bin/php /var/www/itflow.foleyit.com/cron/';
 
         <!-- All scheduled jobs table -->
         <h6 class="mt-4 mb-2 text-muted text-uppercase" style="font-size:.75rem;letter-spacing:.05em">
-            <i class="fas fa-list mr-1"></i>All Scheduled Jobs (<?= htmlspecialchars($cron_file) ?>)
+            <i class="fas fa-list me-1"></i>All Scheduled Jobs (<?= htmlspecialchars($cron_file) ?>)
         </h6>
         <table class="table table-sm table-bordered mb-0">
             <thead class="thead-light">
@@ -130,7 +129,7 @@ $script_base = '/usr/bin/php /var/www/itflow.foleyit.com/cron/';
     </div>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 document.getElementById('cronPreset').addEventListener('change', function () {
     document.getElementById('customScheduleGroup').style.display =
         this.value === 'custom' ? 'block' : 'none';

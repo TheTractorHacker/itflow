@@ -18,8 +18,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-cube mr-2"></i>New License</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-cube me-2"></i>New License</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -30,21 +30,21 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-details">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-details">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-licensing">Licensing</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-licensing">Licensing</a>
             </li>
             <?php if ($client_id) { // Dont show these when in global mode ?>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-device-licenses">Devices</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-device-licenses">Devices</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-user-licenses">Users</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-user-licenses">Users</a>
             </li>
             <?php } ?>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-notes">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-notes">Notes</a>
             </li>
         </ul>
 
@@ -237,8 +237,8 @@ ob_start();
 
                     <li class="list-group-item bg-dark">
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" onclick="this.closest('.tab-pane').querySelectorAll('.asset-checkbox').forEach(checkbox => checkbox.checked = this.checked);">
-                            <label class="form-check-label ml-3"><strong>Licensed Devices</strong></label>
+                            <input type="checkbox" class="form-check-input js-select-all-in-tab-pane" data-target-class="asset-checkbox">
+                            <label class="form-check-label ms-3"><strong>Licensed Devices</strong></label>
                         </div>
                     </li>
 
@@ -262,7 +262,7 @@ ob_start();
                         <li class="list-group-item">
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input asset-checkbox" name="assets[]" value="<?php echo $asset_id_select; ?>">
-                                <label class="form-check-label ml-2"><?php echo "$asset_archived_display$asset_name_select - $contact_name_select"; ?></label>
+                                <label class="form-check-label ms-2"><?php echo "$asset_archived_display$asset_name_select - $contact_name_select"; ?></label>
                             </div>
                         </li>
 
@@ -278,8 +278,8 @@ ob_start();
 
                     <li class="list-group-item bg-dark">
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" onclick="this.closest('.tab-pane').querySelectorAll('.user-checkbox').forEach(checkbox => checkbox.checked = this.checked);">
-                            <label class="form-check-label ml-3"><strong>Licensed Users</strong></label>
+                            <input type="checkbox" class="form-check-input js-select-all-in-tab-pane" data-target-class="user-checkbox">
+                            <label class="form-check-label ms-3"><strong>Licensed Users</strong></label>
                         </div>
                     </li>
 
@@ -295,7 +295,7 @@ ob_start();
                         <li class="list-group-item">
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input user-checkbox" name="contacts[]" value="<?php echo $contact_id_select; ?>">
-                                <label class="form-check-label ml-2"><?php echo "$contact_name_select - $contact_email_select"; ?></label>
+                                <label class="form-check-label ms-2"><?php echo "$contact_name_select - $contact_email_select"; ?></label>
                             </div>
                         </li>
 
@@ -317,8 +317,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_software" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_software" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

@@ -12,3 +12,12 @@ function generatePassword(login_id) {
         }
     );
 }
+
+// Delegated wiring (CSP forbids inline onclick= attributes): any
+// .generatePasswordBtn click generates a password (see .generatePasswordBtn
+// convention already used in agent/modals/contact/contact_add.php / contact_edit.php).
+document.addEventListener('click', function (e) {
+    if (e.target.closest('.generatePasswordBtn')) {
+        generatePassword();
+    }
+});

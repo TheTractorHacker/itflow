@@ -5,126 +5,116 @@ require_once "includes/inc_all_client.php";
 // Perms
 enforceUserPermission('module_sales');
 
-// This page embeds Stripe Elements — override the shared agent/admin CSP
-// (set by includes/header.php) with a Stripe-inclusive policy for this page only.
-header("Content-Security-Policy: default-src 'self'; script-src 'self' https://js.stripe.com https://static.cloudflareinsights.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://cloudflareinsights.com");
+/*
+ * AutoPay overview for a client (agent side).
+ *
+ * Rewritten off the payment_providers / client_payment_provider /
+ * client_saved_payment_methods model and the payment provider factory. The
+ * legacy client_stripe table and config_stripe_* settings have been dropped and
+ * are no longer referenced. Saving/removing methods is performed by the client
+ * from their portal (client/saved_payment_methods.php); this agent view is
+ * read-only.
+ */
 
-// Initialize stripe
-require_once 'plugins/stripe-php/init.php';
+// Load the active payment provider (Stripe) from payment_providers
+$provider_row = mysqli_fetch_assoc(mysqli_query($mysqli, "
+    SELECT * FROM payment_providers
+    WHERE payment_provider_name = 'Stripe'
+      AND payment_provider_active = 1
+    LIMIT 1
+"));
 
-// Get Stripe vars
-$stripe_vars = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_stripe_enable, config_stripe_publishable, config_stripe_secret FROM settings WHERE company_id = 1"));
-$config_stripe_enable = intval($stripe_vars['config_stripe_enable']);
-$config_stripe_publishable = nullable_htmlentities($stripe_vars['config_stripe_publishable']);
-$config_stripe_secret = nullable_htmlentities($stripe_vars['config_stripe_secret']);
-
-// Get client's StripeID from database
-$stripe_client_details = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM client_stripe WHERE client_id = $client_id LIMIT 1"));
-if ($stripe_client_details) {
-    $stripe_id = sanitizeInput($stripe_client_details['stripe_id']);
-    $stripe_pm = sanitizeInput($stripe_client_details['stripe_pm']);
-}
-
-// Stripe not enabled in settings
-if (!$config_stripe_enable || !$config_stripe_publishable || !$config_stripe_secret) {
-    echo "Stripe payment error - Stripe is not enabled, please talk to your helpdesk for further information.";
-    include_once '../includes/footer.php';
+// Guard: no provider configured — the page must still load cleanly
+if (!$provider_row) {
+    ?>
+    <div class="card card-dark">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa fa-redo-alt me-2"></i>AutoPay</h3>
+        </div>
+        <div class="card-body">
+            No payment provider is configured. Configure one under Admin &gt; Settings &gt; Online Payment before using AutoPay.
+        </div>
+    </div>
+    <?php
+    require_once "../includes/footer.php";
     exit();
 }
+
+$provider_id   = intval($provider_row['payment_provider_id']);
+
+// Instantiate the provider through the factory (multi-provider ready)
+require_once "../includes/payment_provider_factory.php";
+$provider = getPaymentProvider($provider_id);
+$provider_display = nullable_htmlentities($provider->displayName());
+
+// Get this client's provider customer record (customer id / autopay consent)
+$client_provider = mysqli_fetch_assoc(mysqli_query($mysqli, "
+    SELECT * FROM client_payment_provider
+    WHERE client_id = $client_id
+      AND payment_provider_id = $provider_id
+    LIMIT 1
+"));
+$provider_customer_id = $client_provider ? nullable_htmlentities($client_provider['payment_provider_client']) : '';
+
+// Get this client's saved payment methods
+$saved_methods_query = mysqli_query($mysqli, "
+    SELECT * FROM client_saved_payment_methods
+    WHERE saved_payment_client_id = $client_id
+      AND saved_payment_provider_id = $provider_id
+    ORDER BY saved_payment_description ASC
+");
 
 ?>
 
 <div class="card card-dark">
     <div class="card-header">
-        <h3 class="card-title"><i class="fa fa-redo-alt mr-2"></i>AutoPay</h3>
+        <h3 class="card-title"><i class="fa fa-redo-alt me-2"></i>AutoPay (<?php echo $provider_display; ?>)</h3>
     </div>
 
     <div class="card-body">
-            <!-- Setup pt1: Stripe ID not found / auto-payment not configured -->
-            <?php if (!$stripe_client_details || empty($stripe_id)) { ?>
 
-                <b>Save card details</b><br>
-                In order to set up automatic payments, you must create a customer record in Stripe.<br>
-                First, you must authorize Stripe to store your card details for the purpose of automatic payment.
-            <br><br>
+        <?php if (!$provider_customer_id) { ?>
 
-                <div class="col-5">
-                    <form action="post.php" method="POST">
+            <p>This client has not authorized automatic payments yet. The client can grant consent and save a payment method from their client portal.</p>
 
-                        <div class="form-group">
-                            <div class="custom-control custom-checkbox">
-                                <input class="custom-control-input" type="checkbox" id="consent" name="consent" value="1" required>
-                                <label for="consent" class="custom-control-label">
-                                    I grant consent for automatic payments
-                                </label>
-                            </div>
-                        </div>
+        <?php } else { ?>
 
-                        <div class="form-group">
-                            <button type="submit" class="form-control btn-success" name="create_stripe_customer">Create Stripe Customer Record</button>
-                        </div>
-                    </form>
-                </div>
+            <b>Saved payment methods</b>
 
-            <?php }
+            <?php if (mysqli_num_rows($saved_methods_query) === 0) { ?>
 
-            // Setup pt2: Stripe ID found / payment may be configured -->
-            elseif (empty($stripe_pm)) { ?>
+                <p>No saved payment methods on file.</p>
 
-                <b>Save card details</b><br>
-                Please add the payment details you would like to save.<br>
-                By adding payment details here, you grant consent for future automatic payments of invoices.<br><br>
+            <?php } else { ?>
 
-                <input type="hidden" id="stripe_publishable_key" value="<?php echo $config_stripe_publishable ?>">
-                <script src="https://js.stripe.com/v3/"></script>
-                <script src="js/autopay_setup_stripe.js"></script>
-                <div id="checkout">
-                    <!-- Checkout will insert the payment form here -->
-                </div>
+                <ul class="list-unstyled">
+                    <?php
+                    while ($method = mysqli_fetch_assoc($saved_methods_query)) {
+                        $description = nullable_htmlentities($method['saved_payment_description']);
+                        $saved_type  = nullable_htmlentities($method['saved_payment_type'] ?? 'card');
+                        $desc_lower  = strtolower($description);
 
-            <?php }
+                        $payment_icon = "fas fa-credit-card"; // default
+                        if ($saved_type === 'us_bank_account' || strpos($desc_lower, 'bank') !== false || strpos($desc_lower, 'ach') !== false) {
+                            $payment_icon = "fas fa-university";
+                        } elseif (strpos($desc_lower, "visa") !== false) {
+                            $payment_icon = "fab fa-cc-visa";
+                        } elseif (strpos($desc_lower, "mastercard") !== false) {
+                            $payment_icon = "fab fa-cc-mastercard";
+                        } elseif (strpos($desc_lower, "american express") !== false || strpos($desc_lower, "amex") !== false) {
+                            $payment_icon = "fab fa-cc-amex";
+                        } elseif (strpos($desc_lower, "discover") !== false) {
+                            $payment_icon = "fab fa-cc-discover";
+                        }
 
-            // Manage the saved card
-            else { ?>
-
-                <b>Manage saved payment methods</b>
-
-                <?php
-
-                try {
-                    // Initialize
-                    $stripe = new \Stripe\StripeClient($config_stripe_secret);
-
-                    // Get payment method info (last 4 digits etc)
-                    $payment_method = $stripe->customers->retrievePaymentMethod(
-                        $stripe_id,
-                        $stripe_pm,
-                        []
-                    );
-
-                } catch (Exception $e) {
-                    $error = $e->getMessage();
-                    error_log("Stripe payment error - encountered exception when fetching payment method info for $stripe_pm: $error");
-                    logApp("Stripe", "error", "Exception when fetching payment method info for $stripe_pm: $error");
-                }
-
-                $card_name = nullable_htmlentities($payment_method->billing_details->name);
-                $card_brand = nullable_htmlentities($payment_method->card->display_brand);
-                $card_last4 = nullable_htmlentities($payment_method->card->last4);
-                $card_expires = nullable_htmlentities($payment_method->card->exp_month) . "/" . nullable_htmlentities($payment_method->card->exp_year);
-
-                ?>
-
-                <ul><li><?php echo "$card_name - $card_brand card ending in $card_last4, expires $card_expires"; ?></li></ul>
-
-                <hr>
-                <b>Actions</b><br>
-                - <a href="post.php?stripe_remove_pm&pm=<?php echo $stripe_pm; ?>">Remove saved payment method</a>
+                        echo "<li><i class='$payment_icon fa-2x me-2'></i>$description</li>";
+                    }
+                    ?>
+                </ul>
 
             <?php } ?>
 
-
-        </div>
+        <?php } ?>
 
     </div>
 </div>

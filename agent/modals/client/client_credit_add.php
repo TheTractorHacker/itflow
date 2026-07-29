@@ -2,8 +2,8 @@
     <div class="modal-dialog">
         <div class="modal-content border-dark">
             <div class="modal-header bg-dark">
-                <h5 class="modal-title"><i class="fa fa-fw fa-wallet mr-2"></i>Adding <strong>Credit</strong> (Credit Balance: <?php echo numfmt_format_currency($currency_format, $credit_balance, $client_currency_code); ?>)</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fa fa-fw fa-wallet me-2"></i>Adding <strong>Credit</strong> (Credit Balance: <?php echo numfmt_format_currency($currency_format, $credit_balance, $client_currency_code); ?>)</h5>
+                <button type="button" class="close text-white" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -22,7 +22,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Type<strong class="text-danger ml-2">*</strong></label>
+                        <label>Type<strong class="text-danger ms-2">*</strong></label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fa fa-fw fa-th-list"></i></span>
@@ -37,7 +37,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Amount<strong class="text-danger ml-2">*</strong></label>
+                        <label>Amount<strong class="text-danger ms-2">*</strong></label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fa fa-fw fa-dollar-sign"></i></span>
@@ -47,7 +47,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Note<strong class="text-danger ml-2">*</strong></label>
+                        <label>Note<strong class="text-danger ms-2">*</strong></label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fa fa-fw fa-file-alt"></i></span>
@@ -88,8 +88,8 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" name="add_credit" class="btn btn-primary text-bold"><i class="fa fa-fw fa-check mr-2"></i>Add</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+                    <button type="submit" name="add_credit" class="btn btn-primary text-bold"><i class="fa fa-fw fa-check me-2"></i>Add</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
                 </div>
             </form>
         </div>

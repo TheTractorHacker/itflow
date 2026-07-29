@@ -8,10 +8,10 @@ $sql = mysqli_query($mysqli, "SELECT * FROM labor_types WHERE labor_type_archive
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clock mr-2"></i>Labor Types</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clock me-2"></i>Labor Types</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/labor_type/labor_type_add.php">
-                <i class="fas fa-plus mr-2"></i>New Labor Type
+                <i class="fas fa-plus me-2"></i>New Labor Type
             </button>
         </div>
     </div>
@@ -38,7 +38,7 @@ $sql = mysqli_query($mysqli, "SELECT * FROM labor_types WHERE labor_type_archive
                 ?>
                 <tr>
                     <td>
-                        <span class="badge badge-pill text-white px-3 py-2" style="background:<?= $lt_color ?>;"><?= $lt_name ?></span>
+                        <span class="badge rounded-pill text-white px-3 py-2" style="background:<?= $lt_color ?>;"><?= $lt_name ?></span>
                     </td>
                     <td><?= $lt_rate > 0 ? '$' . number_format($lt_rate, 2) . '/hr' : '<span class="text-muted">—</span>' ?></td>
                     <td><span style="display:inline-block;width:24px;height:24px;border-radius:4px;background:<?= $lt_color ?>;border:1px solid #ccc;"></span> <?= $lt_color ?></td>
@@ -47,7 +47,7 @@ $sql = mysqli_query($mysqli, "SELECT * FROM labor_types WHERE labor_type_archive
                             <i class="fas fa-edit"></i> Edit
                         </a>
                         <a href="post.php?delete_labor_type=<?= $lt_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                           class="btn btn-xs btn-danger confirm-link ml-1">
+                           class="btn btn-xs btn-danger confirm-link ms-1">
                             <i class="fas fa-trash"></i> Delete
                         </a>
                     </td>

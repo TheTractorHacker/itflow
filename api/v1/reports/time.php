@@ -15,6 +15,11 @@ $date_filter = match($period) {
 };
 $mine_filter = $mine ? "AND r.ticket_reply_by = $uid" : "";
 
+// A legacy API key deliberately restricted to one client ($api_key_client_id) must never
+// see another client's (or the whole company's) time entries - an unrestricted key keeps
+// the same company-wide behavior as before.
+$client_filter = !empty($api_key_client_id) ? " AND t.ticket_client_id = " . intval($api_key_client_id) : '';
+
 $sql = mysqli_query($mysqli,
     "SELECT c.client_name, c.client_id,
             SUM(
@@ -27,7 +32,7 @@ $sql = mysqli_query($mysqli,
      WHERE r.ticket_reply_time_worked IS NOT NULL
        AND r.ticket_reply_time_worked != ''
        AND r.ticket_reply_archived_at IS NULL
-       $date_filter $mine_filter
+       $date_filter $mine_filter$client_filter
      GROUP BY c.client_id, c.client_name
      ORDER BY total_hours DESC
      LIMIT 50"

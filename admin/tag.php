@@ -42,9 +42,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-tags mr-2"></i><?= $tag_type_display ?> Tags</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-tags me-2"></i><?= $tag_type_display ?> Tags</h3>
             <div class="card-tools">
-                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/tag/tag_add.php?type=<?= $type_filter ?>"><i class="fas fa-plus mr-2"></i>New <?= $tag_type_display ?> Tag</button>
+                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/tag/tag_add.php?type=<?= $type_filter ?>"><i class="fas fa-plus me-2"></i>New <?= $tag_type_display ?> Tag</button>
             </div>
         </div>
 
@@ -61,7 +61,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     </form>
                 </div>
                 <div class="col-sm-8">
-                    <div class="btn-group float-right">
+                    <div class="btn-group float-end">
                         <a href="?type=1"
                             class="btn <?php if ($type_filter == 1) {
                                 echo 'btn-primary';
@@ -104,7 +104,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             } else {
                                 echo 'btn-default';
                             } ?>"><i
-                                class="fas fa-fw fa-archive mr-2"></i>Archived</a>
+                                class="fas fa-fw fa-archive me-2"></i>Archived</a>
                     </div>
                 </div>
             </div>
@@ -136,22 +136,22 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td>
                                 <a class="ajax-modal" href="#"
                                     data-modal-url="modals/tag/tag_edit.php?id=<?= $tag_id ?>">
-                                    <span class='badge <?php echo tagTextClass($tag_color); ?> p-2 mr-1' style="background-color: <?php echo $tag_color; ?>"><i class="fa fa-fw fa-<?php echo $tag_icon; ?> mr-2"></i><?php echo $tag_name; ?></span>
+                                    <span class='badge <?php echo tagTextClass($tag_color); ?> p-2 me-1' style="background-color: <?php echo $tag_color; ?>"><i class="fa fa-fw fa-<?php echo $tag_icon; ?> me-2"></i><?php echo $tag_name; ?></span>
                                 </a>
                             </td>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#"
                                             data-modal-url="modals/tag/tag_edit.php?id=<?= $tag_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_tag=<?php echo $tag_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash me-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>

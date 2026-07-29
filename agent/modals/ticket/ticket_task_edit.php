@@ -5,11 +5,14 @@ require_once '../../../includes/modal_header.php';
 $task_id = intval($_GET['id']);
 
 $sql = mysqli_query($mysqli, "SELECT * FROM tasks
+    LEFT JOIN tickets ON ticket_id = task_ticket_id
     WHERE task_id = $task_id
     LIMIT 1"
 );
 
 $row = mysqli_fetch_assoc($sql);
+$client_id = intval($row['ticket_client_id']);
+enforceClientAccess($client_id);
 $task_name = nullable_htmlentities($row['task_name']);
 $task_completion_estimate = intval($row['task_completion_estimate']);
 $task_completed_at = nullable_htmlentities($row['task_completed_at']);
@@ -28,8 +31,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-tasks mr-2"></i>Editing task</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-tasks me-2"></i>Editing task</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -89,12 +92,12 @@ ob_start();
                             <td><?= ucfirst($approval_status) ?></td>
                             <td>
                                 <?php if ($approval_status !== 'approved') { ?>
-                                    <a class="text-danger"
-                                       onclick="return confirm('Delete this approval request?');"
+                                    <a class="text-danger js-confirm-native"
+                                       data-confirm-message="Delete this approval request?"
                                        href="post.php?delete_ticket_task_approver=<?= $approval_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
                                         <i class="fas fa-fw fa-trash-alt"></i>Delete
                                     </a>
-                                    <!-- confirm-link won't work -->
+                                    <!-- confirm-link won't work (nested-modal) -->
                                 <?php } ?>
                             </td>
                         </tr>
@@ -108,8 +111,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="edit_ticket_task" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_ticket_task" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 
 </form>

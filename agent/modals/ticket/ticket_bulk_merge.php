@@ -17,6 +17,7 @@ $sql_merge = mysqli_query($mysqli, "SELECT * FROM tickets
     LEFT JOIN clients ON client_id = ticket_client_id
     WHERE ticket_closed_at IS NULL
     $whereNotIn
+    $access_permission_query
     ORDER BY ticket_status ASC, ticket_id DESC"
 );
 
@@ -24,8 +25,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-clone mr-2"></i>Merge & close <strong><?= $count ?></strong> tickets</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-clone me-2"></i>Merge & close <strong><?= $count ?></strong> tickets</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -78,8 +79,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="bulk_merge_tickets" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Merge</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="bulk_merge_tickets" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Merge</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

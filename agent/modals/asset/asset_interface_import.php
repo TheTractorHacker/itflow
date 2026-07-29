@@ -2,8 +2,8 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-dark">
-                <h5 class="modal-title"><i class="fa fa-fw fa-ethernet mr-2"></i>Import Interfaces</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <h5 class="modal-title"><i class="fa fa-fw fa-ethernet me-2"></i>Import Interfaces</h5>
+                <button type="button" class="close text-white" data-bs-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
@@ -20,7 +20,7 @@
                     <div>Download <a href="post.php?download_client_asset_interfaces_csv_template=<?php echo $asset_id; ?>">sample csv template</a></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" name="import_client_asset_interfaces_csv" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Import</button>
+                    <button type="submit" name="import_client_asset_interfaces_csv" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Import</button>
                 </div>
             </form>
         </div>

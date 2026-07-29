@@ -7,12 +7,14 @@ $contact_id = intval($_GET['contact_id'] ?? 0);
 $asset_id = intval($_GET['asset_id'] ?? 0);
 $project_id = intval($_GET['project_id'] ?? 0);
 
+if ($client_id) enforceClientAccess($client_id);
+
 ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-life-ring mr-2"></i>New Ticket (v1)</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-life-ring me-2"></i>New Ticket (v1)</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -28,13 +30,13 @@ ob_start();
         <?php if (isset($_GET['client_id'])) { ?>
             <ul class="nav nav-pills nav-justified mb-3">
                 <li class="nav-item">
-                    <a class="nav-link active" data-toggle="pill" href="#pills-ticket-details"><i class="fa fa-fw fa-life-ring mr-2"></i>Details</a>
+                    <a class="nav-link active" data-bs-toggle="pill" href="#pills-ticket-details"><i class="fa fa-fw fa-life-ring me-2"></i>Details</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" data-toggle="pill" href="#pills-ticket-contacts"><i class="fa fa-fw fa-users mr-2"></i>Contact</a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#pills-ticket-contacts"><i class="fa fa-fw fa-users me-2"></i>Contact</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" data-toggle="pill" href="#pills-ticket-assignment"><i class="fa fa-fw fa-desktop mr-2"></i>Assignment</a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#pills-ticket-assignment"><i class="fa fa-fw fa-desktop me-2"></i>Assignment</a>
                 </li>
             </ul>
 
@@ -243,9 +245,9 @@ ob_start();
 
                 <?php if ($config_module_enable_accounting) { ?>
                 <div class="form-group">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" name="billable" <?php if ($config_ticket_default_billable == 1) { echo "checked"; } ?> value="1" id="billableSwitch">
-                        <label class="custom-control-label" for="billableSwitch">Mark Billable</label>
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="billable" <?php if ($config_ticket_default_billable == 1) { echo "checked"; } ?> value="1" id="billableSwitch">
+                        <label class="form-check-label" for="billableSwitch">Mark Billable</label>
                     </div>
                 </div>
                 <?php } ?>
@@ -476,13 +478,13 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_ticket" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_ticket" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 
 <!-- SLA hint -->
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 function updateSlaHint() {
     var $contract = $('#ticketContractSelect');
     var $priority = $('select[name="priority"]');
@@ -496,13 +498,13 @@ function updateSlaHint() {
     var hint = '';
     if (r) hint += 'Response: <strong>' + r + 'h</strong>';
     if (res) hint += (hint ? ' &nbsp;|&nbsp; ' : '') + 'Resolution: <strong>' + res + 'h</strong>';
-    $('#slaHint').html(hint ? '<i class="fas fa-stopwatch mr-1"></i>' + hint : '');
+    $('#slaHint').html(hint ? '<i class="fas fa-stopwatch me-1"></i>' + hint : '');
 }
 $(document).on('change', '#ticketContractSelect, select[name="priority"]', updateSlaHint);
 </script>
 
 <!-- Ticket Templates -->
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 $(document).on('change', '#ticket_template_select', function () {
     const $opt = $(this).find(':selected');
     const templateSubject = $opt.data('subject') || '';

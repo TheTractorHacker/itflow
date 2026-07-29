@@ -19,14 +19,16 @@ $link = mysqli_fetch_assoc(mysqli_query($mysqli,
 if (!$link) { flash_alert('RMM asset not found', 'danger'); redirect('/agent/rmm_assets.php'); }
 
 $asset_id  = intval($link['asset_id']);
+$client_id = intval($link['asset_client_id']);
+enforceClientAccess($client_id);
 // Redirect to unified asset view — rmm_asset.php is deprecated
 redirect('/agent/asset_details.php?asset_id=' . $asset_id);
 
 $status_badge = $link['rmm_status'] === 'online'
-    ? '<span class="badge badge-success"><i class="fas fa-circle mr-1"></i>Online</span>'
+    ? '<span class="badge text-bg-success"><i class="fas fa-circle me-1"></i>Online</span>'
     : ($link['rmm_status'] === 'offline'
-        ? '<span class="badge badge-danger"><i class="fas fa-circle mr-1"></i>Offline</span>'
-        : '<span class="badge badge-secondary"><i class="fas fa-question-circle mr-1"></i>Unknown</span>');
+        ? '<span class="badge text-bg-danger"><i class="fas fa-circle me-1"></i>Offline</span>'
+        : '<span class="badge text-bg-secondary"><i class="fas fa-question-circle me-1"></i>Unknown</span>');
 
 // Recent tickets for this asset
 $sql_tickets = mysqli_query($mysqli,
@@ -92,52 +94,52 @@ $sql_creds = mysqli_query($mysqli,
                 <div class="text-muted small">
                     <?php if ($link['client_name']): ?>
                         <a href="/agent/client_details.php?client_id=<?= $client_id ?>">
-                            <i class="fas fa-users mr-1"></i><?= nullable_htmlentities($link['client_name']) ?>
+                            <i class="fas fa-users me-1"></i><?= nullable_htmlentities($link['client_name']) ?>
                         </a>
                     <?php endif; ?>
                     <?php if ($link['location_name']): ?>
-                        &nbsp;&middot;&nbsp;<i class="fas fa-map-marker-alt mr-1"></i><?= nullable_htmlentities($link['location_name']) ?>
+                        &nbsp;&middot;&nbsp;<i class="fas fa-map-marker-alt me-1"></i><?= nullable_htmlentities($link['location_name']) ?>
                     <?php endif; ?>
                     <?php if ($link['last_seen']): ?>
-                        &nbsp;&middot;&nbsp;<i class="fas fa-clock mr-1"></i>Last seen <?= nullable_htmlentities($link['last_seen']) ?>
+                        &nbsp;&middot;&nbsp;<i class="fas fa-clock me-1"></i>Last seen <?= nullable_htmlentities($link['last_seen']) ?>
                     <?php endif; ?>
                     <?php if ($link['logged_in_user']): ?>
-                        &nbsp;&middot;&nbsp;<i class="fas fa-user mr-1"></i><?= nullable_htmlentities($link['logged_in_user']) ?>
+                        &nbsp;&middot;&nbsp;<i class="fas fa-user me-1"></i><?= nullable_htmlentities($link['logged_in_user']) ?>
                     <?php endif; ?>
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-1">
                 <?php if (lookupUserPermission('module_rmm_remote_connect') >= 1): ?>
-                <div class="btn-group mr-1">
-                    <button class="btn btn-success btn-sm" onclick="remoteConnect(<?= $link_id ?>, 'tactical')">
-                        <i class="fas fa-desktop mr-1"></i>Connect
+                <div class="btn-group me-1">
+                    <button class="btn btn-success btn-sm js-rmm-remote-connect" data-link-id="<?= $link_id ?>" data-type="tactical">
+                        <i class="fas fa-desktop me-1"></i>Connect
                     </button>
                     <?php if ($link['mesh_node_id']): ?>
-                    <button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
+                    <button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
                     <div class="dropdown-menu">
-                        <a class="dropdown-item" href="#" onclick="remoteConnect(<?= $link_id ?>, 'tactical'); return false;">
-                            <i class="fas fa-external-link-alt mr-1"></i>Open in Tactical RMM
+                        <a class="dropdown-item js-rmm-remote-connect" href="#" data-link-id="<?= $link_id ?>" data-type="tactical">
+                            <i class="fas fa-external-link-alt me-1"></i>Open in Tactical RMM
                         </a>
-                        <a class="dropdown-item" href="#" onclick="remoteConnect(<?= $link_id ?>, 'mesh'); return false;">
-                            <i class="fas fa-desktop mr-1"></i>MeshCentral Remote Desktop
+                        <a class="dropdown-item js-rmm-remote-connect" href="#" data-link-id="<?= $link_id ?>" data-type="mesh">
+                            <i class="fas fa-desktop me-1"></i>MeshCentral Remote Desktop
                         </a>
                     </div>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
                 <?php if ($link['tactical_agent_id']): ?>
-                <button class="btn btn-info btn-sm mr-1" onclick="openTactical()">
-                    <i class="fas fa-external-link-alt mr-1"></i>Tactical RMM
+                <button class="btn btn-info btn-sm me-1 js-rmm-open-tactical">
+                    <i class="fas fa-external-link-alt me-1"></i>Tactical RMM
                 </button>
                 <?php endif; ?>
                 <?php if (lookupUserPermission('module_support') >= 2): ?>
                 <a href="/agent/ticket.php?action=new&asset_id=<?= $asset_id ?>&client_id=<?= $client_id ?>"
-                   class="btn btn-warning btn-sm mr-1">
-                    <i class="fas fa-ticket-alt mr-1"></i>Create Ticket
+                   class="btn btn-warning btn-sm me-1">
+                    <i class="fas fa-ticket-alt me-1"></i>Create Ticket
                 </a>
                 <?php endif; ?>
-                <button class="btn btn-secondary btn-sm mr-1" onclick="copyAssetInfo()">
-                    <i class="fas fa-copy mr-1"></i>Copy Info
+                <button class="btn btn-secondary btn-sm me-1 js-copy-asset-info">
+                    <i class="fas fa-copy me-1"></i>Copy Info
                 </button>
             </div>
         </div>
@@ -148,18 +150,18 @@ $sql_creds = mysqli_query($mysqli,
     <!-- Left column: identity + hardware + network -->
     <div class="col-md-4">
         <div class="card card-dark mb-3">
-            <div class="card-header py-2"><h6 class="mb-0"><i class="fas fa-info-circle mr-2"></i>System Identity</h6></div>
+            <div class="card-header py-2"><h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>System Identity</h6></div>
             <div class="card-body p-0">
                 <table class="table table-sm table-borderless mb-0 small">
-                    <tr><td class="text-muted pl-3" style="width:40%">Hostname</td><td><?= nullable_htmlentities($link['hostname']) ?></td></tr>
-                    <tr><td class="text-muted pl-3">OS</td><td><?= nullable_htmlentities($link['os_name']) ?> <?= nullable_htmlentities($link['os_version']) ?></td></tr>
-                    <tr><td class="text-muted pl-3">Manufacturer</td><td><?= nullable_htmlentities($link['manufacturer'] ?: $link['asset_make']) ?></td></tr>
-                    <tr><td class="text-muted pl-3">Model</td><td><?= nullable_htmlentities($link['model'] ?: $link['asset_model']) ?></td></tr>
-                    <tr><td class="text-muted pl-3">Serial</td><td><?= nullable_htmlentities($link['asset_serial']) ?></td></tr>
-                    <tr><td class="text-muted pl-3">CPU</td><td><?= nullable_htmlentities($link['cpu']) ?></td></tr>
-                    <tr><td class="text-muted pl-3">RAM</td><td><?= nullable_htmlentities($link['ram_gb']) ?> <?= $link['ram_gb'] ? 'GB' : '' ?></td></tr>
-                    <tr><td class="text-muted pl-3">Logged In</td><td><?= nullable_htmlentities($link['logged_in_user']) ?></td></tr>
-                    <tr><td class="text-muted pl-3">Last Sync</td><td class="text-muted small"><?= nullable_htmlentities($link['last_sync']) ?></td></tr>
+                    <tr><td class="text-muted ps-3" style="width:40%">Hostname</td><td><?= nullable_htmlentities($link['hostname']) ?></td></tr>
+                    <tr><td class="text-muted ps-3">OS</td><td><?= nullable_htmlentities($link['os_name']) ?> <?= nullable_htmlentities($link['os_version']) ?></td></tr>
+                    <tr><td class="text-muted ps-3">Manufacturer</td><td><?= nullable_htmlentities($link['manufacturer'] ?: $link['asset_make']) ?></td></tr>
+                    <tr><td class="text-muted ps-3">Model</td><td><?= nullable_htmlentities($link['model'] ?: $link['asset_model']) ?></td></tr>
+                    <tr><td class="text-muted ps-3">Serial</td><td><?= nullable_htmlentities($link['asset_serial']) ?></td></tr>
+                    <tr><td class="text-muted ps-3">CPU</td><td><?= nullable_htmlentities($link['cpu']) ?></td></tr>
+                    <tr><td class="text-muted ps-3">RAM</td><td><?= nullable_htmlentities($link['ram_gb']) ?> <?= $link['ram_gb'] ? 'GB' : '' ?></td></tr>
+                    <tr><td class="text-muted ps-3">Logged In</td><td><?= nullable_htmlentities($link['logged_in_user']) ?></td></tr>
+                    <tr><td class="text-muted ps-3">Last Sync</td><td class="text-muted small"><?= nullable_htmlentities($link['last_sync']) ?></td></tr>
                 </table>
             </div>
         </div>
@@ -167,16 +169,16 @@ $sql_creds = mysqli_query($mysqli,
         <!-- Network interfaces -->
         <?php if (mysqli_num_rows($sql_ifaces) > 0): ?>
         <div class="card card-dark mb-3">
-            <div class="card-header py-2"><h6 class="mb-0"><i class="fas fa-network-wired mr-2"></i>Network</h6></div>
+            <div class="card-header py-2"><h6 class="mb-0"><i class="fas fa-network-wired me-2"></i>Network</h6></div>
             <div class="card-body p-0">
                 <table class="table table-sm table-borderless mb-0 small">
                 <?php while ($iface = mysqli_fetch_assoc($sql_ifaces)): ?>
                     <tr class="border-bottom">
-                        <td class="pl-3 text-muted" style="width:40%">IP</td>
+                        <td class="ps-3 text-muted" style="width:40%">IP</td>
                         <td><?= nullable_htmlentities($iface['interface_ip_address']) ?></td>
                     </tr>
                     <?php if ($iface['interface_mac']): ?>
-                    <tr><td class="pl-3 text-muted">MAC</td><td class="font-monospace small"><?= nullable_htmlentities($iface['interface_mac']) ?></td></tr>
+                    <tr><td class="ps-3 text-muted">MAC</td><td class="font-monospace small"><?= nullable_htmlentities($iface['interface_mac']) ?></td></tr>
                     <?php endif; ?>
                 <?php endwhile; ?>
                 </table>
@@ -187,7 +189,7 @@ $sql_creds = mysqli_query($mysqli,
         <!-- ITFlow asset link -->
         <div class="card card-dark mb-3">
             <div class="card-header py-2 d-flex align-items-center">
-                <h6 class="mb-0 mr-auto"><i class="fas fa-link mr-2"></i>ITFlow Asset</h6>
+                <h6 class="mb-0 mr-auto"><i class="fas fa-link me-2"></i>ITFlow Asset</h6>
                 <a href="/agent/asset_details.php?asset_id=<?= $asset_id ?>" class="btn btn-xs btn-secondary">View</a>
             </div>
             <div class="card-body p-2 small">
@@ -220,7 +222,7 @@ $sql_creds = mysqli_query($mysqli,
         <?php if (lookupUserPermission('module_rmm_alerts') >= 1): ?>
         <div class="card card-dark mb-3">
             <div class="card-header py-2 d-flex align-items-center">
-                <h6 class="mb-0 mr-auto"><i class="fas fa-bell mr-2"></i>Active Alerts</h6>
+                <h6 class="mb-0 mr-auto"><i class="fas fa-bell me-2"></i>Active Alerts</h6>
                 <a href="/agent/rmm_alerts.php?asset_id=<?= $asset_id ?>" class="btn btn-xs btn-secondary">All</a>
             </div>
             <div class="card-body p-0">
@@ -231,16 +233,16 @@ $sql_creds = mysqli_query($mysqli,
                 $sev_color = ['critical'=>'danger','error'=>'danger','warning'=>'warning','info'=>'info'][$alert['severity']] ?? 'secondary';
             ?>
                 <div class="d-flex align-items-center border-bottom px-3 py-2">
-                    <span class="badge badge-<?= $sev_color ?> mr-2"><?= nullable_htmlentities($alert['severity']) ?></span>
+                    <span class="badge badge-<?= $sev_color ?> me-2"><?= nullable_htmlentities($alert['severity']) ?></span>
                     <span class="small mr-auto"><?= nullable_htmlentities($alert['message']) ?></span>
-                    <span class="text-muted small ml-2"><?= nullable_htmlentities($alert['created_at']) ?></span>
+                    <span class="text-muted small ms-2"><?= nullable_htmlentities($alert['created_at']) ?></span>
                     <?php if (lookupUserPermission('module_rmm_alerts_ack') >= 1): ?>
-                    <button class="btn btn-xs btn-outline-secondary ml-2" onclick="ackAlert(<?= $alert['id'] ?>, this)">Ack</button>
+                    <button class="btn btn-xs btn-outline-secondary ms-2 js-ack-alert" data-alert-id="<?= $alert['id'] ?>">Ack</button>
                     <?php endif; ?>
                 </div>
             <?php endwhile; ?>
             <?php if (!$has_alerts): ?>
-                <p class="text-muted text-center py-3 mb-0 small"><i class="fas fa-check-circle mr-1 text-success"></i>No active alerts</p>
+                <p class="text-muted text-center py-3 mb-0 small"><i class="fas fa-check-circle me-1 text-success"></i>No active alerts</p>
             <?php endif; ?>
             </div>
         </div>
@@ -249,7 +251,7 @@ $sql_creds = mysqli_query($mysqli,
         <!-- Recent Tickets -->
         <div class="card card-dark mb-3">
             <div class="card-header py-2 d-flex align-items-center">
-                <h6 class="mb-0 mr-auto"><i class="fas fa-ticket-alt mr-2"></i>Recent Tickets</h6>
+                <h6 class="mb-0 mr-auto"><i class="fas fa-ticket-alt me-2"></i>Recent Tickets</h6>
                 <a href="/agent/tickets.php?asset_id=<?= $asset_id ?>" class="btn btn-xs btn-secondary">All</a>
             </div>
             <div class="card-body p-0">
@@ -259,13 +261,13 @@ $sql_creds = mysqli_query($mysqli,
                 $has_tickets = true;
             ?>
                 <div class="d-flex align-items-center border-bottom px-3 py-2">
-                    <a href="/agent/ticket.php?ticket_id=<?= intval($tkt['ticket_id']) ?>" class="small mr-auto font-weight-bold">
+                    <a href="/agent/ticket.php?ticket_id=<?= intval($tkt['ticket_id']) ?>" class="small mr-auto fw-bold">
                         <?= nullable_htmlentities($tkt['ticket_subject']) ?>
                     </a>
-                    <span class="badge ml-2" style="background:<?= nullable_htmlentities($tkt['ticket_status_color'] ?? '#6c757d') ?>">
+                    <span class="badge ms-2 <?= tagTextClass($tkt['ticket_status_color'] ?? '#6c757d') ?>" style="background:<?= nullable_htmlentities($tkt['ticket_status_color'] ?? '#6c757d') ?>">
                         <?= nullable_htmlentities($tkt['ticket_status_name']) ?>
                     </span>
-                    <span class="text-muted small ml-2"><?= nullable_htmlentities($tkt['ticket_created_at']) ?></span>
+                    <span class="text-muted small ms-2"><?= nullable_htmlentities($tkt['ticket_created_at']) ?></span>
                 </div>
             <?php endwhile; ?>
             <?php if (!$has_tickets): ?>
@@ -278,11 +280,11 @@ $sql_creds = mysqli_query($mysqli,
         <div class="card card-dark mb-3">
             <div class="card-header py-0">
                 <ul class="nav nav-tabs card-header-tabs">
-                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tab-hw">Hardware</a></li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-sw" onclick="loadTab('software')">Software</a></li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-svc" onclick="loadTab('services')">Services</a></li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-scripts">Scripts</a></li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-sessions">Sessions</a></li>
+                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-hw">Hardware</a></li>
+                    <li class="nav-item"><a class="nav-link js-load-tab" data-bs-toggle="tab" href="#tab-sw" data-tab-type="software">Software</a></li>
+                    <li class="nav-item"><a class="nav-link js-load-tab" data-bs-toggle="tab" href="#tab-svc" data-tab-type="services">Services</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-scripts">Scripts</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-sessions">Sessions</a></li>
                 </ul>
             </div>
             <div class="tab-content">
@@ -298,9 +300,9 @@ $sql_creds = mysqli_query($mysqli,
                             <table class="table table-sm table-borderless mt-1 mb-3">
                             <?php foreach ($wmi['disk'] as $disk): ?>
                                 <tr>
-                                    <td class="text-muted pl-0"><?= nullable_htmlentities($disk['DeviceID'] ?? '') ?></td>
+                                    <td class="text-muted ps-0"><?= nullable_htmlentities($disk['DeviceID'] ?? '') ?></td>
                                     <td><?= nullable_htmlentities($disk['Model'] ?? '') ?></td>
-                                    <td class="text-right">
+                                    <td class="text-end">
                                         <?php
                                         $gb = round(($disk['Size'] ?? 0) / 1073741824, 0);
                                         echo $gb > 0 ? $gb . ' GB' : '';
@@ -319,8 +321,8 @@ $sql_creds = mysqli_query($mysqli,
                             </div>
                         </div>
                         <div class="text-muted mt-2 small"><em>Hardware data cached from last sync. Use live fetch below for real-time detail.</em></div>
-                        <button class="btn btn-sm btn-outline-info mt-2" onclick="loadLiveHardware()">
-                            <i class="fas fa-sync mr-1"></i>Fetch Live Hardware (WMI)
+                        <button class="btn btn-sm btn-outline-info mt-2 js-load-live-hw">
+                            <i class="fas fa-sync me-1"></i>Fetch Live Hardware (WMI)
                         </button>
                         <div id="live-hw-result" class="mt-2"></div>
                     </div>
@@ -329,8 +331,8 @@ $sql_creds = mysqli_query($mysqli,
                 <!-- Software tab -->
                 <div class="tab-pane" id="tab-sw">
                     <div id="sw-content" class="p-3 text-muted small text-center">
-                        <button class="btn btn-sm btn-outline-info" onclick="loadTab('software')">
-                            <i class="fas fa-sync mr-1"></i>Load Software List
+                        <button class="btn btn-sm btn-outline-info js-load-tab" data-tab-type="software">
+                            <i class="fas fa-sync me-1"></i>Load Software List
                         </button>
                     </div>
                 </div>
@@ -338,8 +340,8 @@ $sql_creds = mysqli_query($mysqli,
                 <!-- Services tab -->
                 <div class="tab-pane" id="tab-svc">
                     <div id="svc-content" class="p-3 text-muted small text-center">
-                        <button class="btn btn-sm btn-outline-info" onclick="loadTab('services')">
-                            <i class="fas fa-sync mr-1"></i>Load Running Services
+                        <button class="btn btn-sm btn-outline-info js-load-tab" data-tab-type="services">
+                            <i class="fas fa-sync me-1"></i>Load Running Services
                         </button>
                     </div>
                 </div>
@@ -358,8 +360,8 @@ $sql_creds = mysqli_query($mysqli,
                                 <option value="<?= $scr['id'] ?>">[<?= nullable_htmlentities($scr['category']) ?>] <?= nullable_htmlentities($scr['name']) ?></option>
                                 <?php endwhile; ?>
                             </select>
-                            <button class="btn btn-sm btn-warning ml-2" onclick="runScript()">
-                                <i class="fas fa-play mr-1"></i>Run Script
+                            <button class="btn btn-sm btn-warning ms-2 js-run-script">
+                                <i class="fas fa-play me-1"></i>Run Script
                             </button>
                         </div>
                         <?php endif; ?>
@@ -375,7 +377,7 @@ $sql_creds = mysqli_query($mysqli,
                                 <div class="d-flex align-items-center mb-1">
                                     <strong class="mr-auto"><?= nullable_htmlentities($run['script_name'] ?? 'Manual') ?></strong>
                                     <span class="badge badge-<?= $run_badge ?>"><?= $run['status'] ?></span>
-                                    <span class="text-muted ml-2"><?= nullable_htmlentities($run['started_at']) ?></span>
+                                    <span class="text-muted ms-2"><?= nullable_htmlentities($run['started_at']) ?></span>
                                 </div>
                                 <div class="text-muted"><?= nullable_htmlentities($run['user_name']) ?></div>
                                 <?php if ($run['output']): ?>
@@ -400,10 +402,10 @@ $sql_creds = mysqli_query($mysqli,
                         $has_sess = true;
                     ?>
                         <div class="d-flex border-bottom px-3 py-2 small align-items-center">
-                            <i class="fas fa-desktop mr-2 text-info"></i>
+                            <i class="fas fa-desktop me-2 text-info"></i>
                             <span class="mr-auto">
                                 <?= nullable_htmlentities($sess['user_name']) ?>
-                                <span class="text-muted ml-1">(<?= nullable_htmlentities($sess['connection_type']) ?>)</span>
+                                <span class="text-muted ms-1">(<?= nullable_htmlentities($sess['connection_type']) ?>)</span>
                             </span>
                             <span class="text-muted"><?= nullable_htmlentities($sess['created_at']) ?></span>
                         </div>
@@ -431,7 +433,7 @@ Last Seen: <?= nullable_htmlentities($link['last_seen']) ?>
 Client: <?= nullable_htmlentities($link['client_name']) ?>
 </textarea>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 const LINK_ID    = <?= $link_id ?>;
 const CSRF_TOKEN = '<?= $_SESSION['csrf_token'] ?>';
 const AGENT_ID   = '<?= addslashes($link['tactical_agent_id']) ?>';
@@ -462,24 +464,24 @@ function loadTab(type) {
     const container = document.getElementById(containerMap[type]);
     if (!container || container.dataset.loaded) return;
     container.dataset.loaded = '1';
-    container.innerHTML = '<p class="text-muted text-center py-3"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p>';
+    container.innerHTML = '<p class="text-muted text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</p>';
 
     fetch(`/agent/post/rmm_live_data.php?link_id=${LINK_ID}&type=${type}&csrf_token=${CSRF_TOKEN}`)
         .then(r => r.json())
         .then(d => {
             if (!d.success) { container.innerHTML = `<p class="text-muted text-center py-3">${d.error || 'Failed to load'}</p>`; return; }
             if (type === 'software') {
-                let html = '<table class="table table-sm table-hover mb-0"><thead class="text-muted small border-bottom"><tr><th class="pl-3">Name</th><th>Version</th><th>Publisher</th></tr></thead><tbody>';
+                let html = '<table class="table table-sm table-hover mb-0"><thead class="text-muted small border-bottom"><tr><th class="ps-3">Name</th><th>Version</th><th>Publisher</th></tr></thead><tbody>';
                 (d.data || []).forEach(s => {
-                    html += `<tr><td class="pl-3 small">${esc(s.name||s.Name||'')}</td><td class="small text-muted">${esc(s.version||s.Version||'')}</td><td class="small text-muted">${esc(s.publisher||s.Publisher||'')}</td></tr>`;
+                    html += `<tr><td class="ps-3 small">${esc(s.name||s.Name||'')}</td><td class="small text-muted">${esc(s.version||s.Version||'')}</td><td class="small text-muted">${esc(s.publisher||s.Publisher||'')}</td></tr>`;
                 });
                 html += '</tbody></table>';
                 container.innerHTML = html;
             } else if (type === 'services') {
-                let html = '<table class="table table-sm table-hover mb-0"><thead class="text-muted small border-bottom"><tr><th class="pl-3">Service</th><th>Status</th><th>Display Name</th></tr></thead><tbody>';
+                let html = '<table class="table table-sm table-hover mb-0"><thead class="text-muted small border-bottom"><tr><th class="ps-3">Service</th><th>Status</th><th>Display Name</th></tr></thead><tbody>';
                 (d.data || []).forEach(s => {
                     const running = (s.status || s.Status || '').toLowerCase() === 'running';
-                    html += `<tr><td class="pl-3 small font-monospace">${esc(s.name||s.Name||'')}</td><td><span class="badge badge-${running?'success':'secondary'}">${esc(s.status||s.Status||'')}</span></td><td class="small text-muted">${esc(s.display_name||s.DisplayName||'')}</td></tr>`;
+                    html += `<tr><td class="ps-3 small font-monospace">${esc(s.name||s.Name||'')}</td><td><span class="badge badge-${running?'success':'secondary'}">${esc(s.status||s.Status||'')}</span></td><td class="small text-muted">${esc(s.display_name||s.DisplayName||'')}</td></tr>`;
                 });
                 html += '</tbody></table>';
                 container.innerHTML = html;
@@ -490,7 +492,7 @@ function loadTab(type) {
 
 function loadLiveHardware() {
     const div = document.getElementById('live-hw-result');
-    div.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Fetching...';
+    div.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Fetching...';
     fetch(`/agent/post/rmm_live_data.php?link_id=${LINK_ID}&type=wmi&csrf_token=${CSRF_TOKEN}`)
         .then(r => r.json())
         .then(d => {

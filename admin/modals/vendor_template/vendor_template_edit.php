@@ -25,8 +25,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-building mr-2"></i>Editing vendor template: <strong><?php echo $vendor_name; ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fas fa-fw fa-building me-2"></i>Editing vendor template: <strong><?php echo $vendor_name; ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -38,13 +38,13 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-details<?php echo $vendor_template_id; ?>">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-details<?php echo $vendor_template_id; ?>">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-support<?php echo $vendor_template_id; ?>">Support</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-support<?php echo $vendor_template_id; ?>">Support</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-notes<?php echo $vendor_template_id; ?>">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-notes<?php echo $vendor_template_id; ?>">Notes</a>
             </li>
         </ul>
 
@@ -118,9 +118,9 @@ ob_start();
                 </div>
 
                 <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="updateVendorsCheckbox<?php echo $vendor_template_id; ?>" name="update_base_vendors" value="1" >
-                        <label class="custom-control-label" for="updateVendorsCheckbox<?php echo $vendor_template_id; ?>">Update All Base Vendors</label>
+                    <div class="form-check form-check">
+                        <input type="checkbox" class="form-check-input" id="updateVendorsCheckbox<?php echo $vendor_template_id; ?>" name="update_base_vendors" value="1" >
+                        <label class="form-check-label" for="updateVendorsCheckbox<?php echo $vendor_template_id; ?>">Update All Base Vendors</label>
                     </div>
                 </div>
 
@@ -247,8 +247,8 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" class="btn btn-primary text-bold" name="edit_vendor_template"><i class="fa fa-check mr-2"></i>Update Template</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" class="btn btn-primary text-bold" name="edit_vendor_template"><i class="fa fa-check me-2"></i>Update Template</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

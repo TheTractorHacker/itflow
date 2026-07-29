@@ -16,9 +16,9 @@ if ($session_contact_primary == 0 && !$session_contact_is_technical_contact) {
 $certificates_sql = mysqli_query($mysqli, "SELECT certificate_id, certificate_name, certificate_domain, certificate_issued_by, certificate_expire FROM certificates WHERE certificate_client_id = $session_client_id AND certificate_archived_at IS NULL ORDER BY certificate_expire ASC");
 ?>
 
-    <div class="row">
+    <div class="row mb-4">
         <div class="col">
-            <h3><i class="fas fa-fw fa-certificate mr-2"></i>Web Certificates</h3>
+            <h3><i class="fas fa-fw fa-certificate me-2"></i>Web Certificates</h3>
         </div>
     </div>
     <div class="row">
@@ -53,7 +53,7 @@ $certificates_sql = mysqli_query($mysqli, "SELECT certificate_id, certificate_na
 
                     $expire_class = "";
                     if ($certificate_expire && strtotime($certificate_expire) < strtotime('+30 days')) {
-                        $expire_class = "text-danger font-weight-bold";
+                        $expire_class = "text-danger fw-bold";
                     }
                     ?>
 

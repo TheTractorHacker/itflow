@@ -9,20 +9,22 @@ $sql = mysqli_query($mysqli, "SELECT * FROM payment_providers WHERE payment_prov
 $row = mysqli_fetch_assoc($sql);
 $provider_name = nullable_htmlentities($row['payment_provider_name']);
 $public_key = nullable_htmlentities($row['payment_provider_public_key']);
-$private_key = nullable_htmlentities($row['payment_provider_private_key']);
+$has_private_key = !empty($row['payment_provider_private_key']);
 $account_id = intval($row['payment_provider_account']);
 $threshold = floatval($row['payment_provider_threshold']);
 $vendor_id = intval($row['payment_provider_expense_vendor']);
 $category_id = intval($row['payment_provider_expense_category']);
 $percent_fee = floatval($row['payment_provider_expense_percentage_fee']) * 100;
 $flat_fee = floatval($row['payment_provider_expense_flat_fee']);
+$has_webhook_secret = !empty($row['payment_provider_webhook_secret']);
+$webhook_url = "https://$config_base_url/guest/payment_webhook.php";
 
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-credit-card mr-2"></i>Editing: <strong><?= $provider_name ?></strong></h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-credit-card me-2"></i>Editing: <strong><?= $provider_name ?></strong></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -34,10 +36,10 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-details">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-details">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-expense">Expense</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-expense">Expense</a>
             </li>
         </ul>
 
@@ -63,8 +65,30 @@ ob_start();
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fa fa-fw fa-key"></i></span>
                         </div>
-                        <input type="text" class="form-control" name="private_key" placeholder="Secret API Key (sk_...)" value="<?= $private_key ?>">
+                        <input type="password" class="form-control" name="private_key" placeholder="<?= $has_private_key ? 'Stored - leave blank to keep current' : 'Secret API Key (sk_...)' ?>" autocomplete="new-password">
                     </div>
+                    <small class="form-text text-muted">Stored encrypted. Leave blank to keep the existing key.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Webhook URL <small class="text-muted">(add this in Stripe &raquo; Developers &raquo; Webhooks)</small></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-fw fa-link"></i></span></div>
+                        <input type="text" class="form-control bg-light" value="<?= htmlspecialchars($webhook_url, ENT_QUOTES) ?>" readonly id="stripe_webhook_url_field">
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary js-copy-stripe-webhook-url">Copy</button>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted">Listen for <code>payment_intent.succeeded</code>, then paste the resulting Signing secret below.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Webhook signing secret</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-fw fa-shield-alt"></i></span></div>
+                        <input type="password" class="form-control" name="webhook_secret" placeholder="<?= $has_webhook_secret ? 'Stored - leave blank to keep current' : 'whsec_...' ?>" autocomplete="new-password">
+                    </div>
+                    <small class="form-text text-muted">Signing secret from Stripe's Webhook endpoint settings. Stored encrypted. Leave blank to keep the existing secret.</small>
                 </div>
 
                 <div class="form-group">
@@ -187,10 +211,23 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="edit_payment_provider" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Save</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="edit_payment_provider" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Save</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
+
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-copy-stripe-webhook-url');
+    if (!btn) return;
+    var field = document.getElementById('stripe_webhook_url_field');
+    navigator.clipboard.writeText(field.value).then(function () {
+        var original = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied';
+        setTimeout(function () { btn.innerHTML = original; }, 2000);
+    });
+});
+</script>
 
 <?php
 

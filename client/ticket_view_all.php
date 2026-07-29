@@ -30,7 +30,7 @@ $all_tickets = mysqli_query($mysqli, "SELECT ticket_id, ticket_prefix, ticket_nu
 
     <div class="row">
         <div class="col">
-            <h3><i class="fas fa-fw fa-users mr-2"></i>All Company Tickets</h3>
+            <h3><i class="fas fa-fw fa-users me-2"></i>All Company Tickets</h3>
         </div>
     </div>
 
@@ -40,8 +40,8 @@ $all_tickets = mysqli_query($mysqli, "SELECT ticket_id, ticket_prefix, ticket_nu
             <div class="card card-outline card-primary">
                 <div class="card-header">
                     <form method="get" class="form-inline">
-                        <label class="mr-2 mb-0">Ticket Status</label>
-                        <select class="form-control form-control-sm" name="status" onchange="this.form.submit()">
+                        <label class="me-2 mb-0">Ticket Status</label>
+                        <select class="form-control form-control-sm auto-submit-select" name="status">
                             <option value="%" <?php if ($status == "%") {echo "selected";}?> >Any</option>
                             <option value="Open" <?php if ($status == "Open") {echo "selected";}?> >Open</option>
                             <option value="Closed" <?php if ($status == "Closed") {echo "selected";}?> >Closed</option>
@@ -79,7 +79,7 @@ $all_tickets = mysqli_query($mysqli, "SELECT ticket_id, ticket_prefix, ticket_nu
                                 <td class="text-nowrap"><a href="ticket.php?id=<?php echo $ticket_id; ?>">#<?php echo "$ticket_prefix$ticket_number"; ?></a></td>
                                 <td><a href="ticket.php?id=<?php echo $ticket_id; ?>"><?php echo $ticket_subject; ?></a></td>
                                 <td><?php echo $ticket_contact_name; ?></td>
-                                <td><span class="badge badge-secondary"><?php echo $ticket_status; ?></span></td>
+                                <td><span class="badge text-bg-secondary"><?php echo $ticket_status; ?></span></td>
                             </tr>
                         <?php } ?>
                         </tbody>

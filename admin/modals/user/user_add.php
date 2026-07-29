@@ -5,9 +5,9 @@ require_once '../../../includes/modal_header.php';
 ob_start();
 
 ?>
-<div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-user-plus mr-2"></i>New User</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+<div class="modal-header">
+    <h5 class="modal-title"><i class="fas fa-fw fa-user-plus me-2"></i>New User</h5>
+    <button type="button" class="close" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -17,10 +17,10 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-user-details">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-user-details">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-user-access">Restrict Access</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-user-access">Restrict Access</a>
             </li>
         </ul>
 
@@ -61,7 +61,7 @@ ob_start();
                             <span class="input-group-text"><i class="fa fa-fw fa-eye"></i></span>
                         </div>
                         <div class="input-group-append">
-                            <span class="btn btn-default"><i class="fa fa-fw fa-question" onclick="generatePassword()"></i></span>
+                            <span class="btn btn-default"><i class="fa fa-fw fa-question js-generate-password"></i></span>
                         </div>
                     </div>
                 </div>
@@ -93,18 +93,18 @@ ob_start();
                 </div>
 
                 <div class="form-group" <?php if(empty($config_smtp_host)) { echo "hidden"; } ?>>
-                    <div class="custom-control custom-checkbox">
-                        <input class="custom-control-input" type="checkbox" id="sendEmailCheckBox" name="send_email" value="" checked>
-                        <label for="sendEmailCheckBox" class="custom-control-label">
+                    <div class="form-check form-check">
+                        <input class="form-check-input" type="checkbox" id="sendEmailCheckBox" name="send_email" value="" checked>
+                        <label for="sendEmailCheckBox" class="form-check-label">
                             Send user e-mail with login details?
                         </label>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                        <input class="custom-control-input" type="checkbox" id="forceMFACheckBox" name="force_mfa" value=1>
-                        <label for="forceMFACheckBox" class="custom-control-label">
+                    <div class="form-check form-check">
+                        <input class="form-check-input" type="checkbox" id="forceMFACheckBox" name="force_mfa" value=1>
+                        <label for="forceMFACheckBox" class="form-check-label">
                             Force MFA
                         </label>
                     </div>
@@ -119,10 +119,10 @@ ob_start();
                 </div>
 
                 <ul class="list-group">
-                    <li class="list-group-item bg-dark">
+                    <li class="list-group-item" style="background: var(--color-accent-soft); box-shadow: inset 3px 0 0 var(--color-accent);">
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" onclick="this.closest('.tab-pane').querySelectorAll('.client-checkbox').forEach(checkbox => checkbox.checked = this.checked);">
-                            <label class="form-check-label ml-3"><strong>Restrict Access to Clients</strong></label>
+                            <input type="checkbox" class="form-check-input js-toggle-all-clients">
+                            <label class="form-check-label ms-3"><strong>Restrict Access to Clients</strong></label>
                         </div>
                     </li>
 
@@ -137,7 +137,7 @@ ob_start();
                     <li class="list-group-item">
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input client-checkbox" name="clients[]" value="<?php echo $client_id; ?>">
-                            <label class="form-check-label ml-3"><?php echo $client_name; ?></label>
+                            <label class="form-check-label ms-3"><?php echo $client_name; ?></label>
                         </div>
                     </li>
 
@@ -151,12 +151,12 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_user" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_user" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 
 function generatePassword() {
     jQuery.get(
@@ -169,6 +169,15 @@ function generatePassword() {
         }
     );
 }
+
+document.addEventListener('click', function (e) {
+    if (e.target.closest('.js-generate-password')) { generatePassword(); }
+});
+document.addEventListener('click', function (e) {
+    var el = e.target.closest('.js-toggle-all-clients');
+    if (!el) return;
+    el.closest('.tab-pane').querySelectorAll('.client-checkbox').forEach(function (checkbox) { checkbox.checked = el.checked; });
+});
 
 </script>
 

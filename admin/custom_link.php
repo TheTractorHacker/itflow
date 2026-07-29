@@ -19,9 +19,9 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-external-link-alt mr-2"></i>Custom Links</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-external-link-alt me-2"></i>Custom Links</h3>
             <div class="card-tools">
-                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/custom_link/custom_link_add.php"><i class="fas fa-plus mr-2"></i>New Link</button>
+                <button type="button" class="btn btn-primary ajax-modal" data-modal-url="modals/custom_link/custom_link_add.php"><i class="fas fa-plus me-2"></i>New Link</button>
             </div>
         </div>
 
@@ -107,7 +107,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td>
                                 <a class="ajax-modal" href="#"
                                     data-modal-url="modals/custom_link/custom_link_edit.php?id=<?= $custom_link_id ?>">
-                                    <i class="fa fa-fw fa-<?php echo $custom_link_icon; ?> mr-2"></i><?php echo $custom_link_name;?>
+                                    <i class="fa fa-fw fa-<?php echo $custom_link_icon; ?> me-2"></i><?php echo $custom_link_name;?>
                                 </a>
                             </td>
                             <td><?php echo $custom_link_order_display; ?></td>
@@ -115,16 +115,16 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                             <td><?php echo $custom_link_location_display; ?></td>
                             <td>
                                 <div class="dropdown dropleft text-center">
-                                    <button class="btn btn-secondary btn-sm" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/custom_link/custom_link_edit.php?id=<?= $custom_link_id ?>">
-                                            <i class="fas fa-fw fa-edit mr-2"></i>Edit
+                                            <i class="fas fa-fw fa-edit me-2"></i>Edit
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item text-danger text-bold confirm-link" href="post.php?delete_custom_link=<?php echo $custom_link_id; ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>">
-                                            <i class="fas fa-fw fa-trash mr-2"></i>Delete
+                                            <i class="fas fa-fw fa-trash me-2"></i>Delete
                                         </a>
                                     </div>
                                 </div>

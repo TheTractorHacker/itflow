@@ -13,6 +13,9 @@ $type_esc = $filter_type && in_array($filter_type, $allowed_types)
     : null;
 
 $where = "a.asset_type IN ('Firewall/Router','Switch','Access Point') AND a.asset_archived_at IS NULL";
+// Client-scope restriction, matching agent/assets.php's convention: a tech restricted
+// via user_client_permissions must only see network devices for their permitted clients.
+if (!$session_is_admin && $client_access_string) { $where .= " AND a.asset_client_id IN ($client_access_string)"; }
 if ($filter_client_id) { $where .= " AND a.asset_client_id=" . intval($filter_client_id); }
 if ($filter_status === 'online') {
     $where .= " AND (arl.rmm_status='online' OR (arl.rmm_status IS NULL AND a.asset_status IN ('Deployed','Active','Connected')))";
@@ -83,29 +86,29 @@ $type_labels = [
 
 <!-- Header -->
 <div class="d-flex align-items-center mb-3">
-    <h4 class="mb-0 mr-auto"><i class="fas fa-network-wired mr-2"></i>Network</h4>
+    <h4 class="mb-0 mr-auto"><i class="fas fa-network-wired me-2"></i>Network</h4>
     <?php if (lookupUserPermission('module_rmm_sync') >= 1 && !empty($sophos_integrations)): ?>
     <div class="d-flex align-items-center">
         <?php if (count($sophos_integrations) > 1): ?>
-        <select id="netSyncIntg" class="form-control form-control-sm mr-2" style="max-width:180px">
+        <select id="netSyncIntg" class="form-control form-control-sm me-2" style="max-width:180px">
             <?php foreach ($sophos_integrations as $i): ?>
             <option value="<?= intval($i['id']) ?>"><?= nullable_htmlentities($i['name']) ?></option>
             <?php endforeach; ?>
         </select>
         <?php endif; ?>
-        <button class="btn btn-success btn-sm mr-2" id="netSyncBtn" onclick="triggerNetSync()">
-            <i class="fas fa-sync mr-1"></i>Sync Firewalls
+        <button class="btn btn-success btn-sm me-2 js-trigger-net-sync" id="netSyncBtn">
+            <i class="fas fa-sync me-1"></i>Sync Firewalls
         </button>
     </div>
     <?php endif; ?>
     <a href="/admin/settings_integrations.php?tab=firewalls" class="btn btn-secondary btn-sm">
-        <i class="fas fa-cog mr-1"></i>Settings
+        <i class="fas fa-cog me-1"></i>Settings
     </a>
 </div>
 
 <!-- Sync status bar -->
 <div id="netSyncStatus" class="alert alert-info d-none mb-3">
-    <i class="fas fa-spinner fa-spin mr-2"></i><span id="netSyncStatusText">Syncing...</span>
+    <i class="fas fa-spinner fa-spin me-2"></i><span id="netSyncStatusText">Syncing...</span>
 </div>
 
 <!-- Stat cards -->
@@ -169,7 +172,7 @@ $type_labels = [
             <?php if ($filter_type): ?>
             <input type="hidden" name="device_type" value="<?= htmlspecialchars($filter_type) ?>">
             <?php endif; ?>
-            <select name="client_id" class="form-control form-control-sm" style="max-width:200px" onchange="this.form.submit()">
+            <select name="client_id" class="form-control form-control-sm auto-submit-select" style="max-width:200px">
                 <option value="">All Clients</option>
                 <?php while ($cl = mysqli_fetch_assoc($sql_clients)): ?>
                 <option value="<?= $cl['client_id'] ?>" <?= $filter_client_id == $cl['client_id'] ? 'selected' : '' ?>>
@@ -177,7 +180,7 @@ $type_labels = [
                 </option>
                 <?php endwhile; ?>
             </select>
-            <select name="status" class="form-control form-control-sm" style="max-width:150px" onchange="this.form.submit()">
+            <select name="status" class="form-control form-control-sm auto-submit-select" style="max-width:150px">
                 <option value="">All Statuses</option>
                 <option value="online"  <?= $filter_status === 'online'  ? 'selected' : '' ?>>Online</option>
                 <option value="offline" <?= $filter_status === 'offline' ? 'selected' : '' ?>>Offline</option>
@@ -190,7 +193,7 @@ $type_labels = [
                 </div>
             </div>
             <?php if ($filter_client_id || $filter_status || $filter_search !== '' || $filter_type): ?>
-            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times mr-1"></i>Clear</a>
+            <a href="?" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times me-1"></i>Clear</a>
             <?php endif; ?>
         </form>
     </div>
@@ -209,7 +212,7 @@ if (empty($all_devices)): ?>
         <i class="fas fa-network-wired fa-3x mb-3 d-block"></i>
         <p class="mb-1">No network devices found<?= ($filter_client_id || $filter_status || $filter_type || $filter_search !== '') ? ' matching your filters' : '' ?>.</p>
         <?php if (!empty($sophos_integrations) && (!$filter_type || $filter_type === 'Firewall/Router')): ?>
-        <p class="small"><a href="#" onclick="triggerNetSync();return false;">Sync from Sophos Central</a> to import firewalls.</p>
+        <p class="small"><a href="#" class="js-trigger-net-sync">Sync from Sophos Central</a> to import firewalls.</p>
         <?php endif; ?>
     </div>
 </div>
@@ -267,8 +270,8 @@ $proc = function(array $dev) use ($device_icons): array {
 <?php if (!empty($by_type['Firewall/Router'])): ?>
 <div class="card card-dark mb-3">
     <div class="card-header py-2 d-flex align-items-center">
-        <h3 class="card-title mb-0"><i class="fas fa-shield-alt mr-2 text-danger"></i>Firewalls
-            <span class="badge badge-secondary ml-2"><?= count($by_type['Firewall/Router']) ?></span>
+        <h3 class="card-title mb-0"><i class="fas fa-shield-alt me-2 text-danger"></i>Firewalls
+            <span class="badge text-bg-secondary ms-2"><?= count($by_type['Firewall/Router']) ?></span>
         </h3>
         <?php if ($filter_type): ?><a href="?" class="btn btn-sm btn-outline-secondary ml-auto">Show All</a><?php endif; ?>
     </div>
@@ -282,38 +285,38 @@ $proc = function(array $dev) use ($device_icons): array {
             <div class="card mb-0 h-100" style="border-left:4px solid <?= $d['border'] ?>">
                 <div class="card-body py-3 px-3">
                     <div class="d-flex align-items-start">
-                        <div class="mr-3 pt-1">
+                        <div class="me-3 pt-1">
                             <i class="fas fa-shield-alt fa-2x text-<?= $d['sc'] ?>"></i>
                         </div>
                         <div class="flex-grow-1 min-width-0">
                             <div class="d-flex align-items-start flex-wrap mb-2" style="gap:4px">
                                 <a href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>"
-                                   class="font-weight-bold text-dark mr-1" style="font-size:15px;line-height:1.4">
+                                   class="fw-bold text-dark me-1" style="font-size:15px;line-height:1.4">
                                     <?= $d['display_name'] ?>
                                 </a>
                                 <span class="badge badge-<?= $d['sc'] ?>"><?= ucfirst($d['status']) ?></span>
                                 <?php if ($d['alerts'] > 0): ?>
-                                <a href="<?= $alert_href ?>" class="badge badge-danger" title="<?= $d['alerts'] ?> open alert(s)">
-                                    <i class="fas fa-bell mr-1"></i>Click to view
+                                <a href="<?= $alert_href ?>" class="badge text-bg-danger" title="<?= $d['alerts'] ?> open alert(s)">
+                                    <i class="fas fa-bell me-1"></i>Click to view
                                 </a>
                                 <?php endif; ?>
                             </div>
                             <?php if ($d['client_id']): ?>
                             <div class="small text-muted mb-2">
-                                <i class="fas fa-building mr-1"></i>
+                                <i class="fas fa-building me-1"></i>
                                 <a href="/agent/client_overview.php?client_id=<?= $d['client_id'] ?>"><?= $d['client_name'] ?></a>
                             </div>
                             <?php endif; ?>
                             <div class="row no-gutters" style="font-size:13px">
-                                <div class="col-6 pr-2 mb-1">
+                                <div class="col-6 pe-2 mb-1">
                                     <div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">IP Address</div>
-                                    <div class="text-monospace font-weight-bold"><?= $d['ip'] ?: '<span class="text-muted">—</span>' ?></div>
+                                    <div class="text-monospace fw-bold"><?= $d['ip'] ?: '<span class="text-muted">—</span>' ?></div>
                                 </div>
                                 <div class="col-6 mb-1">
                                     <div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">Model</div>
                                     <div><?= $d['model'] ?: '<span class="text-muted">—</span>' ?></div>
                                 </div>
-                                <div class="col-6 pr-2">
+                                <div class="col-6 pe-2">
                                     <div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px">Firmware</div>
                                     <div class="text-secondary" style="font-size:12px"><?= $d['firmware'] ?: '<span class="text-muted">—</span>' ?></div>
                                 </div>
@@ -326,9 +329,9 @@ $proc = function(array $dev) use ($device_icons): array {
                     </div>
                 </div>
                 <div class="card-footer py-2 d-flex justify-content-between align-items-center bg-light" style="font-size:12px">
-                    <span class="text-muted"><i class="fas fa-plug mr-1"></i><?= $d['source'] ?></span>
+                    <span class="text-muted"><i class="fas fa-plug me-1"></i><?= $d['source'] ?></span>
                     <a href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>" class="btn btn-xs btn-outline-secondary">
-                        <i class="fas fa-external-link-alt mr-1"></i>Details
+                        <i class="fas fa-external-link-alt me-1"></i>Details
                     </a>
                 </div>
             </div>
@@ -350,8 +353,8 @@ foreach ($net_sections as $sect):
 <div class="card card-dark mb-3">
     <div class="card-header py-2 d-flex align-items-center">
         <h3 class="card-title mb-0">
-            <i class="fas fa-<?= $sect['icon'] ?> mr-2 <?= $sect['color'] ?>"></i><?= $sect['label'] ?>
-            <span class="badge badge-secondary ml-2"><?= count($by_type[$sect['type']]) ?></span>
+            <i class="fas fa-<?= $sect['icon'] ?> me-2 <?= $sect['color'] ?>"></i><?= $sect['label'] ?>
+            <span class="badge text-bg-secondary ms-2"><?= count($by_type[$sect['type']]) ?></span>
         </h3>
         <?php if ($filter_type): ?><a href="?" class="btn btn-sm btn-outline-secondary ml-auto">Show All</a><?php endif; ?>
     </div>
@@ -360,7 +363,7 @@ foreach ($net_sections as $sect):
     <table class="table table-hover mb-0">
         <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;background:#f8f9fa" class="text-muted border-bottom">
             <tr>
-                <th class="pl-3" style="width:50px"></th>
+                <th class="ps-3" style="width:50px"></th>
                 <th>Device</th>
                 <th>Client</th>
                 <th>IP Address</th>
@@ -377,16 +380,16 @@ foreach ($net_sections as $sect):
             $alert_href = $d['ticket_id'] ? "/agent/ticket.php?ticket_id={$d['ticket_id']}" : "/agent/alerts.php?source=network&status=new";
         ?>
         <tr>
-            <td class="pl-3 text-center align-middle">
+            <td class="ps-3 text-center align-middle">
                 <i class="fas fa-<?= $d['si'] ?> text-<?= $d['sc'] ?> fa-lg"></i>
             </td>
             <td class="align-middle" style="padding-top:12px;padding-bottom:12px">
-                <a class="font-weight-bold text-dark" href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>">
+                <a class="fw-bold text-dark" href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>">
                     <?= $d['display_name'] ?>
                 </a>
                 <?php if ($d['alerts'] > 0): ?>
-                <a href="<?= $alert_href ?>" class="badge badge-danger ml-1" title="<?= $d['alerts'] ?> open alert(s)">
-                    <i class="fas fa-bell mr-1"></i>Click to view
+                <a href="<?= $alert_href ?>" class="badge text-bg-danger ms-1" title="<?= $d['alerts'] ?> open alert(s)">
+                    <i class="fas fa-bell me-1"></i>Click to view
                 </a>
                 <?php endif; ?>
             </td>
@@ -405,7 +408,7 @@ foreach ($net_sections as $sect):
             <td class="align-middle small text-muted"><?= $d['source'] ?></td>
             <td class="align-middle"><span class="badge badge-<?= $d['sc'] ?>"><?= ucfirst($d['status']) ?></span></td>
             <td class="align-middle small text-muted"><?= $d['ago'] ?></td>
-            <td class="text-right pr-3 align-middle">
+            <td class="text-end pe-3 align-middle">
                 <a href="/agent/asset_details.php?asset_id=<?= $d['asset_id'] ?>" class="btn btn-xs btn-outline-secondary">
                     <i class="fas fa-external-link-alt"></i>
                 </a>
@@ -421,7 +424,14 @@ foreach ($net_sections as $sect):
 
 <?php endif; ?>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+document.addEventListener('click', function (e) {
+    var el = e.target.closest('.js-trigger-net-sync');
+    if (!el) { return; }
+    if (el.tagName === 'A') { e.preventDefault(); }
+    triggerNetSync();
+});
+
 function triggerNetSync() {
     const sel = document.getElementById('netSyncIntg');
     const integrationId = sel ? sel.value : <?= intval($default_sophos_id) ?>;
@@ -429,7 +439,7 @@ function triggerNetSync() {
     const btn = document.getElementById('netSyncBtn');
     const bar = document.getElementById('netSyncStatus');
     const txt = document.getElementById('netSyncStatusText');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing...'; }
     bar.classList.remove('d-none');
     bar.className = bar.className.replace(/alert-(success|danger)/, 'alert-info');
     txt.textContent = 'Syncing firewalls from Sophos Central...';
@@ -451,13 +461,13 @@ function triggerNetSync() {
         } else {
             txt.textContent = 'Sync failed: ' + (d.error || 'Unknown error');
             bar.className = bar.className.replace('alert-info', 'alert-danger');
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Firewalls'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Firewalls'; }
         }
     })
     .catch(err => {
         txt.textContent = 'Error: ' + err.message;
         bar.className = bar.className.replace('alert-info', 'alert-danger');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync Firewalls'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Firewalls'; }
     });
 }
 </script>

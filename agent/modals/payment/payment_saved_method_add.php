@@ -11,14 +11,15 @@ $invoice_prefix = nullable_htmlentities($row['invoice_prefix']);
 $invoice_number = intval($row['invoice_number']);
 $invoice_amount = floatval($row['invoice_amount']);
 $client_id = intval($row['invoice_client_id']);
+enforceClientAccess($client_id);
 
 // Generate the HTML form content using output buffering.
 ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-credit-card mr-2"></i><?php echo "$invoice_prefix$invoice_number"; ?>: Make Payment</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-credit-card me-2"></i><?php echo "$invoice_prefix$invoice_number"; ?>: Make Payment</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -56,8 +57,8 @@ ob_start();
     </div>
 
     <div class="modal-footer">
-        <button type="submit" name="add_payment_stripe" class="btn btn-primary text-bold"><i class="fas fa-check mr-2"></i>Pay</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_payment_stripe" class="btn btn-primary text-bold"><i class="fas fa-check me-2"></i>Pay</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

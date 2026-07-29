@@ -38,7 +38,17 @@ if (isset($_POST['add_project'])) {
 
     $project_number = mysqli_insert_id($mysqli);
 
-    mysqli_query($mysqli, "INSERT INTO projects SET project_prefix = '$config_project_prefix', project_number = $project_number, project_name = '$project_name', project_description = '$project_description', project_due = '$due_date', project_manager = $project_manager, project_client_id = $client_id");
+    // Optional planning/budget fields
+    $project_start = sanitizeInput($_POST['start_date'] ?? '');
+    $project_estimated_hours = floatval($_POST['estimated_hours'] ?? 0);
+    $project_budget_amount = floatval($_POST['budget_amount'] ?? 0);
+    $project_hourly_rate = floatval($_POST['hourly_rate'] ?? 0);
+    $project_start_sql = $project_start ? "'$project_start'" : "NULL";
+    $project_estimated_hours_sql = $project_estimated_hours > 0 ? $project_estimated_hours : "NULL";
+    $project_budget_amount_sql = $project_budget_amount > 0 ? $project_budget_amount : "NULL";
+    $project_hourly_rate_sql = $project_hourly_rate > 0 ? $project_hourly_rate : "NULL";
+
+    mysqli_query($mysqli, "INSERT INTO projects SET project_prefix = '$config_project_prefix', project_number = $project_number, project_name = '$project_name', project_description = '$project_description', project_due = '$due_date', project_manager = $project_manager, project_client_id = $client_id, project_start = $project_start_sql, project_estimated_hours = $project_estimated_hours_sql, project_budget_amount = $project_budget_amount_sql, project_hourly_rate = $project_hourly_rate_sql");
 
     $project_id = mysqli_insert_id($mysqli);
 
@@ -192,7 +202,17 @@ if (isset($_POST['edit_project'])) {
         enforceClientAccess();
     }
 
-    mysqli_query($mysqli, "UPDATE projects SET project_name = '$project_name', project_description = '$project_description', project_due = '$due_date', project_manager = $project_manager, project_client_id = $client_id WHERE project_id = $project_id");
+    // Optional planning/budget fields
+    $project_start = sanitizeInput($_POST['start_date'] ?? '');
+    $project_estimated_hours = floatval($_POST['estimated_hours'] ?? 0);
+    $project_budget_amount = floatval($_POST['budget_amount'] ?? 0);
+    $project_hourly_rate = floatval($_POST['hourly_rate'] ?? 0);
+    $project_start_sql = $project_start ? "'$project_start'" : "NULL";
+    $project_estimated_hours_sql = $project_estimated_hours > 0 ? $project_estimated_hours : "NULL";
+    $project_budget_amount_sql = $project_budget_amount > 0 ? $project_budget_amount : "NULL";
+    $project_hourly_rate_sql = $project_hourly_rate > 0 ? $project_hourly_rate : "NULL";
+
+    mysqli_query($mysqli, "UPDATE projects SET project_name = '$project_name', project_description = '$project_description', project_due = '$due_date', project_manager = $project_manager, project_client_id = $client_id, project_start = $project_start_sql, project_estimated_hours = $project_estimated_hours_sql, project_budget_amount = $project_budget_amount_sql, project_hourly_rate = $project_hourly_rate_sql WHERE project_id = $project_id");
 
     logAction("Project", "Edit", "$session_name edited project $project_name", $client_id, $project_id);
 
@@ -389,23 +409,157 @@ if (isset($_POST['link_closed_ticket_to_project'])) {
     }
 
     // Get ticket details
-    $sql = mysqli_query($mysqli, "SELECT ticket_id, ticket_prefix, ticket_number, ticket_subject, ticket_updated_at FROM tickets WHERE ticket_number = $ticket_number");
+    $sql = mysqli_query($mysqli, "SELECT ticket_id, ticket_client_id, ticket_prefix, ticket_number, ticket_subject, ticket_updated_at FROM tickets WHERE ticket_number = $ticket_number");
     if (mysqli_num_rows($sql) == 0) {
         flash_alert("Cannot merge into that ticket.", 'error');
         redirect();
     }
     $row = mysqli_fetch_assoc($sql);
     $ticket_id = intval($row['ticket_id']);
+    $ticket_client_id = intval($row['ticket_client_id']);
     $ticket_prefix = sanitizeInput($row['ticket_prefix']);
     $ticket_number = intval($row['ticket_number']);
     $ticket_subject = sanitizeInput($row['ticket_subject']);
     $ticket_updated = sanitizeInput($row['ticket_updated_at']); // So we don't mess with the last response
+
+    // ticket_number is a global, non-client-scoped counter - reject if the matched
+    // ticket doesn't actually belong to this project's client before re-parenting it.
+    if ($ticket_client_id != $client_id) {
+        flash_alert("Cannot merge into that ticket.", 'error');
+        redirect();
+    }
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_project_id = $project_id, ticket_updated_at = '$ticket_updated' WHERE ticket_id = $ticket_id");
 
     logAction("Project", "Edit", "$session_name added ticket $ticket_prefix$ticket_number - $ticket_subject to project $project_name", $client_id, $project_id);
 
     flash_alert("Ticket added to <strong>$project_name</strong>");
+
+    redirect();
+
+}
+
+if (isset($_POST['add_milestone'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_support', 2);
+
+    $project_id = intval($_POST['project_id']);
+    $milestone_name = sanitizeInput($_POST['name']);
+    $milestone_description = sanitizeInput($_POST['description']);
+    $milestone_due = sanitizeInput($_POST['due']);
+    $milestone_order = intval($_POST['order']);
+
+    // Resolve client from the project for access checks/logging
+    $client_id = intval(getFieldById('projects', $project_id, 'project_client_id'));
+    if ($client_id) {
+        enforceClientAccess($client_id);
+    }
+
+    $milestone_due_sql = $milestone_due ? "'$milestone_due'" : "NULL";
+
+    mysqli_query($mysqli, "INSERT INTO project_milestones SET milestone_project_id = $project_id, milestone_name = '$milestone_name', milestone_description = '$milestone_description', milestone_due = $milestone_due_sql, milestone_order = $milestone_order");
+
+    $milestone_id = mysqli_insert_id($mysqli);
+
+    logAction("Project", "Edit", "$session_name added milestone $milestone_name", $client_id, $project_id);
+
+    flash_alert("Milestone <strong>$milestone_name</strong> created");
+
+    redirect();
+
+}
+
+if (isset($_POST['edit_milestone'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_support', 2);
+
+    $milestone_id = intval($_POST['milestone_id']);
+    $project_id = intval($_POST['project_id']);
+    $milestone_name = sanitizeInput($_POST['name']);
+    $milestone_description = sanitizeInput($_POST['description']);
+    $milestone_due = sanitizeInput($_POST['due']);
+    $milestone_order = intval($_POST['order']);
+
+    // Resolve client from the milestone's project for access checks/logging
+    $project_id = intval(getFieldById('project_milestones', $milestone_id, 'milestone_project_id'));
+    $client_id = intval(getFieldById('projects', $project_id, 'project_client_id'));
+    if ($client_id) {
+        enforceClientAccess($client_id);
+    }
+
+    $milestone_due_sql = $milestone_due ? "'$milestone_due'" : "NULL";
+
+    mysqli_query($mysqli, "UPDATE project_milestones SET milestone_name = '$milestone_name', milestone_description = '$milestone_description', milestone_due = $milestone_due_sql, milestone_order = $milestone_order WHERE milestone_id = $milestone_id");
+
+    logAction("Project", "Edit", "$session_name edited milestone $milestone_name", $client_id, $project_id);
+
+    flash_alert("Milestone <strong>$milestone_name</strong> edited");
+
+    redirect();
+
+}
+
+if (isset($_GET['toggle_milestone'])) {
+
+    validateCSRFToken($_GET['csrf_token']);
+
+    enforceUserPermission('module_support', 2);
+
+    $milestone_id = intval($_GET['toggle_milestone']);
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT milestone_project_id, milestone_name, milestone_status FROM project_milestones WHERE milestone_id = $milestone_id LIMIT 1"));
+    $project_id = intval($row['milestone_project_id']);
+    $milestone_name = sanitizeInput($row['milestone_name']);
+    $milestone_status = sanitizeInput($row['milestone_status']);
+
+    $client_id = intval(getFieldById('projects', $project_id, 'project_client_id'));
+    if ($client_id) {
+        enforceClientAccess($client_id);
+    }
+
+    if ($milestone_status == 'completed') {
+        mysqli_query($mysqli, "UPDATE project_milestones SET milestone_status = 'open', milestone_completed_at = NULL WHERE milestone_id = $milestone_id");
+        logAction("Project", "Edit", "$session_name reopened milestone $milestone_name", $client_id, $project_id);
+        flash_alert("Milestone <strong>$milestone_name</strong> reopened");
+    } else {
+        mysqli_query($mysqli, "UPDATE project_milestones SET milestone_status = 'completed', milestone_completed_at = NOW() WHERE milestone_id = $milestone_id");
+        logAction("Project", "Edit", "$session_name completed milestone $milestone_name", $client_id, $project_id);
+        flash_alert("Milestone <strong>$milestone_name</strong> completed");
+    }
+
+    redirect();
+
+}
+
+if (isset($_GET['delete_milestone'])) {
+
+    validateCSRFToken($_GET['csrf_token']);
+
+    enforceUserPermission('module_support', 3);
+
+    $milestone_id = intval($_GET['delete_milestone']);
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT milestone_project_id, milestone_name FROM project_milestones WHERE milestone_id = $milestone_id LIMIT 1"));
+    $project_id = intval($row['milestone_project_id']);
+    $milestone_name = sanitizeInput($row['milestone_name']);
+
+    $client_id = intval(getFieldById('projects', $project_id, 'project_client_id'));
+    if ($client_id) {
+        enforceClientAccess($client_id);
+    }
+
+    // Detach any tasks from this milestone before removing it (tasks remain on the project)
+    mysqli_query($mysqli, "UPDATE tasks SET task_milestone_id = NULL WHERE task_milestone_id = $milestone_id");
+
+    mysqli_query($mysqli, "DELETE FROM project_milestones WHERE milestone_id = $milestone_id");
+
+    logAction("Project", "Delete", "$session_name deleted milestone $milestone_name", $client_id, $project_id);
+
+    flash_alert("Milestone <strong>$milestone_name</strong> deleted", 'error');
 
     redirect();
 

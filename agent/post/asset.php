@@ -483,9 +483,12 @@ if (isset($_POST['bulk_assign_asset_contact'])) {
             $asset_id = intval($asset_id);
 
             // Get Asset Details for Logging
-            $sql = mysqli_query($mysqli,"SELECT asset_name FROM assets WHERE asset_id = $asset_id");
+            $sql = mysqli_query($mysqli,"SELECT asset_name, asset_client_id FROM assets WHERE asset_id = $asset_id");
             $row = mysqli_fetch_assoc($sql);
             $asset_name = sanitizeInput($row['asset_name']);
+            $asset_client_id = intval($row['asset_client_id']);
+
+            enforceClientAccess($asset_client_id);
 
             mysqli_query($mysqli,"UPDATE assets SET asset_contact_id = $contact_id WHERE asset_id = $asset_id");
 
@@ -757,8 +760,11 @@ if (isset($_POST['link_software_to_asset'])) {
 
     enforceClientAccess();
 
-    // Get Asset Name for logging
+    // Get Asset Name for logging, and confirm the target asset also belongs
+    // to a client this user can access (the check above only covers the
+    // software's client).
     $asset_name = sanitizeInput(getFieldById('assets', $asset_id, 'asset_name'));
+    enforceClientAccess(intval(getFieldById('assets', $asset_id, 'asset_client_id')));
 
     mysqli_query($mysqli,"INSERT INTO software_assets SET asset_id = $asset_id, software_id = $software_id");
 
@@ -787,8 +793,11 @@ if (isset($_GET['unlink_software_from_asset'])) {
 
     enforceClientAccess();
 
-    // Get Asset Name for logging
+    // Get Asset Name for logging, and confirm the target asset also belongs
+    // to a client this user can access (the check above only covers the
+    // software's client).
     $asset_name = sanitizeInput(getFieldById('assets', $asset_id, 'asset_name'));
+    enforceClientAccess(intval(getFieldById('assets', $asset_id, 'asset_client_id')));
 
     mysqli_query($mysqli,"DELETE FROM software_assets WHERE asset_id = $asset_id AND software_id = $software_id");
 
@@ -818,8 +827,11 @@ if (isset($_POST['link_asset_to_credential'])) {
 
     enforceClientAccess();
 
-    // Get Asset Name for logging
+    // Get Asset Name for logging, and confirm the target asset also belongs
+    // to a client this user can access (the check above only covers the
+    // credential's client).
     $asset_name = sanitizeInput(getFieldById('assets', $asset_id, 'asset_name'));
+    enforceClientAccess(intval(getFieldById('assets', $asset_id, 'asset_client_id')));
 
     mysqli_query($mysqli,"UPDATE credentials SET credential_asset_id = $asset_id WHERE credential_id = $credential_id");
 
@@ -848,8 +860,11 @@ if (isset($_GET['unlink_credential_from_asset'])) {
 
     enforceClientAccess();
 
-    // Get Asset Name for logging
+    // Get Asset Name for logging, and confirm the target asset also belongs
+    // to a client this user can access (the check above only covers the
+    // credential's client).
     $asset_name = sanitizeInput(getFieldById('assets', $asset_id, 'asset_name'));
+    enforceClientAccess(intval(getFieldById('assets', $asset_id, 'asset_client_id')));
 
     mysqli_query($mysqli,"UPDATE credentials SET credential_asset_id = 0 WHERE credential_id = $credential_id");
 
@@ -878,8 +893,11 @@ if (isset($_POST['link_service_to_asset'])) {
 
     enforceClientAccess();
 
-    // Get Asset Name for logging
+    // Get Asset Name for logging, and confirm the target asset also belongs
+    // to a client this user can access (the check above only covers the
+    // service's client).
     $asset_name = sanitizeInput(getFieldById('assets', $asset_id, 'asset_name'));
+    enforceClientAccess(intval(getFieldById('assets', $asset_id, 'asset_client_id')));
 
     mysqli_query($mysqli,"INSERT INTO service_assets SET asset_id = $asset_id, service_id = $service_id");
 
@@ -908,8 +926,11 @@ if (isset($_GET['unlink_service_from_asset'])) {
 
     enforceClientAccess();
 
-    // Get Asset Name for logging
+    // Get Asset Name for logging, and confirm the target asset also belongs
+    // to a client this user can access (the check above only covers the
+    // service's client).
     $asset_name = sanitizeInput(getFieldById('assets', $asset_id, 'asset_name'));
+    enforceClientAccess(intval(getFieldById('assets', $asset_id, 'asset_client_id')));
 
     mysqli_query($mysqli,"DELETE FROM service_assets WHERE asset_id = $asset_id AND service_id = $service_id");
 
@@ -938,8 +959,11 @@ if (isset($_POST['link_asset_to_file'])) {
 
     enforceClientAccess();
 
-    // Get Asset Name for logging
+    // Get Asset Name for logging, and confirm the target asset also belongs
+    // to a client this user can access (the check above only covers the
+    // file's client).
     $asset_name = sanitizeInput(getFieldById('assets', $asset_id, 'asset_name'));
+    enforceClientAccess(intval(getFieldById('assets', $asset_id, 'asset_client_id')));
 
     // asset add query
     mysqli_query($mysqli,"INSERT INTO asset_files SET asset_id = $asset_id, file_id = $file_id");
@@ -969,8 +993,11 @@ if (isset($_GET['unlink_asset_from_file'])) {
 
     enforceClientAccess();
 
-    // Get Asset Name for logging
+    // Get Asset Name for logging, and confirm the target asset also belongs
+    // to a client this user can access (the check above only covers the
+    // file's client).
     $asset_name = sanitizeInput(getFieldById('assets', $asset_id, 'asset_name'));
+    enforceClientAccess(intval(getFieldById('assets', $asset_id, 'asset_client_id')));
 
     mysqli_query($mysqli,"DELETE FROM asset_files WHERE asset_id = $asset_id AND file_id = $file_id");
 

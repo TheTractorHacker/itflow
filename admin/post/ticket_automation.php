@@ -11,7 +11,7 @@ if (isset($_POST['add_rule'])) {
     $trigger = mysqli_real_escape_string($mysqli, $_POST['rule_trigger'] ?? 'schedule');
     $order   = intval($_POST['rule_order'] ?? 0);
 
-    $valid_triggers = ['schedule', 'rmm_alert', 'asset_offline', 'asset_online'];
+    $valid_triggers = ['schedule', 'rmm_alert', 'asset_offline', 'asset_online', 'ticket_created'];
     if (!in_array($_POST['rule_trigger'] ?? '', $valid_triggers, true)) {
         $trigger = 'schedule';
     }
@@ -36,7 +36,7 @@ if (isset($_POST['add_rule'])) {
     $actions = [];
     $action_names = $_POST['action_name'] ?? [];
     $action_vals  = $_POST['action_value'] ?? [];
-    $no_value_actions = ['notify_assignee', 'close_ticket', 'create_ticket_from_alert', 'acknowledge_alert'];
+    $no_value_actions = ['notify_assignee', 'close_ticket', 'create_ticket_from_alert', 'acknowledge_alert', 'ai_triage'];
     foreach ($action_names as $i => $an) {
         $an = trim((string) $an);
         if ($an === '') continue;
@@ -48,7 +48,7 @@ if (isset($_POST['add_rule'])) {
         ];
     }
 
-    if ($name && !empty($conditions) && !empty($actions)) {
+    if ($name && !empty($actions) && (!empty($conditions) || $trigger === 'ticket_created')) {
         $conditions_json = mysqli_real_escape_string($mysqli, json_encode($conditions));
         $actions_json    = mysqli_real_escape_string($mysqli, json_encode($actions));
 

@@ -33,8 +33,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-desktop mr-2"></i>New <?php if ($type) { echo $type; } ?> Asset</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-desktop me-2"></i>New <?php if ($type) { echo $type; } ?> Asset</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -46,22 +46,22 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-asset-details">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-asset-details">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-asset-assignment">Assignment</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-asset-assignment">Assignment</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-asset-network">Network</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-asset-network">Network</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-asset-purchase">Purchase</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-asset-purchase">Purchase</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-asset-login">Login</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-asset-login">Login</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-asset-notes">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-asset-notes">Notes</a>
             </li>
         </ul>
 
@@ -528,15 +528,15 @@ ob_start();
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_asset" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_asset" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Create</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 
 <!-- JSON Autocomplete / type ahead -->
 <link rel="stylesheet" href="/plugins/jquery-ui/jquery-ui.min.css">
 <script src="/plugins/jquery-ui/jquery-ui.min.js"></script>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
     $(function() {
         var operatingSystems = <?php echo $json_os; ?>;
         $("#os").autocomplete({

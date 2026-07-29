@@ -8,8 +8,8 @@ ob_start();
 
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-lock mr-2"></i>New Certificate</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-lock me-2"></i>New Certificate</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -20,13 +20,13 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-details">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-details">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-certificate">Certificate</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-certificate">Certificate</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-notes">Notes</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-notes">Notes</a>
             </li>
         </ul>
 
@@ -117,7 +117,7 @@ ob_start();
                         </div>
                         <input type="text" class="form-control" name="domain" id="domain" placeholder="FQDN" maxlength="200" required>
                         <div class="input-group-append">
-                            <button type="button" class="btn btn-secondary" onclick="fetchSSL('new')"><i class="fas fa-fw fa-sync-alt"></i></button>
+                            <button type="button" class="btn btn-secondary js-fetch-ssl" data-fetch-ssl-type="new"><i class="fas fa-fw fa-sync-alt"></i></button>
                         </div>
                     </div>
                 </div>
@@ -166,7 +166,7 @@ ob_start();
 
     <div class="modal-footer">
         <button type="submit" name="add_certificate" class="btn btn-primary text-bold"><i class="fa fa-check"></i> Create</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
 

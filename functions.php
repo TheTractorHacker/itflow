@@ -35,7 +35,33 @@ function nullable_htmlentities($unsanitizedInput) {
 
 // Returns 'text-dark' or 'text-light' depending on which gives better contrast against the given hex color
 function tagTextClass($hex_color) {
-    return 'text-light';
+    $hex = ltrim((string) $hex_color, '#');
+    if (strlen($hex) === 3) {
+        $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+    }
+    if (!preg_match('/^[0-9a-fA-F]{6}$/', $hex)) {
+        return 'text-light'; // unparseable color - fall back to the old default
+    }
+
+    // WCAG relative luminance (https://www.w3.org/TR/WCAG21/#dfn-relative-luminance)
+    $to_linear = function ($channel) {
+        $c = $channel / 255;
+        return $c <= 0.03928 ? $c / 12.92 : (($c + 0.055) / 1.055) ** 2.4;
+    };
+    $r = $to_linear(hexdec(substr($hex, 0, 2)));
+    $g = $to_linear(hexdec(substr($hex, 2, 2)));
+    $b = $to_linear(hexdec(substr($hex, 4, 2)));
+    $luminance = 0.2126 * $r + 0.7152 * $g + 0.0722 * $b;
+
+    // Contrast ratio against white (#fff, luminance 1.0) vs. near-black
+    // Bootstrap "text-dark" (#212529, the same shade text-dark already renders,
+    // so switching classes doesn't introduce a color inconsistent with the rest
+    // of the theme).
+    $contrast_white = (1.0 + 0.05) / ($luminance + 0.05);
+    $dark_luminance = 0.01806564208421097; // relative luminance of #212529
+    $contrast_dark  = ($luminance + 0.05) / ($dark_luminance + 0.05);
+
+    return $contrast_white >= $contrast_dark ? 'text-light' : 'text-dark';
 }
 
 // Curated set of preset tag colors offered in the tag color picker
@@ -859,6 +885,1107 @@ function roundUpToNearestMultiple($n, $increment = 1000)
     return (int) ($increment * ceil($n / $increment));
 }
 
+/**
+ * Formats a duration in seconds into a short human string (e.g. "3d 4h", "2h 15m", "45m", "30s").
+ * Returns "-" for null/empty so callers can echo the result directly.
+ */
+function secondsToTime($seconds)
+{
+    if ($seconds === null || $seconds === '' || $seconds < 0) {
+        return '-';
+    }
+    $seconds = (int) round($seconds);
+    if ($seconds < 60) {
+        return $seconds . 's';
+    }
+    $days  = intdiv($seconds, 86400);
+    $hours = intdiv($seconds % 86400, 3600);
+    $mins  = intdiv($seconds % 3600, 60);
+    if ($days > 0) {
+        return $days . 'd ' . $hours . 'h';
+    }
+    if ($hours > 0) {
+        return $hours . 'h ' . $mins . 'm';
+    }
+    return $mins . 'm';
+}
+
+// -----------------------------------------------------------------------------
+// Analytics delivery (Wave 3): shared CSV export streamer + scheduled/emailed
+// report rendering. Kept alongside the report helpers so the web pages
+// (agent/reports/*), the ?export=csv handlers and the cron/report_scheduler.php
+// worker all draw the same numbers from the same source functions.
+// -----------------------------------------------------------------------------
+
+/**
+ * Streams a tabular dataset to the browser as a CSV download and exits. Must be
+ * called before any page output (report pages suppress their HTML chrome when
+ * ?export=csv is set, see agent/reports/includes/inc_all_reports.php).
+ *
+ * $filename : suggested download name (sanitised to a safe basename).
+ * $header   : flat array of column titles (omitted from output if empty).
+ * $rows     : array of flat arrays, one per data row.
+ *
+ * Numeric values are written verbatim; text values that begin with a spreadsheet
+ * formula trigger (= + - @) are prefixed with an apostrophe to neutralise CSV
+ * formula injection without corrupting genuine negative numbers.
+ */
+function report_send_csv(string $filename, array $header, array $rows)
+{
+    $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename);
+    if ($filename === '' || strtolower(substr($filename, -4)) !== '.csv') {
+        $filename = ($filename === '' ? 'report' : $filename) . '.csv';
+    }
+
+    if (!headers_sent()) {
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+    }
+
+    $sanitize = static function ($v) {
+        if (is_int($v) || is_float($v)) {
+            return $v;
+        }
+        $v = (string) ($v ?? '');
+        if ($v !== '' && !is_numeric($v) && in_array($v[0], ['=', '+', '-', '@'], true)) {
+            $v = "'" . $v;
+        }
+        return $v;
+    };
+
+    $out = fopen('php://output', 'w');
+    // UTF-8 BOM so Excel opens accented characters correctly.
+    fwrite($out, "\xEF\xBB\xBF");
+    if (!empty($header)) {
+        fputcsv($out, array_map($sanitize, $header));
+    }
+    foreach ($rows as $row) {
+        fputcsv($out, array_map($sanitize, (array) $row));
+    }
+    fclose($out);
+    exit;
+}
+
+/**
+ * Single source of truth for which reports can be scheduled/emailed. Maps the
+ * schedule key (stored in report_schedules.schedule_report) to a display label.
+ * Used by agent/reports/schedules.php (dropdown + validation), the scheduler cron
+ * and report_render_email_html().
+ */
+function report_schedulable_reports()
+{
+    return [
+        'service_desk'           => 'Service Desk & SLA',
+        'technician_performance' => 'Technician Performance',
+        'mrr'                    => 'MRR & Forecast',
+        'income_summary'         => 'Income Summary',
+        'expense_summary'        => 'Expense Summary',
+        'ticket_summary'         => 'Ticket Summary',
+        'clients_with_balance'   => 'Clients with a Balance (AR Aging)',
+    ];
+}
+
+/**
+ * Renders a headline summary of a report to an HTML email body. Returns
+ * ['subject' => ..., 'html' => ...] or null for an unknown report key. Draws its
+ * figures from the same getXxxReport() helpers the web pages use so an emailed
+ * summary reconciles with the interactive report. Currency is formatted with the
+ * global $currency_format when available (cron sets it), else plain 2dp.
+ */
+function report_render_email_html(mysqli $mysqli, $report_key)
+{
+    global $currency_format, $company_currency, $session_company_currency, $company_name, $session_company_name;
+
+    $reports = report_schedulable_reports();
+    if (!isset($reports[$report_key])) {
+        return null;
+    }
+    $label = $reports[$report_key];
+    $brand = $company_name ?? ($session_company_name ?? 'ITFlow');
+    $ccy   = $session_company_currency ?? $company_currency ?? 'USD';
+
+    $money = static function ($v) use ($currency_format, $ccy) {
+        if (isset($currency_format) && $currency_format instanceof NumberFormatter) {
+            return numfmt_format_currency($currency_format, (float) $v, $ccy);
+        }
+        return number_format((float) $v, 2);
+    };
+
+    $today = date('Y-m-d');
+    $rows  = [];
+
+    switch ($report_key) {
+        case 'service_desk': {
+            $from = date('Y-m-01');
+            $r = getServiceDeskReport($mysqli, $from, $today);
+            $rows[] = ['Window', "$from to $today"];
+            $rows[] = ['Opened', intval($r['totals']['opened'])];
+            $rows[] = ['Resolved', intval($r['totals']['resolved'])];
+            $rows[] = ['Open now', intval($r['totals']['open_now'])];
+            $rows[] = ['Response SLA', $r['sla']['response_pct'] !== null ? $r['sla']['response_pct'] . '%' : '-'];
+            $rows[] = ['Resolution SLA', $r['sla']['resolution_pct'] !== null ? $r['sla']['resolution_pct'] . '%' : '-'];
+            $rows[] = ['CSAT', $r['csat']['pct'] !== null ? $r['csat']['pct'] . '%' : '-'];
+            break;
+        }
+        case 'technician_performance': {
+            $from = date('Y-m-01');
+            $r = getTechnicianPerformanceReport($mysqli, $from, $today);
+            $rows[] = ['Window', "$from to $today"];
+            $rows[] = ['Billable hours', number_format($r['totals']['billable_seconds'] / 3600, 1)];
+            $rows[] = ['Non-billable hours', number_format($r['totals']['nonbillable_seconds'] / 3600, 1)];
+            $rows[] = ['Team utilization', $r['totals']['team_utilization_pct'] !== null ? $r['totals']['team_utilization_pct'] . '%' : '-'];
+            $rows[] = ['Billable value', $money($r['totals']['billable_value'])];
+            $rows[] = ['Tickets closed', intval($r['totals']['tickets_closed'])];
+            $rows[] = ['Team CSAT', $r['totals']['csat_pct'] !== null ? $r['totals']['csat_pct'] . '%' : '-'];
+            break;
+        }
+        case 'mrr': {
+            $r = getMrrReport($mysqli);
+            $rows[] = ['Current MRR', $money($r['mrr'])];
+            $rows[] = ['ARR', $money($r['arr'])];
+            $rows[] = ['Active schedules', intval($r['active_count'])];
+            $rows[] = ['Net new MRR (30d)', $money($r['movement']['net_new_mrr'])];
+            break;
+        }
+        case 'clients_with_balance': {
+            $r = getArAgingReport($mysqli);
+            $b = $r['buckets'];
+            $rows[] = ['As of', $r['as_of']];
+            $rows[] = ['0-30 days', $money($b['b_0_30'])];
+            $rows[] = ['31-60 days', $money($b['b_31_60'])];
+            $rows[] = ['61-90 days', $money($b['b_61_90'])];
+            $rows[] = ['90+ days', $money($b['b_90_plus'])];
+            $rows[] = ['Total outstanding', $money($b['total'])];
+            break;
+        }
+        case 'income_summary': {
+            $year = intval(date('Y'));
+            $p = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT COALESCE(SUM(payment_amount),0) AS v FROM payments p JOIN invoices i ON i.invoice_id = p.payment_invoice_id
+                 WHERE YEAR(p.payment_date) = $year"));
+            $rv = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT COALESCE(SUM(revenue_amount),0) AS v FROM revenues WHERE revenue_category_id > 0 AND YEAR(revenue_date) = $year"));
+            $rows[] = ['Year', $year];
+            $rows[] = ['Total income (YTD)', $money(floatval($p['v']) + floatval($rv['v']))];
+            break;
+        }
+        case 'expense_summary': {
+            $year = intval(date('Y'));
+            $e = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT COALESCE(SUM(expense_amount),0) AS v FROM expenses WHERE expense_vendor_id > 0 AND YEAR(expense_date) = $year"));
+            $rows[] = ['Year', $year];
+            $rows[] = ['Total expense (YTD)', $money(floatval($e['v']))];
+            break;
+        }
+        case 'ticket_summary': {
+            $year = intval(date('Y'));
+            $t = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT COUNT(ticket_id) AS c FROM tickets WHERE YEAR(ticket_created_at) = $year"));
+            $rows[] = ['Year', $year];
+            $rows[] = ['Tickets raised (YTD)', intval($t['c'])];
+            break;
+        }
+        default:
+            return null;
+    }
+
+    $subject = "$brand report: $label ($today)";
+
+    $html  = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333">';
+    $html .= '<h2 style="color:#2c3e50;margin-bottom:4px">' . htmlspecialchars($label) . '</h2>';
+    $html .= '<p style="color:#777;margin-top:0">Automated report from ' . htmlspecialchars($brand)
+           . ' &middot; generated ' . date('Y-m-d H:i') . '</p>';
+    $html .= '<table cellpadding="8" cellspacing="0" style="border-collapse:collapse;min-width:340px">';
+    foreach ($rows as $i => $r2) {
+        $bg = ($i % 2 === 0) ? '#f7f7f7' : '#ffffff';
+        $html .= '<tr style="background:' . $bg . '">'
+              . '<td style="border:1px solid #e0e0e0;font-weight:bold">' . htmlspecialchars((string) $r2[0]) . '</td>'
+              . '<td style="border:1px solid #e0e0e0;text-align:right">' . htmlspecialchars((string) $r2[1]) . '</td>'
+              . '</tr>';
+    }
+    $html .= '</table>';
+    $html .= '<p style="color:#999;font-size:12px;margin-top:16px">Log in to ' . htmlspecialchars($brand)
+           . ' to view the full interactive report and export the underlying data as CSV.</p>';
+    $html .= '</div>';
+
+    return ['subject' => $subject, 'html' => $html];
+}
+
+/**
+ * Service-desk & SLA operations report data (set-based, no per-row PHP loops for aggregates).
+ * Shared by agent/reports/service_desk.php (web) and api/v1/reports/service_desk.php (JSON)
+ * so both surfaces return identical numbers. $date_from/$date_to are 'Y-m-d' strings and are
+ * validated here (defence in depth); metrics that are point-in-time snapshots (open-ticket
+ * aging, current per-tech open workload) intentionally ignore the range.
+ */
+function getServiceDeskReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = null)
+{
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_from)) {
+        $date_from = date('Y-01-01');
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_to)) {
+        $date_to = date('Y-m-d');
+    }
+    $from_dt = "$date_from 00:00:00";
+    $to_dt   = "$date_to 23:59:59";
+    // $client_id restricts every query below to one client - used by the API when the
+    // caller is authenticated via a client-scoped legacy key. The classic web report
+    // always calls this with $client_id = null (company-wide).
+    $client_clause   = $client_id !== null ? " AND ticket_client_id = " . intval($client_id) : '';
+    $client_clause_t = $client_id !== null ? " AND t.ticket_client_id = " . intval($client_id) : '';
+    $created_range = "ticket_created_at BETWEEN '$from_dt' AND '$to_dt'$client_clause";
+
+    // --- Ticket volume trend (opened vs resolved, grouped by month, set-based) ---
+    $opened_by_month = [];
+    $res = mysqli_query($mysqli,
+        "SELECT DATE_FORMAT(ticket_created_at, '%Y-%m') AS ym, COUNT(ticket_id) AS c
+         FROM tickets
+         WHERE $created_range AND ticket_archived_at IS NULL
+         GROUP BY ym");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $opened_by_month[$row['ym']] = intval($row['c']);
+    }
+
+    $resolved_by_month = [];
+    $res = mysqli_query($mysqli,
+        "SELECT DATE_FORMAT(ticket_closed_at, '%Y-%m') AS ym, COUNT(ticket_id) AS c
+         FROM tickets
+         WHERE ticket_closed_at BETWEEN '$from_dt' AND '$to_dt' AND ticket_archived_at IS NULL$client_clause
+         GROUP BY ym");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $resolved_by_month[$row['ym']] = intval($row['c']);
+    }
+
+    // Build a contiguous month axis from the first to the last month in range (capped at 60).
+    $labels = $opened_series = $resolved_series = $backlog_series = [];
+    $cursor = new DateTime(substr($date_from, 0, 7) . '-01');
+    $last   = new DateTime(substr($date_to, 0, 7) . '-01');
+    $running = 0;
+    $guard = 0;
+    while ($cursor <= $last && $guard < 60) {
+        $key = $cursor->format('Y-m');
+        $opened   = $opened_by_month[$key] ?? 0;
+        $resolved = $resolved_by_month[$key] ?? 0;
+        $running += ($opened - $resolved);
+        $labels[]          = $cursor->format('M Y');
+        $opened_series[]   = $opened;
+        $resolved_series[] = $resolved;
+        $backlog_series[]  = $running;
+        $cursor->modify('+1 month');
+        $guard++;
+    }
+
+    // --- Open-ticket aging buckets (point-in-time snapshot of all open tickets) ---
+    $open_open = "ticket_closed_at IS NULL AND ticket_archived_at IS NULL$client_clause";
+    $aging = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT
+            SUM(CASE WHEN TIMESTAMPDIFF(HOUR, ticket_created_at, NOW()) < 24  THEN 1 ELSE 0 END) AS b0,
+            SUM(CASE WHEN TIMESTAMPDIFF(HOUR, ticket_created_at, NOW()) >= 24  AND TIMESTAMPDIFF(HOUR, ticket_created_at, NOW()) < 72  THEN 1 ELSE 0 END) AS b1,
+            SUM(CASE WHEN TIMESTAMPDIFF(HOUR, ticket_created_at, NOW()) >= 72  AND TIMESTAMPDIFF(HOUR, ticket_created_at, NOW()) < 168 THEN 1 ELSE 0 END) AS b2,
+            SUM(CASE WHEN TIMESTAMPDIFF(HOUR, ticket_created_at, NOW()) >= 168 AND TIMESTAMPDIFF(HOUR, ticket_created_at, NOW()) < 720 THEN 1 ELSE 0 END) AS b3,
+            SUM(CASE WHEN TIMESTAMPDIFF(HOUR, ticket_created_at, NOW()) >= 720 THEN 1 ELSE 0 END) AS b4
+         FROM tickets WHERE $open_open"));
+    $aging_buckets = [
+        ['label' => '0-1d',  'count' => intval($aging['b0'] ?? 0)],
+        ['label' => '1-3d',  'count' => intval($aging['b1'] ?? 0)],
+        ['label' => '3-7d',  'count' => intval($aging['b2'] ?? 0)],
+        ['label' => '7-30d', 'count' => intval($aging['b3'] ?? 0)],
+        ['label' => '30d+',  'count' => intval($aging['b4'] ?? 0)],
+    ];
+
+    // --- SLA compliance (tickets created in range that carry an SLA due) ---
+    $sla_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT
+            SUM(CASE WHEN ticket_sla_response_due IS NOT NULL THEN 1 ELSE 0 END) AS resp_total,
+            SUM(CASE WHEN ticket_sla_response_due IS NOT NULL AND ticket_first_response_at IS NOT NULL
+                     AND ticket_first_response_at <= ticket_sla_response_due THEN 1 ELSE 0 END) AS resp_met,
+            SUM(CASE WHEN ticket_sla_resolution_due IS NOT NULL THEN 1 ELSE 0 END) AS reso_total,
+            SUM(CASE WHEN ticket_sla_resolution_due IS NOT NULL AND ticket_resolved_at IS NOT NULL
+                     AND ticket_resolved_at <= ticket_sla_resolution_due THEN 1 ELSE 0 END) AS reso_met
+         FROM tickets WHERE $created_range AND ticket_archived_at IS NULL"));
+    $resp_total = intval($sla_row['resp_total'] ?? 0);
+    $resp_met   = intval($sla_row['resp_met'] ?? 0);
+    $reso_total = intval($sla_row['reso_total'] ?? 0);
+    $reso_met   = intval($sla_row['reso_met'] ?? 0);
+    $sla = [
+        'response_total'   => $resp_total,
+        'response_met'     => $resp_met,
+        'response_pct'     => $resp_total > 0 ? round($resp_met / $resp_total * 100, 1) : null,
+        'resolution_total' => $reso_total,
+        'resolution_met'   => $reso_met,
+        'resolution_pct'   => $reso_total > 0 ? round($reso_met / $reso_total * 100, 1) : null,
+    ];
+
+    // --- CSAT (ticket_feedback Good/Bad, tickets created in range) ---
+    $csat_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT
+            SUM(CASE WHEN ticket_feedback = 'Good' THEN 1 ELSE 0 END) AS good,
+            SUM(CASE WHEN ticket_feedback = 'Bad'  THEN 1 ELSE 0 END) AS bad
+         FROM tickets WHERE $created_range AND ticket_archived_at IS NULL"));
+    $csat_good = intval($csat_row['good'] ?? 0);
+    $csat_bad  = intval($csat_row['bad'] ?? 0);
+    $csat_total = $csat_good + $csat_bad;
+    $csat = [
+        'good'  => $csat_good,
+        'bad'   => $csat_bad,
+        'total' => $csat_total,
+        'pct'   => $csat_total > 0 ? round($csat_good / $csat_total * 100, 1) : null,
+    ];
+
+    // --- Avg first-response & resolution time by priority (tickets created in range) ---
+    $by_priority = [];
+    $res = mysqli_query($mysqli,
+        "SELECT ticket_priority,
+            COUNT(ticket_id) AS total,
+            AVG(CASE WHEN ticket_first_response_at IS NOT NULL
+                THEN TIMESTAMPDIFF(SECOND, ticket_created_at, ticket_first_response_at) END) AS avg_response_seconds,
+            AVG(CASE WHEN ticket_resolved_at IS NOT NULL
+                THEN TIMESTAMPDIFF(SECOND, ticket_created_at, ticket_resolved_at) END) AS avg_resolve_seconds
+         FROM tickets
+         WHERE $created_range AND ticket_archived_at IS NULL
+           AND ticket_priority IS NOT NULL AND ticket_priority <> ''
+         GROUP BY ticket_priority
+         ORDER BY FIELD(ticket_priority, 'Critical', 'High', 'Medium', 'Low')");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $by_priority[] = [
+            'priority'             => $row['ticket_priority'],
+            'total'                => intval($row['total']),
+            'avg_response_seconds' => $row['avg_response_seconds'] !== null ? intval($row['avg_response_seconds']) : null,
+            'avg_resolve_seconds'  => $row['avg_resolve_seconds'] !== null ? intval($row['avg_resolve_seconds']) : null,
+        ];
+    }
+
+    // --- Per-technician workload: current open (snapshot) + resolved in range ---
+    $techs = [];
+    $res = mysqli_query($mysqli,
+        "SELECT t.ticket_assigned_to AS uid, u.user_name, COUNT(t.ticket_id) AS c
+         FROM tickets t LEFT JOIN users u ON u.user_id = t.ticket_assigned_to
+         WHERE t.ticket_closed_at IS NULL AND t.ticket_archived_at IS NULL AND t.ticket_assigned_to > 0$client_clause_t
+         GROUP BY t.ticket_assigned_to, u.user_name");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $uid = intval($row['uid']);
+        $techs[$uid] = [
+            'user_id'             => $uid,
+            'name'                => $row['user_name'] ?? 'User #' . $uid,
+            'open'                => intval($row['c']),
+            'resolved'            => 0,
+            'avg_resolve_seconds' => null,
+        ];
+    }
+    $res = mysqli_query($mysqli,
+        "SELECT t.ticket_assigned_to AS uid, u.user_name, COUNT(t.ticket_id) AS c,
+            AVG(TIMESTAMPDIFF(SECOND, t.ticket_created_at, t.ticket_closed_at)) AS avg_res
+         FROM tickets t LEFT JOIN users u ON u.user_id = t.ticket_assigned_to
+         WHERE t.ticket_closed_at IS NOT NULL
+           AND t.ticket_closed_at BETWEEN '$from_dt' AND '$to_dt'
+           AND t.ticket_archived_at IS NULL AND t.ticket_assigned_to > 0$client_clause_t
+         GROUP BY t.ticket_assigned_to, u.user_name");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $uid = intval($row['uid']);
+        if (!isset($techs[$uid])) {
+            $techs[$uid] = [
+                'user_id'             => $uid,
+                'name'                => $row['user_name'] ?? 'User #' . $uid,
+                'open'                => 0,
+                'resolved'            => 0,
+                'avg_resolve_seconds' => null,
+            ];
+        }
+        $techs[$uid]['resolved'] = intval($row['c']);
+        $techs[$uid]['avg_resolve_seconds'] = $row['avg_res'] !== null ? intval($row['avg_res']) : null;
+    }
+    $by_technician = array_values($techs);
+    usort($by_technician, function ($a, $b) {
+        if ($b['open'] !== $a['open']) return $b['open'] - $a['open'];
+        return $b['resolved'] - $a['resolved'];
+    });
+
+    // --- Headline totals ---
+    $total_opened   = array_sum($opened_series);
+    $total_resolved = array_sum($resolved_series);
+    $open_now = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COUNT(ticket_id) AS c FROM tickets WHERE $open_open"))['c']);
+
+    return [
+        'date_from' => $date_from,
+        'date_to'   => $date_to,
+        'totals'    => [
+            'opened'   => $total_opened,
+            'resolved' => $total_resolved,
+            'open_now' => $open_now,
+        ],
+        'volume' => [
+            'labels'   => $labels,
+            'opened'   => $opened_series,
+            'resolved' => $resolved_series,
+            'backlog'  => $backlog_series,
+        ],
+        'aging'         => $aging_buckets,
+        'sla'           => $sla,
+        'csat'          => $csat,
+        'by_priority'   => $by_priority,
+        'by_technician' => $by_technician,
+    ];
+}
+
+// -----------------------------------------------------------------------------
+// Analytics / reporting helpers (Wave 2). All set-based (no per-row PHP loops for
+// aggregates) and shared between the web report pages under agent/reports/ and the
+// JSON endpoints under api/v1/reports/ so both surfaces return identical numbers.
+// -----------------------------------------------------------------------------
+
+// Default technician capacity assumption used for utilization %. 8h/day x 5 days.
+// TODO: make this configurable per-company (e.g. a settings column or per-user
+// contracted hours) instead of a hard-coded constant. Deliberately NOT a schema
+// change here — kept as a documented default so the metric is honest and tunable.
+if (!defined('REPORT_CAPACITY_HOURS_PER_DAY')) {
+    define('REPORT_CAPACITY_HOURS_PER_DAY', 8);
+}
+if (!defined('REPORT_CAPACITY_DAYS_PER_WEEK')) {
+    define('REPORT_CAPACITY_DAYS_PER_WEEK', 5);
+}
+
+/**
+ * Counts business days (Mon..Fri by default, controlled by REPORT_CAPACITY_DAYS_PER_WEEK)
+ * inclusive between two 'Y-m-d' dates. Used to derive a capacity baseline for utilization.
+ */
+function report_business_days($date_from, $date_to)
+{
+    try {
+        $start = new DateTime(substr((string) $date_from, 0, 10));
+        $end   = new DateTime(substr((string) $date_to, 0, 10));
+    } catch (Exception $e) {
+        return 0;
+    }
+    if ($end < $start) {
+        return 0;
+    }
+    $dpw = defined('REPORT_CAPACITY_DAYS_PER_WEEK') ? REPORT_CAPACITY_DAYS_PER_WEEK : 5;
+    $days = 0;
+    $guard = 0;
+    $cursor = clone $start;
+    while ($cursor <= $end && $guard < 3660) {
+        if ((int) $cursor->format('N') <= $dpw) {
+            $days++;
+        }
+        $cursor->modify('+1 day');
+        $guard++;
+    }
+    return $days;
+}
+
+/**
+ * Technician performance / utilization report (set-based). Billable vs non-billable
+ * hours (joined to labor_types), tickets closed, avg handle time, CSAT and utilization
+ * against a business-time capacity baseline. $date_from/$date_to are 'Y-m-d' strings.
+ */
+function getTechnicianPerformanceReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = null)
+{
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_from)) {
+        $date_from = date('Y-01-01');
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_to)) {
+        $date_to = date('Y-m-d');
+    }
+    $from_dt = "$date_from 00:00:00";
+    $to_dt   = "$date_to 23:59:59";
+
+    // $client_id restricts every query below to one client - used by the API when the
+    // caller is authenticated via a client-scoped legacy key. The classic web report
+    // always calls this with $client_id = null (company-wide). ticket_replies carries no
+    // client column of its own, so it's joined to tickets only when scoping is active.
+    $client_clause         = $client_id !== null ? " AND ticket_client_id = " . intval($client_id) : '';
+    $client_join_ticket_id = $client_id !== null ? " JOIN tickets trt ON trt.ticket_id = tr.ticket_reply_ticket_id AND trt.ticket_client_id = " . intval($client_id) : '';
+
+    $hpd = defined('REPORT_CAPACITY_HOURS_PER_DAY') ? REPORT_CAPACITY_HOURS_PER_DAY : 8;
+    $business_days    = report_business_days($date_from, $date_to);
+    $capacity_seconds = $business_days * $hpd * 3600;
+
+    // Base agent list (active agents), keyed by user_id.
+    $techs = [];
+    $res = mysqli_query($mysqli,
+        "SELECT user_id, user_name FROM users
+         WHERE user_type = 1 AND user_status = 1 AND user_archived_at IS NULL
+         ORDER BY user_name ASC");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $uid = intval($row['user_id']);
+        $techs[$uid] = [
+            'user_id'             => $uid,
+            'name'                => $row['user_name'],
+            'billable_seconds'    => 0,
+            'nonbillable_seconds' => 0,
+            'total_seconds'       => 0,
+            'billable_value'      => 0.0,
+            'tickets_closed'      => 0,
+            'avg_handle_seconds'  => null,
+            'csat_good'           => 0,
+            'csat_bad'            => 0,
+            'csat_pct'            => null,
+            'utilization_pct'     => null,
+        ];
+    }
+
+    // Time worked in range, split billable/non-billable + billable value (join labor_types).
+    // A reply is billable when its labor type carries a rate > 0; NULL/0 labor type = non-billable.
+    $res = mysqli_query($mysqli,
+        "SELECT tr.ticket_reply_by AS uid,
+            SUM(TIME_TO_SEC(tr.ticket_reply_time_worked)) AS total_secs,
+            SUM(CASE WHEN lt.labor_type_rate > 0 THEN TIME_TO_SEC(tr.ticket_reply_time_worked) ELSE 0 END) AS billable_secs,
+            SUM(TIME_TO_SEC(tr.ticket_reply_time_worked) / 3600 * COALESCE(lt.labor_type_rate, 0)) AS billable_value
+         FROM ticket_replies tr
+         LEFT JOIN labor_types lt ON lt.labor_type_id = tr.ticket_reply_labor_type_id
+         $client_join_ticket_id
+         WHERE tr.ticket_reply_time_worked IS NOT NULL
+           AND tr.ticket_reply_created_at BETWEEN '$from_dt' AND '$to_dt'
+         GROUP BY tr.ticket_reply_by");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $uid = intval($row['uid']);
+        if (!isset($techs[$uid])) {
+            continue;
+        }
+        $total    = intval($row['total_secs']);
+        $billable = intval($row['billable_secs']);
+        $techs[$uid]['total_seconds']       = $total;
+        $techs[$uid]['billable_seconds']    = $billable;
+        $techs[$uid]['nonbillable_seconds'] = max(0, $total - $billable);
+        $techs[$uid]['billable_value']      = round(floatval($row['billable_value']), 2);
+        $techs[$uid]['utilization_pct']     = $capacity_seconds > 0 ? round($total / $capacity_seconds * 100, 1) : null;
+    }
+
+    // Tickets closed in range + CSAT, by assigned technician.
+    $res = mysqli_query($mysqli,
+        "SELECT ticket_assigned_to AS uid,
+            COUNT(ticket_id) AS closed,
+            AVG(TIMESTAMPDIFF(SECOND, ticket_created_at, ticket_closed_at)) AS avg_res,
+            SUM(CASE WHEN ticket_feedback = 'Good' THEN 1 ELSE 0 END) AS good,
+            SUM(CASE WHEN ticket_feedback = 'Bad'  THEN 1 ELSE 0 END) AS bad
+         FROM tickets
+         WHERE ticket_closed_at BETWEEN '$from_dt' AND '$to_dt'
+           AND ticket_archived_at IS NULL AND ticket_assigned_to > 0$client_clause
+         GROUP BY ticket_assigned_to");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $uid = intval($row['uid']);
+        if (!isset($techs[$uid])) {
+            continue;
+        }
+        $techs[$uid]['tickets_closed'] = intval($row['closed']);
+        $techs[$uid]['csat_good']      = intval($row['good']);
+        $techs[$uid]['csat_bad']       = intval($row['bad']);
+        $ct = $techs[$uid]['csat_good'] + $techs[$uid]['csat_bad'];
+        $techs[$uid]['csat_pct'] = $ct > 0 ? round($techs[$uid]['csat_good'] / $ct * 100, 1) : null;
+    }
+
+    // Avg handle time = total time worked / tickets closed (seconds per closed ticket).
+    foreach ($techs as $uid => &$t) {
+        $t['avg_handle_seconds'] = $t['tickets_closed'] > 0
+            ? intval(round($t['total_seconds'] / $t['tickets_closed']))
+            : null;
+    }
+    unset($t);
+
+    $technicians = array_values($techs);
+    usort($technicians, function ($a, $b) {
+        return $b['total_seconds'] - $a['total_seconds'];
+    });
+
+    $num_techs   = count($technicians);
+    $sum_total   = array_sum(array_column($technicians, 'total_seconds'));
+    $team_cap    = $capacity_seconds * $num_techs;
+    $totals = [
+        'billable_seconds'    => array_sum(array_column($technicians, 'billable_seconds')),
+        'nonbillable_seconds' => array_sum(array_column($technicians, 'nonbillable_seconds')),
+        'total_seconds'       => $sum_total,
+        'billable_value'      => round(array_sum(array_column($technicians, 'billable_value')), 2),
+        'tickets_closed'      => array_sum(array_column($technicians, 'tickets_closed')),
+        'csat_good'           => array_sum(array_column($technicians, 'csat_good')),
+        'csat_bad'            => array_sum(array_column($technicians, 'csat_bad')),
+        'team_utilization_pct' => $team_cap > 0 ? round($sum_total / $team_cap * 100, 1) : null,
+    ];
+    $csat_tot = $totals['csat_good'] + $totals['csat_bad'];
+    $totals['csat_pct'] = $csat_tot > 0 ? round($totals['csat_good'] / $csat_tot * 100, 1) : null;
+
+    return [
+        'date_from'   => $date_from,
+        'date_to'     => $date_to,
+        'capacity'    => [
+            'hours_per_day'          => $hpd,
+            'days_per_week'          => defined('REPORT_CAPACITY_DAYS_PER_WEEK') ? REPORT_CAPACITY_DAYS_PER_WEEK : 5,
+            'business_days'          => $business_days,
+            'capacity_seconds'       => $capacity_seconds,
+            'capacity_hours_per_tech' => $business_days * $hpd,
+        ],
+        'totals'      => $totals,
+        'technicians' => $technicians,
+    ];
+}
+
+/**
+ * Monthly Recurring Revenue report (set-based). Current MRR + ARR, breakdown by
+ * frequency, trailing-12-month trend (approx active-at-month-end), 30-day movement
+ * (new/churned), a 6-month forward billing forecast from next_date, and top clients.
+ * Normalizes every recurring frequency to a monthly figure.
+ */
+function getMrrReport(mysqli $mysqli, ?int $client_id = null)
+{
+    // App only exposes 'month' and 'year'; others handled defensively so a future
+    // frequency doesn't silently drop out of MRR.
+    $freq_expr = "CASE recurring_invoice_frequency
+        WHEN 'month'   THEN recurring_invoice_amount
+        WHEN 'year'    THEN recurring_invoice_amount / 12
+        WHEN 'quarter' THEN recurring_invoice_amount / 3
+        WHEN 'week'    THEN recurring_invoice_amount * 52 / 12
+        WHEN 'day'     THEN recurring_invoice_amount * 365 / 12
+        ELSE recurring_invoice_amount END";
+
+    // $client_id restricts every query below to one client - used by the API when the
+    // caller is authenticated via a client-scoped legacy key, so a key restricted to one
+    // client can never see another client's (or the whole company's) recurring revenue.
+    // The classic web report always calls this with $client_id = null (company-wide).
+    $client_clause = $client_id !== null ? " AND recurring_invoice_client_id = " . intval($client_id) : '';
+    $client_clause_ri = $client_id !== null ? " AND ri.recurring_invoice_client_id = " . intval($client_id) : '';
+
+    $active_where = "recurring_invoice_status = 1 AND recurring_invoice_archived_at IS NULL$client_clause";
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COALESCE(SUM($freq_expr), 0) AS mrr, COUNT(*) AS c
+         FROM recurring_invoices WHERE $active_where"));
+    $mrr    = round(floatval($row['mrr']), 2);
+    $active = intval($row['c']);
+
+    // Breakdown by frequency.
+    $by_freq = [];
+    $res = mysqli_query($mysqli,
+        "SELECT recurring_invoice_frequency AS f, COUNT(*) AS c, COALESCE(SUM($freq_expr), 0) AS mrr
+         FROM recurring_invoices WHERE $active_where
+         GROUP BY recurring_invoice_frequency ORDER BY mrr DESC");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $by_freq[] = ['frequency' => $r['f'], 'count' => intval($r['c']), 'mrr' => round(floatval($r['mrr']), 2)];
+    }
+
+    // Movement over the trailing 30 days (approximation — recurring_invoices has no
+    // amount-change history, so expansion/contraction can't be measured precisely).
+    $new_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COALESCE(SUM($freq_expr), 0) AS mrr, COUNT(*) AS c
+         FROM recurring_invoices
+         WHERE $active_where AND recurring_invoice_created_at >= (NOW() - INTERVAL 30 DAY)"));
+    $churn_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COALESCE(SUM($freq_expr), 0) AS mrr, COUNT(*) AS c
+         FROM recurring_invoices
+         WHERE recurring_invoice_archived_at IS NOT NULL
+           AND recurring_invoice_archived_at >= (NOW() - INTERVAL 30 DAY)$client_clause"));
+    $new_mrr   = round(floatval($new_row['mrr']), 2);
+    $churn_mrr = round(floatval($churn_row['mrr']), 2);
+
+    // Trailing-12-month MRR trend. Active-at-month-end is approximated as created on/before
+    // the month-end and not archived by then (past status is not retained).
+    $trend_labels = $trend_mrr = [];
+    for ($i = 11; $i >= 0; $i--) {
+        $end = date('Y-m-t', strtotime("first day of -$i month"));
+        $trend_labels[] = date('M Y', strtotime($end));
+        $r = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT COALESCE(SUM($freq_expr), 0) AS mrr FROM recurring_invoices
+             WHERE recurring_invoice_created_at <= '$end 23:59:59'
+               AND (recurring_invoice_archived_at IS NULL OR recurring_invoice_archived_at > '$end 23:59:59')$client_clause"));
+        $trend_mrr[] = round(floatval($r['mrr']), 2);
+    }
+
+    // 6-month forward billing forecast: iterate each active schedule's next_date forward.
+    $forecast_labels = [];
+    $months = [];
+    for ($i = 0; $i < 6; $i++) {
+        $k = date('Y-m', strtotime("first day of +$i month"));
+        $months[$k] = 0.0;
+        $forecast_labels[] = date('M Y', strtotime("first day of +$i month"));
+    }
+    $horizon_end = date('Y-m-t', strtotime('first day of +5 month'));
+    $res = mysqli_query($mysqli,
+        "SELECT recurring_invoice_frequency AS f, recurring_invoice_amount AS amt, recurring_invoice_next_date AS nd
+         FROM recurring_invoices WHERE $active_where");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $amt = floatval($r['amt']);
+        $f   = $r['f'];
+        $cur = $r['nd'];
+        if (!$cur) {
+            continue;
+        }
+        $guard = 0;
+        while ($cur <= $horizon_end && $guard < 400) {
+            $k = substr($cur, 0, 7);
+            if (isset($months[$k])) {
+                $months[$k] += $amt;
+            }
+            if ($f === 'year') {
+                $cur = date('Y-m-d', strtotime("$cur +1 year"));
+            } elseif ($f === 'quarter') {
+                $cur = date('Y-m-d', strtotime("$cur +3 month"));
+            } elseif ($f === 'week') {
+                $cur = date('Y-m-d', strtotime("$cur +1 week"));
+            } elseif ($f === 'day') {
+                $cur = date('Y-m-d', strtotime("$cur +1 day"));
+            } else {
+                $cur = date('Y-m-d', strtotime("$cur +1 month"));
+            }
+            $guard++;
+        }
+    }
+    $forecast_amount = [];
+    foreach ($months as $v) {
+        $forecast_amount[] = round($v, 2);
+    }
+
+    // Top clients by MRR.
+    $top = [];
+    $res = mysqli_query($mysqli,
+        "SELECT c.client_id, c.client_name, COALESCE(SUM($freq_expr), 0) AS mrr
+         FROM recurring_invoices ri JOIN clients c ON c.client_id = ri.recurring_invoice_client_id
+         WHERE ri.recurring_invoice_status = 1 AND ri.recurring_invoice_archived_at IS NULL$client_clause_ri
+         GROUP BY c.client_id, c.client_name HAVING mrr > 0 ORDER BY mrr DESC LIMIT 15");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $top[] = ['client_id' => intval($r['client_id']), 'client_name' => $r['client_name'], 'mrr' => round(floatval($r['mrr']), 2)];
+    }
+
+    return [
+        'mrr'          => $mrr,
+        'arr'          => round($mrr * 12, 2),
+        'active_count' => $active,
+        'by_frequency' => $by_freq,
+        'movement'     => [
+            'new_mrr'        => $new_mrr,
+            'new_count'      => intval($new_row['c']),
+            'churned_mrr'    => $churn_mrr,
+            'churned_count'  => intval($churn_row['c']),
+            'net_new_mrr'    => round($new_mrr - $churn_mrr, 2),
+        ],
+        'trend'        => ['labels' => $trend_labels, 'mrr' => $trend_mrr],
+        'forecast'     => ['labels' => $forecast_labels, 'amount' => $forecast_amount],
+        'top_clients'  => $top,
+    ];
+}
+
+/**
+ * Accounts-receivable aging (set-based). Outstanding balance per billable invoice,
+ * aged into 0-30 / 31-60 / 61-90 / 90+ day buckets by days past invoice_due, rolled
+ * up to bucket totals and per-client. Not-yet-due balances land in the 0-30 bucket.
+ */
+function getArAgingReport(mysqli $mysqli)
+{
+    $res = mysqli_query($mysqli,
+        "SELECT i.invoice_client_id AS client_id, cl.client_name,
+                DATEDIFF(CURDATE(), i.invoice_due) AS days_overdue,
+                (i.invoice_amount - COALESCE(p.paid, 0)) AS balance
+         FROM invoices i
+         JOIN clients cl ON cl.client_id = i.invoice_client_id
+         LEFT JOIN (
+             SELECT payment_invoice_id, SUM(payment_amount) AS paid
+             FROM payments GROUP BY payment_invoice_id
+         ) p ON p.payment_invoice_id = i.invoice_id
+         WHERE i.invoice_status NOT IN ('Draft', 'Cancelled', 'Non-Billable')
+         HAVING balance > 0.005");
+
+    $buckets = ['b_0_30' => 0.0, 'b_31_60' => 0.0, 'b_61_90' => 0.0, 'b_90_plus' => 0.0, 'total' => 0.0];
+    $clients = [];
+    while ($r = mysqli_fetch_assoc($res)) {
+        $bal = floatval($r['balance']);
+        if ($bal <= 0) {
+            continue;
+        }
+        $d   = intval($r['days_overdue']);
+        $cid = intval($r['client_id']);
+        if (!isset($clients[$cid])) {
+            $clients[$cid] = [
+                'client_id' => $cid, 'client_name' => $r['client_name'],
+                'b_0_30' => 0.0, 'b_31_60' => 0.0, 'b_61_90' => 0.0, 'b_90_plus' => 0.0, 'balance' => 0.0,
+            ];
+        }
+        if ($d <= 30) {
+            $k = 'b_0_30';
+        } elseif ($d <= 60) {
+            $k = 'b_31_60';
+        } elseif ($d <= 90) {
+            $k = 'b_61_90';
+        } else {
+            $k = 'b_90_plus';
+        }
+        $clients[$cid][$k]        += $bal;
+        $clients[$cid]['balance'] += $bal;
+        $buckets[$k]              += $bal;
+        $buckets['total']        += $bal;
+    }
+    foreach ($buckets as $k => $v) {
+        $buckets[$k] = round($v, 2);
+    }
+    $clients = array_values($clients);
+    foreach ($clients as &$c) {
+        foreach (['b_0_30', 'b_31_60', 'b_61_90', 'b_90_plus', 'balance'] as $k) {
+            $c[$k] = round($c[$k], 2);
+        }
+    }
+    unset($c);
+    usort($clients, function ($a, $b) {
+        return $b['balance'] <=> $a['balance'];
+    });
+
+    return ['as_of' => date('Y-m-d'), 'buckets' => $buckets, 'clients' => $clients];
+}
+
+/**
+ * Per-client profitability for a year (set-based). Revenue = payments received in the
+ * year (attributed to the invoice's client). Labor value = SUM(hours x labor_type_rate)
+ * for time logged in the year, by ticket client. Margin = revenue - labor value.
+ * NOTE: labor_type_rate is the billing rate (per the task spec's "time_worked x rate"),
+ * so "labor value" here is billable value, not internal wage cost.
+ */
+function getClientProfitability(mysqli $mysqli, $year)
+{
+    $year = intval($year);
+
+    $rev = [];
+    $res = mysqli_query($mysqli,
+        "SELECT i.invoice_client_id AS cid, SUM(p.payment_amount) AS rev
+         FROM payments p JOIN invoices i ON i.invoice_id = p.payment_invoice_id
+         WHERE YEAR(p.payment_date) = $year
+         GROUP BY i.invoice_client_id");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $rev[intval($r['cid'])] = floatval($r['rev']);
+    }
+
+    $lab = [];
+    $res = mysqli_query($mysqli,
+        "SELECT t.ticket_client_id AS cid,
+            SUM(TIME_TO_SEC(tr.ticket_reply_time_worked) / 3600 * COALESCE(lt.labor_type_rate, 0)) AS val,
+            SUM(TIME_TO_SEC(tr.ticket_reply_time_worked)) AS secs
+         FROM ticket_replies tr
+         JOIN tickets t ON t.ticket_id = tr.ticket_reply_ticket_id
+         LEFT JOIN labor_types lt ON lt.labor_type_id = tr.ticket_reply_labor_type_id
+         WHERE tr.ticket_reply_time_worked IS NOT NULL AND YEAR(tr.ticket_reply_created_at) = $year
+         GROUP BY t.ticket_client_id");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $lab[intval($r['cid'])] = ['val' => floatval($r['val']), 'secs' => intval($r['secs'])];
+    }
+
+    $cids  = array_values(array_unique(array_merge(array_keys($rev), array_keys($lab))));
+    $names = [];
+    if ($cids) {
+        $in  = implode(',', array_map('intval', $cids));
+        $res = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_id IN ($in)");
+        while ($r = mysqli_fetch_assoc($res)) {
+            $names[intval($r['client_id'])] = $r['client_name'];
+        }
+    }
+
+    $out = [];
+    foreach ($cids as $cid) {
+        $cid = intval($cid);
+        $r   = round($rev[$cid] ?? 0, 2);
+        $lv  = round($lab[$cid]['val'] ?? 0, 2);
+        $out[] = [
+            'client_id'     => $cid,
+            'client_name'   => $names[$cid] ?? ('Client #' . $cid),
+            'revenue'       => $r,
+            'labor_value'   => $lv,
+            'labor_seconds' => intval($lab[$cid]['secs'] ?? 0),
+            'margin'        => round($r - $lv, 2),
+        ];
+    }
+    usort($out, function ($a, $b) {
+        return $b['revenue'] <=> $a['revenue'];
+    });
+
+    return ['year' => $year, 'clients' => $out];
+}
+
+/**
+ * Quarterly Profit & Loss summary for a single year (set-based). Mirrors the revenue
+ * and expense definitions used by agent/reports/profit_loss.php's classic table so the
+ * numbers reconcile: revenue = invoice-linked payments + categorised revenues; expenses
+ * = categorised, vendor-attributed expenses. Used to drive the prior-year comparison
+ * column, net margin and the year-over-year chart.
+ */
+function getProfitLossSummary(mysqli $mysqli, $year)
+{
+    $year  = intval($year);
+    $rev_q = [0.0, 0.0, 0.0, 0.0];
+    $exp_q = [0.0, 0.0, 0.0, 0.0];
+
+    $res = mysqli_query($mysqli,
+        "SELECT QUARTER(payment_date) AS q, SUM(payment_amount) AS amt
+         FROM payments JOIN invoices ON payment_invoice_id = invoice_id
+         WHERE YEAR(payment_date) = $year GROUP BY q");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $q = intval($r['q']);
+        if ($q >= 1 && $q <= 4) {
+            $rev_q[$q - 1] += floatval($r['amt']);
+        }
+    }
+    $res = mysqli_query($mysqli,
+        "SELECT QUARTER(revenue_date) AS q, SUM(revenue_amount) AS amt
+         FROM revenues WHERE revenue_category_id > 0 AND YEAR(revenue_date) = $year GROUP BY q");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $q = intval($r['q']);
+        if ($q >= 1 && $q <= 4) {
+            $rev_q[$q - 1] += floatval($r['amt']);
+        }
+    }
+    $res = mysqli_query($mysqli,
+        "SELECT QUARTER(expense_date) AS q, SUM(expense_amount) AS amt
+         FROM expenses WHERE expense_category_id > 0 AND expense_vendor_id > 0 AND YEAR(expense_date) = $year GROUP BY q");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $q = intval($r['q']);
+        if ($q >= 1 && $q <= 4) {
+            $exp_q[$q - 1] += floatval($r['amt']);
+        }
+    }
+
+    $net_q = [];
+    for ($i = 0; $i < 4; $i++) {
+        $net_q[$i] = round($rev_q[$i] - $exp_q[$i], 2);
+    }
+    $rev_total = array_sum($rev_q);
+    $exp_total = array_sum($exp_q);
+    $net_total = $rev_total - $exp_total;
+
+    return [
+        'year'          => $year,
+        'revenue_q'     => array_map(function ($v) { return round($v, 2); }, $rev_q),
+        'expense_q'     => array_map(function ($v) { return round($v, 2); }, $exp_q),
+        'net_q'         => $net_q,
+        'revenue_total' => round($rev_total, 2),
+        'expense_total' => round($exp_total, 2),
+        'net_total'     => round($net_total, 2),
+        'margin_pct'    => $rev_total > 0 ? round($net_total / $rev_total * 100, 1) : null,
+    ];
+}
+
+/**
+ * RMM health report (set-based). Alert volume trend, MTTA/MTTR, severity/status mix,
+ * noisiest assets & clients, and alert->ticket conversion. Guards for an empty
+ * rmm_alerts table (integration not configured). $date_from/$date_to are 'Y-m-d'.
+ */
+function getRmmHealthReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = null)
+{
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_from)) {
+        $date_from = date('Y-01-01');
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_to)) {
+        $date_to = date('Y-m-d');
+    }
+    $from_dt   = "$date_from 00:00:00";
+    $to_dt     = "$date_to 23:59:59";
+    // $client_id restricts every query below to one client - used by the API when the
+    // caller is authenticated via a client-scoped legacy key. The classic web report
+    // always calls this with $client_id = null (company-wide).
+    $client_clause    = $client_id !== null ? " AND client_id = " . intval($client_id) : '';
+    $client_clause_ra = $client_id !== null ? " AND ra.client_id = " . intval($client_id) : '';
+    $range     = "created_at BETWEEN '$from_dt' AND '$to_dt'$client_clause";
+    $range_ra  = "ra.created_at BETWEEN '$from_dt' AND '$to_dt'$client_clause_ra";
+
+    $have_data = intval(mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COUNT(*) AS c FROM rmm_alerts WHERE 1=1$client_clause"))['c']) > 0;
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COUNT(*) AS total,
+            SUM(CASE WHEN resolved_at IS NOT NULL THEN 1 ELSE 0 END) AS resolved,
+            SUM(CASE WHEN acknowledged_at IS NOT NULL THEN 1 ELSE 0 END) AS acknowledged,
+            SUM(CASE WHEN resolved_at IS NULL THEN 1 ELSE 0 END) AS open_alerts,
+            SUM(CASE WHEN ticket_id IS NOT NULL AND ticket_id > 0 THEN 1 ELSE 0 END) AS with_ticket,
+            AVG(CASE WHEN acknowledged_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, created_at, acknowledged_at) END) AS mtta,
+            AVG(CASE WHEN resolved_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, created_at, resolved_at) END) AS mttr
+         FROM rmm_alerts WHERE $range"));
+    $total  = intval($row['total']);
+    $totals = [
+        'total'          => $total,
+        'resolved'       => intval($row['resolved']),
+        'acknowledged'   => intval($row['acknowledged']),
+        'open'           => intval($row['open_alerts']),
+        'with_ticket'    => intval($row['with_ticket']),
+        'conversion_pct' => $total > 0 ? round(intval($row['with_ticket']) / $total * 100, 1) : null,
+        'mtta_seconds'   => $row['mtta'] !== null ? intval($row['mtta']) : null,
+        'mttr_seconds'   => $row['mttr'] !== null ? intval($row['mttr']) : null,
+    ];
+
+    $by_severity = [];
+    $res = mysqli_query($mysqli,
+        "SELECT COALESCE(NULLIF(severity, ''), 'unknown') AS sev, COUNT(*) AS c
+         FROM rmm_alerts WHERE $range GROUP BY sev ORDER BY c DESC");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $by_severity[] = ['severity' => $r['sev'], 'count' => intval($r['c'])];
+    }
+
+    $by_status = [];
+    $res = mysqli_query($mysqli,
+        "SELECT COALESCE(NULLIF(status, ''), 'unknown') AS st, COUNT(*) AS c
+         FROM rmm_alerts WHERE $range GROUP BY st ORDER BY c DESC");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $by_status[] = ['status' => $r['st'], 'count' => intval($r['c'])];
+    }
+
+    // Monthly volume trend on a contiguous month axis.
+    $counts = [];
+    $res = mysqli_query($mysqli,
+        "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS c
+         FROM rmm_alerts WHERE $range GROUP BY ym");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $counts[$r['ym']] = intval($r['c']);
+    }
+    $trend_labels = $trend_series = [];
+    $cursor = new DateTime(substr($date_from, 0, 7) . '-01');
+    $last   = new DateTime(substr($date_to, 0, 7) . '-01');
+    $guard  = 0;
+    while ($cursor <= $last && $guard < 60) {
+        $k = $cursor->format('Y-m');
+        $trend_labels[] = $cursor->format('M Y');
+        $trend_series[] = $counts[$k] ?? 0;
+        $cursor->modify('+1 month');
+        $guard++;
+    }
+
+    $noisiest_assets = [];
+    $res = mysqli_query($mysqli,
+        "SELECT ra.asset_id, a.asset_name, COUNT(*) AS c,
+            AVG(CASE WHEN ra.resolved_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, ra.created_at, ra.resolved_at) END) AS mttr
+         FROM rmm_alerts ra LEFT JOIN assets a ON a.asset_id = ra.asset_id
+         WHERE $range_ra AND ra.asset_id IS NOT NULL AND ra.asset_id > 0
+         GROUP BY ra.asset_id, a.asset_name ORDER BY c DESC LIMIT 10");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $noisiest_assets[] = [
+            'asset_id'     => intval($r['asset_id']),
+            'asset_name'   => $r['asset_name'] ?? ('Asset #' . intval($r['asset_id'])),
+            'alerts'       => intval($r['c']),
+            'mttr_seconds' => $r['mttr'] !== null ? intval($r['mttr']) : null,
+        ];
+    }
+
+    $noisiest_clients = [];
+    $res = mysqli_query($mysqli,
+        "SELECT ra.client_id, cl.client_name, COUNT(*) AS c,
+            SUM(CASE WHEN ra.ticket_id IS NOT NULL AND ra.ticket_id > 0 THEN 1 ELSE 0 END) AS with_ticket
+         FROM rmm_alerts ra LEFT JOIN clients cl ON cl.client_id = ra.client_id
+         WHERE $range_ra AND ra.client_id IS NOT NULL AND ra.client_id > 0
+         GROUP BY ra.client_id, cl.client_name ORDER BY c DESC LIMIT 10");
+    while ($r = mysqli_fetch_assoc($res)) {
+        $noisiest_clients[] = [
+            'client_id'   => intval($r['client_id']),
+            'client_name' => $r['client_name'] ?? ('Client #' . intval($r['client_id'])),
+            'alerts'      => intval($r['c']),
+            'with_ticket' => intval($r['with_ticket']),
+        ];
+    }
+
+    return [
+        'date_from'        => $date_from,
+        'date_to'          => $date_to,
+        'have_data'        => $have_data,
+        'totals'           => $totals,
+        'by_severity'      => $by_severity,
+        'by_status'        => $by_status,
+        'trend'            => ['labels' => $trend_labels, 'counts' => $trend_series],
+        'noisiest_assets'  => $noisiest_assets,
+        'noisiest_clients' => $noisiest_clients,
+    ];
+}
+
 function getAssetIcon($asset_type)
 {
     if ($asset_type == 'Laptop') {
@@ -897,7 +2024,7 @@ function getAssetIcon($asset_type)
 function getInvoiceBadgeColor($invoice_status)
 {
     if ($invoice_status == "Sent") {
-        $invoice_badge_color = "warning text-white";
+        $invoice_badge_color = "warning";
     } elseif ($invoice_status == "Viewed") {
         $invoice_badge_color = "info";
     } elseif ($invoice_status == "Partial") {
@@ -1375,6 +2502,11 @@ function getOutlookAccessToken($user_id) {
                 user_outlook_token_expires = NULL
                 WHERE user_id = $user_id");
             error_log("ITFlow: Outlook token for user $user_id revoked ({$data['error']}). User must reconnect at /agent/user/user_integrations.php");
+
+            // The refresh token is cleared above, so this only fires once per
+            // revocation (the next call short-circuits before reaching Microsoft)
+            // rather than notifying on every scheduling action.
+            notifyUser($user_id, 'Integration', 'Your Outlook Calendar connection has expired or was revoked. Appointments will stop syncing until you reconnect it.', '/agent/user/user_integrations.php');
         }
         return null;
     }
@@ -1572,7 +2704,75 @@ function deleteOutlookCalendarEvent($ticket_id) {
     mysqli_query($mysqli, "UPDATE tickets SET ticket_outlook_event_id = NULL WHERE ticket_id = $ticket_id");
 }
 
+// Modern multi-appointment counterpart to deleteOutlookCalendarEvent() above - operates
+// on ticket_schedules.schedule_outlook_event_id (one row per appointment) rather than the
+// legacy tickets.ticket_outlook_event_id (one event per ticket). Mirrors it exactly
+// otherwise: same Graph DELETE call shape, same silent-failure convention (a failed
+// Outlook-side delete should never block the ITFlow-side archive of the appointment).
+function deleteOutlookScheduleEvent($schedule_id) {
+    global $mysqli;
+
+    $schedule_id = intval($schedule_id);
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT schedule_outlook_event_id, schedule_tech_id FROM ticket_schedules WHERE schedule_id = $schedule_id"
+    ));
+
+    if (!$row || empty($row['schedule_outlook_event_id'])) {
+        return;
+    }
+
+    $access_token = getOutlookAccessToken($row['schedule_tech_id']);
+    if ($access_token) {
+        $ch = curl_init("https://graph.microsoft.com/v1.0/me/events/" . rawurlencode($row['schedule_outlook_event_id']));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST  => 'DELETE',
+            CURLOPT_HTTPHEADER     => ["Authorization: Bearer $access_token"],
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+    }
+
+    mysqli_query($mysqli, "UPDATE ticket_schedules SET schedule_outlook_event_id = NULL WHERE schedule_id = $schedule_id");
+}
+
 // ── End Outlook Calendar ────────────────────────────────────────────────────
+
+/**
+ * Generic authenticated Microsoft Graph request. Used for mailbox polling
+ * (Admin > Mailboxes, Microsoft 365 provider) instead of raw IMAP.
+ * Returns ['ok' => bool, 'code' => int, 'json' => array|null, 'raw' => string|false, 'error' => string]
+ */
+function microsoftGraphRequest(string $method, string $url, string $access_token, ?array $body = null): array {
+    $ch = curl_init($url);
+    $headers = ["Authorization: Bearer $access_token", "Content-Type: application/json"];
+
+    $opts = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST  => $method,
+        CURLOPT_HTTPHEADER     => $headers,
+        CURLOPT_TIMEOUT        => 30,
+    ];
+    if ($body !== null) {
+        $opts[CURLOPT_POSTFIELDS] = json_encode($body);
+    }
+    curl_setopt_array($ch, $opts);
+
+    $raw = curl_exec($ch);
+    $err = curl_error($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $json = ($raw !== false && $raw !== '') ? json_decode($raw, true) : null;
+
+    return [
+        'ok'    => ($raw !== false && $code >= 200 && $code < 300),
+        'code'  => $code,
+        'json'  => $json,
+        'raw'   => $raw,
+        'error' => $err,
+    ];
+}
 
 function getTicketStatusName($ticket_status) {
 
@@ -1892,6 +3092,10 @@ function appNotify($type, $details, $action = null, $client_id = 0, $entity_id =
 
     $type    = substr($type, 0, 200);
     $details = substr($details, 0, 1000);
+    $type_esc    = mysqli_real_escape_string($mysqli, $type);
+    $details_esc = mysqli_real_escape_string($mysqli, $details);
+    $client_id = intval($client_id);
+    $entity_id = intval($entity_id);
 
     $action_sql = is_null($action)
         ? "NULL"
@@ -1904,7 +3108,7 @@ function appNotify($type, $details, $action = null, $client_id = 0, $entity_id =
     while ($row = mysqli_fetch_assoc($sql)) {
         $user_id = intval($row['user_id']);
 
-        mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = '$type', notification = '$details', notification_action = $action_sql, notification_client_id = $client_id, notification_entity_id = $entity_id, notification_user_id = $user_id");
+        mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = '$type_esc', notification = '$details_esc', notification_action = $action_sql, notification_client_id = $client_id, notification_entity_id = $entity_id, notification_user_id = $user_id");
 
         publishUserNotification($user_id, [
             'id'        => mysqli_insert_id($mysqli),
@@ -1969,11 +3173,19 @@ function logAction($type, $action, $description, $client_id = 0, $entity_id = 0)
         $session_user_id = 0;
     }
 
-    $type = substr($type, 0, 200);
-    $action = substr($action, 0, 255);
-    $description = substr($description, 0, 1000);
+    // Only 1 of ~900 call sites across the app pre-escapes its $description (most
+    // just interpolate a client/product/ticket name straight in) - any dynamic
+    // value containing a single quote (e.g. "O'Brien", an item name with an
+    // apostrophe) previously broke the INSERT with a SQL syntax fatal. Escaping
+    // here, once, covers every caller instead of requiring each of the ~900 to
+    // remember to do it themselves.
+    $type = mysqli_real_escape_string($mysqli, substr($type, 0, 200));
+    $action = mysqli_real_escape_string($mysqli, substr($action, 0, 255));
+    $description = mysqli_real_escape_string($mysqli, substr($description, 0, 1000));
+    $session_ip_esc = mysqli_real_escape_string($mysqli, (string) $session_ip);
+    $session_user_agent_esc = mysqli_real_escape_string($mysqli, (string) $session_user_agent);
 
-    mysqli_query($mysqli, "INSERT INTO logs SET log_type = '$type', log_action = '$action', log_description = '$description', log_ip = '$session_ip', log_user_agent = '$session_user_agent', log_client_id = $client_id, log_user_id = $session_user_id, log_entity_id = $entity_id");
+    mysqli_query($mysqli, "INSERT INTO logs SET log_type = '$type', log_action = '$action', log_description = '$description', log_ip = '$session_ip_esc', log_user_agent = '$session_user_agent_esc', log_client_id = $client_id, log_user_id = $session_user_id, log_entity_id = $entity_id");
 }
 
 function logApp($category, $type, $details) {
@@ -1993,6 +3205,595 @@ function logAuth($status, $details) {
     }
 
     mysqli_query($mysqli, "INSERT INTO auth_logs SET auth_log_status = $status, auth_log_details = '$details', auth_log_ip = '$session_ip', auth_log_user_agent = '$session_user_agent', auth_log_user_id = $session_user_id");
+}
+
+// One row per inbound email the mailbox poller touches - see processInboundMessage() in
+// cron/ticket_email_parser.php and Admin > Maintenance > Email Log. Distinct from
+// logAction()/logApp(): those are the general audit/app trails, this is specifically
+// "what happened to this email" (including messages that matched nothing and were left
+// alone), so admins can see incoming mail activity without digging through other logs.
+function logMailEvent(?int $mailbox_id, ?string $from_email, ?string $from_name, ?string $subject, string $outcome, ?string $detail = null, ?int $ticket_id = null, ?int $mail_request_id = null): void {
+    global $mysqli;
+
+    $mailbox_id_sql = $mailbox_id ? intval($mailbox_id) : 'NULL';
+    $from_email_sql = $from_email !== null ? "'" . mysqli_real_escape_string($mysqli, $from_email) . "'" : 'NULL';
+    $from_name_sql = $from_name !== null ? "'" . mysqli_real_escape_string($mysqli, $from_name) . "'" : 'NULL';
+    $subject_sql = $subject !== null ? "'" . mysqli_real_escape_string($mysqli, mb_substr($subject, 0, 500)) . "'" : 'NULL';
+    $outcome_esc = mysqli_real_escape_string($mysqli, $outcome);
+    $detail_sql = $detail !== null ? "'" . mysqli_real_escape_string($mysqli, mb_substr($detail, 0, 500)) . "'" : 'NULL';
+    $ticket_id_sql = $ticket_id ? intval($ticket_id) : 'NULL';
+    $mail_request_id_sql = $mail_request_id ? intval($mail_request_id) : 'NULL';
+
+    mysqli_query($mysqli, "INSERT INTO mail_log SET
+        mail_log_mailbox_id = $mailbox_id_sql,
+        mail_log_from_email = $from_email_sql,
+        mail_log_from_name = $from_name_sql,
+        mail_log_subject = $subject_sql,
+        mail_log_outcome = '$outcome_esc',
+        mail_log_detail = $detail_sql,
+        mail_log_ticket_id = $ticket_id_sql,
+        mail_log_mail_request_id = $mail_request_id_sql
+    ");
+}
+
+/** ------------------------------------------------------------------
+ * Ticket creation from inbound email
+ *
+ * addTicket()/addReply() were originally cron-only (cron/ticket_email_parser.php).
+ * Relocated here so both the mailbox poller and the admin-triggered "Convert to
+ * Ticket" action (mail_requests, see admin/post/mail_requests.php) can call the
+ * exact same ticket-creation logic instead of two copies drifting apart.
+ * ------------------------------------------------------------------ */
+
+// Allow-list for saved ticket/mail-request attachments. Anything else is blocked
+// and logged rather than saved to disk.
+function ticketAttachmentAllowedExtensions(): array {
+    return ['jpg', 'jpeg', 'gif', 'png', 'webp', 'svg', 'pdf', 'txt', 'md', 'doc', 'docx', 'csv', 'xls', 'xlsx', 'xlsm', 'zip', 'tar', 'gz'];
+}
+
+// Cached per-request; used in ticket notification emails.
+function getCompanyNameAndPhone(): array {
+    global $mysqli;
+    static $cached = null;
+
+    if ($cached === null) {
+        $sql = mysqli_query($mysqli, "SELECT company_name, company_phone, company_phone_country_code FROM companies, settings WHERE companies.company_id = settings.company_id AND companies.company_id = 1");
+        $row = mysqli_fetch_assoc($sql);
+        $cached = [
+            'name'  => sanitizeInput($row['company_name']),
+            'phone' => sanitizeInput(formatPhoneNumber($row['company_phone'], $row['company_phone_country_code'])),
+        ];
+    }
+
+    return $cached;
+}
+
+function addTicket($contact_id, $contact_name, $contact_email, $client_id, $date, $subject, $message, $attachments, $original_message_file, $ccs, $mailbox_id = null) {
+    global $mysqli, $config_app_name, $config_ticket_prefix, $config_ticket_client_general_notifications, $config_ticket_new_ticket_notification_email, $config_base_url, $config_ticket_from_name, $config_ticket_from_email, $config_ticket_default_billable;
+    $company = getCompanyNameAndPhone();
+    $company_name = $company['name'];
+    $company_phone = $company['phone'];
+    $allowed_extensions = ticketAttachmentAllowedExtensions();
+    $bad_pattern = "/do[\W_]*not[\W_]*reply|no[\W_]*reply/i"; // Email addresses to ignore
+
+    // Reply/notify as the mailbox this ticket actually came through (needs its own
+    // Send-As permission), falling back to the global Ticket identity for tickets
+    // created outside the mailbox flow.
+    $from_email = $config_ticket_from_email;
+    $from_name  = $config_ticket_from_name;
+    if ($mailbox_id) {
+        $mb = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT mailbox_email, mailbox_from_name FROM mailboxes WHERE mailbox_id = " . intval($mailbox_id) . " AND mailbox_archived_at IS NULL LIMIT 1"));
+        if ($mb && !empty($mb['mailbox_email'])) {
+            $from_email = $mb['mailbox_email'];
+            $from_name  = $mb['mailbox_from_name'] ?: $config_ticket_from_name;
+        }
+    }
+
+    // Atomically increment and get the new ticket number
+    mysqli_query($mysqli, "
+        UPDATE settings
+        SET
+            config_ticket_next_number = LAST_INSERT_ID(config_ticket_next_number),
+            config_ticket_next_number = config_ticket_next_number + 1
+        WHERE company_id = 1
+    ");
+
+    $ticket_number = mysqli_insert_id($mysqli);
+
+    // Clean up the message
+    $message = trim($message);
+    // Remove DOCTYPE and meta tags
+    $message = preg_replace('/<!DOCTYPE[^>]*>/i', '', $message);
+    $message = preg_replace('/<meta[^>]*>/i', '', $message);
+    // Remove <html>, <head>, <body> and their closing tags
+    $message = preg_replace('/<\/?(html|head|body)[^>]*>/i', '', $message);
+    // Collapse excess whitespace
+    $message = preg_replace('/\s+/', ' ', $message);
+    // Convert newlines to <br>
+    $message = nl2br($message);
+    // Wrap final formatted message
+    $message = "<i>Email from: <b>$contact_name</b> &lt;$contact_email&gt; at $date:-</i> <br><br><div style='line-height:1.5;'>$message</div>";
+
+    $ticket_prefix_esc = mysqli_real_escape_string($mysqli, $config_ticket_prefix);
+    $message_esc = mysqli_real_escape_string($mysqli, $message);
+    $contact_email_esc = mysqli_real_escape_string($mysqli, $contact_email);
+    $subject_esc = mysqli_real_escape_string($mysqli, $subject);
+    $client_id = intval($client_id);
+
+    $url_key = randomString(32);
+    $ticket_mailbox_id_sql = ($mailbox_id !== null && $mailbox_id !== '') ? intval($mailbox_id) : 'NULL';
+
+    mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$ticket_prefix_esc', ticket_number = $ticket_number, ticket_source = 'Email', ticket_subject = '$subject_esc', ticket_details = '$message_esc', ticket_priority = 'Low', ticket_status = 1, ticket_billable = $config_ticket_default_billable, ticket_created_by = 0, ticket_contact_id = $contact_id, ticket_url_key = '$url_key', ticket_client_id = $client_id, ticket_mailbox_id = $ticket_mailbox_id_sql");
+    $id = mysqli_insert_id($mysqli);
+
+    // Logging
+    logAction("Ticket", "Create", "Email parser: Client contact $contact_email_esc created ticket $ticket_prefix_esc$ticket_number ($subject) ($id)", $client_id, $id);
+
+    // Email-parsed tickets are never auto-assigned, so broadcast to active
+    // agents so the mobile app gets a push for it too.
+    appNotify("Ticket", "Email parser: $contact_email_esc raised a new ticket $ticket_prefix_esc$ticket_number - $subject", "/agent/ticket.php?ticket_id=$id" . ($client_id ? "&client_id=$client_id" : ''), $client_id, $id);
+
+    mkdirMissing(__DIR__ . '/uploads/tickets/');
+    $att_dir = __DIR__ . '/uploads/tickets/' . $id . '/';
+    mkdirMissing($att_dir);
+
+    // Move original .eml into the ticket folder, if present. Always true for the cron
+    // poller (it just wrote the file); guarded here because convertMailRequestToTicket()
+    // rehydrates it from a holding dir first and that file can legitimately be missing -
+    // without this check a dead ticket_attachments row (linking to a file that was never
+    // moved) would get created instead of silently skipping it.
+    $original_eml_path = __DIR__ . "/uploads/tmp/{$original_message_file}";
+    if (!empty($original_message_file) && file_exists($original_eml_path)) {
+        rename($original_eml_path, "{$att_dir}{$original_message_file}");
+        $original_message_file_esc = mysqli_real_escape_string($mysqli, $original_message_file);
+        mysqli_query($mysqli, "INSERT INTO ticket_attachments SET ticket_attachment_name = 'Original-parsed-email.eml', ticket_attachment_reference_name = '$original_message_file_esc', ticket_attachment_ticket_id = $id");
+    }
+
+    // Save non-inline attachments
+    foreach ($attachments as $attachment) {
+        $att_name = $attachment['name'];
+        $att_extension = strtolower(pathinfo($att_name, PATHINFO_EXTENSION));
+
+        if (in_array($att_extension, $allowed_extensions)) {
+            $att_saved_filename = md5(uniqid(rand(), true)) . '.' . $att_extension;
+            $att_saved_path = $att_dir . $att_saved_filename;
+            file_put_contents($att_saved_path, $attachment['content']);
+
+            $ticket_attachment_name = sanitizeInput($att_name);
+            $ticket_attachment_reference_name = sanitizeInput($att_saved_filename);
+
+            $ticket_attachment_name_esc = mysqli_real_escape_string($mysqli, $ticket_attachment_name);
+            $ticket_attachment_reference_name_esc = mysqli_real_escape_string($mysqli, $ticket_attachment_reference_name);
+            mysqli_query($mysqli, "INSERT INTO ticket_attachments SET ticket_attachment_name = '$ticket_attachment_name_esc', ticket_attachment_reference_name = '$ticket_attachment_reference_name_esc', ticket_attachment_ticket_id = $id");
+        } else {
+            $ticket_attachment_name_esc = mysqli_real_escape_string($mysqli, $att_name);
+            logAction("Ticket", "Edit", "Email parser: Blocked attachment $ticket_attachment_name_esc from Client contact $contact_email_esc for ticket $ticket_prefix_esc$ticket_number", $client_id, $id);
+        }
+    }
+
+    // Add unknown guests as ticket watcher
+    if ($client_id == 0 && !preg_match($bad_pattern, $contact_email_esc)) {
+        mysqli_query($mysqli, "INSERT INTO ticket_watchers SET watcher_email = '$contact_email_esc', watcher_ticket_id = $id");
+    }
+
+    // Add CCs as ticket watchers
+    foreach ($ccs as $cc) {
+        if (filter_var($cc, FILTER_VALIDATE_EMAIL) && !preg_match($bad_pattern, $cc)) {
+            $cc_esc = mysqli_real_escape_string($mysqli, $cc);
+            mysqli_query($mysqli, "INSERT INTO ticket_watchers SET watcher_email = '$cc_esc', watcher_ticket_id = $id");
+        }
+    }
+
+    // External email
+    $data = [];
+    if ($config_ticket_client_general_notifications == 1 && !preg_match($bad_pattern, $contact_email)) {
+        $subject_email = "Ticket created - [$config_ticket_prefix$ticket_number] - $subject";
+        $body = "<i style='color: #808080'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Thank you for your email. A ticket regarding \"$subject\" has been automatically created for you.<br><br>Ticket: $config_ticket_prefix$ticket_number<br>Subject: $subject<br>Status: New<br>Portal: <a href='https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$id&url_key=$url_key'>View ticket</a><br><br>--<br>$company_name - Support<br>$from_email<br>$company_phone";
+        $data[] = [
+            'from' => $from_email,
+            'from_name' => $from_name,
+            'recipient' => $contact_email,
+            'recipient_name' => $contact_name,
+            'subject' => $subject_email,
+            'body' => mysqli_real_escape_string($mysqli, $body)
+        ];
+    }
+
+    // Internal email
+    if ($config_ticket_new_ticket_notification_email) {
+        if ($client_id == 0) {
+            $client_name = "Guest";
+            $client_uri = '';
+        } else {
+            $client_sql = mysqli_query($mysqli, "SELECT client_name FROM clients WHERE client_id = $client_id");
+            $client_row = mysqli_fetch_assoc($client_sql);
+            $client_name = sanitizeInput($client_row['client_name']);
+            $client_uri = "&client_id=$client_id";
+        }
+        $email_subject = "$config_app_name - New Ticket - $client_name: $subject";
+        $email_body = "Hello, <br><br>This is a notification that a new ticket has been raised in ITFlow. <br>Client: $client_name<br>Priority: Low (email parsed)<br>Link: https://$config_base_url/agent/ticket.php?ticket_id=$id$client_uri <br><br>--------------------------------<br><br><b>$subject</b><br>$message";
+
+        $data[] = [
+            'from' => $from_email,
+            'from_name' => $from_name,
+            'recipient' => $config_ticket_new_ticket_notification_email,
+            'recipient_name' => $from_name,
+            'subject' => $email_subject,
+            'body' => mysqli_real_escape_string($mysqli, $email_body)
+        ];
+    }
+
+    addToMailQueue($data);
+    customAction('ticket_create', $id);
+
+    // Run ticket_created automation rules (fire-and-forget; never blocks/fails insert)
+    require_once __DIR__ . '/includes/ticket_automation_dispatch.php';
+    runTicketCreatedAutomation($mysqli, $id);
+
+    return $id;
+}
+
+function addReply($from_email, $date, $subject, $ticket_number, $message, $attachments, $mailbox_id = null, $from_name = null, $ccs = [], $original_message_file = '') {
+    global $mysqli, $config_app_name, $config_ticket_prefix, $config_base_url, $config_ticket_from_name, $config_ticket_from_email;
+    $company = getCompanyNameAndPhone();
+    $company_name = $company['name'];
+    $company_phone = $company['phone'];
+    $allowed_extensions = ticketAttachmentAllowedExtensions();
+
+    // Reply/notify as the mailbox this ticket actually came through (needs its own
+    // Send-As permission) — named "outbound_" here since $from_email is already
+    // taken by the incoming client sender's address.
+    $outbound_from_email = $config_ticket_from_email;
+    $outbound_from_name  = $config_ticket_from_name;
+    if ($mailbox_id) {
+        $mb = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT mailbox_email, mailbox_from_name FROM mailboxes WHERE mailbox_id = " . intval($mailbox_id) . " AND mailbox_archived_at IS NULL LIMIT 1"));
+        if ($mb && !empty($mb['mailbox_email'])) {
+            $outbound_from_email = $mb['mailbox_email'];
+            $outbound_from_name  = $mb['mailbox_from_name'] ?: $config_ticket_from_name;
+        }
+    }
+
+    $ticket_reply_type = 'Client';
+    // $message contains the raw HTML body from IMAP
+
+    // 1) Remove the reply separator and everything below it (HTML-aware)
+    // This matches: <i ...>##- Please type your reply above this line -##</i> and EVERYTHING after it
+    $message = preg_replace(
+        '/<i[^>]*>##-\s*Please\s+type\s+your\s+reply\s+above\s+this\s+line\s*-##<\/i>.*$/is',
+        '',
+        $message
+    );
+
+    // 2) Clean up the remaining message
+
+    // Remove DOCTYPE and meta tags
+    $message = preg_replace('/<!DOCTYPE[^>]*>/i', '', $message);
+    $message = preg_replace('/<meta[^>]*>/i', '', $message);
+
+    // Remove <html>, <head>, <body> and their closing tags
+    $message = preg_replace('/<\/?(html|head|body)[^>]*>/i', '', $message);
+
+    // Trim leading/trailing whitespace
+    $message = trim($message);
+
+    // Normalize line breaks to spaces
+    $message = preg_replace('/\r\n|\r|\n/', ' ', $message);
+
+    // Convert to <br> for HTML display
+    $message = nl2br($message);
+
+    // 3) Final wrapper
+    $message = "<i>Email from: $from_email at $date:-</i><br><br><div style='line-height:1.5;'>$message</div>";
+
+    $ticket_number_esc = intval($ticket_number);
+    $message_esc = mysqli_real_escape_string($mysqli, $message);
+    $from_email_esc = mysqli_real_escape_string($mysqli, $from_email);
+
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_id, ticket_subject, ticket_status, ticket_contact_id, ticket_client_id, contact_email, client_name
+        FROM tickets
+        LEFT JOIN contacts on tickets.ticket_contact_id = contacts.contact_id
+        LEFT JOIN clients on tickets.ticket_client_id = clients.client_id
+        WHERE ticket_number = $ticket_number_esc LIMIT 1"));
+
+    if ($row) {
+        $ticket_id = intval($row['ticket_id']);
+        $ticket_subject = sanitizeInput($row['ticket_subject']);
+        $ticket_status = sanitizeInput($row['ticket_status']);
+        $ticket_reply_contact = intval($row['ticket_contact_id']);
+        $ticket_contact_email = sanitizeInput($row['contact_email']);
+        $client_id = intval($row['ticket_client_id']);
+        if ($client_id) {
+            $client_uri = "&client_id=$client_id";
+        } else {
+            $client_uri = '';
+        }
+        $client_name = sanitizeInput($row['client_name']);
+
+        if ($ticket_status == 5) {
+            $config_ticket_prefix_esc = mysqli_real_escape_string($mysqli, $config_ticket_prefix);
+            $ticket_number_esc2 = mysqli_real_escape_string($mysqli, $ticket_number);
+
+            appNotify("Ticket", "Email parser: $from_email attempted to re-open ticket $config_ticket_prefix_esc$ticket_number_esc2 (ID $ticket_id) - check inbox manually to see email", "/agent/ticket.php?ticket_id=$ticket_id$client_uri", $client_id);
+
+            $email_subject = "Action required: This ticket is already closed";
+            $email_body = "Hi there, <br><br>You've tried to reply to a ticket that is closed - we won't see your response. <br><br>Please raise a new ticket by sending a new e-mail to our support address below. <br><br>--<br>$company_name - Support<br>$outbound_from_email<br>$company_phone";
+
+            $data = [
+                [
+                    'from' => $outbound_from_email,
+                    'from_name' => $outbound_from_name,
+                    'recipient' => $from_email,
+                    'recipient_name' => $from_email,
+                    'subject' => $email_subject,
+                    'body' => mysqli_real_escape_string($mysqli, $email_body)
+                ]
+            ];
+
+            addToMailQueue($data);
+            return true;
+        }
+
+        if (empty($ticket_contact_email) || $ticket_contact_email !== $from_email) {
+            $from_email_esc2 = mysqli_real_escape_string($mysqli, $from_email);
+            $row2 = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT contact_id FROM contacts WHERE contact_email = '$from_email_esc2' AND contact_client_id = $client_id LIMIT 1"));
+            if ($row2) {
+                $ticket_reply_contact = intval($row2['contact_id']);
+            } else {
+                // The sender does not match this ticket's registered contact and isn't any
+                // other contact of the same client either - ticket numbers are sequential
+                // and routinely disclosed in notification subjects, so anyone (including a
+                // spoofed mailer-daemon NDR) can target another client's ticket just by
+                // putting a guessed [PREFIX-N] in their subject. Never insert their content
+                // straight into the ticket - queue it for manual review like an unmatched
+                // sender, the same as a message that didn't match any ticket at all.
+                createMailRequestFromInbound(
+                    intval($mailbox_id),
+                    $from_email,
+                    $from_name ?: $from_email,
+                    $subject,
+                    is_array($ccs) ? $ccs : [],
+                    $date,
+                    $message,
+                    $attachments,
+                    $original_message_file ?: ''
+                );
+                return false;
+            }
+        }
+
+        mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$message_esc', ticket_reply_type = '$ticket_reply_type', ticket_reply_time_worked = '00:00:00', ticket_reply_by = $ticket_reply_contact, ticket_reply_ticket_id = $ticket_id");
+        $reply_id = mysqli_insert_id($mysqli);
+
+        // New client email reply invalidates any cached AI summary for this ticket
+        require_once __DIR__ . '/includes/ai_functions.php';
+        markTicketSummaryStale($mysqli, $ticket_id);
+
+        $ticket_dir = __DIR__ . '/uploads/tickets/' . $ticket_id . '/';
+        mkdirMissing($ticket_dir);
+
+        foreach ($attachments as $attachment) {
+            $att_name = $attachment['name'];
+            $att_extension = strtolower(pathinfo($att_name, PATHINFO_EXTENSION));
+
+            if (in_array($att_extension, $allowed_extensions)) {
+                $att_saved_filename = md5(uniqid(rand(), true)) . '.' . $att_extension;
+                $att_saved_path = $ticket_dir . $att_saved_filename;
+                file_put_contents($att_saved_path, $attachment['content']);
+
+                $ticket_attachment_name = sanitizeInput($att_name);
+                $ticket_attachment_reference_name = sanitizeInput($att_saved_filename);
+
+                $ticket_attachment_name_esc = mysqli_real_escape_string($mysqli, $ticket_attachment_name);
+                $ticket_attachment_reference_name_esc = mysqli_real_escape_string($mysqli, $ticket_attachment_reference_name);
+                mysqli_query($mysqli, "INSERT INTO ticket_attachments SET ticket_attachment_name = '$ticket_attachment_name_esc', ticket_attachment_reference_name = '$ticket_attachment_reference_name_esc', ticket_attachment_reply_id = $reply_id, ticket_attachment_ticket_id = $ticket_id");
+            } else {
+                $ticket_attachment_name_esc = mysqli_real_escape_string($mysqli, $att_name);
+                logAction("Ticket", "Edit", "Email parser: Blocked attachment $ticket_attachment_name_esc from Client contact $from_email_esc for ticket $config_ticket_prefix$ticket_number_esc", $client_id, $ticket_id);
+            }
+        }
+
+        $ticket_assigned_to_sql = mysqli_query($mysqli, "SELECT ticket_assigned_to FROM tickets WHERE ticket_id = $ticket_id LIMIT 1");
+        if ($ticket_assigned_to_sql) {
+            $row3 = mysqli_fetch_assoc($ticket_assigned_to_sql);
+            $ticket_assigned_to = intval($row3['ticket_assigned_to']);
+
+            if ($ticket_assigned_to) {
+                $tech_sql = mysqli_query($mysqli, "SELECT user_email, user_name FROM users WHERE user_id = $ticket_assigned_to LIMIT 1");
+                $tech_row = mysqli_fetch_assoc($tech_sql);
+                $tech_email = sanitizeInput($tech_row['user_email']);
+                $tech_name = sanitizeInput($tech_row['user_name']);
+
+                $email_subject = "$config_app_name - Ticket updated - [$config_ticket_prefix$ticket_number] $ticket_subject";
+                $email_body    = "Hello $tech_name,<br><br>A new reply has been added to the below ticket.<br><br>Client: $client_name<br>Ticket: $config_ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Link: https://$config_base_url/agent/ticket.php?ticket_id=$ticket_id$client_uri<br><br>--------------------------------<br>$message_esc";
+
+                $data = [
+                    [
+                        'from' => $outbound_from_email,
+                        'from_name' => $outbound_from_name,
+                        'recipient' => $tech_email,
+                        'recipient_name' => $tech_name,
+                        'subject' => mysqli_real_escape_string($mysqli, $email_subject),
+                        'body' => mysqli_real_escape_string($mysqli, $email_body)
+                    ]
+                ];
+                addToMailQueue($data);
+            }
+        }
+
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 2, ticket_resolved_at = NULL WHERE ticket_id = $ticket_id AND ticket_client_id = $client_id LIMIT 1");
+
+        logAction("Ticket", "Edit", "Email parser: Client contact $from_email_esc updated ticket $config_ticket_prefix$ticket_number_esc ($subject)", $client_id, $ticket_id);
+        customAction('ticket_reply_client', $ticket_id);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/** ------------------------------------------------------------------
+ * Mail Requests - review queue for unknown-sender email
+ *
+ * When a mailbox has mailbox_parse_unknown_senders enabled, an email from a sender
+ * that doesn't match any known contact/domain no longer becomes a ticket immediately
+ * - it's held here for an admin to review on admin/mail_requests.php, then either
+ * converted into a ticket (picking the client) or dismissed. Bounce/NDR handling in
+ * processInboundMessage() is unrelated and unaffected.
+ * ------------------------------------------------------------------ */
+
+// Called from processInboundMessage() step 5 instead of addTicket(). Always succeeds
+// (returns the new mail_request_id) so the poller marks the source message read/moved -
+// otherwise it gets re-fetched and re-queued every single cron run.
+function createMailRequestFromInbound(int $mailbox_id, string $from_email, string $from_name, string $subject, array $ccs, string $received_at, string $message_body, array $attachments, string $original_message_file): int {
+    global $mysqli;
+
+    $from_email_esc = mysqli_real_escape_string($mysqli, $from_email);
+    $from_name_esc = mysqli_real_escape_string($mysqli, $from_name);
+    $subject_esc = mysqli_real_escape_string($mysqli, mb_substr($subject, 0, 500));
+    $body_esc = mysqli_real_escape_string($mysqli, $message_body);
+    $ccs_esc = mysqli_real_escape_string($mysqli, implode(',', $ccs));
+    $received_at_esc = mysqli_real_escape_string($mysqli, $received_at);
+    $eml_esc = mysqli_real_escape_string($mysqli, $original_message_file);
+
+    mysqli_query($mysqli, "INSERT INTO mail_requests SET
+        mail_request_mailbox_id = " . intval($mailbox_id) . ",
+        mail_request_from_email = '$from_email_esc',
+        mail_request_from_name = '$from_name_esc',
+        mail_request_subject = '$subject_esc',
+        mail_request_body = '$body_esc',
+        mail_request_ccs = '$ccs_esc',
+        mail_request_received_at = '$received_at_esc',
+        mail_request_eml_reference_name = '$eml_esc'
+    ");
+    $mail_request_id = mysqli_insert_id($mysqli);
+
+    mkdirMissing(__DIR__ . '/uploads/mail_requests/');
+    $holding_dir = __DIR__ . '/uploads/mail_requests/' . $mail_request_id . '/';
+    mkdirMissing($holding_dir);
+
+    $tmp_eml_path = __DIR__ . "/uploads/tmp/{$original_message_file}";
+    if (file_exists($tmp_eml_path)) {
+        rename($tmp_eml_path, $holding_dir . $original_message_file);
+    }
+
+    // No extension allow-list filtering here - that happens once, inside addTicket(),
+    // at conversion time. Everything is kept so nothing is lost before a human looks at it -
+    // but the holding file itself is always saved as .bin (regardless of the sender-supplied
+    // extension) since admin/modals/mail_request/mail_request_view.php links straight to this
+    // file on disk. An inbound .html/.svg attachment served with its original extension would
+    // render inline at this app's own origin when an admin clicks it (stored XSS in an admin
+    // session); .bin is never rendered inline by a browser. The real filename/extension is
+    // preserved separately in mail_request_attachment_name for display and is what addTicket()
+    // re-applies its own allow-list against at conversion time.
+    foreach ($attachments as $attachment) {
+        $att_name = $attachment['name'];
+        $att_saved_filename = md5(uniqid(rand(), true)) . '.bin';
+        file_put_contents($holding_dir . $att_saved_filename, $attachment['content']);
+
+        $att_name_esc = mysqli_real_escape_string($mysqli, sanitizeInput($att_name));
+        $att_saved_filename_esc = mysqli_real_escape_string($mysqli, $att_saved_filename);
+        mysqli_query($mysqli, "INSERT INTO mail_request_attachments SET
+            mail_request_attachment_name = '$att_name_esc',
+            mail_request_attachment_reference_name = '$att_saved_filename_esc',
+            mail_request_attachment_mail_request_id = $mail_request_id
+        ");
+    }
+
+    logAction("Mail Request", "Create", "Email parser: unknown sender $from_email_esc queued as a request ($subject_esc)", 0, $mail_request_id);
+    appNotify("Ticket", "Email parser: unknown sender $from_email_esc sent an email - review it on the Requests page", "/admin/mail_requests.php", 0);
+
+    return $mail_request_id;
+}
+
+// Converts a pending mail request into a real ticket via addTicket(), resolving/creating
+// a contact under $client_id first (skipped entirely for Guest, client_id = 0 - matches
+// today's unknown-sender ticket behavior). Returns the new ticket id, or null if the
+// request was already converted/dismissed or no longer exists.
+function convertMailRequestToTicket(int $mail_request_id, int $client_id): ?int {
+    global $mysqli, $session_name;
+
+    $mail_request_id = intval($mail_request_id);
+    $client_id = intval($client_id);
+
+    $req = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM mail_requests WHERE mail_request_id = $mail_request_id AND mail_request_archived_at IS NULL LIMIT 1"));
+    if (!$req) {
+        return null;
+    }
+
+    $mailbox_id = intval($req['mail_request_mailbox_id']);
+    $from_email = $req['mail_request_from_email'];
+    $contact_name = !empty($req['mail_request_from_name']) ? $req['mail_request_from_name'] : $from_email;
+    $contact_email = $from_email;
+    $subject = $req['mail_request_subject'];
+    $message_body = (string) $req['mail_request_body'];
+    $ccs = !empty($req['mail_request_ccs']) ? explode(',', $req['mail_request_ccs']) : [];
+    $received_at = $req['mail_request_received_at'];
+    $eml_filename = $req['mail_request_eml_reference_name'];
+
+    $contact_id = 0;
+    if ($client_id > 0) {
+        $from_email_esc = mysqli_real_escape_string($mysqli, $from_email);
+        $existing_contact = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT contact_id, contact_name, contact_email FROM contacts WHERE contact_email = '$from_email_esc' AND contact_client_id = $client_id AND contact_archived_at IS NULL LIMIT 1"));
+
+        if ($existing_contact) {
+            $contact_id = intval($existing_contact['contact_id']);
+            $contact_name = $existing_contact['contact_name'];
+            $contact_email = $existing_contact['contact_email'];
+        } else {
+            $contact_name_esc = mysqli_real_escape_string($mysqli, $contact_name);
+            mysqli_query($mysqli, "INSERT INTO contacts SET contact_name = '$contact_name_esc', contact_email = '$from_email_esc', contact_notes = 'Added automatically via email parsing.', contact_client_id = $client_id");
+            $contact_id = mysqli_insert_id($mysqli);
+
+            logAction("Contact", "Create", "$session_name created contact $contact_name_esc", $client_id, $contact_id);
+            customAction('contact_create', $contact_id);
+        }
+    }
+
+    $holding_dir = __DIR__ . '/uploads/mail_requests/' . $mail_request_id . '/';
+
+    // Rehydrate the .eml back into uploads/tmp/ under its original name so addTicket()'s
+    // own internal rename() finds it exactly where it always expects it.
+    if (!empty($eml_filename) && file_exists($holding_dir . $eml_filename)) {
+        mkdirMissing(__DIR__ . '/uploads/tmp/');
+        copy($holding_dir . $eml_filename, __DIR__ . "/uploads/tmp/{$eml_filename}");
+    }
+
+    $attachments = [];
+    $att_rows = mysqli_query($mysqli, "SELECT mail_request_attachment_name, mail_request_attachment_reference_name FROM mail_request_attachments WHERE mail_request_attachment_mail_request_id = $mail_request_id");
+    while ($att_row = mysqli_fetch_assoc($att_rows)) {
+        $att_path = $holding_dir . $att_row['mail_request_attachment_reference_name'];
+        if (file_exists($att_path)) {
+            $attachments[] = ['name' => $att_row['mail_request_attachment_name'], 'content' => file_get_contents($att_path)];
+        }
+    }
+
+    $ticket_id = addTicket($contact_id, $contact_name, $contact_email, $client_id, $received_at, $subject, $message_body, $attachments, $eml_filename, $ccs, $mailbox_id);
+
+    mysqli_query($mysqli, "UPDATE mail_requests SET mail_request_archived_at = NOW(), mail_request_converted_ticket_id = " . intval($ticket_id) . " WHERE mail_request_id = $mail_request_id");
+
+    removeDirectory($holding_dir);
+
+    logAction("Mail Request", "Convert", "$session_name converted a mail request into ticket #$ticket_id", $client_id, $ticket_id);
+
+    return $ticket_id;
+}
+
+// Dismisses (soft-deletes) a pending mail request and removes its holding directory.
+function dismissMailRequest(int $mail_request_id): bool {
+    global $mysqli, $session_name;
+
+    $mail_request_id = intval($mail_request_id);
+    $req = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT mail_request_id FROM mail_requests WHERE mail_request_id = $mail_request_id AND mail_request_archived_at IS NULL LIMIT 1"));
+    if (!$req) {
+        return false;
+    }
+
+    removeDirectory(__DIR__ . '/uploads/mail_requests/' . $mail_request_id . '/');
+
+    mysqli_query($mysqli, "UPDATE mail_requests SET mail_request_archived_at = NOW() WHERE mail_request_id = $mail_request_id");
+
+    logAction("Mail Request", "Delete", "$session_name dismissed a mail request", 0, $mail_request_id);
+
+    return true;
 }
 
 // Helper function for missing data fallback
@@ -2089,6 +3890,29 @@ function getFieldById($table, $id, $field, $escape_method = 'sql') {
     return null; // Return null if no record was found
 }
 
+/**
+ * Resolves the "from" email/name identity that should be used when sending mail
+ * related to a specific ticket. If the ticket was created from (or is otherwise
+ * associated with) an active, non-archived mailbox, that mailbox's identity is
+ * used; otherwise falls back to the global config_ticket_from_email/name.
+ *
+ * @param int $ticket_id The ticket's id.
+ *
+ * @return array{email: string, name: string}
+ */
+function resolveTicketFromIdentity($ticket_id) {
+    global $mysqli, $config_ticket_from_email, $config_ticket_from_name;
+    $ticket_id = intval($ticket_id);
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT m.mailbox_email, m.mailbox_from_name FROM tickets t
+         JOIN mailboxes m ON m.mailbox_id = t.ticket_mailbox_id
+         WHERE t.ticket_id = $ticket_id AND m.mailbox_archived_at IS NULL LIMIT 1"));
+    if ($row && !empty($row['mailbox_email'])) {
+        return ['email' => $row['mailbox_email'], 'name' => $row['mailbox_from_name'] ?: $config_ticket_from_name];
+    }
+    return ['email' => $config_ticket_from_email, 'name' => $config_ticket_from_name];
+}
+
 // Recursive function to display folder options - Used in folders files and documents
 function display_folder_options($parent_folder_id, $client_id, $indent = 0) {
     global $mysqli;
@@ -2146,7 +3970,8 @@ function redirect($url = null, $permanent = false) {
         exit;
     } else {
         // Fallback for headers already sent
-        echo "<script>window.location.href = '" . addslashes($url) . "';</script>";
+        global $csp_nonce;
+        echo "<script nonce=\"" . htmlspecialchars($csp_nonce ?? '') . "\">window.location.href = '" . addslashes($url) . "';</script>";
         echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"></noscript>';
         exit;
     }
@@ -2667,5 +4492,43 @@ function decryptSetting(string $ciphertext): string {
     $iv  = substr($data, 0, 16);
     $ct  = substr($data, 16);
     return openssl_decrypt($ct, 'aes-128-cbc', $key, OPENSSL_RAW_DATA, $iv) ?: '';
+}
+
+// ── CRM / Sales helpers ────────────────────────────────────────────────────
+
+// Ordered list of pipeline stages with their suggested default win probability.
+// Won/Lost are terminal stages that also drive opportunity_status.
+function getOpportunityStages() {
+    return array(
+        'Qualification' => 20,
+        'Proposal'      => 40,
+        'Negotiation'   => 60,
+        'Won'           => 100,
+        'Lost'          => 0,
+    );
+}
+
+// Returns the Bootstrap contextual colour used for a given pipeline stage badge.
+function opportunityStageColor($stage) {
+    switch ($stage) {
+        case 'Won':          return 'success';
+        case 'Lost':         return 'danger';
+        case 'Negotiation':  return 'warning';
+        case 'Proposal':     return 'info';
+        case 'Qualification':
+        default:             return 'secondary';
+    }
+}
+
+// Maps a pipeline stage to the opportunity_status it should set.
+// Won/Lost are terminal; everything else keeps the deal open.
+function opportunityStatusForStage($stage) {
+    if ($stage === 'Won') {
+        return 'won';
+    }
+    if ($stage === 'Lost') {
+        return 'lost';
+    }
+    return 'open';
 }
 

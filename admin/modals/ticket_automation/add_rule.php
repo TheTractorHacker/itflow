@@ -18,9 +18,9 @@ $sql_scripts = mysqli_query($mysqli,
 );
 ob_start();
 ?>
-<div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-robot mr-2"></i>New Automation Rule</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+<div class="modal-header">
+    <h5 class="modal-title"><i class="fas fa-fw fa-robot me-2"></i>New Automation Rule</h5>
+    <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="/admin/post.php" method="POST" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -36,6 +36,7 @@ ob_start();
             <label>Trigger — When to evaluate this rule</label>
             <select name="rule_trigger" class="form-control" id="ruleTrigger">
                 <option value="schedule">Scheduled check (runs every cron pass against open tickets)</option>
+                <option value="ticket_created">Ticket created (runs once as each new ticket is opened)</option>
                 <option value="rmm_alert">New RMM alert received</option>
                 <option value="asset_offline">Asset goes offline</option>
                 <option value="asset_online">Asset comes back online</option>
@@ -63,7 +64,7 @@ ob_start();
                     </div>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="addCondition"><i class="fas fa-plus mr-1"></i>Add condition</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="addCondition"><i class="fas fa-plus me-1"></i>Add condition</button>
         </div>
 
         <div class="form-group">
@@ -89,7 +90,7 @@ ob_start();
                     </div>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="addAction"><i class="fas fa-plus mr-1"></i>Add action</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="addAction"><i class="fas fa-plus me-1"></i>Add action</button>
         </div>
 
         <div class="form-group">
@@ -99,11 +100,11 @@ ob_start();
 
     </div>
     <div class="modal-footer">
-        <button type="submit" class="btn btn-primary"><i class="fas fa-check mr-2"></i>Save Rule</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-check me-2"></i>Save Rule</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
     </div>
 </form>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 (function () {
     var FIELD_OPTIONS = {
         schedule: [
@@ -115,6 +116,15 @@ ob_start();
             ['category',    'Ticket category'],
             ['sla_response_breached',   'SLA response breached (1/0)'],
             ['sla_resolution_breached', 'SLA resolution breached (1/0)'],
+            ['sla_response_pct',        'SLA response % consumed (0-100)'],
+            ['sla_resolution_pct',      'SLA resolution % consumed (0-100)'],
+        ],
+        ticket_created: [
+            ['priority',  'Priority'],
+            ['category',  'Ticket category'],
+            ['client_id', 'Client ID'],
+            ['subject',   'Ticket subject (contains)'],
+            ['details',   'Ticket body (contains)'],
         ],
         rmm_alert: [
             ['severity',       'Alert severity'],
@@ -140,6 +150,7 @@ ob_start();
 
     var TRIGGER_HINTS = {
         schedule:      'Evaluated against every open ticket on each cron run.',
+        ticket_created: 'Evaluated once the moment each new ticket is created (agent, email, API or RMM alert). Leave conditions empty to match every new ticket.',
         rmm_alert:     'Evaluated once for each new RMM alert. Use "Create ticket from alert" to open a ticket before running ticket-based actions.',
         asset_offline: 'Evaluated once when an asset\'s RMM status changes to offline.',
         asset_online:  'Evaluated once when an asset\'s RMM status changes to online.',
@@ -156,8 +167,10 @@ ob_start();
     var ACTION_OPTIONS = [
         ['set_priority',           'Set ticket priority (low / medium / high / critical)'],
         ['assign_to',               'Assign ticket to user ID'],
+        ['escalate',                'Escalate ticket (reassign + bump priority: userID:priority)'],
         ['set_status',               'Set ticket status ID'],
         ['add_note',                 'Add automation note to ticket'],
+        ['ai_triage',                'AI triage — suggest category/priority/assignee (posts a note)'],
         ['notify_assignee',          'Notify assigned technician'],
         ['close_ticket',              'Close ticket'],
         ['add_worksheet',             'Add worksheet from template to ticket'],
@@ -214,7 +227,8 @@ ob_start();
         var isWS  = action.value === 'add_worksheet';
         var isScr = action.value === 'run_script';
         var isNone = action.value === 'notify_assignee' || action.value === 'close_ticket'
-                  || action.value === 'create_ticket_from_alert' || action.value === 'acknowledge_alert';
+                  || action.value === 'create_ticket_from_alert' || action.value === 'acknowledge_alert'
+                  || action.value === 'ai_triage';
 
         text.style.display = (isWS || isScr) ? 'none' : '';
         text.disabled      = (isWS || isScr);

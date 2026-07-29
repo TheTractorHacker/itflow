@@ -121,6 +121,33 @@ function automationExecuteAction($mysqli, array $action, array &$context, array 
             logAction("Automation", "Update", "Rule '$rule_name': assigned ticket $tid to user $uid", $client_id, $tid);
             return "assigned ticket #$tid to user $uid";
 
+        case 'escalate':
+            // Tiered escalation: reassign to a named user and/or bump priority in one
+            // action, then notify the new assignee. Value format: "userID:priority"
+            // (either part optional, e.g. "5:critical", "5", ":high").
+            if (!$tid) return null;
+            $parts   = explode(':', $aval);
+            $esc_uid = intval(trim($parts[0] ?? ''));
+            $esc_pri = strtolower(trim($parts[1] ?? ''));
+            $sets = [];
+            $bits = [];
+            if ($esc_uid > 0) {
+                $sets[] = "ticket_assigned_to = $esc_uid";
+                $bits[] = "assigned to user $esc_uid";
+            }
+            if (in_array($esc_pri, ['low', 'medium', 'high', 'critical'], true)) {
+                $esc_pri_esc = mysqli_real_escape_string($mysqli, $esc_pri);
+                $sets[] = "ticket_priority = '$esc_pri_esc'";
+                $bits[] = "priority=$esc_pri";
+            }
+            if (empty($sets)) return null;
+            mysqli_query($mysqli, "UPDATE tickets SET " . implode(', ', $sets) . " WHERE ticket_id = $tid");
+            if ($esc_uid > 0) {
+                appNotify("Automation", "Escalation: rule '$rule_name' escalated ticket #$tid to you", "/agent/ticket.php?ticket_id=$tid", $client_id);
+            }
+            logAction("Automation", "Escalate", "Rule '$rule_name': escalated ticket $tid (" . implode(', ', $bits) . ")", $client_id, $tid);
+            return "escalated ticket #$tid (" . implode(', ', $bits) . ")";
+
         case 'set_status':
             if (!$tid) return null;
             $sid = intval($aval);
@@ -136,6 +163,110 @@ function automationExecuteAction($mysqli, array $action, array &$context, array 
                  VALUES ('$note', 'Automation', $tid, NOW())"
             );
             return "added note to ticket #$tid";
+
+        case 'ai_triage':
+            // AI-assisted triage. PHASE 1 = SUGGEST MODE: classify the ticket and
+            // post an internal Automation note with the suggestion. Does NOT mutate
+            // the ticket's category/priority/assignee. Never fatals - any AI failure
+            // (disabled, unconfigured, timeout, bad JSON) is a silent no-op so it can
+            // never block the ticket-created dispatch that calls it.
+            if (!$tid) return null;
+            require_once __DIR__ . '/ai_functions.php';
+
+            // Subject + body come from the dispatch context; fall back to the row.
+            $subject = trim((string) ($context['subject'] ?? ''));
+            $body    = (string) ($context['details'] ?? '');
+            if ($subject === '' && $body === '') {
+                $trow = mysqli_fetch_assoc(mysqli_query($mysqli,
+                    "SELECT ticket_subject, ticket_details FROM tickets WHERE ticket_id = $tid LIMIT 1"));
+                if ($trow) {
+                    $subject = trim((string) $trow['ticket_subject']);
+                    $body    = (string) $trow['ticket_details'];
+                }
+            }
+            $body = trim(strip_tags($body));
+
+            // Build name -> id maps for validation. Categories and technicians are
+            // company-wide; priorities are the fixed ticket enum.
+            $cat_by_name = [];
+            $cat_names   = [];
+            $cres = mysqli_query($mysqli,
+                "SELECT category_id, category_name FROM categories
+                 WHERE category_type = 'Ticket' AND category_archived_at IS NULL");
+            while ($cres && $c = mysqli_fetch_assoc($cres)) {
+                $cat_by_name[strtolower(trim($c['category_name']))] = ['id' => intval($c['category_id']), 'name' => $c['category_name']];
+                $cat_names[] = $c['category_name'];
+            }
+            $valid_priorities = ['low', 'medium', 'high', 'critical'];
+            $agent_by_name = [];
+            $agent_names   = [];
+            $ures = mysqli_query($mysqli,
+                "SELECT user_id, user_name FROM users
+                 WHERE user_type = 1 AND user_status = 1 AND user_archived_at IS NULL");
+            while ($ures && $u = mysqli_fetch_assoc($ures)) {
+                $agent_by_name[strtolower(trim($u['user_name']))] = ['id' => intval($u['user_id']), 'name' => $u['user_name']];
+                $agent_names[] = $u['user_name'];
+            }
+
+            $cat_list   = !empty($cat_names)   ? implode(', ', $cat_names)   : '(none configured)';
+            $agent_list = !empty($agent_names) ? implode(', ', $agent_names) : '(none configured)';
+
+            $prompt = "You are an IT helpdesk triage assistant. Classify the following support ticket.\n\n"
+                . "Valid categories: $cat_list\n"
+                . "Valid priorities: Low, Medium, High, Critical\n"
+                . "Valid agents: $agent_list\n\n"
+                . "Ticket subject: $subject\n"
+                . "Ticket body: $body\n\n"
+                . "Respond with STRICT JSON only, no prose and no code fences, in exactly this shape:\n"
+                . '{"category": "<one of the valid categories or null>", "priority": "<Low|Medium|High|Critical>", "assignee": "<one of the valid agents or null>"}' . "\n"
+                . "Use the exact names from the lists above. Use null for any field you are unsure about.";
+
+            $messages = [
+                ['role' => 'system', 'content' => 'You classify IT support tickets and reply with strict JSON only.'],
+                ['role' => 'user',   'content' => $prompt],
+            ];
+
+            $ai = aiChat($messages, 'General', ['temperature' => 0, 'max_tokens' => 300, 'client_id' => $client_id]);
+            if (empty($ai['ok'])) {
+                return null; // AI disabled/unconfigured/failed
+            }
+
+            // Extract the JSON object (tolerate stray code fences / prose).
+            $raw = trim((string) $ai['content']);
+            if (preg_match('/\{.*\}/s', $raw, $mjson)) {
+                $raw = $mjson[0];
+            }
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded)) {
+                return null;
+            }
+
+            $parts = [];
+            $cat_in = strtolower(trim((string) ($decoded['category'] ?? '')));
+            if ($cat_in !== '' && $cat_in !== 'null' && isset($cat_by_name[$cat_in])) {
+                $parts[] = 'Category: ' . $cat_by_name[$cat_in]['name'];
+            }
+            $pri_in = strtolower(trim((string) ($decoded['priority'] ?? '')));
+            if (in_array($pri_in, $valid_priorities, true)) {
+                $parts[] = 'Priority: ' . ucfirst($pri_in);
+            }
+            $asg_in = strtolower(trim((string) ($decoded['assignee'] ?? '')));
+            if ($asg_in !== '' && $asg_in !== 'null' && isset($agent_by_name[$asg_in])) {
+                $parts[] = 'Assign to @' . $agent_by_name[$asg_in]['name'];
+            }
+
+            if (empty($parts)) {
+                return null; // nothing validated - don't post an empty suggestion
+            }
+
+            $note     = '🤖 AI Triage suggests: ' . implode(' / ', $parts);
+            $note_esc = mysqli_real_escape_string($mysqli, $note);
+            mysqli_query($mysqli,
+                "INSERT INTO ticket_replies (ticket_reply, ticket_reply_type, ticket_reply_ticket_id, ticket_reply_by, ticket_reply_created_at)
+                 VALUES ('$note_esc', 'Automation', $tid, 0, NOW())"
+            );
+            logAction("Automation", "AI Triage", "Rule '$rule_name': posted AI triage suggestion on ticket $tid", $client_id, $tid);
+            return "posted AI triage suggestion on ticket #$tid";
 
         case 'notify_assignee':
             if ($tid) {

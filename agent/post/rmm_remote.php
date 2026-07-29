@@ -11,7 +11,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/functions.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/check_login.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_global_settings.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/load_user_session.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/class_tactical_rmm.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/rmm_client_factory.php';
 
 header('Content-Type: application/json');
 
@@ -49,22 +49,20 @@ $_GET['client_id'] = $client_id;
 enforceClientAccess($client_id);
 
 try {
-    $client = new TacticalRmmClient(intval($link['integration_id']));
+    // Resolve the correct RMM client (Tactical, Level, …) via the factory so
+    // remote-connect works for whichever provider the asset is linked to.
+    $client = getRmmClient(intval($link['integration_id']));
 
-    if ($connection_type === 'mesh' && !empty($link['mesh_node_id'])) {
-        $url = $client->buildMeshUrl($link['mesh_node_id']);
+    // Tactical honours an explicit 'mesh' request via a stored node id;
+    // pass it through so the client can build a persistent MeshCentral URL.
+    if ($connection_type === 'mesh' && !empty($link['mesh_node_id'])
+        && $client instanceof TacticalRmmClient) {
+        $url  = $client->buildMeshUrl($link['mesh_node_id']);
         $type = 'meshcentral';
     } else {
-        // Try MeshCentral one-time login link first so the technician
-        // doesn't have to log in to either Tactical RMM or MeshCentral
-        $mesh = $client->getAgentMesh($link['tactical_agent_id']);
-        if (!empty($mesh['control'])) {
-            $url  = $mesh['control'];
-            $type = 'meshcentral';
-        } else {
-            $url  = $client->buildDeviceUrl($link['tactical_agent_id']);
-            $type = 'tactical';
-        }
+        $remote = $client->buildRemoteUrl($link['tactical_agent_id'], $connection_type);
+        $url    = $remote['url'];
+        $type   = $remote['type'];
     }
 
     // Log the session (redact one-time login tokens before storing)

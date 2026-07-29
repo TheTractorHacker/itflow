@@ -4,7 +4,7 @@ require_once '../../../includes/modal_header.php';
 $outtake_id = intval($_GET['outtake_id']);
 $ticket_id  = intval($_GET['ticket_id']);
 
-$sql = mysqli_query($mysqli, "SELECT ot.outtake_signed_at, t.ticket_prefix, t.ticket_number, t.ticket_details, c.client_name, co.contact_name
+$sql = mysqli_query($mysqli, "SELECT ot.outtake_signed_at, t.ticket_prefix, t.ticket_number, t.ticket_details, t.ticket_client_id, c.client_name, co.contact_name
     FROM ticket_outtake_forms ot
     JOIN tickets t ON ot.outtake_ticket_id = t.ticket_id
     LEFT JOIN clients c ON t.ticket_client_id = c.client_id
@@ -13,13 +13,21 @@ $sql = mysqli_query($mysqli, "SELECT ot.outtake_signed_at, t.ticket_prefix, t.ti
 
 $row = mysqli_fetch_assoc($sql);
 
+// Same client-scoping check used by the sibling ticket_schedule_edit.php modal
+// - without it, any logged-in agent could load ANY client's outtake form by
+// guessing/incrementing the outtake_id, regardless of their own client access.
+if ($row) {
+    $client_id = intval($row['ticket_client_id']);
+    if ($client_id) enforceClientAccess();
+}
+
 ob_start();
 
 if (!$row) {
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-file-signature mr-2"></i>Sign Outtake Form</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fas fa-fw fa-file-signature me-2"></i>Sign Outtake Form</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <div class="modal-body">
     <div class="alert alert-danger mb-0">Outtake form not found.</div>
@@ -28,11 +36,11 @@ if (!$row) {
 } elseif (!empty($row['outtake_signed_at'])) {
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-file-signature mr-2"></i>Sign Outtake Form</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fas fa-fw fa-file-signature me-2"></i>Sign Outtake Form</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <div class="modal-body">
-    <div class="alert alert-success mb-0"><i class="fas fa-check-circle mr-2"></i>This outtake form has already been signed.</div>
+    <div class="alert alert-success mb-0"><i class="fas fa-check-circle me-2"></i>This outtake form has already been signed.</div>
 </div>
 <?php
 } else {
@@ -41,29 +49,29 @@ if (!$row) {
     $default_name  = nullable_htmlentities($row['contact_name'] ?: $row['client_name']);
 ?>
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-file-signature mr-2"></i>Sign Outtake Form &mdash; <?= $ticket_num ?></h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fas fa-fw fa-file-signature me-2"></i>Sign Outtake Form &mdash; <?= $ticket_num ?></h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <div class="modal-body">
 
     <?php if ($ticket_detail) { ?>
     <div class="form-group">
-        <label class="text-uppercase text-secondary font-weight-bold" style="font-size:11px;">Ticket Problem</label>
+        <label class="text-uppercase text-secondary fw-bold" style="font-size:11px;">Ticket Problem</label>
         <div class="border rounded p-2 bg-light" style="max-height:120px;overflow-y:auto;white-space:pre-wrap;font-size:13px;"><?= htmlspecialchars($ticket_detail) ?></div>
     </div>
     <?php } ?>
 
     <div class="form-group">
-        <label class="font-weight-bold">Full Name <span class="text-danger">*</span></label>
+        <label class="fw-bold">Full Name <span class="text-danger">*</span></label>
         <input type="text" class="form-control" id="outtake_signed_name" value="<?= $default_name ?>" placeholder="Type full name">
     </div>
 
     <div class="form-group mb-2">
-        <label class="font-weight-bold">Signature <span class="text-danger">*</span></label>
+        <label class="fw-bold">Signature <span class="text-danger">*</span></label>
         <canvas id="outtake_sig_canvas" style="border:2px solid #ccc;border-radius:4px;background:#fff;display:block;width:100%;height:140px;touch-action:none;cursor:crosshair;"></canvas>
         <input type="hidden" id="outtake_sig_data">
         <div class="mt-2 d-flex align-items-center">
-            <button type="button" class="btn btn-sm btn-outline-secondary mr-3" id="outtake_sig_clear">Clear</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary me-3" id="outtake_sig_clear">Clear</button>
             <small class="text-secondary">Draw signature in the box above</small>
         </div>
     </div>
@@ -79,11 +87,11 @@ if (!$row) {
 
 </div>
 <div class="modal-footer">
-    <button type="button" class="btn btn-primary" id="outtake_sign_submit"><i class="fas fa-pen-nib mr-2"></i>Sign &amp; Save</button>
-    <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+    <button type="button" class="btn btn-primary" id="outtake_sign_submit"><i class="fas fa-pen-nib me-2"></i>Sign &amp; Save</button>
+    <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 (function () {
     var pad = null;
     var $modal = $('#outtake_sig_canvas').closest('.modal');

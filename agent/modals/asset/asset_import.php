@@ -9,8 +9,8 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-desktop mr-2"></i>Import Assets</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+    <h5 class="modal-title"><i class="fa fa-fw fa-desktop me-2"></i>Import Assets</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -29,7 +29,7 @@ ob_start();
         <small class="text-muted">Note: Purchase date must be in the format YYYY-MM-DD. Spreadsheet tools may automatically reformat dates.</small>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="import_assets_csv" class="btn btn-primary text-bold"><i class="fa fa-check mr-2"></i>Import</button>
+        <button type="submit" name="import_assets_csv" class="btn btn-primary text-bold"><i class="fa fa-check me-2"></i>Import</button>
     </div>
 </form>
 

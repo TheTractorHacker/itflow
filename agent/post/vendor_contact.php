@@ -12,7 +12,7 @@ if (isset($_POST['add_vendor_contact'])) {
 
     enforceUserPermission('module_client', 2);
 
-    require_once 'post/user/vendor_contact_model.php';
+    require_once 'vendor_contact_model.php';
 
     mysqli_query($mysqli,"INSERT INTO vendor_contacts SET vendor_contact_name = '$name', vendor_contact_title = '$title', vendor_contact_phone = '$phone', vendor_contact_extension = '$extension', vendor_contact_mobile = '$mobile', vendor_contact_email = '$email', vendor_contact_notes = '$notes', vendor_contact_department = '$department', vendor_contact_vendor_id = $vendor_id");
 
@@ -34,7 +34,7 @@ if (isset($_POST['edit_vendor_contact'])) {
 
     enforceUserPermission('module_client', 2);
 
-    require_once 'post/user/vendor_contact_model.php';
+    require_once 'vendor_contact_model.php';
 
     $vendor_contact_id = intval($_POST['vendor_contact_id']);
 
@@ -50,233 +50,19 @@ if (isset($_POST['edit_vendor_contact'])) {
 
 }
 
-if (isset($_POST['bulk_archive_vendor_contacts'])) {
-
-    validateCSRFToken($_POST['csrf_token']);
-
-    enforceUserPermission('module_client', 2);
-
-    if (isset($_POST['vendor_contact_ids'])) {
-
-        $count = 0; // Default 0
-
-        // Cycle through array and archive each contact
-        foreach ($_POST['vendor_contact_ids'] as $vendor_contact_id) {
-
-            $vendor_contact_id = intval($vendor_contact_id);
-
-            // Get Contact Name and Client ID for logging and alert message
-            $sql = mysqli_query($mysqli,"SELECT vendor_contact_name, vendor_contact_client_id FROM vendor_contacts WHERE vendor_contact_id = $vendor_contact_id");
-            $row = mysqli_fetch_assoc($sql);
-            $vendor_contact_name = sanitizeInput($row['vendor_contact_name']);
-            $client_id = intval($row['contact_client_id']);
-
-        }
-
-        logAction("Vendor Contact", "Bulk Archive", "$session_name archived $count vendor contacts", $client_id);
-
-        flash_alert("Archived <strong>$count</strong> vendor contact(s)", 'error');
-
-    }
-
-    redirect();
-
-}
-
-if (isset($_POST['bulk_restore_vendor_contacts'])) {
-
-    validateCSRFToken($_POST['csrf_token']);
-
-    enforceUserPermission('module_client', 2);
-
-    if (isset($_POST['contact_ids'])) {
-
-        // Get Selected Contacts Count
-        $count = count($_POST['contact_ids']);
-
-        // Cycle through array and unarchive each contact
-        foreach ($_POST['contact_ids'] as $contact_id) {
-
-            $contact_id = intval($contact_id);
-
-            // Get Contact Name and Client ID for logging and alert message
-            $sql = mysqli_query($mysqli,"SELECT contact_name, contact_client_id, contact_user_id FROM contacts WHERE contact_id = $contact_id");
-            $row = mysqli_fetch_assoc($sql);
-            $contact_name = sanitizeInput($row['contact_name']);
-            $client_id = intval($row['contact_client_id']);
-            $contact_user_id = intval($row['contact_user_id']);
-
-            // unArchive Contact User
-            if ($contact_user_id > 0) {
-                mysqli_query($mysqli,"UPDATE users SET user_archived_at = NULL WHERE user_id = $contact_user_id");
-            }
-
-            mysqli_query($mysqli,"UPDATE contacts SET contact_archived_at = NULL WHERE contact_id = $contact_id");
-
-            logAction("Contact", "Restore", "$session_name restored $contact_name", $client_id, $contact_id);
-
-        }
-
-        logAction("Contact", "Bulk Restore", "$session_name restored $count contacts", $client_id);
-
-        flash_alert("Restored <strong>$count</strong> contact(s)");
-
-    }
-
-    redirect();
-
-}
-
-if (isset($_POST['bulk_delete_vendor_contacts'])) {
-
-    validateCSRFToken($_POST['csrf_token']);
-
-    enforceUserPermission('module_client', 3);
-
-    if (isset($_POST['contact_ids'])) {
-
-        // Get Selected Contacts Count
-        $count = count($_POST['contact_ids']);
-
-        // Cycle through array and delete each record
-        foreach ($_POST['contact_ids'] as $contact_id) {
-
-            $contact_id = intval($contact_id);
-
-            // Get Name and Client ID for logging and alert message
-            $sql = mysqli_query($mysqli,"SELECT contact_name, contact_client_id, contact_user_id FROM contacts WHERE contact_id = $contact_id");
-            $row = mysqli_fetch_assoc($sql);
-            $contact_name = sanitizeInput($row['contact_name']);
-            $client_id = intval($row['contact_client_id']);
-            $contact_user_id = intval($row['contact_user_id']);
-
-            // Delete Contact User
-            if ($contact_user_id > 0) {
-                mysqli_query($mysqli,"DELETE FROM users WHERE user_id = $contact_user_id");
-            }
-
-            mysqli_query($mysqli, "DELETE FROM contacts WHERE contact_id = $contact_id AND contact_client_id = $client_id");
-
-            // Remove Relations
-            mysqli_query($mysqli, "DELETE FROM contact_tags WHERE contact_id = $contact_id");
-            mysqli_query($mysqli, "DELETE FROM contact_assets WHERE contact_id = $contact_id");
-            mysqli_query($mysqli, "DELETE FROM contact_documents WHERE contact_id = $contact_id");
-            mysqli_query($mysqli, "DELETE FROM contact_files WHERE contact_id = $contact_id");
-            mysqli_query($mysqli, "DELETE FROM contact_logins WHERE contact_id = $contact_id");
-            mysqli_query($mysqli, "DELETE FROM contact_notes WHERE contact_note_contact_id = $contact_id");
-
-            logAction("Contact", "Delete", "$session_name deleted $contact_name", $client_id);
-
-        }
-
-         logAction("Contact", "Bulk Delete", "$session_name deleted $count contacts", $client_id);
-
-        flash_alert("You deleted <strong>$count</strong> contact(s)", 'error');
-
-    }
-
-    redirect();
-
-}
-
-
-if (isset($_GET['archive_vendor_contact'])) {
-
-    validateCSRFToken($_GET['csrf_token']);
-
-    enforceUserPermission('module_client', 2);
-
-    $contact_id = intval($_GET['archive_contact']);
-
-    // Get Contact Name and Client ID for logging and alert message
-    $sql = mysqli_query($mysqli,"SELECT contact_name, contact_client_id, contact_user_id FROM contacts WHERE contact_id = $contact_id");
-    $row = mysqli_fetch_assoc($sql);
-    $contact_name = sanitizeInput($row['contact_name']);
-    $client_id = intval($row['contact_client_id']);
-    $contact_user_id = intval($row['contact_user_id']);
-
-    // Archive Contact User
-    if ($contact_user_id > 0) {
-        mysqli_query($mysqli,"UPDATE users SET user_archived_at = NOW() WHERE user_id = $contact_user_id");
-    }
-
-    mysqli_query($mysqli,"UPDATE contacts SET contact_important = 0, contact_billing = 0, contact_technical = 0, contact_archived_at = NOW() WHERE contact_id = $contact_id");
-
-    logAction("Contact", "Archive", "$session_name archived contact $contact_name", $client_id, $contact_id);
-
-    flash_alert("Contact <strong>$contact_name</strong> has been archived", 'alert');
-
-    redirect();
-
-}
-
-if (isset($_GET['restore_vendor_contact'])) {
-
-    validateCSRFToken($_GET['csrf_token']);
-
-    enforceUserPermission('module_client', 2);
-
-    $contact_id = intval($_GET['restre_contact']);
-
-    // Get Contact Name and Client ID for logging and alert message
-    $sql = mysqli_query($mysqli,"SELECT contact_name, contact_client_id, contact_user_id FROM contacts WHERE contact_id = $contact_id");
-    $row = mysqli_fetch_assoc($sql);
-    $contact_name = sanitizeInput($row['contact_name']);
-    $client_id = intval($row['contact_client_id']);
-    $contact_user_id = intval($row['contact_user_id']);
-
-    // unArchive Contact User
-    if ($contact_user_id > 0) {
-        mysqli_query($mysqli,"UPDATE users SET user_archived_at = NULL WHERE user_id = $contact_user_id");
-    }
-
-    mysqli_query($mysqli,"UPDATE contacts SET contact_archived_at = NULL WHERE contact_id = $contact_id");
-
-    logAction("Contact", "Restore", "$session_name restored contact $contact_name", $client_id, $contact_id);
-
-    flash_alert("Contact <strong>$contact_name</strong> Restored");
-
-    redirect();
-
-}
-
-if (isset($_GET['delete_vendor_contact'])) {
-
-    validateCSRFToken($_GET['csrf_token']);
-
-    enforceUserPermission('module_client', 3);
-
-    $contact_id = intval($_GET['delete_contact']);
-
-    // Get Contact Name and Client ID for logging and alert message
-    $sql = mysqli_query($mysqli,"SELECT contact_name, contact_client_id FROM contacts WHERE contact_id = $contact_id");
-    $row = mysqli_fetch_assoc($sql);
-    $contact_name = sanitizeInput($row['contact_name']);
-    $client_id = intval($row['contact_client_id']);
-    $contact_user_id = intval($row['contact_user_id']);
-
-    // Delete User
-    if ($contact_user_id > 0) {
-        mysqli_query($mysqli,"DELETE FROM users WHERE user_id = $contact_user_id");
-    }
-
-    mysqli_query($mysqli,"DELETE FROM contacts WHERE contact_id = $contact_id");
-
-    // Remove Relations
-    mysqli_query($mysqli, "DELETE FROM contact_tags WHERE contact_id = $contact_id");
-    mysqli_query($mysqli, "DELETE FROM contact_assets WHERE contact_id = $contact_id");
-    mysqli_query($mysqli, "DELETE FROM contact_documents WHERE contact_id = $contact_id");
-    mysqli_query($mysqli, "DELETE FROM contact_files WHERE contact_id = $contact_id");
-    mysqli_query($mysqli, "DELETE FROM contact_logins WHERE contact_id = $contact_id");
-    mysqli_query($mysqli, "DELETE FROM contact_notes WHERE contact_note_contact_id = $contact_id");
-
-    logAction("Contact", "Delete", "$session_name deleted contact $contact_name", $client_id);
-
-    flash_alert("Contact <strong>$contact_name</strong> has been deleted.", 'error');
-
-    redirect();
-
-}
+// NOTE: bulk_archive_vendor_contacts / bulk_restore_vendor_contacts / bulk_delete_vendor_contacts
+// were removed here - they were a copy-pasted duplicate of agent/post/contact.php's bulk archive/
+// restore/delete handlers (operating on the `contacts` table despite the "vendor_contact" naming),
+// unreferenced by any form/JS in the codebase, and missing the enforceClientAccess() check that
+// contact.php's equivalents have - allowing deletion/archival of contacts belonging to clients
+// outside the caller's permitted scope. The correct, protected implementation already lives in
+// agent/post/contact.php.
+
+// NOTE: archive_vendor_contact / restore_vendor_contact / delete_vendor_contact (GET) were removed
+// here for the same reason as the bulk_* handlers above - copy-pasted duplicates of contact.php's
+// archive_contact/restore_contact/delete_contact acting on the `contacts` table with no
+// enforceClientAccess() check and no references anywhere else in the codebase (restore_vendor_contact
+// even read a misspelled $_GET['restre_contact'] key, confirming it was never wired up/used).
 
 if (isset($_POST['export_vendor_contacts_csv'])) {
 

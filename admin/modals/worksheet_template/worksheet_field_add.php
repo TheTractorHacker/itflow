@@ -3,9 +3,9 @@ require_once '../../../includes/modal_header.php';
 $template_id = intval($_GET['template_id']);
 ob_start();
 ?>
-<div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-plus mr-2"></i>Add Field</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+<div class="modal-header">
+    <h5 class="modal-title"><i class="fa fa-fw fa-plus me-2"></i>Add Field</h5>
+    <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 <form action="post.php" method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -31,18 +31,18 @@ ob_start();
             <textarea class="form-control" name="field_options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
         </div>
         <div class="form-group">
-            <div class="custom-control custom-switch">
-                <input type="checkbox" class="custom-control-input" id="fieldRequired" name="field_required" value="1">
-                <label class="custom-control-label" for="fieldRequired">Required field</label>
+            <div class="form-check form-check form-switch">
+                <input type="checkbox" class="form-check-input" id="fieldRequired" name="field_required" value="1">
+                <label class="form-check-label" for="fieldRequired">Required field</label>
             </div>
         </div>
     </div>
     <div class="modal-footer">
-        <button type="submit" name="add_worksheet_field" class="btn btn-primary"><i class="fa fa-check mr-2"></i>Add Field</button>
-        <button type="button" class="btn btn-light" data-dismiss="modal"><i class="fa fa-times mr-2"></i>Cancel</button>
+        <button type="submit" name="add_worksheet_field" class="btn btn-primary"><i class="fa fa-check me-2"></i>Add Field</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa fa-times me-2"></i>Cancel</button>
     </div>
 </form>
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 document.getElementById('fieldTypeSelect').addEventListener('change', function() {
     document.getElementById('fieldOptionsGroup').style.display = this.value === 'select' ? 'block' : 'none';
 });

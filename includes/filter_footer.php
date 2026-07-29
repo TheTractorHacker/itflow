@@ -20,8 +20,9 @@ if ($total_found_rows > 5) {
     <div class="row">
         <div class="col-sm">
             <form action="post.php" method="post">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <div class="form-group">
-                    <select onchange="this.form.submit()" class="form-control select2 col-12 col-sm-3" name="change_records_per_page">
+                    <select class="form-control select2 col-12 col-sm-3 auto-submit-select" name="change_records_per_page">
                         <option <?php if ($user_config_records_per_page == 5) { echo "selected"; } ?> >5</option>
                         <option <?php if ($user_config_records_per_page == 10) { echo "selected"; } ?> >10</option>
                         <option <?php if ($user_config_records_per_page == 20) { echo "selected"; } ?> >20</option>

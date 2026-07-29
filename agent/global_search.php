@@ -153,7 +153,7 @@ if (isset($_GET['query'])) {
 
 <div class="card card-dark">
     <div class="card-header mb-3">
-        <h4 class="card-title text-center"><i class="fas fa-fw fa-search mr-2"></i>Global Search</h4>
+        <h4 class="card-title text-center"><i class="fas fa-fw fa-search me-2"></i>Global Search</h4>
     </div>
 
     <div class="card-body">
@@ -166,7 +166,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-users mr-2"></i>Clients</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-users me-2"></i>Clients</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -209,7 +209,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-users mr-2"></i>Contacts</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-users me-2"></i>Contacts</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -267,7 +267,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-building mr-2"></i>Vendors</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-building me-2"></i>Vendors</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -315,7 +315,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-globe mr-2"></i>Domains</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-globe me-2"></i>Domains</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -359,7 +359,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-box mr-2"></i>Products</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-box me-2"></i>Products</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -398,7 +398,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-file-alt mr-2"></i>Documents</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-file-alt me-2"></i>Documents</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -442,7 +442,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-paperclip mr-2"></i>Files</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-paperclip me-2"></i>Files</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -492,7 +492,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-life-ring mr-2"></i>Tickets</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-life-ring me-2"></i>Tickets</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -542,7 +542,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-undo-alt mr-2"></i>Recurring Tickets</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-undo-alt me-2"></i>Recurring Tickets</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -585,13 +585,13 @@ if (isset($_GET['query'])) {
         <?php } ?>
 
 
-        <?php if (mysqli_num_rows($sql_credentials) > 0) { ?>
+        <?php if (lookupUserPermission('module_credential') && mysqli_num_rows($sql_credentials) > 0) { // Begin Credential Enforcement ?>
 
             <!-- Credentials -->
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-fw fa-key mr-2"></i>Credentials</h3>
+                        <h3 class="card-title"><i class="fas fa-fw fa-key me-2"></i>Credentials</h3>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -621,7 +621,7 @@ if (isset($_GET['query'])) {
                                     <td><a href="credentials.php?client_id=<?php echo $credential_client_id ?>&q=<?php echo $q ?>"><?php echo $credential_name; ?></a></td>
                                     <td><?php echo $credential_description; ?></td>
                                     <td><?php echo $credential_username; ?></td>
-                                    <td><a tabindex="0" class="btn btn-sm" data-toggle="popover" data-trigger="focus" data-placement="left" data-content="<?php echo $credential_password; ?>"><i class="far fa-eye text-secondary"></i></a><button class="btn btn-sm clipboardjs" data-clipboard-text="<?php echo $credential_password; ?>"><i class="far fa-copy text-secondary"></i></button>
+                                    <td><a tabindex="0" class="btn btn-sm" data-bs-toggle="popover" data-trigger="focus" data-placement="left" data-content="<?php echo $credential_password; ?>"><i class="far fa-eye text-secondary"></i></a><button class="btn btn-sm clipboardjs" data-clipboard-text="<?php echo $credential_password; ?>"><i class="far fa-copy text-secondary"></i></button>
                                     </td>
                                     <td><a href="credentials.php?client_id=<?php echo $client_id; ?>"><?php echo $client_name; ?></a></td>
                                 </tr>
@@ -644,7 +644,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-file-invoice mr-2"></i>Quotes</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-file-invoice me-2"></i>Quotes</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -695,7 +695,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-file-invoice mr-2"></i>Invoices</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-file-invoice me-2"></i>Invoices</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -746,7 +746,7 @@ if (isset($_GET['query'])) {
             <div class="col-sm-6">
                 <div class="card card-dark mb-3">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-desktop mr-2"></i>Assets</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-desktop me-2"></i>Assets</h6>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped table-borderless">
@@ -806,9 +806,9 @@ if (isset($_GET['query'])) {
                                 ?>
                                 <tr>
                                     <td>
-                                        <i class="fa fa-fw text-secondary fa-<?php echo $device_icon; ?> mr-2"></i><a href="asset_details.php?client_id=<?php echo $client_id; ?>&asset_id=<?php echo $asset_id; ?>"><?php echo $asset_name; ?></a>
+                                        <i class="fa fa-fw text-secondary fa-<?php echo $device_icon; ?> me-2"></i><a href="asset_details.php?client_id=<?php echo $client_id; ?>&asset_id=<?php echo $asset_id; ?>"><?php echo $asset_name; ?></a>
                                         <?php if(!empty($asset_uri)){ ?>
-                                            <a href="<?php echo $asset_uri; ?>" target="_blank"><i class="fas fa-fw fa-external-link-alt ml-2"></i></a>
+                                            <a href="<?php echo $asset_uri; ?>" target="_blank"><i class="fas fa-fw fa-external-link-alt ms-2"></i></a>
                                         <?php } ?>
                                     </td>
                                     <td><?php echo $asset_type; ?></td>
@@ -836,7 +836,7 @@ if (isset($_GET['query'])) {
 
                 <div class="card card-dark">
                     <div class="card-header">
-                        <h6 class="card-title"><i class="fas fa-fw fa-reply mr-2"></i>Ticket Replies</h6>
+                        <h6 class="card-title"><i class="fas fa-fw fa-reply me-2"></i>Ticket Replies</h6>
                     </div>
                     <div class="card-body">
 
@@ -879,7 +879,7 @@ if (isset($_GET['query'])) {
                         // Output the ticket reply
                         ?>
                         <div class="media">
-                            <i class="fas fa-fw fa-reply mr-3"></i>
+                            <i class="fas fa-fw fa-reply me-3"></i>
                             <div class="media-body">
                                 <?php echo $ticket_reply; ?>
                             </div>

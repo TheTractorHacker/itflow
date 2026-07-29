@@ -165,7 +165,6 @@ if ($item_type == "Document") {
 
 
 } elseif ($item_type == "Credential") {
-    $encryption_key = $_GET['ek'];
 
     $credential_sql = mysqli_query($mysqli, "SELECT * FROM credentials WHERE credential_id = $item_related_id AND credential_client_id = $client_id LIMIT 1");
     $credential_row = mysqli_fetch_assoc($credential_sql);
@@ -179,35 +178,17 @@ if ($item_type == "Document") {
     $credential_id = intval($credential_row['credential_id']);
     $credential_name = nullable_htmlentities($credential_row['credential_name']);
     $credential_uri = nullable_htmlentities($credential_row['credential_uri']);
-
-    $username_iv = substr($row['item_encrypted_username'], 0, 16);
-    $username_ciphertext = substr($row['item_encrypted_username'], 16);
-    $credential_username = nullable_htmlentities(openssl_decrypt($username_ciphertext, 'aes-128-cbc', $encryption_key, 0, $username_iv));
-
-    $password_iv = substr($row['item_encrypted_credential'], 0, 16);
-    $password_ciphertext = substr($row['item_encrypted_credential'], 16);
-    $credential_password = nullable_htmlentities(openssl_decrypt($password_ciphertext, 'aes-128-cbc', $encryption_key, 0, $password_iv));
-
-    // Read OTP from the share item (re-encrypted with the share key) rather than from the credentials table
-    $credential_otp_raw = '';
-    if (!empty($row['item_encrypted_otp'])) {
-        $otp_iv = substr($row['item_encrypted_otp'], 0, 16);
-        $otp_ct = substr($row['item_encrypted_otp'], 16);
-        $credential_otp_raw = openssl_decrypt($otp_ct, 'aes-128-cbc', $encryption_key, 0, $otp_iv) ?: '';
-    }
-    $credential_otp = nullable_htmlentities($credential_otp_raw);
-
-    $credential_otp_secret = nullable_htmlentities($credential_otp_raw);
-    $credential_id_with_secret = '"' . $credential_row['credential_id'] . '","' . $credential_otp_raw . '"';
-    if (empty($credential_otp_secret)) {
-        $otp_display = "-";
-    } else {
-        $otp_display = "<span onmouseenter='showOTP($credential_id_with_secret)'><i class='far fa-clock'></i> <span id='otp_$credential_id'><i>Hover..</i></span></span>";
-    }
-
     $credential_notes = nullable_htmlentities($credential_row['credential_note']);
 
-
+    // The AES key ('ek') is passed in the URL fragment (see agent/ajax.php), which is
+    // never sent to the server - so it can't be read from $_GET/$_SERVER here at all.
+    // Decryption happens client-side in JS after reading window.location.hash; the
+    // values below are the raw encrypted blobs, base64-encoded only so they can be
+    // embedded safely as HTML attributes (this is NOT the decryption key and reveals
+    // nothing without 'ek').
+    $enc_username_b64 = base64_encode($row['item_encrypted_username'] ?? '');
+    $enc_password_b64 = base64_encode($row['item_encrypted_credential'] ?? '');
+    $enc_otp_b64 = !empty($row['item_encrypted_otp']) ? base64_encode($row['item_encrypted_otp']) : '';
 
     ?>
 
@@ -219,36 +200,106 @@ if ($item_type == "Document") {
         </tr>
         <tr>
             <th>Username</th>
-            <td><?php echo $credential_username ?></td>
+            <td><span id="credUsername" class="js-shared-credential-field" data-enc="<?= $enc_username_b64 ?>">Decrypting&hellip;</span></td>
         </tr>
         <tr>
             <th>Password</th>
-            <td><?php echo $credential_password ?></td>
+            <td><span id="credPassword" class="js-shared-credential-field" data-enc="<?= $enc_password_b64 ?>">Decrypting&hellip;</span></td>
         </tr>
-        <?php if(!empty($credential_otp_secret)){ ?>
+        <?php if (!empty($enc_otp_b64)) { ?>
         <tr>
             <th>2FA (TOTP)</th>
-            <td><?php echo $otp_display ?></td>
+            <td>
+                <span class="js-show-otp" data-enc="<?= $enc_otp_b64 ?>" data-credential-id="<?= $credential_id ?>">
+                    <i class="far fa-clock"></i> <span id="otp_<?= $credential_id ?>"><i>Hover..</i></span>
+                </span>
+            </td>
         </tr>
         <?php } ?>
 
     </table>
 
-    <script>
-        function showOTP(id, secret) {
-            //Send a GET request to ajax.php as guest_ajax.php?get_totp_token=true&totp_secret=SECRET
-            jQuery.get(
-                "/agent/ajax.php",
-                {get_totp_token: 'true', totp_secret: secret},
-                function(data) {
-                    //If we get a response from post.php, parse it as JSON
-                    const token = JSON.parse(data);
+    <noscript>
+        <div class="alert alert-warning mt-2">This page requires JavaScript to decrypt and display the shared login.</div>
+    </noscript>
+    <div id="sharedCredentialKeyMissing" class="alert alert-danger mt-2 d-none">
+        Check your link - the decryption key is missing or the link was copied incorrectly. Please use the original link you were sent.
+    </div>
 
-                    document.getElementById("otp_" + id).innerText = token
+    <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+        (function () {
+            // 'ek' lives only in the URL fragment (never transmitted to the server) -
+            // see the PHP comment above for why.
+            var hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+            var ek = hashParams.get('ek');
 
-                }
-            );
-        }
+            function showKeyMissing() {
+                document.getElementById('sharedCredentialKeyMissing').classList.remove('d-none');
+                document.querySelectorAll('.js-shared-credential-field').forEach(function (el) {
+                    el.textContent = '(unavailable)';
+                });
+            }
+
+            if (!ek) {
+                showKeyMissing();
+                return;
+            }
+
+            function b64ToBytes(b64) {
+                var bin = atob(b64);
+                var bytes = new Uint8Array(bin.length);
+                for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                return bytes;
+            }
+
+            // Matches agent/ajax.php's share encryption: a raw 16-byte IV followed by
+            // openssl_encrypt()'s default (base64-encoded) AES-128-CBC ciphertext, the
+            // whole blob then base64-encoded again server-side purely for safe HTML
+            // attribute embedding (decoded back out again here).
+            function decryptField(enc, keyStr) {
+                if (!enc) return Promise.resolve('');
+                var combined = b64ToBytes(enc);
+                var iv = combined.slice(0, 16);
+                var cipherB64 = new TextDecoder().decode(combined.slice(16));
+                var cipherBytes = b64ToBytes(cipherB64);
+                var keyBytes = new TextEncoder().encode(keyStr);
+                return crypto.subtle.importKey('raw', keyBytes, {name: 'AES-CBC'}, false, ['decrypt'])
+                    .then(function (cryptoKey) {
+                        return crypto.subtle.decrypt({name: 'AES-CBC', iv: iv}, cryptoKey, cipherBytes);
+                    })
+                    .then(function (plainBuf) {
+                        return new TextDecoder().decode(plainBuf);
+                    });
+            }
+
+            document.querySelectorAll('.js-shared-credential-field').forEach(function (el) {
+                decryptField(el.dataset.enc, ek).then(function (plain) {
+                    el.textContent = plain || '-';
+                }).catch(function () {
+                    el.textContent = '(decryption failed)';
+                });
+            });
+
+            // Delegated listener (CSP blocks inline onmouseenter= attributes) - lazily
+            // decrypts and fetches the current TOTP code the first time each OTP field
+            // is hovered.
+            document.addEventListener('mouseover', function (e) {
+                var trigger = e.target.closest && e.target.closest('.js-show-otp');
+                if (!trigger || trigger.dataset.otpLoaded) return;
+                trigger.dataset.otpLoaded = '1';
+                decryptField(trigger.dataset.enc, ek).then(function (secret) {
+                    if (!secret) return;
+                    jQuery.get(
+                        '/agent/ajax.php',
+                        {get_totp_token: 'true', totp_secret: secret},
+                        function (data) {
+                            var token = JSON.parse(data);
+                            document.getElementById('otp_' + trigger.dataset.credentialId).innerText = token;
+                        }
+                    );
+                });
+            });
+        })();
 
         function generatePassword() {
             document.getElementById("password").value = "<?php echo randomString(); ?>"
@@ -277,7 +328,7 @@ if ($item_type == "Document") {
 
 </div>
 <div class="card-footer">
-<?php echo "<i class='fas fa-phone fa-fw mr-2'></i>$company_phone | <i class='fas fa-globe fa-fw mr-2 ml-2'></i>$company_website"; ?>
+<?php echo "<i class='fas fa-phone fa-fw me-2'></i>$company_phone | <i class='fas fa-globe fa-fw me-2 ms-2'></i>$company_website"; ?>
 </div>
 
 <?php

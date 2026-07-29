@@ -5,9 +5,9 @@ require_once '../../../includes/modal_header.php';
 ob_start();
 
 ?>
-<div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fas fa-fw fa-user-shield mr-2"></i>New Role</h5>
-    <button type="button" class="close text-white" data-dismiss="modal">
+<div class="modal-header">
+    <h5 class="modal-title"><i class="fas fa-fw fa-user-shield me-2"></i>New Role</h5>
+    <button type="button" class="close" data-bs-dismiss="modal">
         <span>&times;</span>
     </button>
 </div>
@@ -19,10 +19,10 @@ ob_start();
 
         <ul class="nav nav-pills nav-justified mb-3">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="pill" href="#pills-role-details">Details</a>
+                <a class="nav-link active" data-bs-toggle="pill" href="#pills-role-details">Details</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="pill" href="#pills-role-permissions">Permissions</a>
+                <a class="nav-link" data-bs-toggle="pill" href="#pills-role-permissions">Permissions</a>
             </li>
         </ul>
 
@@ -56,16 +56,16 @@ ob_start();
                 <div class="form-group">
                     <label>Admin Access <strong class="text-danger">*</strong></label>
 
-                    <div class="custom-control custom-radio mb-2">
-                        <input type="radio" class="custom-control-input" id="admin_no" name="role_is_admin" value="0" checked required>
-                        <label class="custom-control-label" for="admin_no">
+                    <div class="form-check form-check mb-2">
+                        <input type="radio" class="form-check-input" id="admin_no" name="role_is_admin" value="0" checked required>
+                        <label class="form-check-label" for="admin_no">
                             No - use permissions on the next tab
                         </label>
                     </div>
 
-                    <div class="custom-control custom-radio">
-                        <input type="radio" class="custom-control-input" id="admin_yes" name="role_is_admin" value="1" required>
-                        <label class="custom-control-label" for="admin_yes">
+                    <div class="form-check form-check">
+                        <input type="radio" class="form-check-input" id="admin_yes" name="role_is_admin" value="1" required>
+                        <label class="form-check-label" for="admin_yes">
                             Yes - this role should have full admin access
                         </label>
                     </div>
@@ -101,7 +101,7 @@ ob_start();
                     <div class="form-group">
                         <label><?= $module_name_display_safe ?> <strong class="text-danger">*</strong></label>
 
-                        <div class="btn-group btn-group-toggle btn-block" data-toggle="buttons" role="group"
+                        <div class="btn-group js-btn-group-toggle btn-block" role="group"
                              aria-label="Permissions for <?= $module_name_display_safe ?>">
 
                             <label class="btn btn-outline-secondary btn-sm active" title="No Access">
@@ -125,7 +125,7 @@ ob_start();
                                     value="1"
                                     autocomplete="off"
                                 >
-                                <i class="fas fa-fw fa-eye mr-1"></i>Read
+                                <i class="fas fa-fw fa-eye me-1"></i>Read
                             </label>
 
                             <label class="btn btn-outline-warning btn-sm" title="Read, Edit, Archive">
@@ -136,7 +136,7 @@ ob_start();
                                     value="2"
                                     autocomplete="off"
                                 >
-                                <i class="fas fa-fw fa-edit mr-1"></i>Modify
+                                <i class="fas fa-fw fa-edit me-1"></i>Modify
                             </label>
 
                             <label class="btn btn-outline-danger btn-sm" title="Read, Edit, Archive, Delete">
@@ -147,7 +147,7 @@ ob_start();
                                     value="3"
                                     autocomplete="off"
                                 >
-                                <i class="fas fa-fw fa-trash mr-1"></i>Full
+                                <i class="fas fa-fw fa-trash me-1"></i>Full
                             </label>
 
                         </div>
@@ -164,15 +164,15 @@ ob_start();
 
     <div class="modal-footer">
         <button type="submit" name="add_role" class="btn btn-primary text-bold">
-            <i class="fas fa-check mr-2"></i>Create
+            <i class="fas fa-check me-2"></i>Create
         </button>
-        <button type="button" class="btn btn-light" data-dismiss="modal">
-            <i class="fas fa-times mr-2"></i>Cancel
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Cancel
         </button>
     </div>
 </form>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
     // Optional: when Admin Yes is selected, disable permission radios + switch to Details tab
     (function () {
         function setPermissionsEnabled(enabled) {

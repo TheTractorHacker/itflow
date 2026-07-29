@@ -68,8 +68,9 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $tmpl_name ?> — <?= $client_name ?></title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/plugins/bootstrap5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/itflow_bs5_bridge.css">
+    <link rel="stylesheet" href="/plugins/fontawesome-free/css/all.min.css">
     <style>
         body { background: #f4f6f9; font-family: Arial, sans-serif; }
         .outtake-card { max-width: 780px; margin: 30px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.1); overflow: hidden; }
@@ -120,14 +121,14 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
     <?php if ($already_signed) { ?>
     <!-- Already Signed -->
     <div class="signed-box">
-        <h5 class="text-success mb-2"><i class="fas fa-check-circle mr-2"></i>Form Signed</h5>
+        <h5 class="text-success mb-2"><i class="fas fa-check-circle me-2"></i>Form Signed</h5>
         <p class="mb-1">Signed by <strong><?= $signed_name ?></strong> on <?= date('M j, Y g:i A', strtotime($signed_at)) ?></p>
         <?php if ($existing_sig) { ?>
         <img src="<?= htmlspecialchars($existing_sig, ENT_QUOTES, 'UTF-8') ?>" style="max-height:80px; border:1px solid #ccc; border-radius:4px; background:#fff; display:block; margin-top:8px;">
         <?php } ?>
     </div>
     <div class="text-center py-3 no-print">
-        <button onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="fas fa-print mr-1"></i>Print / Save PDF</button>
+        <button class="btn btn-outline-secondary btn-sm js-print-page"><i class="fas fa-print me-1"></i>Print / Save PDF</button>
     </div>
 
     <?php } else { ?>
@@ -184,7 +185,7 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
                 <label style="font-size:13px; color:#666; font-weight:600;"><?= $fname ?> <?= $freq ? '<span style="color:red">*</span>' : '' ?></label>
                 <canvas id="sig_canvas_<?= $fid ?>"></canvas>
                 <input type="hidden" name="field_<?= $fid ?>" id="sig_data_<?= $fid ?>">
-                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="clearCanvas(<?= $fid ?>)">Clear</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1 js-clear-sig-canvas" data-sig-id="<?= $fid ?>">Clear</button>
             </div>
         <?php } else { ?>
             <div class="field-row">
@@ -217,7 +218,7 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
             <canvas id="sig_canvas_main"></canvas>
             <input type="hidden" name="main_signature" id="sig_data_main">
             <div class="d-flex mt-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="clearCanvas('main')">Clear</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary me-2 js-clear-sig-canvas" data-sig-id="main">Clear</button>
                 <small class="text-secondary align-self-center">Draw your signature above</small>
             </div>
             <div class="form-check mt-3 mb-3">
@@ -228,7 +229,7 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
             </div>
             <div class="mt-2">
                 <button type="submit" name="sign_worksheet" class="btn btn-success btn-block btn-lg">
-                    <i class="fas fa-check-circle mr-2"></i>Submit & Sign Outtake Form
+                    <i class="fas fa-check-circle me-2"></i>Submit & Sign Outtake Form
                 </button>
             </div>
         </div>
@@ -238,7 +239,7 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
     <?php } // end not-signed ?>
 </div>
 
-<script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 var sigPads = {};
 function initSig(id) {
     var c = document.getElementById('sig_canvas_' + id);
@@ -257,6 +258,10 @@ function initSig(id) {
 }
 function save(id) { var c=sigPads[id]; if(c) document.getElementById('sig_data_'+id).value=c.toDataURL(); }
 function clearCanvas(id) { var c=sigPads[id]; if(c){c.getContext('2d').clearRect(0,0,c.width,c.height); document.getElementById('sig_data_'+id).value='';} }
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-clear-sig-canvas');
+    if (btn) { clearCanvas(btn.dataset.sigId); }
+});
 document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('canvas[id^="sig_canvas_"]').forEach(function(c){
         initSig(c.id.replace('sig_canvas_',''));

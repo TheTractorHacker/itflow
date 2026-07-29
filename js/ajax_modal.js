@@ -1,81 +1,136 @@
-// Ajax Modal Load Script
+// Ajax Modal Load Script (Bootstrap 5 / vanilla fetch)
 
-// Reusable helper: fetch modal content via AJAX and show it in a Bootstrap modal.
-// options: { modalTab, onShown($modal), onHidden(), onError(error) }
+// <script> elements inserted via innerHTML are inert per the HTML spec - the browser
+// parses them into the DOM but never executes them. Since modal content below is
+// injected via wrapper.innerHTML, every modal-local inline <script> (SLA hints,
+// template autofill, tag/select wiring, etc.) would otherwise silently never run.
+// This clones each script node into a freshly-created <script> element (which DOES
+// execute when attached), preserving a valid CSP nonce along the way.
+function executeInjectedScripts(container) {
+  // window.CSP_NONCE is set once, server-side, in includes/footer.php - reading
+  // a plain global is reliable, unlike trying to read another script tag's live
+  // .nonce IDL property (which - at least in this app's testing - came back empty
+  // and left every AJAX-modal script silently CSP-blocked).
+  var pageNonce = window.CSP_NONCE || '';
+
+  // Run scripts one at a time, in document order. A synchronous forEach isn't
+  // enough: an external <script src> (e.g. a plugin) fetches in the background,
+  // and a later INLINE script that depends on it would still run immediately on
+  // the next loop iteration, before the plugin finishes loading. Each external
+  // script's own load/error event is what advances to the next one; inline
+  // scripts execute synchronously the moment they're attached, so they advance
+  // immediately.
+  var oldScripts = Array.prototype.slice.call(container.querySelectorAll('script'));
+
+  function runNext(i) {
+    if (i >= oldScripts.length) { return; }
+    var oldScript = oldScripts[i];
+    var newScript = document.createElement('script');
+    for (var j = 0; j < oldScript.attributes.length; j++) {
+      var attr = oldScript.attributes[j];
+      if (attr.name.toLowerCase() !== 'nonce') {
+        newScript.setAttribute(attr.name, attr.value);
+      }
+    }
+    if (pageNonce) { newScript.nonce = pageNonce; }
+    newScript.textContent = oldScript.textContent;
+
+    if (newScript.src) {
+      newScript.addEventListener('load', function () { runNext(i + 1); });
+      newScript.addEventListener('error', function () { runNext(i + 1); });
+      oldScript.replaceWith(newScript);
+    } else {
+      oldScript.replaceWith(newScript);
+      runNext(i + 1);
+    }
+  }
+
+  runNext(0);
+}
+
+// Reusable helper: fetch modal content via fetch() and show it in a Bootstrap 5 modal.
+// options: { modalTab, onShown(modalEl), onHidden(), onError(error) }
 window.openAjaxModal = function (modalUrl, modalSize, options) {
   options = options || {};
   modalSize = modalSize || 'md';
   const modalId = 'ajaxModal_' + Date.now();
 
-  // Show loading spinner while fetching content
-  const loadingSpinner = `
-    <div id="modal-loading-spinner" class="text-center p-5">
-      <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-    </div>`;
-  $('.content-wrapper').append(loadingSpinner);
+  // Where dynamically-loaded modals live (AL4 renamed .content-wrapper -> .app-content)
+  const host = document.querySelector('.app-content') || document.querySelector('.app-wrapper') || document.body;
 
-  // Make AJAX request
-  $.ajax({
-    url: modalUrl,
-    method: 'GET',
-    dataType: 'json',
-    success: function (response) {
-      $('#modal-loading-spinner').remove();
+  // Show a loading spinner while fetching content
+  const spinner = document.createElement('div');
+  spinner.id = 'modal-loading-spinner';
+  spinner.className = 'text-center p-5';
+  spinner.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x text-muted"></i>';
+  host.appendChild(spinner);
 
-      if (response.error) {
-        alert(response.error);
-        if (options.onError) options.onError(response.error);
+  fetch(modalUrl, { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function (response) {
+      if (!response.ok) { throw new Error('HTTP ' + response.status); }
+      return response.json();
+    })
+    .then(function (data) {
+      spinner.remove();
+
+      if (data.error) {
+        alert(data.error);
+        if (options.onError) { options.onError(data.error); }
         return;
       }
 
-      const modalHtml = `
-        <div class="modal fade" id="${modalId}" tabindex="-1">
-          <div class="modal-dialog modal-${modalSize}">
-            <div class="modal-content border-dark">
-              ${response.content}
-            </div>
-          </div>
-        </div>`;
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML =
+        '<div class="modal fade" id="' + modalId + '" tabindex="-1">' +
+          '<div class="modal-dialog modal-' + modalSize + '">' +
+            '<div class="modal-content border-dark">' +
+              data.content +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      const modalEl = wrapper.firstElementChild;
+      host.appendChild(modalEl);
+      executeInjectedScripts(modalEl);
 
-      $('.content-wrapper').append(modalHtml);
-      const $modal = $('#' + modalId);
-      $modal.modal('show');
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
 
       // Optionally jump straight to a specific pill/tab inside the modal
       if (options.modalTab) {
-        $modal.find('a[href="#' + options.modalTab + '"]').tab('show');
+        const tabTrigger = modalEl.querySelector('a[href="#' + options.modalTab + '"], [data-bs-target="#' + options.modalTab + '"]');
+        if (tabTrigger) { bootstrap.Tab.getOrCreateInstance(tabTrigger).show(); }
       }
 
-      $modal.on('hidden.bs.modal', function () {
-        $(this).remove();
-        if (options.onHidden) options.onHidden();
+      // Auto-remove the modal element from the DOM once it's dismissed
+      modalEl.addEventListener('hidden.bs.modal', function () {
+        modalEl.remove();
+        if (options.onHidden) { options.onHidden(); }
       });
 
-      if (options.onShown) options.onShown($modal);
-    },
-    error: function (xhr, status, error) {
-      $('#modal-loading-spinner').remove();
+      if (options.onShown) { options.onShown(modalEl); }
+    })
+    .catch(function (error) {
+      const s = document.getElementById('modal-loading-spinner');
+      if (s) { s.remove(); }
       alert('Error loading modal content. Please try again.');
-      console.error('Modal AJAX Error:', status, error);
-      if (options.onError) options.onError(error);
-    }
-  });
+      console.error('Modal fetch error:', error);
+      if (options.onError) { options.onError(error); }
+    });
 };
 
-$(document).on('click', '.ajax-modal', function (e) {
+document.addEventListener('click', function (e) {
+  const trigger = e.target.closest('.ajax-modal');
+  if (!trigger) { return; }
   e.preventDefault();
 
-  const $trigger  = $(this);
+  // Prefer data-modal-url, fallback to href — read the live DOM attribute so
+  // bulk_actions.js updates via setAttribute are honored.
+  let modalUrl = trigger.getAttribute('data-modal-url') || trigger.getAttribute('href') || '#';
+  const modalSize = trigger.getAttribute('data-modal-size') || 'md';
+  const modalTab = trigger.getAttribute('data-modal-tab');
 
-  // Prefer data-modal-url, fallback to href — use .attr() not .data() so we
-  // always read the live DOM attribute (bulk_actions.js updates it via setAttribute).
-  let modalUrl = $trigger.attr('data-modal-url') || $trigger.attr('href') || '#';
-  const modalSize = $trigger.data('modal-size') || 'md';
-  const modalTab = $trigger.data('modal-tab');
-
-  // If no usable URL, bail
   if (!modalUrl || modalUrl === '#') {
-    console.warn('ajax-modal: No modal URL found on trigger:', this);
+    console.warn('ajax-modal: No modal URL found on trigger:', trigger);
     return;
   }
 

@@ -31,23 +31,23 @@ ob_start();
 ?>
 
 <div class="modal-header bg-dark">
-    <h5 class="modal-title"><i class="fa fa-fw fa-file-contract mr-2"></i>Edit Contract Template</h5>
-    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+    <h5 class="modal-title"><i class="fa fa-fw fa-file-contract me-2"></i>Edit Contract Template</h5>
+    <button type="button" class="close text-white" data-bs-dismiss="modal"><span>&times;</span></button>
 </div>
 
 <!-- Tabs Navigation -->
 <ul class="modal-header nav nav-pills nav-justified">
     <li class="nav-item">
-        <a class="nav-link active" id="general-tab" data-toggle="tab" href="#general" role="tab">General Info</a>
+        <a class="nav-link active" id="general-tab" data-bs-toggle="tab" href="#general" role="tab">General Info</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="sla-tab" data-toggle="tab" href="#sla" role="tab">SLA</a>
+        <a class="nav-link" id="sla-tab" data-bs-toggle="tab" href="#sla" role="tab">SLA</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="rates-tab" data-toggle="tab" href="#rates" role="tab">Rates & Support</a>
+        <a class="nav-link" id="rates-tab" data-bs-toggle="tab" href="#rates" role="tab">Rates & Support</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="details-tab" data-toggle="tab" href="#details" role="tab">Details</a>
+        <a class="nav-link" id="details-tab" data-bs-toggle="tab" href="#details" role="tab">Details</a>
     </li>
 </ul>
 
@@ -253,10 +253,10 @@ ob_start();
 
     <div class="modal-footer">
         <button type="submit" name="edit_contract_template" class="btn btn-primary text-bold">
-            <i class="fa fa-check mr-2"></i>Save Changes
+            <i class="fa fa-check me-2"></i>Save Changes
         </button>
-        <button type="button" class="btn btn-light" data-dismiss="modal">
-            <i class="fa fa-times mr-2"></i>Cancel
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            <i class="fa fa-times me-2"></i>Cancel
         </button>
     </div>
 </form>
