@@ -4511,6 +4511,13 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
     // Up-to-date
 }
 
+    if (CURRENT_DATABASE_VERSION == '2.4.9') {
+        // 2.4.9/2.4.10 never had schema changes defined for them - this block only
+        // exists to close the gap so an install parked at exactly 2.4.9 isn't stuck
+        // forever (the next real migration block below starts at 2.4.11).
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.11'");
+    }
+
     if (CURRENT_DATABASE_VERSION == '2.4.11') {
 
         mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `api_tokens` (
@@ -4528,7 +4535,7 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
           KEY `token_user_id` (`token_user_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        mysqli_query($mysqli, "UPDATE `settings` SET ``config_current_database_version` = '2.4.12'");
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.4.12'");
     }
 
     if (CURRENT_DATABASE_VERSION == '2.4.12') {
@@ -5953,4 +5960,64 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
         mysqli_query($mysqli, "UPDATE `categories` SET `category_color` = '#6c757d' WHERE `category_type` = 'asset_status' AND `category_name` = 'Retired' AND `category_color` IS NULL");
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.36'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.36') {
+
+        // CSAT: upgrade the binary Good/Bad ticket_feedback rating to a proper 1-5
+        // star scale + optional comment. ticket_feedback is left in place, untouched,
+        // and is no longer written to by any handler after this version - kept only
+        // so nothing reading it directly at the DB level breaks.
+        mysqli_query($mysqli, "ALTER TABLE `tickets`
+            ADD COLUMN IF NOT EXISTS `ticket_csat_rating` tinyint(4) DEFAULT NULL COMMENT '1-5 CSAT star rating, NULL = not yet rated' AFTER `ticket_feedback`,
+            ADD COLUMN IF NOT EXISTS `ticket_csat_comment` text DEFAULT NULL AFTER `ticket_csat_rating`,
+            ADD COLUMN IF NOT EXISTS `ticket_csat_rated_at` datetime DEFAULT NULL AFTER `ticket_csat_comment`,
+            ADD COLUMN IF NOT EXISTS `ticket_csat_reminded_at` datetime DEFAULT NULL AFTER `ticket_csat_rated_at`");
+
+        // One-time backfill so legacy Good/Bad tickets still contribute to the new
+        // 1-5 average/trend views instead of CSAT history appearing to start empty
+        // on upgrade day. Good -> 5, Bad -> 1 (the two extremes of the new scale -
+        // the only honest mapping of a binary rating onto a 5-point one). There's no
+        // historical timestamp for when the old rating was submitted, so
+        // ticket_closed_at (the earliest point a rating could have been given) is
+        // used as the closest available approximation. Idempotent: only touches rows
+        // that don't already have a rating.
+        mysqli_query($mysqli, "UPDATE `tickets`
+            SET `ticket_csat_rating` = CASE `ticket_feedback` WHEN 'Good' THEN 5 WHEN 'Bad' THEN 1 ELSE NULL END,
+                `ticket_csat_rated_at` = `ticket_closed_at`
+            WHERE `ticket_feedback` IN ('Good', 'Bad') AND `ticket_csat_rating` IS NULL");
+
+        // Settings: master enable + reminder delay + low-rating follow-up threshold.
+        mysqli_query($mysqli, "ALTER TABLE `settings`
+            ADD COLUMN IF NOT EXISTS `config_ticket_csat_enable` tinyint(1) NOT NULL DEFAULT 1 AFTER `config_ticket_autoclose_hours`,
+            ADD COLUMN IF NOT EXISTS `config_ticket_csat_reminder_days` int(5) NOT NULL DEFAULT 3 AFTER `config_ticket_csat_enable`,
+            ADD COLUMN IF NOT EXISTS `config_ticket_csat_low_rating_threshold` tinyint(4) NOT NULL DEFAULT 2 AFTER `config_ticket_csat_reminder_days`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.37'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.37') {
+        // Adds an atomic-claim state to the QBO sync queue: cron/cron.php (hourly),
+        // cron/accounting_sync_standalone.php (every 15m), and the "sync now" button
+        // in admin/settings_accounting.php can all pick up the same pending job
+        // concurrently. 'processing' lets accountingSyncProcessJob() claim a job with
+        // a single conditional UPDATE before doing any work, closing that race.
+        mysqli_query($mysqli, "ALTER TABLE `accounting_sync_queue` MODIFY COLUMN `queue_status` enum('pending','processing','delivered','failed') NOT NULL DEFAULT 'pending'");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.38'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.38') {
+        // rmm_scripts.tactical_script_id is a single int reused for BOTH Tactical
+        // RMM and Level.io's numeric script IDs, with no per-integration scoping -
+        // a Level script whose ID happens to collide with an existing Tactical
+        // script's ID silently overwrites that row's name/body/type on sync. Adds
+        // rmm_integration_id so agent/post/rmm_sync.php can scope the lookup.
+        // Existing rows predate Level support and were all synced from the
+        // Tactical integration, so they backfill to that integration's id.
+        mysqli_query($mysqli, "ALTER TABLE `rmm_scripts` ADD COLUMN IF NOT EXISTS `rmm_integration_id` int(11) NOT NULL DEFAULT 0 AFTER `tactical_script_id`");
+        mysqli_query($mysqli, "UPDATE `rmm_scripts` SET `rmm_integration_id` = (SELECT id FROM rmm_integrations WHERE type = 'tactical_rmm' ORDER BY id ASC LIMIT 1) WHERE `rmm_integration_id` = 0");
+        mysqli_query($mysqli, "ALTER TABLE `rmm_scripts` ADD INDEX IF NOT EXISTS `idx_integration_script` (`rmm_integration_id`, `tactical_script_id`)");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.39'");
     }

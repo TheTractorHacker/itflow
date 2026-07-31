@@ -23,9 +23,24 @@ $sql_all_years = mysqli_query($mysqli, "SELECT YEAR(expense_date) AS all_years F
     ORDER BY all_years DESC"
 );
 
+// Fetched into arrays (rather than looped directly as a mysqli result) so an
+// "Uncategorized" (category_id = 0) row can be appended below - without it,
+// invoices/expenses never assigned a category would be counted in the Gross
+// Revenue / Total Expenses headline figures but never appear in any category
+// row, so the breakdown could never sum to the total it's supposed to explain.
+$income_categories = [];
 $sql_categories_income = mysqli_query($mysqli, "SELECT * FROM categories WHERE category_type = 'Income' ORDER BY category_name ASC");
+while ($row = mysqli_fetch_assoc($sql_categories_income)) {
+    $income_categories[] = $row;
+}
+$income_categories[] = ['category_id' => 0, 'category_name' => 'Uncategorized'];
 
+$expense_categories = [];
 $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE category_type = 'Expense' ORDER BY category_name ASC");
+while ($row = mysqli_fetch_assoc($sql_categories_expense)) {
+    $expense_categories[] = $row;
+}
+$expense_categories[] = ['category_id' => 0, 'category_name' => 'Uncategorized'];
 
 
 ?>
@@ -71,7 +86,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                     </thead>
                     <tbody>
                     <?php
-                    while ($row = mysqli_fetch_assoc($sql_categories_income)) {
+                    foreach ($income_categories as $row) {
                         $category_id = intval($row['category_id']);
                         $category_name = nullable_htmlentities($row['category_name']);
                         ?>
@@ -172,8 +187,6 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
 
                         <?php
 
-                        $total_payment_for_all_months = 0;
-
                     }
 
                     ?>
@@ -189,7 +202,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                             $row = mysqli_fetch_assoc($sql_payments);
                             $payment_total_amount_for_month = floatval($row['payment_total_amount_for_month']);
 
-                            $sql_revenues = mysqli_query($mysqli, "SELECT SUM(revenue_amount) AS revenue_total_amount_for_month FROM revenues WHERE revenue_category_id > 0 AND YEAR(revenue_date) = $year AND MONTH(revenue_date) = $month");
+                            $sql_revenues = mysqli_query($mysqli, "SELECT SUM(revenue_amount) AS revenue_total_amount_for_month FROM revenues WHERE YEAR(revenue_date) = $year AND MONTH(revenue_date) = $month");
                             $row = mysqli_fetch_assoc($sql_revenues);
                             $revenue_total_amount_for_month = floatval($row['revenue_total_amount_for_month']);
 
@@ -211,7 +224,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                             $row = mysqli_fetch_assoc($sql_payments);
                             $payment_total_amount_for_month = floatval($row['payment_total_amount_for_month']);
 
-                            $sql_revenues = mysqli_query($mysqli, "SELECT SUM(revenue_amount) AS revenue_total_amount_for_month FROM revenues WHERE revenue_category_id > 0 AND YEAR(revenue_date) = $year AND MONTH(revenue_date) = $month");
+                            $sql_revenues = mysqli_query($mysqli, "SELECT SUM(revenue_amount) AS revenue_total_amount_for_month FROM revenues WHERE YEAR(revenue_date) = $year AND MONTH(revenue_date) = $month");
                             $row = mysqli_fetch_assoc($sql_revenues);
                             $revenue_total_amount_for_month = floatval($row['revenue_total_amount_for_month']);
 
@@ -233,7 +246,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                             $row = mysqli_fetch_assoc($sql_payments);
                             $payment_total_amount_for_month = floatval($row['payment_total_amount_for_month']);
 
-                            $sql_revenues = mysqli_query($mysqli, "SELECT SUM(revenue_amount) AS revenue_total_amount_for_month FROM revenues WHERE revenue_category_id > 0 AND YEAR(revenue_date) = $year AND MONTH(revenue_date) = $month");
+                            $sql_revenues = mysqli_query($mysqli, "SELECT SUM(revenue_amount) AS revenue_total_amount_for_month FROM revenues WHERE YEAR(revenue_date) = $year AND MONTH(revenue_date) = $month");
                             $row = mysqli_fetch_assoc($sql_revenues);
                             $revenue_total_amount_for_month = floatval($row['revenue_total_amount_for_month']);
 
@@ -255,7 +268,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                             $row = mysqli_fetch_assoc($sql_payments);
                             $payment_total_amount_for_month = floatval($row['payment_total_amount_for_month']);
 
-                            $sql_revenues = mysqli_query($mysqli, "SELECT SUM(revenue_amount) AS revenue_total_amount_for_month FROM revenues WHERE revenue_category_id > 0 AND YEAR(revenue_date) = $year AND MONTH(revenue_date) = $month");
+                            $sql_revenues = mysqli_query($mysqli, "SELECT SUM(revenue_amount) AS revenue_total_amount_for_month FROM revenues WHERE YEAR(revenue_date) = $year AND MONTH(revenue_date) = $month");
                             $row = mysqli_fetch_assoc($sql_revenues);
                             $revenue_total_amount_for_month = floatval($row['revenue_total_amount_for_month']);
 
@@ -278,7 +291,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                         <th colspan="5"></th>
                     </tr>
                     <?php
-                    while ($row = mysqli_fetch_assoc($sql_categories_expense)) {
+                    foreach ($expense_categories as $row) {
                         $category_id = intval($row['category_id']);
                         $category_name = nullable_htmlentities($row['category_name']);
                         ?>
@@ -349,8 +362,6 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
 
                         <?php
 
-                        $total_expense_for_all_months = 0;
-
                     }
 
                     ?>
@@ -362,7 +373,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                         $expense_total_amount_for_quarter_one = 0;
 
                         for($month = 1; $month<=3; $month++) {
-                            $sql_expenses = mysqli_query($mysqli, "SELECT SUM(expense_amount) AS expense_total_amount_for_month FROM expenses WHERE expense_category_id > 0 AND YEAR(expense_date) = $year AND MONTH(expense_date) = $month AND expense_vendor_id > 0");
+                            $sql_expenses = mysqli_query($mysqli, "SELECT SUM(expense_amount) AS expense_total_amount_for_month FROM expenses WHERE YEAR(expense_date) = $year AND MONTH(expense_date) = $month");
                             $row = mysqli_fetch_assoc($sql_expenses);
                             $expense_total_amount_for_quarter_one = $expense_total_amount_for_quarter_one + floatval($row['expense_total_amount_for_month']);
                         }
@@ -376,7 +387,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                         $expense_total_amount_for_quarter_two = 0;
 
                         for($month = 4; $month<=6; $month++) {
-                            $sql_expenses = mysqli_query($mysqli, "SELECT SUM(expense_amount) AS expense_total_amount_for_month FROM expenses WHERE expense_category_id > 0 AND YEAR(expense_date) = $year AND MONTH(expense_date) = $month AND expense_vendor_id > 0");
+                            $sql_expenses = mysqli_query($mysqli, "SELECT SUM(expense_amount) AS expense_total_amount_for_month FROM expenses WHERE YEAR(expense_date) = $year AND MONTH(expense_date) = $month");
                             $row = mysqli_fetch_assoc($sql_expenses);
                             $expense_total_amount_for_quarter_two = $expense_total_amount_for_quarter_two + floatval($row['expense_total_amount_for_month']);
                         }
@@ -390,7 +401,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                         $expense_total_amount_for_quarter_three = 0;
 
                         for($month = 7; $month<=9; $month++) {
-                            $sql_expenses = mysqli_query($mysqli, "SELECT SUM(expense_amount) AS expense_total_amount_for_month FROM expenses WHERE expense_category_id > 0 AND YEAR(expense_date) = $year AND MONTH(expense_date) = $month AND expense_vendor_id > 0");
+                            $sql_expenses = mysqli_query($mysqli, "SELECT SUM(expense_amount) AS expense_total_amount_for_month FROM expenses WHERE YEAR(expense_date) = $year AND MONTH(expense_date) = $month");
                             $row = mysqli_fetch_assoc($sql_expenses);
                             $expense_total_amount_for_quarter_three = $expense_total_amount_for_quarter_three + floatval($row['expense_total_amount_for_month']);
                         }
@@ -404,7 +415,7 @@ $sql_categories_expense = mysqli_query($mysqli, "SELECT * FROM categories WHERE 
                         $expense_total_amount_for_quarter_four = 0;
 
                         for($month = 10; $month<=12; $month++) {
-                            $sql_expenses = mysqli_query($mysqli, "SELECT SUM(expense_amount) AS expense_total_amount_for_month FROM expenses WHERE expense_category_id > 0 AND YEAR(expense_date) = $year AND MONTH(expense_date) = $month AND expense_vendor_id > 0");
+                            $sql_expenses = mysqli_query($mysqli, "SELECT SUM(expense_amount) AS expense_total_amount_for_month FROM expenses WHERE YEAR(expense_date) = $year AND MONTH(expense_date) = $month");
                             $row = mysqli_fetch_assoc($sql_expenses);
                             $expense_total_amount_for_quarter_four = $expense_total_amount_for_quarter_four + floatval($row['expense_total_amount_for_month']);
                         }

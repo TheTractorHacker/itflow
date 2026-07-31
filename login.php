@@ -720,9 +720,14 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
         <link rel="icon" type="image/x-icon" href="/uploads/favicon.ico">
     <?php } ?>
 
-    <link rel="stylesheet" href="plugins/adminlte/css/adminlte.min.css">
-    <link rel="stylesheet" href="css/itflow_custom.css">
-    <link rel="stylesheet" href="/css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
+    <!-- Core stack: Bootstrap 5.3 + AdminLTE 4 -->
+    <link rel="stylesheet" href="plugins/bootstrap5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="plugins/adminlte4/css/adminlte.min.css">
+
+    <!-- Theme: BS5 bridge (maps BS vars -> Alga tokens) THEN the custom theme -->
+    <link rel="stylesheet" href="css/itflow_bs5_bridge.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_bs5_bridge.css') ?>">
+    <link rel="stylesheet" href="css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
+    <link rel="stylesheet" href="css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
     <style>
         body.login-page {
             background-color: #343A40;
@@ -847,10 +852,10 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
                         </div>
                     </div>
 
-                    <div class="form-group mb-3">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="remember_me" name="remember_me">
-                            <label class="custom-control-label" for="remember_me">Stay signed in</label>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                            <label class="form-check-label" for="remember_me">Stay signed in</label>
                         </div>
                     </div>
 
@@ -879,10 +884,10 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
                     <input type="hidden" name="pending_mfa_token"
                            value="<?php echo htmlspecialchars($_SESSION['pending_mfa_login']['token'] ?? '', ENT_QUOTES); ?>">
 
-                    <div class="form-group mb-3">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="remember_me" name="remember_me">
-                            <label class="custom-control-label" for="remember_me">Remember Me</label>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                            <label class="form-check-label" for="remember_me">Remember Me</label>
                         </div>
                     </div>
 
@@ -916,8 +921,8 @@ if (!$config_whitelabel_enabled) {
 ?>
 
 <script src="plugins/jquery/jquery.min.js"></script>
-<script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="plugins/adminlte/js/adminlte.min.js"></script>
+<script src="plugins/bootstrap5/js/bootstrap.bundle.min.js"></script>
+<script src="plugins/adminlte4/js/adminlte.min.js"></script>
 <script src="js/login_prevent_resubmit.js"></script>
 <script src="js/webauthn_signin.js"></script>
 

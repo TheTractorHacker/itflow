@@ -333,8 +333,18 @@ if (isset($_POST['add_ticket_task_approver'])) {
     $company_phone = sanitizeInput(formatPhoneNumber($crow['company_phone'], $crow['company_phone_country_code']));
 
     // Email contents
+    // Internal-scope approvals must be actioned via the authenticated agent
+    // portal (login + module_support permission + specific-approver/no-self-approval
+    // checks in the approve_ticket_task handler above) - unlike client-scope
+    // approvals, they must never link to the unauthenticated guest approve flow,
+    // which has no way to enforce those identity checks.
     $subject = "Ticket task approval required - [$ticket_prefix$ticket_number] - $ticket_subject";
-    $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello,<br><br>A ticket regarding $ticket_subject has a task requiring your approval:- <br>Task name: $task_name<br>Scope/Type: $scope - $type <br><br>To approve this task, please click <a href=\'https://$config_base_url/guest/guest_approve_ticket_task.php?task_approval_id=$approval_id&url_key=$approval_url_key\'>here</a>.<br>If you require further information, please reply to this e-mail.<br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: $ticket_status<br>Portal: <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$ticket_url_key\'>View ticket</a><br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+    if ($scope == 'internal') {
+        $action_html = "To approve this task, please <a href=\'https://$config_base_url/agent/ticket.php?ticket_id=$ticket_id\'>log in and view the ticket</a>.";
+    } else {
+        $action_html = "To approve this task, please click <a href=\'https://$config_base_url/guest/guest_approve_ticket_task.php?task_approval_id=$approval_id&url_key=$approval_url_key\'>here</a>.";
+    }
+    $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello,<br><br>A ticket regarding $ticket_subject has a task requiring your approval:- <br>Task name: $task_name<br>Scope/Type: $scope - $type <br><br>$action_html<br>If you require further information, please reply to this e-mail.<br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: $ticket_status<br>Portal: <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$ticket_url_key\'>View ticket</a><br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
 
     if ($scope == 'internal' && $type == 'specific' && $session_user_id !== $required_user_id) {
         mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = 'Ticket', notification = '$session_name needs your approval for ticket $ticket_prefix$ticket_number task $task_name', notification_action = 'ticket.php?ticket_id=$ticket_id', notification_client_id = 0, notification_user_id = $required_user_id");

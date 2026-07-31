@@ -7,11 +7,7 @@
  * owner (falling back to all admins when no owner is set). Each processed row
  * is stamped activity_reminded_at so it only ever fires once.
  *
- * WIRING: This file is NOT yet called anywhere. To run it on the normal cron
- * cadence, add the following line inside cron/cron.php (owned separately):
- *
- *     require_once __DIR__ . '/crm_reminders.php';
- *
+ * WIRING: required from cron/cron.php on its normal hourly cadence.
  * It is also runnable standalone from the CLI:  php cron/crm_reminders.php
  * The bootstrap below only loads config/functions when they are not already
  * present, so it is safe to require_once from cron.php after its bootstrap.

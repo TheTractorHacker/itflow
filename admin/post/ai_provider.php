@@ -12,7 +12,6 @@ if (isset($_POST['add_ai_provider'])) {
 
     $provider = sanitizeInput($_POST['provider']);
     $url = sanitizeInput($_POST['url']);
-    $model = sanitizeInput($_POST['model']);
     $api_key = mysqli_real_escape_string($mysqli, encryptSetting(sanitizeInput($_POST['api_key'])));
 
     mysqli_query($mysqli,"INSERT INTO ai_providers SET ai_provider_name = '$provider', ai_provider_api_url = '$url', ai_provider_api_key = '$api_key'");

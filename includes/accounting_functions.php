@@ -463,6 +463,17 @@ function accountingSyncProcessJob(mysqli $mysqli, QboClient $qbo, int $acc_id, a
     $job_attempts = intval($job['queue_attempts']) + 1;
     $acc_backoffs = array_map('intval', explode(',', ACCOUNTING_BACKOFFS));
 
+    // Atomically claim the job before doing any work. cron/cron.php (hourly),
+    // cron/accounting_sync_standalone.php (every 15m), and the "sync now" button
+    // in admin/settings_accounting.php can all call this concurrently - without
+    // this claim, two callers could both see the same 'pending' row and both push
+    // the same entity to the live QuickBooks company before either writes its
+    // accounting_entity_map row.
+    mysqli_query($mysqli, "UPDATE accounting_sync_queue SET queue_status = 'processing' WHERE queue_id = $job_id AND queue_status = 'pending'");
+    if (mysqli_affected_rows($mysqli) !== 1) {
+        return ['queue_id' => $job_id, 'type' => $job_type, 'local_id' => $job_local_id, 'outcome' => 'already-claimed', 'message' => "Job #$job_id was already claimed by another sync run."];
+    }
+
     $deferred = false;
     $outcome  = 'delivered';
     $message  = '';
@@ -538,7 +549,18 @@ function accountingSyncProcessJob(mysqli $mysqli, QboClient $qbo, int $acc_id, a
                     'Line'        => $lines,
                 ]);
                 setAccountingMap($mysqli, $acc_id, 'invoice', $job_local_id, (string) $created['Id'], (string) ($created['SyncToken'] ?? ''));
-                $message = "Pushed invoice $doc_number -> QBO Invoice #{$created['Id']}";
+                // QBO silently substitutes its own auto-number for DocNumber (no error)
+                // when the company hasn't enabled "Custom transaction numbers" in
+                // Account and Settings > Sales - so the number we asked for and the
+                // number QBO actually assigned can silently diverge. Compare what we
+                // sent against what came back so that drift is visible in the sync
+                // log itself instead of only discoverable by checking QBO's UI.
+                $qbo_doc_number = (string) ($created['DocNumber'] ?? '');
+                if ($qbo_doc_number !== '' && $qbo_doc_number !== $doc_number) {
+                    $message = "Pushed invoice $doc_number -> QBO Invoice #{$created['Id']}, but QBO assigned its own number ($qbo_doc_number) instead - enable \"Custom transaction numbers\" in QBO Account and Settings > Sales to fix.";
+                } else {
+                    $message = "Pushed invoice $doc_number -> QBO Invoice #{$created['Id']}";
+                }
                 accountingLog($mysqli, $acc_id, 'invoice', $job_local_id, 'delivered', $message);
                 break;
             }
@@ -605,7 +627,14 @@ function accountingSyncProcessJob(mysqli $mysqli, QboClient $qbo, int $acc_id, a
 
                 $created = $qbo->createEstimate($payload);
                 setAccountingMap($mysqli, $acc_id, 'quote', $job_local_id, (string) $created['Id'], (string) ($created['SyncToken'] ?? ''));
-                $message = "Pushed quote $doc_number -> QBO Estimate #{$created['Id']}";
+                // Same QBO auto-numbering caveat as createInvoice() above - see that
+                // comment for why this comparison exists.
+                $qbo_doc_number = (string) ($created['DocNumber'] ?? '');
+                if ($qbo_doc_number !== '' && $qbo_doc_number !== $doc_number) {
+                    $message = "Pushed quote $doc_number -> QBO Estimate #{$created['Id']}, but QBO assigned its own number ($qbo_doc_number) instead - enable \"Custom transaction numbers\" in QBO Account and Settings > Sales to fix.";
+                } else {
+                    $message = "Pushed quote $doc_number -> QBO Estimate #{$created['Id']}";
+                }
                 accountingLog($mysqli, $acc_id, 'quote', $job_local_id, 'delivered', $message);
                 break;
             }
@@ -671,7 +700,7 @@ function accountingSyncProcessJob(mysqli $mysqli, QboClient $qbo, int $acc_id, a
             return ['queue_id' => $job_id, 'type' => $job_type, 'local_id' => $job_local_id, 'outcome' => 'failed', 'message' => $e->getMessage()];
         }
         $delay = $acc_backoffs[min($job_attempts - 1, count($acc_backoffs) - 1)];
-        mysqli_query($mysqli, "UPDATE accounting_sync_queue SET queue_attempts = $job_attempts, queue_last_error = '$err', queue_next_attempt_at = DATE_ADD(NOW(), INTERVAL $delay MINUTE) WHERE queue_id = $job_id");
+        mysqli_query($mysqli, "UPDATE accounting_sync_queue SET queue_status = 'pending', queue_attempts = $job_attempts, queue_last_error = '$err', queue_next_attempt_at = DATE_ADD(NOW(), INTERVAL $delay MINUTE) WHERE queue_id = $job_id");
         return ['queue_id' => $job_id, 'type' => $job_type, 'local_id' => $job_local_id, 'outcome' => 'retry', 'message' => $e->getMessage() . " (will retry in {$delay}m)"];
     }
 
@@ -682,7 +711,7 @@ function accountingSyncProcessJob(mysqli $mysqli, QboClient $qbo, int $acc_id, a
             return ['queue_id' => $job_id, 'type' => $job_type, 'local_id' => $job_local_id, 'outcome' => 'failed', 'message' => 'Dependency never became available.'];
         }
         $delay = $acc_backoffs[min($job_attempts - 1, count($acc_backoffs) - 1)];
-        mysqli_query($mysqli, "UPDATE accounting_sync_queue SET queue_attempts = $job_attempts, queue_next_attempt_at = DATE_ADD(NOW(), INTERVAL $delay MINUTE) WHERE queue_id = $job_id");
+        mysqli_query($mysqli, "UPDATE accounting_sync_queue SET queue_status = 'pending', queue_attempts = $job_attempts, queue_next_attempt_at = DATE_ADD(NOW(), INTERVAL $delay MINUTE) WHERE queue_id = $job_id");
         return ['queue_id' => $job_id, 'type' => $job_type, 'local_id' => $job_local_id, 'outcome' => 'deferred', 'message' => $message];
     }
 

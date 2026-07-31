@@ -67,7 +67,7 @@ if (isset($_POST['add_webhook'])) {
 
     $webhook_name    = sanitizeInput($_POST['webhook_name']);
     $webhook_url     = filter_var(trim($_POST['webhook_url']), FILTER_SANITIZE_URL);
-    $webhook_secret  = sanitizeInput($_POST['webhook_secret'] ?? '');
+    $webhook_secret  = mysqli_real_escape_string($mysqli, encryptSetting(sanitizeInput($_POST['webhook_secret'] ?? '')));
     $webhook_enabled = isset($_POST['webhook_enabled']) ? 1 : 0;
     $raw_events      = $_POST['webhook_events'] ?? [];
     $valid_events    = array_intersect($raw_events, $ALL_EVENTS);
@@ -116,7 +116,7 @@ if (isset($_POST['edit_webhook'])) {
     // Rotate secret only if a new one was provided
     $raw_secret = trim($_POST['webhook_secret'] ?? '');
     if (!empty($raw_secret)) {
-        $webhook_secret = sanitizeInput($raw_secret);
+        $webhook_secret = mysqli_real_escape_string($mysqli, encryptSetting(sanitizeInput($raw_secret)));
         mysqli_query($mysqli, "UPDATE webhooks SET webhook_name = '$webhook_name', webhook_url = '$webhook_url', webhook_secret = '$webhook_secret', webhook_events = '$webhook_events', webhook_enabled = $webhook_enabled WHERE webhook_id = $webhook_id");
     } else {
         mysqli_query($mysqli, "UPDATE webhooks SET webhook_name = '$webhook_name', webhook_url = '$webhook_url', webhook_events = '$webhook_events', webhook_enabled = $webhook_enabled WHERE webhook_id = $webhook_id");

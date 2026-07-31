@@ -4,8 +4,7 @@ require_once "includes/inc_all_reports.php";
 
 enforceUserPermission('module_credential');
 
-// TODO: Default to 90 but allow input field to change this
-if (isset($_GET['days'])) {
+if (isset($_GET['days']) && intval($_GET['days']) > 0) {
     $days = intval($_GET['days']);
 } else {
     $days = 90;
@@ -23,12 +22,19 @@ $passwords_not_rotated_sql = mysqli_query($mysqli,
 
     <div class="card card-dark">
         <div class="card-header py-2">
-            <h3 class="card-title mt-2"><i class="fas fa-fw fa-life-ring me-2"></i>Client credentials not changed/rotated in the last 90 days</h3>
+            <h3 class="card-title mt-2"><i class="fas fa-fw fa-life-ring me-2"></i>Client credentials not changed/rotated in the last <?= intval($days) ?> days</h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-primary d-print-none js-print-page"><i class="fas fa-fw fa-print me-2"></i>Print</button>
             </div>
         </div>
         <div class="card-body">
+
+            <form class="mb-3">
+                <div class="input-group" style="max-width:220px">
+                    <span class="input-group-text">Days</span>
+                    <input type="number" min="1" class="form-control auto-submit-select" name="days" value="<?= intval($days) ?>">
+                </div>
+            </form>
 
             <div class="table-responsive-sm">
                 <table class="table table-striped">

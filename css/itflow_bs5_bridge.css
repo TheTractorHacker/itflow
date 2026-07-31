@@ -433,7 +433,7 @@
 /* --- AL3 .main-sidebar (client-context sidebars) -> fixed like AL4 .app-sidebar --- */
 .main-sidebar {
   position: fixed !important; top: 0; left: 0; bottom: 0; width: 250px; z-index: 1035;
-  background-color: #2b3038 !important; box-shadow: 0 0 1rem rgba(0,0,0,.2);
+  background-color: #2b3038 !important;
   overflow: hidden; display: flex; flex-direction: column;
 }
 /* Only the nav list scrolls - the back link + client identity stay put above it */

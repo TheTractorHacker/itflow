@@ -42,7 +42,7 @@ $task_row = mysqli_fetch_assoc(mysqli_query($mysqli,
         LEFT JOIN tasks ON approval_task_id = task_id
         LEFT JOIN tickets on task_ticket_id = ticket_id
         LEFT JOIN ticket_statuses ON ticket_status = ticket_status_id
-    WHERE approval_id = $approval_id AND approval_url_key = '$url_key'
+    WHERE approval_id = $approval_id AND approval_url_key = '$url_key' AND approval_scope = 'client'
     LIMIT 1"
 ));
 

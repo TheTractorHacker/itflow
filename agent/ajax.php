@@ -291,6 +291,10 @@ if (isset($_POST['asset_set_notes'])) {
 if (isset($_GET['ticket_add_view'])) {
     $ticket_id = intval($_GET['ticket_id']);
 
+    $client_query = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id"));
+    $client_id = intval($client_query['ticket_client_id'] ?? 0);
+    if ($client_id) { enforceClientAccess(); }
+
     mysqli_query($mysqli, "INSERT INTO ticket_views SET view_ticket_id = $ticket_id, view_user_id = $session_user_id, view_timestamp = NOW()");
 }
 
@@ -301,6 +305,10 @@ if (isset($_GET['ticket_add_view'])) {
  */
 if (isset($_GET['ticket_query_views'])) {
     $ticket_id = intval($_GET['ticket_id']);
+
+    $client_query = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id"));
+    $client_id = intval($client_query['ticket_client_id'] ?? 0);
+    if ($client_id) { enforceClientAccess(); }
 
     $query = mysqli_query($mysqli, "SELECT user_name FROM ticket_views LEFT JOIN users ON view_user_id = user_id WHERE view_ticket_id = $ticket_id AND view_user_id != $session_user_id AND view_timestamp > DATE_SUB(NOW(), INTERVAL 2 MINUTE)");
     while ($row = mysqli_fetch_assoc($query)) {

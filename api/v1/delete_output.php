@@ -5,6 +5,7 @@
  * Included on calls to delete.php endpoints
  * Returns success/failure messages
  */
+defined('FROM_API') || die();
 
 // Check if delete query was successful
 if (isset($delete_count) && is_numeric($delete_count) && $delete_count > 0) {

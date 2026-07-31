@@ -8,7 +8,10 @@ if (isset($_POST['save_comet_settings'])) {
     $user       = sanitizeInput($_POST['config_comet_admin_user']);
     $auto_ticket= isset($_POST['config_comet_auto_ticket']) ? 1 : 0;
 
-    $webhook_secret = sanitizeInput($_POST['config_comet_webhook_secret'] ?? '');
+    // Webhook secret is shown/edited as plain text (the admin needs to copy it into
+    // Comet Server's webhook config), so it's always saved as submitted - encrypted
+    // at rest, unlike password/TOTP which are write-only (blank = keep existing).
+    $webhook_secret = mysqli_real_escape_string($mysqli, encryptSetting(sanitizeInput($_POST['config_comet_webhook_secret'] ?? '')));
 
     // Build SET clause — only update password/totp if provided (blank = keep existing)
     $set = "config_comet_enabled=$enabled, config_comet_server_url='$url', config_comet_admin_user='$user', config_comet_auto_ticket=$auto_ticket, config_comet_webhook_secret='$webhook_secret'";
@@ -18,7 +21,7 @@ if (isset($_POST['save_comet_settings'])) {
         $set .= ", config_comet_admin_pass='$pass'";
     }
     if (!empty(trim($_POST['config_comet_totp_secret']))) {
-        $totp = sanitizeInput($_POST['config_comet_totp_secret']);
+        $totp = mysqli_real_escape_string($mysqli, encryptSetting(trim($_POST['config_comet_totp_secret'])));
         $set .= ", config_comet_totp_secret='$totp'";
     }
     mysqli_query($mysqli, "UPDATE settings SET $set WHERE company_id=1");

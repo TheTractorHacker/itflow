@@ -39,7 +39,7 @@ $monthlyTotals = array_fill(1, 12, 0);  // Initialize monthly totals for each mo
             </select>
         </form>
 
-        <canvas id="cashFlow" width="100%" height="20"></canvas>
+        <div style="position:relative;height:300px"><canvas id="cashFlow"></canvas></div>
 
         <div class="table-responsive-sm">
             <table class="table table-striped">
@@ -74,15 +74,15 @@ $monthlyTotals = array_fill(1, 12, 0);  // Initialize monthly totals for each mo
                             $result = $mysqli->query($sql);
                             if ($result->num_rows > 0) {
                                 $budget = $result->fetch_assoc();
-                                $amount = $budget['budget_amount'];
+                                $amount = floatval($budget['budget_amount']);
                                 $categoryTotal += $amount;
                                 $monthlyTotals[$month] += $amount;
-                                echo "<td class='text-end'>" . $amount . "</td>";
+                                echo "<td class='text-end'>" . numfmt_format_currency($currency_format, $amount, $session_company_currency) . "</td>";
                             } else {
-                                echo "<td class='text-end'>0</td>";
+                                echo "<td class='text-end'>" . numfmt_format_currency($currency_format, 0, $session_company_currency) . "</td>";
                             }
                         }
-                        echo "<td class='text-end'>" . $categoryTotal . "</td>";
+                        echo "<td class='text-end'>" . numfmt_format_currency($currency_format, $categoryTotal, $session_company_currency) . "</td>";
                         echo "</tr>";
                     }
 
@@ -91,9 +91,9 @@ $monthlyTotals = array_fill(1, 12, 0);  // Initialize monthly totals for each mo
                     $grandTotal = 0;
                     for ($month = 1; $month <= 12; $month++) {
                         $grandTotal += $monthlyTotals[$month];
-                        echo "<td class='text-end'>" . $monthlyTotals[$month] . "</td>";
+                        echo "<td class='text-end'>" . numfmt_format_currency($currency_format, $monthlyTotals[$month], $session_company_currency) . "</td>";
                     }
-                    echo "<td class='text-end'>" . $grandTotal . "</td>";
+                    echo "<td class='text-end'>" . numfmt_format_currency($currency_format, $grandTotal, $session_company_currency) . "</td>";
                     echo "</tr>";
                 }
                 ?>
@@ -103,5 +103,34 @@ $monthlyTotals = array_fill(1, 12, 0);  // Initialize monthly totals for each mo
     </div>
 </div>
 
-<?php require_once "../../includes/footer.php";
- ?>
+<?php require_once "../../includes/footer.php"; ?>
+
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+    Chart.defaults.font.family = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+    Chart.defaults.color = '#292b2c';
+
+    (function () {
+        var ctx = document.getElementById("cashFlow");
+        if (!ctx) return;
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'Budgeted (<?php echo intval($year); ?>)',
+                    backgroundColor: '#007bff',
+                    data: <?php echo json_encode(array_values($monthlyTotals)); ?>
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { ticks: { maxTicksLimit: 6 }, grid: { color: 'rgba(0,0,0,.125)' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    })();
+</script>

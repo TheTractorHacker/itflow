@@ -291,21 +291,24 @@ if (isset($_POST['add_ticket_feedback'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
+    if (empty($config_ticket_csat_enable)) {
+        redirect();
+    }
+
     $ticket_id = intval($_POST['ticket_id']);
-    $feedback = sanitizeInput($_POST['add_ticket_feedback']);
+    $rating = intval($_POST['csat_rating'] ?? 0);
+    $comment_raw = substr(trim($_POST['csat_comment'] ?? ''), 0, 1000);
+    $comment = sanitizeInput($comment_raw);
+
+    if ($rating < 1 || $rating > 5) {
+        flash_alert("Please select a rating.", "danger");
+        redirect();
+    }
 
     // Verify the contact has access to the provided ticket ID
     if (verifyContactTicketAccess($ticket_id, "Closed")) {
 
-        // Add feedback
-        mysqli_query($mysqli, "UPDATE tickets SET ticket_feedback = '$feedback' WHERE ticket_id = $ticket_id AND ticket_client_id = $session_client_id LIMIT 1");
-
-        // Notify on bad feedback
-        if ($feedback == "Bad") {
-            $ticket_details = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_number FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
-            $ticket_number = intval($ticket_details['ticket_number']);
-            appNotify("Feedback", "$session_contact_name rated ticket $config_ticket_prefix$ticket_number as bad (ID: $ticket_id)", "/agent/ticket.php?ticket_id=$ticket_id&client_id=$session_client_id", $session_client_id, $ticket_id);
-        }
+        applyCsatRating($mysqli, $ticket_id, $rating, $comment, $session_contact_name, $config_ticket_csat_low_rating_threshold);
 
         // Custom action/notif handler
         customAction('ticket_feedback', $ticket_id);
@@ -903,6 +906,26 @@ if (isset($_GET['create_stripe_checkout'])) {
     $client_currency_row = mysqli_fetch_assoc($client_currency_result);
     $client_currency = $client_currency_row['client_currency_code'] ?? 'usd';
 
+    // Get client's Stripe customer ID - the session must be bound to it at
+    // creation, or stripe_save_card below would attach whatever payment method
+    // this checkout produces to the CURRENT logged-in client regardless of
+    // which customer Stripe actually associates with the session.
+    $client_provider_query = mysqli_query($mysqli, "
+        SELECT payment_provider_client
+        FROM client_payment_provider
+        WHERE client_id = $session_client_id
+        AND payment_provider_id = $stripe_provider_id
+        LIMIT 1
+    ");
+    $client_provider = mysqli_fetch_assoc($client_provider_query);
+    $stripe_customer_id = sanitizeInput($client_provider['payment_provider_client'] ?? '');
+
+    if (empty($stripe_customer_id)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Stripe customer not found for client']);
+        exit();
+    }
+
     // Return URL when checkout finishes
     $return_url = "https://$config_base_url/client/post.php?stripe_save_card&session_id={CHECKOUT_SESSION_ID}";
 
@@ -912,6 +935,7 @@ if (isset($_GET['create_stripe_checkout'])) {
 
         // Create checkout session
         $checkout_session = $stripe->checkout->sessions->create([
+            'customer' => $stripe_customer_id,
             'currency' => $client_currency,
             'mode' => 'setup',
             'ui_mode' => 'embedded',
@@ -986,6 +1010,18 @@ if (isset($_GET['stripe_save_card'])) {
 
         // Retrieve checkout session & setup intent
         $checkout_session = $stripe->checkout->sessions->retrieve($checkout_session_id, []);
+
+        // The session_id travels via a GET return-URL, so it isn't treated as a
+        // secret - verify Stripe's own record of which customer this session
+        // belongs to matches the currently logged-in client before attaching
+        // anything, or a leaked/replayed session_id from a different client's
+        // checkout could let this account attach that client's payment method.
+        if (empty($checkout_session->customer) || (string) $checkout_session->customer !== $stripe_customer_id) {
+            logApp("Stripe", "error", "Checkout session customer mismatch for client $session_client_id: session belongs to " . ($checkout_session->customer ?? '(none)'));
+            flash_alert("This checkout session does not belong to your account.", 'danger');
+            redirect("saved_payment_methods.php");
+        }
+
         $setup_intent_id = $checkout_session->setup_intent;
         $setup_intent = $stripe->setupIntents->retrieve($setup_intent_id, []);
         $payment_method_id = sanitizeInput($setup_intent->payment_method);

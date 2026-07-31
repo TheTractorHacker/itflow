@@ -174,14 +174,18 @@ if ($action === 'sync_scripts') {
             $body    = mysqli_real_escape_string($mysqli, $body_raw);
             $cat     = mysqli_real_escape_string($mysqli, substr($s['category'] ?? 'Uncategorized', 0, 100));
 
+            // Scoped by integration_id, not just tactical_script_id - Tactical and
+            // Level.io each hand out their own numeric script IDs, so an unscoped
+            // lookup can match (and overwrite) an unrelated script from the other
+            // provider whose ID happens to collide.
             $existing = mysqli_fetch_assoc(mysqli_query($mysqli,
-                "SELECT id FROM rmm_scripts WHERE tactical_script_id=$tac_id LIMIT 1"
+                "SELECT id FROM rmm_scripts WHERE tactical_script_id=$tac_id AND rmm_integration_id=$integration_id LIMIT 1"
             ));
             if ($existing) {
-                mysqli_query($mysqli, "UPDATE rmm_scripts SET name='$name', script_type='$stype', description='$desc', script_body='$body', category='$cat' WHERE tactical_script_id=$tac_id");
+                mysqli_query($mysqli, "UPDATE rmm_scripts SET name='$name', script_type='$stype', description='$desc', script_body='$body', category='$cat' WHERE tactical_script_id=$tac_id AND rmm_integration_id=$integration_id");
                 $updated++;
             } else {
-                mysqli_query($mysqli, "INSERT INTO rmm_scripts SET name='$name', script_type='$stype', description='$desc', script_body='$body', category='$cat', tactical_script_id=$tac_id, enabled=1, created_by=$session_user_id");
+                mysqli_query($mysqli, "INSERT INTO rmm_scripts SET name='$name', script_type='$stype', description='$desc', script_body='$body', category='$cat', tactical_script_id=$tac_id, rmm_integration_id=$integration_id, enabled=1, created_by=$session_user_id");
                 $imported++;
             }
         }

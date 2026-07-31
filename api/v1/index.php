@@ -255,7 +255,6 @@ switch ($resource) {
     case 'expenses':      require __DIR__ . '/expenses.php';      break;
     case 'worksheets':        require __DIR__ . '/worksheets.php'; break;
     case 'outtakes':          require __DIR__ . '/outtakes.php';  break;
-    case 'worksheet-responses': require __DIR__ . '/worksheets.php'; break;
     case 'worksheet-templates': require __DIR__ . '/worksheets.php'; break;
     case 'products':    require __DIR__ . '/products.php'; break;
     case 'search':      require __DIR__ . '/search.php';   break;

@@ -118,6 +118,10 @@ try {
     }
 
     if ($action === 'patch_scan') {
+        if (!method_exists($client, 'scanPatches')) {
+            echo json_encode(['success' => false, 'error' => 'Patch scanning is not supported by this RMM integration']);
+            exit;
+        }
         $client->scanPatches($agent_id);
         $logSession('patch_scan', 'Patch scan queued');
         echo json_encode(['success' => true, 'message' => 'Patch scan queued. Re-check patches shortly.']);
@@ -125,6 +129,10 @@ try {
     }
 
     if ($action === 'patch_install') {
+        if (!method_exists($client, 'installPatches')) {
+            echo json_encode(['success' => false, 'error' => 'Patch installation is not supported by this RMM integration']);
+            exit;
+        }
         $client->installPatches($agent_id);
         $logSession('patch_install', 'Pending patch install queued');
         echo json_encode(['success' => true, 'message' => 'Install of pending updates queued. This may take a while and can reboot the device.']);

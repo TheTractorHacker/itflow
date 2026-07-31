@@ -194,14 +194,20 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
         <link rel="icon" type="image/x-icon" href="../uploads/favicon.ico">
     <?php } ?>
 
-    <!-- Theme style -->
-    <link rel="stylesheet" href="../plugins/adminlte/css/adminlte.min.css">
+    <!-- Core stack: Bootstrap 5.3 + AdminLTE 4 -->
+    <link rel="stylesheet" href="../plugins/bootstrap5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../plugins/adminlte4/css/adminlte.min.css">
+
+    <!-- Theme: BS5 bridge (maps BS vars -> Alga tokens) THEN the custom theme -->
+    <link rel="stylesheet" href="../css/itflow_bs5_bridge.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_bs5_bridge.css') ?>">
+    <link rel="stylesheet" href="../css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
+    <link rel="stylesheet" href="../css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
 
 </head>
 
 <body class="hold-transition login-page">
 <div class="login-box">
-    <div class="login-logo"><b><?php echo nullable_htmlentities($company_name_display); ?></b> <br>Password Reset</h2></div>
+    <div class="login-logo"><b><?php echo nullable_htmlentities($company_name_display); ?></b> <br>Password Reset</div>
     <div class="card">
         <div class="card-body login-card-body">
 
@@ -233,8 +239,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                             </div>
                         </div>
 
-                        <input type="hidden" name="token" value="<?php echo $token; ?>">
-                        <input type="hidden" name="email" value="<?php echo $email; ?>">
+                        <input type="hidden" name="token" value="<?php echo nullable_htmlentities($token); ?>">
+                        <input type="hidden" name="email" value="<?php echo nullable_htmlentities($email); ?>">
                         <input type="hidden" name="client" value="<?php echo $client; ?>">
 
                         <button type="submit" class="btn btn-success btn-block mb-3" name="password_reset_set_password">Reset password</button>
@@ -293,11 +299,11 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 <!-- jQuery -->
 <script src="../plugins/jquery/jquery.min.js"></script>
 
-<!-- Bootstrap 4 -->
-<script src="../plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap 5 (bundle includes Popper) -->
+<script src="../plugins/bootstrap5/js/bootstrap.bundle.min.js"></script>
 
 <!-- AdminLTE App -->
-<script src="../plugins/adminlte/js/adminlte.min.js"></script>
+<script src="../plugins/adminlte4/js/adminlte.min.js"></script>
 
 <!-- Prevents resubmit on refresh or back -->
 <script src="../js/login_prevent_resubmit.js"></script>

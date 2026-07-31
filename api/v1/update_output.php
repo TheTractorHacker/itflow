@@ -5,6 +5,7 @@
  * Checks the status of the update SQL query ($update_sql)
  * Returns success data / fail messages
  */
+defined('FROM_API') || die();
 
 // Check if the insert query was successful
 if (isset($update_count) && is_numeric($update_count) && $update_count > 0) {

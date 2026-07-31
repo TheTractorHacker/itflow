@@ -318,7 +318,16 @@ if (isset($_GET['asset_id'])) {
                             <span class="badge text-bg-danger ms-1"><i class="fas fa-bell me-1"></i><?= $rmm_alerts_count ?> Alert<?= $rmm_alerts_count != 1 ? 's' : '' ?></span>
                         <?php endif; ?>
                         <div class="text-muted small mt-1">
-                            <?php if ($rmm_link['os_name']): ?><i class="fab fa-windows me-1"></i><?= nullable_htmlentities($rmm_link['os_name']) ?>&nbsp;<?php endif; ?>
+                            <?php if ($rmm_link['os_name']):
+                                $rmm_os_lower = strtolower($rmm_link['os_name']);
+                                if (str_contains($rmm_os_lower, 'linux')) {
+                                    $rmm_os_icon = 'fa-linux';
+                                } elseif (str_contains($rmm_os_lower, 'mac') || str_contains($rmm_os_lower, 'darwin')) {
+                                    $rmm_os_icon = 'fa-apple';
+                                } else {
+                                    $rmm_os_icon = 'fa-windows';
+                                }
+                            ?><i class="fab <?= $rmm_os_icon ?> me-1"></i><?= nullable_htmlentities($rmm_link['os_name']) ?>&nbsp;<?php endif; ?>
                             <?php if ($rmm_link['logged_in_user']): ?>&bull;&nbsp;<i class="fas fa-user mx-1"></i><?= nullable_htmlentities($rmm_link['logged_in_user']) ?>&nbsp;<?php endif; ?>
                             <?php if ($rmm_link['last_seen']): ?>&bull;&nbsp;<i class="fas fa-clock mx-1"></i>Last seen <?= nullable_htmlentities($rmm_link['last_seen']) ?><?php endif; ?>
                         </div>

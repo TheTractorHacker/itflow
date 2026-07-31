@@ -103,12 +103,12 @@ while ($row = mysqli_fetch_assoc($sql_tickets)) {
                             <td><a href="../../agent/ticket.php?ticket_id=<?= $ticket_id ?>">#<?= $ticket_number ?> - <?= $ticket_subject ?></a></td>
                             <td><?= $client_name ?></td>
                             <td class="text-end"><?= $charge_count ?></td>
-                            <td class="text-end">$<?= number_format($total_amount, 2) ?></td>
+                            <td class="text-end"><?= numfmt_format_currency($currency_format, $total_amount, $session_company_currency) ?></td>
                             <td class="text-end">
                                 <?php if ($uninvoiced_amount > 0) { ?>
-                                    <span class="badge text-bg-warning">$<?= number_format($uninvoiced_amount, 2) ?></span>
+                                    <span class="badge text-bg-warning"><?= numfmt_format_currency($currency_format, $uninvoiced_amount, $session_company_currency) ?></span>
                                 <?php } else { ?>
-                                    $0.00
+                                    <?= numfmt_format_currency($currency_format, 0, $session_company_currency) ?>
                                 <?php } ?>
                             </td>
                             <td><?= nullable_htmlentities($last_charge_at) ?></td>
@@ -119,8 +119,8 @@ while ($row = mysqli_fetch_assoc($sql_tickets)) {
                     <tfoot>
                     <tr class="fw-bold">
                         <td colspan="3" class="text-end">Grand Total</td>
-                        <td class="text-end">$<?= number_format($grand_total, 2) ?></td>
-                        <td class="text-end">$<?= number_format($grand_uninvoiced, 2) ?></td>
+                        <td class="text-end"><?= numfmt_format_currency($currency_format, $grand_total, $session_company_currency) ?></td>
+                        <td class="text-end"><?= numfmt_format_currency($currency_format, $grand_uninvoiced, $session_company_currency) ?></td>
                         <td></td>
                     </tr>
                     </tfoot>

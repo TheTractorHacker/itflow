@@ -998,6 +998,14 @@ paths:
         - {$ref: '#/components/parameters/YearParam'}
       responses:
         '200': {$ref: '#/components/responses/ReportObject'}
+  /reports/csat:
+    get:
+      tags: [Reports]
+      summary: Customer satisfaction (CSAT) report - 1-5 star ratings, distribution, trend, per-technician/per-client breakdowns, raw feedback feed
+      parameters:
+        - {$ref: '#/components/parameters/YearParam'}
+      responses:
+        '200': {$ref: '#/components/responses/ReportObject'}
   /reports/mrr:
     get:
       tags: [Reports]
@@ -1122,6 +1130,18 @@ paths:
     put:
       tags: [Profile]
       summary: Update profile / password, or register FCM push or biometric key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateProfileRequest'}
+      responses:
+        '200': {$ref: '#/components/responses/Ok'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    post:
+      tags: [Profile]
+      summary: Update profile / password (alias of PUT - FCM push and biometric key registration require PUT)
       requestBody:
         required: true
         content:

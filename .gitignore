@@ -4,6 +4,7 @@ config/
 .beta_db_pw
 keystore_base64.txt
 .claude/
+backups/*.zip
 
 uploads/favicon.ico
 uploads/contracts/*

@@ -5,6 +5,7 @@
  * Checks the status of the insert SQL query ($insert_sql)
  * Returns success data / fail messages
  */
+defined('FROM_API') || die();
 
 // Check if the insert query was successful
 if (isset($insert_id) && is_numeric($insert_id)) {

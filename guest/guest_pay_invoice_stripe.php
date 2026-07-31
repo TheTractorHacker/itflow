@@ -186,6 +186,24 @@ if (isset($_GET['invoice_id'], $_GET['url_key']) && !isset($_GET['payment_intent
         exit(WORDING_PAYMENT_FAILED);
     }
 
+    // Idempotency: a double-submit, back/forward replay of this return URL, or a
+    // race against guest/payment_webhook.php recording the same PaymentIntent
+    // first, would otherwise insert a second payment row for the same charge.
+    $existing_payment = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT payment_id, payment_invoice_id FROM payments WHERE payment_reference = 'Stripe - $pi_id' LIMIT 1"
+    ));
+    if ($existing_payment) {
+        $existing_invoice_id  = intval($existing_payment['payment_invoice_id']);
+        $existing_invoice_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT invoice_url_key FROM invoices WHERE invoice_id = $existing_invoice_id LIMIT 1"));
+        $existing_url_key     = sanitizeInput($existing_invoice_row['invoice_url_key'] ?? '');
+        // Company info isn't loaded yet on this branch (see below) - fetch just the
+        // base URL needed for the redirect.
+        $existing_base_url_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT company_base_url FROM companies WHERE company_id = 1"));
+        $existing_base_url     = sanitizeInput($existing_base_url_row['company_base_url'] ?? '');
+        header('Location: //' . $existing_base_url . '/guest/guest_view_invoice.php?invoice_id=' . $existing_invoice_id . '&url_key=' . $existing_url_key);
+        exit;
+    }
+
     // PI details
     $pi_date = date('Y-m-d', $pi_obj->created);
     $pi_invoice_id = intval($pi_obj->metadata->itflow_invoice_id);
@@ -244,12 +262,16 @@ if (isset($_GET['invoice_id'], $_GET['url_key']) && !isset($_GET['payment_intent
         exit(WORDING_PAYMENT_FAILED);
     }
 
-    // Update Invoice Status
-    mysqli_query($mysqli, "UPDATE invoices SET invoice_status = 'Paid' WHERE invoice_id = $invoice_id");
-
     // Add Payment to History
     mysqli_query($mysqli, "INSERT INTO payments SET payment_date = '$pi_date', payment_amount = $pi_amount_paid, payment_currency_code = '$pi_currency', payment_account_id = $stripe_account, payment_method = 'Stripe', payment_reference = 'Stripe - $pi_id', payment_invoice_id = $invoice_id");
-    mysqli_query($mysqli, "INSERT INTO history SET history_status = 'Paid', history_description = 'Online Payment added (client) - $ip - $os - $browser', history_invoice_id = $invoice_id");
+
+    // Recompute invoice status from total payments, rather than assuming this
+    // single PaymentIntent covers the invoice in full - matches guest/payment_webhook.php.
+    $paid_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT SUM(payment_amount) AS amount_paid FROM payments WHERE payment_invoice_id = $invoice_id"));
+    $total_paid = floatval($paid_row['amount_paid']);
+    $invoice_status = ($invoice_amount - $total_paid <= 0) ? 'Paid' : 'Partial';
+    mysqli_query($mysqli, "UPDATE invoices SET invoice_status = '$invoice_status' WHERE invoice_id = $invoice_id");
+    mysqli_query($mysqli, "INSERT INTO history SET history_status = '$invoice_status', history_description = 'Online Payment added (client) - $ip - $os - $browser', history_invoice_id = $invoice_id");
 
     // Notify
     appNotify("Invoice Paid", "Invoice $invoice_prefix$invoice_number has been paid by $client_name - $ip - $os - $browser", "/agent/invoice.php?invoice_id=$invoice_id", $pi_client_id);

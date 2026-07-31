@@ -43,9 +43,15 @@ $data = "otpauth://totp/ITFlow:$session_email?secret=$token";
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="../../plugins/fontawesome-free/css/all.min.css">
 
-    <!-- Theme style -->
-    <link rel="stylesheet" href="../../plugins/adminlte/css/adminlte.min.css">
+    <!-- Core stack: Bootstrap 5.3 + AdminLTE 4 -->
+    <link rel="stylesheet" href="../../plugins/bootstrap5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../plugins/adminlte4/css/adminlte.min.css">
     <link href="../../plugins/toastr/toastr.min.css" rel="stylesheet">
+
+    <!-- Theme: BS5 bridge (maps BS vars -> Alga tokens) THEN the custom theme -->
+    <link rel="stylesheet" href="../../css/itflow_bs5_bridge.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_bs5_bridge.css') ?>">
+    <link rel="stylesheet" href="../../css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
+    <link rel="stylesheet" href="../../css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
 
     <!-- jQuery -->
     <script src="../../plugins/jquery/jquery.min.js"></script>
@@ -99,8 +105,8 @@ $data = "otpauth://totp/ITFlow:$session_email?secret=$token";
 
     <!-- REQUIRED SCRIPTS -->
 
-    <!-- Bootstrap 4 -->
-    <script src="../../plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5 (bundle includes Popper) -->
+    <script src="../../plugins/bootstrap5/js/bootstrap.bundle.min.js"></script>
 
     <!-- Custom js-->
     <script src="../../plugins/clipboardjs/clipboard.min.js"></script>
@@ -112,44 +118,31 @@ $data = "otpauth://totp/ITFlow:$session_email?secret=$token";
         $("#alert").slideUp(500);
     });
 
-    // ClipboardJS
-
-    // Tooltip
-
-    $('button').tooltip({
-        trigger: 'click',
-        placement: 'bottom'
+    // Tooltips & popovers (Bootstrap 5, vanilla)
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        bootstrap.Tooltip.getOrCreateInstance(el);
+    });
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
+        bootstrap.Popover.getOrCreateInstance(el, { container: 'body' });
     });
 
-    function setTooltip(btn, message) {
-        $(btn).tooltip('hide')
-        .attr('data-original-title', message)
-        .tooltip('show');
-    }
-
-    function hideTooltip(btn) {
-        setTimeout(function() {
-            $(btn).tooltip('hide');
-        }, 1000);
-    }
-
-    // Clipboard
-
+    // Clipboard copy with BS5 tooltip feedback
     var clipboard = new ClipboardJS('.clipboardjs');
 
+    function flashTooltip(el, message) {
+        var tip = bootstrap.Tooltip.getOrCreateInstance(el, { trigger: 'manual', placement: 'bottom', title: message });
+        tip.setContent({ '.tooltip-inner': message });
+        tip.show();
+        setTimeout(function () { tip.hide(); }, 1000);
+    }
+
     clipboard.on('success', function(e) {
-        setTooltip(e.trigger, 'Copied!');
-        hideTooltip(e.trigger);
+        flashTooltip(e.trigger, 'Copied!');
+        e.clearSelection();
     });
 
     clipboard.on('error', function(e) {
-        setTooltip(e.trigger, 'Failed!');
-        hideTooltip(e.trigger);
-    });
-
-    // Enable Popovers
-    $(function () {
-        $('[data-bs-toggle="popover"]').popover()
+        flashTooltip(e.trigger, 'Failed!');
     });
 
     </script>

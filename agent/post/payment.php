@@ -430,7 +430,7 @@ if (isset($_POST['add_payment_stripe'])) {
     $idempotency_key = md5("agent_pay_stripe_{$invoice_id}_{$saved_payment_id}_" . intdiv(time(), 60));
     try {
         $payment_intent = $provider->chargeSavedMethod([
-            'amount' => intval($balance_to_pay * 100), // Times by 100 as Stripe expects values in cents
+            'amount' => intval(round($balance_to_pay * 100)), // Times by 100 as Stripe expects values in cents - round before truncating so float representation error can't undercharge by a cent
             'currency' => $invoice_currency_code,
             'customer' => $payment_provider_client,
             'payment_method' => $saved_payment_method,
@@ -619,7 +619,7 @@ if (isset($_GET['add_payment_stripe'])) {
     // Create a payment intent
     try {
         $payment_intent = $stripe->paymentIntents->create([
-            'amount' => intval($balance_to_pay * 100), // Times by 100 as Stripe expects values in cents
+            'amount' => intval(round($balance_to_pay * 100)), // Times by 100 as Stripe expects values in cents - round before truncating so float representation error can't undercharge by a cent
             'currency' => $invoice_currency_code,
             'customer' => $stripe_id,
             'payment_method' => $stripe_pm,

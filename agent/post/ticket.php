@@ -1009,10 +1009,16 @@ if (isset($_POST['quick_status_ticket'])) {
     $ns = mysqli_fetch_assoc($sql_ns);
     if (!$ns) { echo json_encode(['ok' => false]); exit; }
 
-    $new_status_name  = sanitizeInput($ns['ticket_status_name']);
-    $new_status_color = sanitizeInput($ns['ticket_status_color']);
-
     if ($new_status_id == 4) { $new_status_id = 5; }
+
+    // Re-fetch for the FINAL status id (a "Resolved" selection immediately
+    // becomes "Closed" above) - using the pre-remap name/color here previously
+    // told the acting user's own UI, the history log, and every other live
+    // viewer that the ticket was "Resolved" when it was actually "Closed".
+    $sql_ns_final = mysqli_query($mysqli, "SELECT ticket_status_name, ticket_status_color FROM ticket_statuses WHERE ticket_status_id = $new_status_id LIMIT 1");
+    $ns_final = mysqli_fetch_assoc($sql_ns_final);
+    $new_status_name  = sanitizeInput($ns_final['ticket_status_name']);
+    $new_status_color = sanitizeInput($ns_final['ticket_status_color']);
 
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $ticket_id");
     if ($new_status_id == 5) {
@@ -2115,9 +2121,6 @@ if (isset($_POST['add_ticket_reply'])) {
     // Update Ticket Status & updated at (in case status didn't change)
     mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $ticket_status, ticket_updated_at = NOW() WHERE ticket_id = $ticket_id");
 
-    $reply_status_info = getTicketStatusInfo($mysqli, $ticket_status);
-    publishTicketEvent($ticket_id, 'status', ['status_id' => $reply_status_info['id'], 'status_name' => $reply_status_info['name'], 'status_color' => $reply_status_info['color'], 'by' => $session_name]);
-
     // Resolve the ticket, if set
     if ($ticket_status == 4) {
         mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 5, ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id");
@@ -2130,9 +2133,15 @@ if (isset($_POST['add_ticket_reply'])) {
         customAction('ticket_close', $ticket_id);
     }
 
+    // Broadcast the FINAL status (a "Resolved" selection immediately becomes
+    // "Closed" above - broadcasting before that remap told other live viewers
+    // the wrong status name/color).
+    $final_ticket_status_id = ($ticket_status == 4) ? 5 : $ticket_status;
+    $reply_status_info = getTicketStatusInfo($mysqli, $final_ticket_status_id);
+    publishTicketEvent($ticket_id, 'status', ['status_id' => $reply_status_info['id'], 'status_name' => $reply_status_info['name'], 'status_color' => $reply_status_info['color'], 'by' => $session_name]);
+
     // SLA pause-on-hold: accrue/clear paused time across this status change.
-    $sla_new_status_id = ($ticket_status == 4) ? 5 : $ticket_status;
-    slaAccruePause($mysqli, $ticket_id, $sla_old_status_id, $sla_new_status_id);
+    slaAccruePause($mysqli, $ticket_id, $sla_old_status_id, $final_ticket_status_id);
 
     // Time was logged via the timer/manual entry fields
     $ticket_reply_time_logged = ($hours > 0 || $minutes > 0 || $seconds > 0);
@@ -2430,7 +2439,7 @@ if (isset($_POST['merge_ticket'])) {
     $ticket_reply_type = 'System'; // Default all auto-generated merge notes to System
 
     // Get current ticket details
-    $sql = mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_subject, ticket_details FROM tickets WHERE ticket_id = $ticket_id");
+    $sql = mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_subject, ticket_details, ticket_first_response_at, ticket_client_id FROM tickets WHERE ticket_id = $ticket_id");
     if (mysqli_num_rows($sql) == 0) {
         flash_alert("No ticket with that ID found.", 'error');
         redirect();
@@ -2442,6 +2451,14 @@ if (isset($_POST['merge_ticket'])) {
     $ticket_subject = sanitizeInput($row['ticket_subject']);
     $ticket_details = mysqli_escape_string($mysqli, $row['ticket_details']);
     $ticket_first_response_at = sanitizeInput($row['ticket_first_response_at']);
+
+    // Confirm access to the SOURCE ticket's client - checking only the
+    // destination below let an attacker merge (and force-close) any other
+    // client's ticket into one they legitimately have access to.
+    $source_client_id = intval($row['ticket_client_id']);
+    if ($source_client_id) {
+        enforceClientAccess($source_client_id);
+    }
 
     // NEW PARENT ticket details
     // Get merge into ticket id (as it may differ from the number)
@@ -2506,6 +2523,19 @@ if (isset($_POST['change_client_ticket'])) {
     $ticket_id = intval($_POST['ticket_id']);
     $client_id = intval($_POST['new_client_id']);
     $contact_id = intval($_POST['new_contact_id']);
+
+    // Confirm access to the ticket's CURRENT client before reassigning it - only
+    // checking the destination (new_client_id) below let an attacker move any
+    // other client's ticket into one they legitimately have access to.
+    $current_client_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id"));
+    if (!$current_client_row) {
+        flash_alert("No ticket with that ID found.", 'error');
+        redirect();
+    }
+    $current_client_id = intval($current_client_row['ticket_client_id']);
+    if ($current_client_id) {
+        enforceClientAccess($current_client_id);
+    }
 
     // Don't Enforce Client Access if Ticket doesn't have an assigned client
     if ($client_id) {
@@ -2729,7 +2759,8 @@ if (isset($_GET['close_ticket'])) {
 
         // EMAIL
         $subject = "Ticket closed - [$ticket_prefix$ticket_number] - $ticket_subject | (do not reply)";
-        $body = "Hello $contact_name,<br><br>Your ticket regarding \"$ticket_subject\" has been closed. <br><br> We hope the request/issue was resolved to your satisfaction, please provide your feedback <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>here</a>. <br>If you need further assistance, please raise a new ticket using the below details. Please do not reply to this email. <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$config_base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+        $csat_rating_html = ($config_ticket_csat_enable == 1) ? csatEmailRatingLinksHtml($config_base_url, $ticket_id, $url_key) : '';
+        $body = "Hello $contact_name,<br><br>Your ticket regarding \"$ticket_subject\" has been closed. <br><br> We hope the request/issue was resolved to your satisfaction - how would you rate it?<br>$csat_rating_html<a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>Or click here to leave feedback</a>. <br>If you need further assistance, please raise a new ticket using the below details. Please do not reply to this email. <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$config_base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
 
         // Check email valid
         if (filter_var($contact_email, FILTER_VALIDATE_EMAIL)) {
@@ -2769,7 +2800,7 @@ if (isset($_GET['close_ticket'])) {
     }
     //End Mail IF
 
-    flash_alert("Ticket Closed, this cannot not be reopened but you may start another one");
+    flash_alert("Ticket closed");
 
     redirect();
 
@@ -2933,6 +2964,10 @@ if (isset($_POST['add_quote_from_ticket'])) {
     require_once 'quote_model.php';
 
     $ticket_id = intval($_POST['ticket_id']);
+    $scope = sanitizeInput($_POST['scope']);
+    $date = sanitizeInput($_POST['date']);
+    $expire = sanitizeInput($_POST['expire']);
+    $category = intval($_POST['category']);
     $item_name = sanitizeInput($_POST['item_name']);
     $item_description = sanitizeInput($_POST['item_description']);
     $qty = floatval($_POST['qty']);
@@ -3494,7 +3529,6 @@ if (isset($_POST['edit_ticket_charge'])) {
     enforceUserPermission('module_support', 2);
 
     $charge_id      = intval($_POST['charge_id']);
-    $ticket_id      = intval($_POST['ticket_id']);
     $charge_name    = sanitizeInput($_POST['charge_name']);
     $charge_desc    = mysqli_real_escape_string($mysqli, $_POST['charge_description'] ?? '');
     $charge_qty     = round(floatval($_POST['charge_quantity']), 2);
@@ -3502,8 +3536,20 @@ if (isset($_POST['edit_ticket_charge'])) {
     $charge_total   = round($charge_qty * $charge_price, 2);
     $charge_tax_id  = intval($_POST['charge_tax_id'] ?? 0);
 
-    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
-    $client_id = intval($r['ticket_client_id'] ?? 0);
+    // Derive ticket_id/client_id FROM the charge row itself (matching the sibling
+    // delete_ticket_charge handler below) rather than trusting a separately-POSTed
+    // ticket_id - the access check must be validated against the SAME resource the
+    // UPDATE actually targets, or an attacker can pass a ticket_id they legitimately
+    // own alongside an unrelated charge_id belonging to another client's ticket.
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT charge_ticket_id FROM ticket_charges WHERE charge_id = $charge_id LIMIT 1"));
+    $ticket_id = intval($r['charge_ticket_id'] ?? 0);
+    if (!$ticket_id) {
+        flash_alert("No charge with that ID found.", 'error');
+        redirect();
+    }
+
+    $tr = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+    $client_id = intval($tr['ticket_client_id'] ?? 0);
     if ($client_id) { enforceClientAccess(); }
 
     mysqli_query($mysqli, "UPDATE ticket_charges SET
@@ -3513,7 +3559,7 @@ if (isset($_POST['edit_ticket_charge'])) {
         charge_unit_price  = $charge_price,
         charge_total       = $charge_total,
         charge_tax_id      = $charge_tax_id
-        WHERE charge_id = $charge_id");
+        WHERE charge_id = $charge_id AND charge_ticket_id = $ticket_id");
 
     logAction("Ticket", "Edit", "Updated charge $charge_name on ticket", $client_id, $ticket_id);
 

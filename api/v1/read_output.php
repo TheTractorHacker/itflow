@@ -5,6 +5,7 @@
  * Included on calls to read.php endpoints
  * Returns success & data messages
  */
+defined('FROM_API') || die();
 
 if ($sql && mysqli_num_rows($sql) > 0) {
     $return_arr['success'] = "True";

@@ -193,35 +193,58 @@ if (isset($_POST['close_ticket'], $_POST['url_key'])) {
 
 if (isset($_POST['add_ticket_feedback'], $_POST['url_key'])) {
 
+    if (empty($config_ticket_csat_enable)) {
+        redirect();
+    }
+
     $ticket_id = intval($_POST['ticket_id']);
     $url_key = sanitizeInput($_POST['url_key']);
-    $feedback = sanitizeInput($_POST['feedback']);
+    $rating = intval($_POST['csat_rating'] ?? 0);
+    $comment_raw = substr(trim($_POST['csat_comment'] ?? ''), 0, 1000);
+    $comment = sanitizeInput($comment_raw);
+
+    if ($rating < 1 || $rating > 5) {
+        flash_alert("Please select a rating.", "danger");
+        redirect();
+    }
 
     // Select only the necessary fields
     $sql = mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $ticket_id AND ticket_url_key = '$url_key' AND ticket_closed_at IS NOT NULL");
 
     if (mysqli_num_rows($sql) == 1) {
-        // Add feedback
-        mysqli_query($mysqli, "UPDATE tickets SET ticket_feedback = '$feedback' WHERE ticket_id = $ticket_id AND ticket_url_key = '$url_key'");
+        applyCsatRating($mysqli, $ticket_id, $rating, $comment, 'a guest', $config_ticket_csat_low_rating_threshold);
 
-        // Notify on bad feedback
-        if ($feedback == "Bad") {
-            $ticket_details = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
-            $ticket_prefix = sanitizeInput($ticket_details['ticket_prefix']);
-            $ticket_number = intval($ticket_details['ticket_number']);
-
-            appNotify("Feedback", "Guest rated ticket number $ticket_prefix$ticket_number (ID: $ticket_id) as bad", "/agent/ticket.php?ticket_id=$ticket_id");
-        }
+        customAction('ticket_feedback', $ticket_id);
 
         flash_alert("Feedback recorded - thank you");
 
         redirect();
 
-        customAction('ticket_feedback', $ticket_id);
-
     } else {
         echo "Invalid!!";
     }
+
+}
+
+if (isset($_POST['add_ticket_csat_comment'], $_POST['url_key'])) {
+
+    $ticket_id = intval($_POST['ticket_id']);
+    $url_key = sanitizeInput($_POST['url_key']);
+    $comment_raw = substr(trim($_POST['csat_comment'] ?? ''), 0, 1000);
+    $comment = sanitizeInput($comment_raw);
+
+    // Only lets someone add a comment to a rating that already exists and has no
+    // comment yet (the one-click email star links can't carry free text, so the
+    // comment is a separate follow-up step on the landing page) - never lets this
+    // action set/overwrite the rating itself.
+    $sql = mysqli_query($mysqli, "SELECT ticket_id FROM tickets WHERE ticket_id = $ticket_id AND ticket_url_key = '$url_key' AND ticket_csat_rating IS NOT NULL AND (ticket_csat_comment IS NULL OR ticket_csat_comment = '')");
+
+    if (mysqli_num_rows($sql) == 1 && $comment !== '') {
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_csat_comment = '$comment' WHERE ticket_id = $ticket_id AND ticket_url_key = '$url_key'");
+        flash_alert("Comment added - thank you");
+    }
+
+    redirect();
 
 }
 
@@ -231,7 +254,7 @@ if (isset($_GET['approve_ticket_task'])) {
     $approval_id = intval($_GET['approval_id']);
     $url_key = sanitizeInput($_GET['approval_url_key']);
 
-    $approval_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM task_approvals LEFT JOIN tasks on task_id = approval_task_id WHERE approval_id = $approval_id AND approval_task_id = $task_id AND approval_url_key = '$url_key' AND approval_status = 'pending'"));
+    $approval_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM task_approvals LEFT JOIN tasks on task_id = approval_task_id WHERE approval_id = $approval_id AND approval_task_id = $task_id AND approval_url_key = '$url_key' AND approval_status = 'pending' AND approval_scope = 'client'"));
 
     $task_name = nullable_htmlentities($approval_row['task_name']);
     $scope = nullable_htmlentities($approval_row['approval_scope']);
@@ -245,7 +268,7 @@ if (isset($_GET['approve_ticket_task'])) {
     }
 
     // Approve
-    mysqli_query($mysqli, "UPDATE task_approvals SET approval_status = 'approved', approval_approved_by = $required_user WHERE approval_id = $approval_id AND approval_task_id = $task_id AND approval_url_key = '$url_key' AND approval_status = 'pending'");
+    mysqli_query($mysqli, "UPDATE task_approvals SET approval_status = 'approved', approval_approved_by = $required_user WHERE approval_id = $approval_id AND approval_task_id = $task_id AND approval_url_key = '$url_key' AND approval_status = 'pending' AND approval_scope = 'client'");
 
     // Notify tech
     mysqli_query($mysqli, "INSERT INTO notifications SET notification_type = 'Ticket', notification = 'Guest approved ticket task $task_name', notification_action = 'ticket.php?ticket_id=$ticket_id', notification_user_id = $created_by");

@@ -59,6 +59,9 @@ $config_ticket_from_name = sanitizeInput($row['config_ticket_from_name']);
 $config_ticket_from_email = sanitizeInput($row['config_ticket_from_email']);
 $config_ticket_client_general_notifications = intval($row['config_ticket_client_general_notifications']);
 $config_ticket_autoclose_hours = intval($row['config_ticket_autoclose_hours']);
+$config_ticket_csat_enable = intval($row['config_ticket_csat_enable'] ?? 1);
+$config_ticket_csat_reminder_days = intval($row['config_ticket_csat_reminder_days'] ?? 3);
+$config_ticket_csat_low_rating_threshold = intval($row['config_ticket_csat_low_rating_threshold'] ?? 2);
 $config_ticket_new_ticket_notification_email = sanitizeInput($row['config_ticket_new_ticket_notification_email']);
 
 // Get Config for Telemetry
@@ -508,7 +511,8 @@ while ($row = mysqli_fetch_assoc($sql_resolved_tickets_to_close)) {
         if (filter_var($contact_email, FILTER_VALIDATE_EMAIL)) {
 
             $email_subject = "Ticket closed - [$ticket_prefix$ticket_number] - $ticket_subject | (do not reply)";
-            $email_body = "Hello $contact_name,<br><br>Your ticket regarding \"$ticket_subject\" has been automatically closed after a period of inactivity. <br><br> We hope the request/issue was resolved to your satisfaction, please provide your feedback <a href='https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key'>here</a>. <br>If you need further assistance, please raise a new ticket using the below details. Please do not reply to this email. <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$config_base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+            $csat_rating_html = ($config_ticket_csat_enable == 1) ? csatEmailRatingLinksHtml($config_base_url, $ticket_id, $url_key) : '';
+            $email_body = "Hello $contact_name,<br><br>Your ticket regarding \"$ticket_subject\" has been automatically closed after a period of inactivity. <br><br> We hope the request/issue was resolved to your satisfaction - how would you rate it?<br>$csat_rating_html<a href='https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key'>Or click here to leave feedback</a>. <br>If you need further assistance, please raise a new ticket using the below details. Please do not reply to this email. <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$config_base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
 
             $ticket_from = resolveTicketFromIdentity($ticket_id);
 
@@ -523,6 +527,59 @@ while ($row = mysqli_fetch_assoc($sql_resolved_tickets_to_close)) {
 
             addToMailQueue([$email]);
         }
+    }
+}
+
+// CSAT REMINDER
+// One nudge email for a closed ticket that's sat unrated past the configured delay.
+// ticket_csat_reminded_at is the dedupe column - set immediately after queueing so
+// this can never send twice for the same ticket, no matter how often cron runs.
+if ($config_ticket_csat_enable == 1 && (!empty($config_smtp_host) || !empty($config_smtp_provider)) && $config_ticket_client_general_notifications == 1) {
+
+    $sql_unrated_tickets = mysqli_query(
+        $mysqli,
+        "SELECT tickets.*, contact_name, contact_email FROM tickets
+        LEFT JOIN contacts ON ticket_contact_id = contact_id
+        WHERE ticket_status = 5
+        AND ticket_csat_rating IS NULL
+        AND ticket_csat_reminded_at IS NULL
+        AND ticket_archived_at IS NULL
+        AND ticket_closed_at < NOW() - INTERVAL $config_ticket_csat_reminder_days DAY"
+    );
+
+    while ($row = mysqli_fetch_assoc($sql_unrated_tickets)) {
+
+        $ticket_id = intval($row['ticket_id']);
+        $ticket_prefix = sanitizeInput($row['ticket_prefix']);
+        $ticket_number = intval($row['ticket_number']);
+        $ticket_subject = sanitizeInput($row['ticket_subject']);
+        $contact_name = sanitizeInput($row['contact_name']);
+        $contact_email = sanitizeInput($row['contact_email']);
+        $url_key = sanitizeInput($row['ticket_url_key']);
+
+        if (filter_var($contact_email, FILTER_VALIDATE_EMAIL)) {
+
+            $email_subject = "How did we do? - [$ticket_prefix$ticket_number] - $ticket_subject | (do not reply)";
+            $csat_rating_html = csatEmailRatingLinksHtml($config_base_url, $ticket_id, $url_key);
+            $email_body = "Hello $contact_name,<br><br>We hope your ticket regarding \"$ticket_subject\" was resolved to your satisfaction. You haven't had a chance to rate it yet - how would you rate it?<br>$csat_rating_html<a href='https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key'>Or click here to leave feedback</a>. <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Portal: https://$config_base_url/client/ticket.php?id=$ticket_id<br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+
+            $ticket_from = resolveTicketFromIdentity($ticket_id);
+
+            $email = [
+                'from' => $ticket_from['email'],
+                'from_name' => $ticket_from['name'],
+                'recipient' => $contact_email,
+                'recipient_name' => $contact_name,
+                'subject' => $email_subject,
+                'body' => $email_body
+            ];
+
+            addToMailQueue([$email]);
+        }
+
+        // Set regardless of whether a valid contact email existed, so a ticket with
+        // no/invalid contact email doesn't get re-scanned by cron indefinitely.
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_csat_reminded_at = NOW() WHERE ticket_id = $ticket_id");
     }
 }
 
@@ -888,7 +945,7 @@ while ($row = mysqli_fetch_assoc($sql_recurring_payments)) {
 
                 try {
                     $payment_intent = $provider->chargeSavedMethod([
-                        'amount' => intval($balance_to_pay * 100),
+                        'amount' => intval(round($balance_to_pay * 100)), // round before truncating so float representation error can't undercharge by a cent
                         'currency' => $recurring_payment_currency_code,
                         'customer' => $stripe_customer_id,
                         'payment_method' => $stripe_payment_method_id,
@@ -1362,10 +1419,10 @@ if ($config_backup_auto_enabled) {
 // recent jobs as a fallback, so a failed backup always raises an alert even
 // if the webhook was never set up or didn't fire.
 $config_comet_enabled    = intval($row['config_comet_enabled'] ?? 0);
-$config_comet_totp_secret = $row['config_comet_totp_secret'] ?? '';
+$config_comet_totp_secret = decryptSetting($row['config_comet_totp_secret'] ?? '');
 $config_comet_server_url  = $row['config_comet_server_url'] ?? '';
 $config_comet_admin_user  = $row['config_comet_admin_user'] ?? '';
-$config_comet_admin_pass  = $row['config_comet_admin_pass'] ?? '';
+$config_comet_admin_pass  = decryptSetting($row['config_comet_admin_pass'] ?? '');
 
 if ($config_comet_enabled && !empty($config_comet_server_url)) {
     require_once dirname(__DIR__) . '/includes/comet.php';
@@ -1413,7 +1470,7 @@ $sql_wq = mysqli_query($mysqli,
 while ($wq = mysqli_fetch_assoc($sql_wq)) {
     $wq_id       = intval($wq['queue_id']);
     $wq_payload  = $wq['queue_payload'];
-    $wq_secret   = $wq['webhook_secret'];
+    $wq_secret   = decryptSetting($wq['webhook_secret']);
     $wq_url      = $wq['webhook_url'];
     $wq_attempts = intval($wq['queue_attempts']) + 1;
     $wq_event    = $wq['queue_event'];

@@ -99,7 +99,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                         //$colors_diff = array_diff($colors_array,$colors_used_array);
 
-                        include "custom_field_edit_modal.php";
+                        include "modals/custom_field/custom_field_edit.php";
 
 
                     }
@@ -115,6 +115,6 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
     </div>
 
 <?php
-require_once "custom_field_create_modal.php";
+require_once "modals/custom_field/custom_field_create.php";
 
 require_once "../includes/footer.php";
