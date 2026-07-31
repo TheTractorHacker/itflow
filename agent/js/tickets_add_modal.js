@@ -1,4 +1,5 @@
 // Used to populate dynamic content in recurring_ticket_add_modal and ticket_add_modal_v2 based on selected client
+(function () {
 
 // Client selected listener
 //  We seem to have to use jQuery to listen for events, as the client input is a select2 component?
@@ -6,7 +7,7 @@
 const clientSelectDropdown = document.getElementById("changeClientSelect"); // Define client selector
 
 // // If the client selector is disabled, we must be on a client-specific page instead. Trigger the lists to update.
-if (clientSelectDropdown.disabled) {
+if (clientSelectDropdown && clientSelectDropdown.disabled) {
 
     let client_id = $(clientSelectDropdown).find(':selected').val();
 
@@ -174,3 +175,4 @@ function populateVendorsDropdown(client_id) {
         }
     );
 }
+})();
