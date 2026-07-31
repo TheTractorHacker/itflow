@@ -195,9 +195,9 @@ $priority_colors = [
                     <span class="info-box-icon"><i class="fas fa-smile"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">CSAT</span>
-                        <span class="info-box-number"><?php echo $report['csat']['pct'] !== null ? $report['csat']['pct'] . '%' : '—'; ?></span>
-                        <?php if ($report['csat']['total'] > 0) { ?>
-                        <span class="info-box-text" style="font-size:10px"><?php echo intval($report['csat']['good']); ?> good / <?php echo intval($report['csat']['bad']); ?> bad</span>
+                        <span class="info-box-number"><?php echo $report['csat']['avg_rating'] !== null ? $report['csat']['avg_rating'] . ' / 5' : '—'; ?></span>
+                        <?php if ($report['csat']['rated'] > 0) { ?>
+                        <span class="info-box-text" style="font-size:10px"><?php echo intval($report['csat']['rated']); ?> rated · <?php echo $report['csat']['satisfied_pct']; ?>% satisfied</span>
                         <?php } ?>
                     </div>
                 </div>

@@ -3,7 +3,7 @@
 
     <a class="pb-1 mt-1 brand-link" href="../<?php echo $config_start_page ?>">
         <p class="h5"><i class="nav-icon fas fa-arrow-left ms-3 me-2"></i>
-            <span class="brand-text ">Back | <strong>Custom</strong>
+            <span class="brand-text">Back | <strong>Custom</strong></span>
         </p>
     </a>
 

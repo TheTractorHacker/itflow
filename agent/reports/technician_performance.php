@@ -24,7 +24,7 @@ $report = getTechnicianPerformanceReport($mysqli, $report_from, $report_to);
 
 // CSV export: per-technician detail (same rows as the "Per-Technician Detail" table).
 if (!empty($report_export_csv)) {
-    $csv_header = ['Technician', 'Billable hours', 'Non-billable hours', 'Utilization %', 'Billable value', 'Tickets closed', 'Avg handle (seconds)', 'CSAT %', 'CSAT good', 'CSAT bad'];
+    $csv_header = ['Technician', 'Billable hours', 'Non-billable hours', 'Utilization %', 'Billable value', 'Tickets closed', 'Avg handle (seconds)', 'CSAT avg rating', 'CSAT rated count', 'CSAT satisfied %'];
     $csv_rows = [];
     foreach ($report['technicians'] as $t) {
         $csv_rows[] = [
@@ -35,9 +35,9 @@ if (!empty($report_export_csv)) {
             $t['billable_value'],
             intval($t['tickets_closed']),
             $t['avg_handle_seconds'] !== null ? intval($t['avg_handle_seconds']) : '',
-            $t['csat_pct'] !== null ? $t['csat_pct'] : '',
-            intval($t['csat_good']),
-            intval($t['csat_bad']),
+            $t['csat_avg_rating'] !== null ? $t['csat_avg_rating'] : '',
+            intval($t['csat_rated_count']),
+            $t['csat_satisfied_pct'] !== null ? $t['csat_satisfied_pct'] : '',
         ];
     }
     report_send_csv('technician_performance_' . $report_from . '_to_' . $report_to . '.csv', $csv_header, $csv_rows);
@@ -182,9 +182,9 @@ $cap_hours_per_tech = $report['capacity']['capacity_hours_per_tech'];
                     <span class="info-box-icon"><i class="fas fa-smile"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Team CSAT</span>
-                        <span class="info-box-number"><?php echo $report['totals']['csat_pct'] !== null ? $report['totals']['csat_pct'] . '%' : '—'; ?></span>
-                        <?php if (($report['totals']['csat_good'] + $report['totals']['csat_bad']) > 0) { ?>
-                        <span class="info-box-text" style="font-size:10px"><?php echo intval($report['totals']['csat_good']); ?> good / <?php echo intval($report['totals']['csat_bad']); ?> bad</span>
+                        <span class="info-box-number"><?php echo $report['totals']['csat_avg_rating'] !== null ? $report['totals']['csat_avg_rating'] . ' / 5' : '—'; ?></span>
+                        <?php if ($report['totals']['csat_rated_count'] > 0) { ?>
+                        <span class="info-box-text" style="font-size:10px"><?php echo intval($report['totals']['csat_rated_count']); ?> rated · <?php echo $report['totals']['csat_satisfied_pct']; ?>% satisfied</span>
                         <?php } ?>
                     </div>
                 </div>
@@ -242,9 +242,9 @@ $cap_hours_per_tech = $report['capacity']['capacity_hours_per_tech'];
                                 <td class="text-end"><?php echo intval($t['tickets_closed']); ?></td>
                                 <td class="text-end"><?php echo $t['avg_handle_seconds'] !== null ? secondsToTime($t['avg_handle_seconds']) : '—'; ?></td>
                                 <td class="text-end">
-                                    <?php echo $t['csat_pct'] !== null ? $t['csat_pct'] . '%' : '—'; ?>
-                                    <?php if (($t['csat_good'] + $t['csat_bad']) > 0) { ?>
-                                        <small class="text-muted">(<?php echo intval($t['csat_good']); ?>/<?php echo intval($t['csat_bad']); ?>)</small>
+                                    <?php echo $t['csat_avg_rating'] !== null ? $t['csat_avg_rating'] . ' / 5' : '—'; ?>
+                                    <?php if ($t['csat_rated_count'] > 0) { ?>
+                                        <small class="text-muted">(<?php echo intval($t['csat_rated_count']); ?> rated)</small>
                                     <?php } ?>
                                 </td>
                             </tr>

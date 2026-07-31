@@ -22,6 +22,11 @@ if ($reports_show_technical) {
     $reports_open_tickets = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE ticket_closed_at IS NULL AND ticket_resolved_at IS NULL"))[0]);
     $reports_unassigned_tickets = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE ticket_closed_at IS NULL AND (ticket_assigned_to IS NULL OR ticket_assigned_to = 0)"))[0]);
     $reports_opened_today = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE DATE(ticket_created_at) = CURDATE()"))[0]);
+    $reports_csat_avg = null;
+    if (!empty($config_ticket_csat_enable)) {
+        $reports_csat_avg_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT AVG(ticket_csat_rating) AS v FROM tickets WHERE ticket_csat_rated_at >= NOW() - INTERVAL 30 DAY"));
+        $reports_csat_avg = $reports_csat_avg_row['v'] !== null ? round(floatval($reports_csat_avg_row['v']), 2) : null;
+    }
 }
 ?>
 
@@ -74,7 +79,7 @@ if ($reports_show_technical) {
             <?php if ($reports_show_technical) { ?>
             <h6 class="text-muted text-uppercase mb-2" style="font-size:.72rem; letter-spacing:.06em;">Technical</h6>
             <div class="row">
-                <div class="col-6 col-md-4 mb-3">
+                <div class="col-6 col-md-3 mb-3">
                     <a href="/agent/reports/ticket_summary.php" class="text-decoration-none">
                         <div class="small-box text-bg-primary bg-gradient mb-0">
                             <div class="inner">
@@ -85,7 +90,7 @@ if ($reports_show_technical) {
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 mb-3">
+                <div class="col-6 col-md-3 mb-3">
                     <a href="/agent/reports/service_desk.php" class="text-decoration-none">
                         <div class="small-box text-bg-danger bg-gradient mb-0">
                             <div class="inner">
@@ -96,7 +101,7 @@ if ($reports_show_technical) {
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 mb-3">
+                <div class="col-6 col-md-3 mb-3">
                     <a href="/agent/reports/ticket_summary.php" class="text-decoration-none">
                         <div class="small-box text-bg-info bg-gradient mb-0">
                             <div class="inner">
@@ -107,6 +112,19 @@ if ($reports_show_technical) {
                         </div>
                     </a>
                 </div>
+                <?php if (!empty($config_ticket_csat_enable)) { ?>
+                <div class="col-6 col-md-3 mb-3">
+                    <a href="/agent/reports/csat.php" class="text-decoration-none">
+                        <div class="small-box text-bg-warning bg-gradient mb-0">
+                            <div class="inner">
+                                <h3><?php echo $reports_csat_avg !== null ? $reports_csat_avg . '/5' : '—'; ?></h3>
+                                <p>CSAT (30 days)</p>
+                            </div>
+                            <div class="icon"><i class="fas fa-star"></i></div>
+                        </div>
+                    </a>
+                </div>
+                <?php } ?>
             </div>
             <?php } ?>
 

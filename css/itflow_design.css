@@ -191,3 +191,40 @@ code, kbd, samp, pre, .text-monospace, .font-monospace, .if-mono { font-family: 
 
 /* keyboard focus visible everywhere (quality floor) */
 a:focus-visible, .btn:focus-visible, .nav-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* ---- CSAT face rating widget: works with JS fully disabled (native radios,
+   no fill trick needed - unlike a star scale, each face is one discrete option
+   representing its own satisfaction level, not a cumulative "fill up to here").
+   Faces stay in full natural color at all times - emoji rely on color for
+   readability, and desaturating them (an earlier version of this rule did)
+   turns 5 distinct expressions into 5 near-identical muddy gray-brown blobs,
+   defeating the entire point of a face scale. Hover/selection is shown purely
+   via scale + a soft background + a ring, never by dimming the others. ---- */
+.csat-faces { border: 0; padding: 0; margin: 0; display: inline-flex; overflow: visible; min-width: 0; gap: .35rem; }
+.csat-face-input { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
+/* Color emoji glyphs render taller than their nominal font-size implies (their
+   font metrics bake in extra vertical space differently per platform), so a
+   line-height:1 box the same height as the font-size clips their bottom edge
+   - give the line box real breathing room instead of relying on font-size alone. */
+.csat-face-label { display: inline-flex; align-items: center; justify-content: center; overflow: visible; width: 3rem; height: 3rem; font-size: 2rem; line-height: 3rem; cursor: pointer; border-radius: 50%; transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease; }
+.csat-face-label:hover { transform: scale(1.15); background-color: var(--if-surface); }
+.csat-face-input:checked + .csat-face-label { transform: scale(1.2); background-color: var(--if-surface); box-shadow: 0 0 0 2px var(--color-accent); }
+.csat-face-input:focus-visible + .csat-face-label { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.csat-face-display { font-size: 1.8rem; line-height: 1.4; vertical-align: middle; }
+
+/* CSAT prompt/thank-you card: deliberately NOT the dark-header record-card
+   treatment used above it (ticket subject/state/priority) - that pattern reads
+   as "formal record," which is wrong for what should feel like a quick,
+   personal, low-friction ask. A colored top accent (echoing the accent button
+   below it) plus a light surface differentiates "quick human interaction" from
+   "formal record" without introducing a new visual language. */
+.csat-card { border: 1px solid var(--if-border); border-top: 3px solid var(--color-accent); border-radius: var(--if-radius); background-color: var(--if-surface); box-shadow: none; }
+.csat-card .card-body { padding: 1.75rem 1.5rem; }
+.csat-card-lede { color: var(--if-muted); }
+
+/* ---- Ticket detail sidebar: the stacked cards (Time Entry, Appointments,
+   Technicians, Live Chat, Activity Summary, Tasks, Worksheets, Attachments,
+   Charges, Contact) had no gap and no shadow between them, so they visually
+   fused into one flat, borderless block instead of reading as separate cards. ---- */
+.ticket-sidebar > .card { margin-bottom: 1rem; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075); }
+.ticket-sidebar > .card:last-child { margin-bottom: 0; }

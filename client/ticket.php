@@ -49,6 +49,8 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
         $ticket_resolved_at = nullable_htmlentities($ticket_row['ticket_resolved_at']);
         $ticket_closed_at = nullable_htmlentities($ticket_row['ticket_closed_at']);
         $ticket_feedback = nullable_htmlentities($ticket_row['ticket_feedback']);
+        $ticket_csat_rating = intval($ticket_row['ticket_csat_rating'] ?? 0);
+        $ticket_csat_comment = nullable_htmlentities($ticket_row['ticket_csat_comment']);
         $ticket_category = nullable_htmlentities($ticket_row['category_name']);
 
         // Get Ticket Attachments (not associated with a specific reply)
@@ -234,7 +236,26 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
 
         <!-- Either show the reply comments box, option to re-open ticket, show ticket smiley feedback or thanks for feedback -->
 
-        <?php if (empty($ticket_resolved_at)) { ?>
+        <?php if ($ticket_csat_rating > 0) { ?>
+
+            <div class="card csat-card mb-3">
+                <div class="card-body text-center">
+                    <h4 class="mb-1">
+                        <span class="csat-face-display" title="<?= csatFaceLabel($ticket_csat_rating) ?>"><?= csatFaceEmoji($ticket_csat_rating) ?></span>
+                        Thanks for your feedback!
+                    </h4>
+                    <?php if ($ticket_csat_comment) { ?>
+                        <p class="text-muted mb-0 mt-2">"<?php echo $ticket_csat_comment; ?>"</p>
+                    <?php } ?>
+                </div>
+            </div>
+
+        <?php // A low rating auto-reopens the ticket (clears resolved_at/closed_at) so
+              // the agent sees it back in their queue - but the customer who JUST rated
+              // it shouldn't then be dropped back into the plain reply form below, which
+              // is why this rated-check runs first regardless of resolved/closed state. ?>
+
+        <?php } elseif (empty($ticket_resolved_at)) { ?>
             <!-- Reply -->
 
             <form action="post.php" enctype="multipart/form-data" method="post">
@@ -267,26 +288,37 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
             </div>
             <br>
 
-        <?php } elseif (empty($ticket_feedback)) { ?>
+        <?php } elseif (empty($config_ticket_csat_enable)) { ?>
 
-            <h4>Ticket closed. Please rate your ticket</h4>
-
-            <form action="post.php" method="post">
-                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                <input type="hidden" name="ticket_id" value="<?php echo $ticket_id ?>">
-
-                <button type="submit" class="btn btn-primary btn-lg" name="add_ticket_feedback" value="Good">
-                    <span class="fa fa-smile" aria-hidden="true"></span> Good
-                </button>
-
-                <button type="submit" class="btn btn-danger btn-lg" name="add_ticket_feedback" value="Bad">
-                    <span class="fa fa-frown" aria-hidden="true"></span> Bad
-                </button>
-            </form>
+            <!-- CSAT disabled and this ticket hasn't been rated - nothing to show. -->
 
         <?php } else { ?>
 
-            <h4>Rated <?php echo $ticket_feedback ?> -- Thanks for your feedback!</h4>
+            <div class="card csat-card mb-3">
+                <div class="card-body text-center">
+                    <h4 class="mb-1">How did we do?</h4>
+                    <p class="csat-card-lede mb-3">Your ticket is closed &mdash; a quick rating helps us keep improving.</p>
+                    <form action="post.php" method="post" class="csat-form">
+                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                        <input type="hidden" name="ticket_id" value="<?php echo $ticket_id ?>">
+
+                        <fieldset class="csat-faces justify-content-center">
+                            <legend class="visually-hidden">Rate this ticket</legend>
+                            <?php for ($s = 1; $s <= 5; $s++) { ?>
+                                <input type="radio" name="csat_rating" id="csat_face_<?= $s ?>" value="<?= $s ?>" class="csat-face-input js-csat-rating-input" data-label="<?= csatFaceLabel($s) ?>">
+                                <label for="csat_face_<?= $s ?>" class="csat-face-label" title="<?= csatFaceLabel($s) ?>"><?= csatFaceEmoji($s) ?></label>
+                            <?php } ?>
+                        </fieldset>
+                        <div class="js-csat-live text-muted small mt-1" aria-live="polite"></div>
+
+                        <div class="mt-3 mx-auto" style="max-width:420px;">
+                            <textarea name="csat_comment" class="form-control" rows="2" maxlength="1000" placeholder="Anything you'd like to add? (optional)"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary mt-3 px-4" name="add_ticket_feedback" value="1"><i class="fas fa-fw fa-paper-plane me-2"></i>Submit rating</button>
+                    </form>
+                </div>
+            </div>
 
         <?php } ?>
 
@@ -382,6 +414,7 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
 
         <!-- Live ticket updates (replies/status/chat via SSE) -->
         <script src="../js/live_ticket.js"></script>
+        <script src="../js/csat_rating.js"></script>
 
         <?php
     } else {

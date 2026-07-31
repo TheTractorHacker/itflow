@@ -69,6 +69,35 @@ require_once "includes/inc_all_admin.php";
                     </div>
                 </div>
 
+                <hr>
+                <h6 class="text-muted text-uppercase mb-2" style="font-size:.72rem; letter-spacing:.06em;">Customer Satisfaction (CSAT)</h6>
+
+                <div class="form-group">
+                    <div class="form-check form-check form-switch">
+                        <input type="checkbox" class="form-check-input" name="config_ticket_csat_enable" <?php if ($config_ticket_csat_enable == 1) { echo "checked"; } ?> value="1" id="csatEnableSwitch">
+                        <label class="form-check-label" for="csatEnableSwitch">Enable CSAT ratings <small class="text-secondary">(clients/guests can rate closed tickets <?= csatFaceEmoji(1) ?>&ndash;<?= csatFaceEmoji(5) ?>)</small></label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Reminder email delay <small class="text-secondary">(days after close before an unrated ticket gets one reminder)</small></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-fw fa-bell"></i></span>
+                        </div>
+                        <input type="number" min="1" class="form-control" name="config_ticket_csat_reminder_days" value="<?php echo intval($config_ticket_csat_reminder_days); ?>">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Low-rating follow-up threshold <small class="text-secondary">(a rating at or below this auto-reopens the ticket)</small></label>
+                    <select class="form-control" name="config_ticket_csat_low_rating_threshold">
+                        <?php for ($t = 1; $t <= 4; $t++) { ?>
+                            <option value="<?= $t ?>" <?php if ($config_ticket_csat_low_rating_threshold == $t) { echo "selected"; } ?>><?= csatFaceEmoji($t) ?> <?= csatFaceLabel($t) ?> or below</option>
+                        <?php } ?>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label>Email address to notify when new tickets are raised <small class="text-secondary">(Ideally a distribution list/shared mailbox)</small></label>
                     <div class="input-group">

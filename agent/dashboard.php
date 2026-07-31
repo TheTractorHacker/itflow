@@ -54,7 +54,7 @@ $sql_years_select = mysqli_query($mysqli, "
   .small-box.bg-success, .small-box.text-bg-success,
   .small-box.bg-warning, .small-box.text-bg-warning,
   .small-box.bg-danger, .small-box.text-bg-danger,
-  .small-box.bg-secondary, .small-box.bg-pink {
+  .small-box.bg-secondary, .small-box.text-bg-secondary, .small-box.bg-pink {
     color: #0b0b0b !important;
     border: 1px solid #e6e5e0;
     border-left-width: 4px;
@@ -91,9 +91,9 @@ $sql_years_select = mysqli_query($mysqli, "
   .small-box.bg-info .icon, .small-box.text-bg-info .icon { background: rgba(27,175,122,.16); }
   .small-box.bg-info .icon i, .small-box.text-bg-info .icon i { color: #159763; }
 
-  .small-box.bg-secondary { background: rgba(74,58,167,.06) !important; border-left-color: #4a3aa7; }
-  .small-box.bg-secondary .icon { background: rgba(74,58,167,.14); }
-  .small-box.bg-secondary .icon i { color: #4a3aa7; }
+  .small-box.bg-secondary, .small-box.text-bg-secondary { background: rgba(74,58,167,.06) !important; border-left-color: #4a3aa7; }
+  .small-box.bg-secondary .icon, .small-box.text-bg-secondary .icon { background: rgba(74,58,167,.14); }
+  .small-box.bg-secondary .icon i, .small-box.text-bg-secondary .icon i { color: #4a3aa7; }
 
   .small-box.bg-pink { background: rgba(232,123,164,.10) !important; border-left-color: #e87ba4; }
   .small-box.bg-pink .icon { background: rgba(232,123,164,.20); }
@@ -150,7 +150,7 @@ $sql_years_select = mysqli_query($mysqli, "
 $dash_open_tickets = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE ticket_closed_at IS NULL AND ticket_resolved_at IS NULL"))[0]);
 $dash_active_clients = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM clients WHERE client_archived_at IS NULL"))[0]);
 $dash_my_tickets = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE ticket_assigned_to = $session_user_id AND ticket_closed_at IS NULL"))[0]);
-$dash_pending_invoices = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM invoices WHERE invoice_status = 'Unpaid'"))[0]);
+$dash_pending_invoices = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM invoices WHERE invoice_status IN ('Sent', 'Viewed', 'Partial')"))[0]);
 $dash_hour = intval(date('G'));
 $dash_greeting = $dash_hour < 12 ? 'Good morning' : ($dash_hour < 17 ? 'Good afternoon' : 'Good evening');
 
@@ -168,6 +168,16 @@ $dash_attention_items = [
     ['count' => $dash_expiring_domains,         'label' => 'Domains expiring (30d)',    'href' => 'domains.php?sort=domain_expire&order=ASC',            'icon' => 'fa-globe'],
     ['count' => $dash_expiring_certificates,    'label' => 'Certificates expiring (30d)','href' => 'certificates.php?sort=certificate_expire&order=ASC',  'icon' => 'fa-lock'],
 ];
+
+$dash_csat_avg = null;
+if ($config_module_enable_ticketing == 1 && !empty($config_ticket_csat_enable)) {
+    $dash_csat_needs_followup = intval(mysqli_fetch_row(mysqli_query($mysqli, "SELECT COUNT(*) FROM tickets WHERE ticket_csat_rating IS NOT NULL AND ticket_csat_rating <= $config_ticket_csat_low_rating_threshold AND ticket_status != 5"))[0]);
+    $dash_attention_items[] = ['count' => $dash_csat_needs_followup, 'label' => 'Needs CSAT follow-up', 'href' => 'reports/csat.php', 'icon' => 'fa-star-half-alt'];
+
+    $dash_csat_avg_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT AVG(ticket_csat_rating) AS v FROM tickets WHERE ticket_csat_rated_at >= NOW() - INTERVAL 30 DAY"));
+    $dash_csat_avg = $dash_csat_avg_row['v'] !== null ? round(floatval($dash_csat_avg_row['v']), 2) : null;
+}
+
 $dash_attention_total = array_sum(array_column($dash_attention_items, 'count'));
 ?>
 <div class="mb-3 d-flex align-items-center justify-content-between flex-wrap" style="gap:.5rem;">
@@ -241,6 +251,19 @@ $dash_attention_total = array_sum(array_column($dash_attention_items, 'count'));
         </div>
         </a>
     </div>
+    <?php if ($dash_csat_avg !== null) { ?>
+    <div class="col-6 col-md-3 mb-3">
+        <a href="reports/csat.php" class="text-decoration-none">
+        <div class="small-box text-bg-secondary bg-gradient mb-0">
+            <div class="inner">
+                <h3><?= $dash_csat_avg ?>/5</h3>
+                <p>CSAT (30 days)</p>
+            </div>
+            <div class="icon"><i class="fas fa-star"></i></div>
+        </div>
+        </a>
+    </div>
+    <?php } ?>
 </div>
 
 <div class="card card-body">

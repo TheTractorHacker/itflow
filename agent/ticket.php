@@ -119,6 +119,8 @@ if (isset($_GET['ticket_id'])) {
             $ticket_priority_display = "";
         }
         $ticket_feedback = nullable_htmlentities($row['ticket_feedback']);
+        $ticket_csat_rating = intval($row['ticket_csat_rating'] ?? 0);
+        $ticket_csat_comment = nullable_htmlentities($row['ticket_csat_comment']);
 
         $ticket_status = intval($row['ticket_status_id']);
         $ticket_status_id = intval($row['ticket_status_id']);
@@ -378,6 +380,7 @@ if (isset($_GET['ticket_id'])) {
             AND ticket_reply_archived_at IS NULL
             ORDER BY ticket_reply_created_at DESC, ticket_reply_id DESC"
         );
+        $ticket_replies_count = mysqli_num_rows($sql_ticket_replies);
 
         // Get ticket Events
         $sql_ticket_events = mysqli_query($mysqli, "SELECT * FROM ticket_history
@@ -474,7 +477,7 @@ if (isset($_GET['ticket_id'])) {
         </ol>
 
         <div class="card shadow-sm mb-3">
-            <div class="card-body pb-2">
+            <div class="card-body pb-3">
 
                 <!-- Subject + action toolbar -->
                 <div class="d-flex align-items-start justify-content-between flex-wrap" style="gap:.5rem;">
@@ -576,7 +579,7 @@ if (isset($_GET['ticket_id'])) {
                 </div>
 
                 <!-- Ticket #, status, tags + timestamps -->
-                <div class="d-flex align-items-center justify-content-between flex-wrap mt-1" style="gap:.5rem;">
+                <div class="d-flex align-items-center justify-content-between flex-wrap mt-2" style="gap:.5rem;">
 
                     <div class="d-flex align-items-center flex-wrap text-muted small" style="gap:.6rem;">
                         <span>Ticket# <?= "$ticket_prefix$ticket_number" ?></span>
@@ -625,7 +628,7 @@ if (isset($_GET['ticket_id'])) {
 
             </div>
 
-            <div class="card-body py-2 border-top">
+            <div class="card-body py-3 border-top">
 
                 <!-- Assigned To / Priority / Board / Category / Schedule -->
                 <div class="d-flex flex-wrap align-items-center" style="gap:1.25rem; row-gap:.5rem;">
@@ -802,7 +805,7 @@ if (isset($_GET['ticket_id'])) {
 
                     <!-- Billable -->
                     <?php if ($config_module_enable_accounting && lookupUserPermission("module_sales") >= 1) { ?>
-                    <div class="border-top pt-2">
+                    <div class="border-top pt-3">
 
                         <?php if ($quote_id) { ?>
                             <div class="mt-1">
@@ -1081,6 +1084,12 @@ if (isset($_GET['ticket_id'])) {
                 </ul>
 
                 <!-- Ticket replies -->
+                <?php if ($ticket_replies_count === 0) { ?>
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-comment-slash fa-3x mb-3"></i>
+                    <p class="mb-0">No activity yet. Add a reply or internal note to get started.</p>
+                </div>
+                <?php } ?>
                 <?php
 
                 while ($row = mysqli_fetch_assoc($sql_ticket_replies)) {
@@ -1100,6 +1109,7 @@ if (isset($_GET['ticket_id'])) {
                     $ticket_reply_updated_at = nullable_htmlentities($row['ticket_reply_updated_at']);
                     $ticket_reply_updated_at_ago = timeAgo($row['ticket_reply_updated_at']);
                     $ticket_reply_by = intval($row['ticket_reply_by']);
+                    $is_system_generated_reply = false;
 
                     $is_portal_reply = (stripos($row['ticket_reply'] ?? '', 'Client message from portal') === 0);
 
@@ -1113,6 +1123,17 @@ if (isset($_GET['ticket_id'])) {
                         $user_initials = 'CP';
                         $user_avatar = '';
                         $avatar_link = '';
+                    } elseif ($ticket_reply_by === 0) {
+                        // No real user - a genuinely system/automation-generated entry
+                        // (e.g. an auto-reopen note, a scheduled sync note), not a person
+                        // acting on session_user_id. Looking up user_id=0 in the users
+                        // table always came back empty, rendering a blank gray circle
+                        // with no initials - show a distinct system icon instead.
+                        $ticket_reply_by_display = 'System';
+                        $user_initials = '';
+                        $user_avatar = '';
+                        $avatar_link = '';
+                        $is_system_generated_reply = true;
                     } else {
                         $ticket_reply_by_display = nullable_htmlentities($row['user_name']);
                         $user_id = intval($row['user_id']);
@@ -1139,6 +1160,11 @@ if (isset($_GET['ticket_id'])) {
                                 <div class="d-flex align-items-center">
                                     <?php if (!empty($user_avatar)) { ?>
                                         <img src="<?php echo $avatar_link; ?>" alt="User Avatar" class="img-size-50 me-3 img-circle">
+                                    <?php } elseif ($is_system_generated_reply) { ?>
+                                        <span class="fa-stack fa-2x">
+                                            <i class="fa fa-circle fa-stack-2x text-secondary"></i>
+                                            <i class="fas fa-robot fa-stack-1x text-white"></i>
+                                        </span>
                                     <?php } else { ?>
                                         <span class="fa-stack fa-2x">
                                             <i class="fa fa-circle fa-stack-2x text-secondary"></i>
@@ -1233,7 +1259,7 @@ if (isset($_GET['ticket_id'])) {
 
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-3 ticket-sidebar">
 
                 <!-- Time Entry card -->
                 <div class="card time-entry-card">
@@ -1624,14 +1650,25 @@ if (isset($_GET['ticket_id'])) {
                                 <i class="fas fa-fw fa-clock text-secondary me-1"></i><strong class="me-1">Closed:</strong><?= date('M d, Y • g:i A', strtotime($ticket_closed_at)) . " ($ticket_closed_at_ago)" ?>
                             </div>
 
-                            <?php if ($ticket_feedback) { ?>
-                                <div class="mt-2">
-                                    <i class="fa fa-fw fa-comment-dots text-secondary me-1"></i><strong>Feedback: </strong><?php echo $ticket_feedback; ?>
-                                </div>
-                            <?php } ?>
-
                         <?php } ?>
                         <!-- END Ticket closure info -->
+
+                        <?php // CSAT is intentionally OUTSIDE the "if closed" block above - a
+                              // low rating auto-reopens the ticket (clears ticket_closed_at), and
+                              // that's exactly the case where the rating is most important to see
+                              // in this sidebar, not the case where it should disappear. ?>
+                        <?php if ($ticket_csat_rating > 0) { ?>
+                            <div class="mt-2">
+                                <i class="fa fa-fw fa-comment-dots text-secondary me-1"></i><strong class="me-1">CSAT:</strong>
+                                <span class="csat-face-display" title="<?= csatFaceLabel($ticket_csat_rating) ?>"><?= csatFaceEmoji($ticket_csat_rating) ?></span>
+                                <?php if (empty($ticket_closed_at)) { ?>
+                                    <span class="badge text-bg-danger ms-1">Needs follow-up</span>
+                                <?php } ?>
+                            </div>
+                            <?php if ($ticket_csat_comment) { ?>
+                                <div class="mt-1 ms-4 ps-1 text-muted small">"<?php echo $ticket_csat_comment; ?>"</div>
+                            <?php } ?>
+                        <?php } ?>
 
                     </div>
                 </div>

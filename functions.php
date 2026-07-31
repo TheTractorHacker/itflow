@@ -984,6 +984,7 @@ function report_schedulable_reports()
         'expense_summary'        => 'Expense Summary',
         'ticket_summary'         => 'Ticket Summary',
         'clients_with_balance'   => 'Clients with a Balance (AR Aging)',
+        'csat'                   => 'CSAT',
     ];
 }
 
@@ -1026,7 +1027,7 @@ function report_render_email_html(mysqli $mysqli, $report_key)
             $rows[] = ['Open now', intval($r['totals']['open_now'])];
             $rows[] = ['Response SLA', $r['sla']['response_pct'] !== null ? $r['sla']['response_pct'] . '%' : '-'];
             $rows[] = ['Resolution SLA', $r['sla']['resolution_pct'] !== null ? $r['sla']['resolution_pct'] . '%' : '-'];
-            $rows[] = ['CSAT', $r['csat']['pct'] !== null ? $r['csat']['pct'] . '%' : '-'];
+            $rows[] = ['CSAT (avg rating)', $r['csat']['avg_rating'] !== null ? $r['csat']['avg_rating'] . ' / 5' : '-'];
             break;
         }
         case 'technician_performance': {
@@ -1038,7 +1039,7 @@ function report_render_email_html(mysqli $mysqli, $report_key)
             $rows[] = ['Team utilization', $r['totals']['team_utilization_pct'] !== null ? $r['totals']['team_utilization_pct'] . '%' : '-'];
             $rows[] = ['Billable value', $money($r['totals']['billable_value'])];
             $rows[] = ['Tickets closed', intval($r['totals']['tickets_closed'])];
-            $rows[] = ['Team CSAT', $r['totals']['csat_pct'] !== null ? $r['totals']['csat_pct'] . '%' : '-'];
+            $rows[] = ['Team CSAT (avg rating)', $r['totals']['csat_avg_rating'] !== null ? $r['totals']['csat_avg_rating'] . ' / 5' : '-'];
             break;
         }
         case 'mrr': {
@@ -1085,6 +1086,16 @@ function report_render_email_html(mysqli $mysqli, $report_key)
                 "SELECT COUNT(ticket_id) AS c FROM tickets WHERE YEAR(ticket_created_at) = $year"));
             $rows[] = ['Year', $year];
             $rows[] = ['Tickets raised (YTD)', intval($t['c'])];
+            break;
+        }
+        case 'csat': {
+            $from = date('Y-m-01');
+            $r = getCsatReport($mysqli, $from, $today);
+            $rows[] = ['Window', "$from to $today"];
+            $rows[] = ['Avg rating', $r['summary']['avg_rating'] !== null ? $r['summary']['avg_rating'] . ' / 5' : '-'];
+            $rows[] = ['Response rate', $r['summary']['response_rate_pct'] !== null ? $r['summary']['response_rate_pct'] . '%' : '-'];
+            $rows[] = ['Satisfied (' . csatFaceEmoji(4) . csatFaceEmoji(5) . ')', $r['summary']['satisfied_pct'] !== null ? $r['summary']['satisfied_pct'] . '%' : '-'];
+            $rows[] = ['Needs follow-up', intval($r['summary']['needs_followup_count'])];
             break;
         }
         default:
@@ -1218,20 +1229,17 @@ function getServiceDeskReport(mysqli $mysqli, $date_from, $date_to, ?int $client
         'resolution_pct'   => $reso_total > 0 ? round($reso_met / $reso_total * 100, 1) : null,
     ];
 
-    // --- CSAT (ticket_feedback Good/Bad, tickets created in range) ---
+    // --- CSAT (1-5 ticket_csat_rating, tickets created in range) ---
     $csat_row = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT
-            SUM(CASE WHEN ticket_feedback = 'Good' THEN 1 ELSE 0 END) AS good,
-            SUM(CASE WHEN ticket_feedback = 'Bad'  THEN 1 ELSE 0 END) AS bad
+        "SELECT COUNT(ticket_csat_rating) AS rated, AVG(ticket_csat_rating) AS avg_rating,
+            SUM(CASE WHEN ticket_csat_rating >= 4 THEN 1 ELSE 0 END) AS satisfied
          FROM tickets WHERE $created_range AND ticket_archived_at IS NULL"));
-    $csat_good = intval($csat_row['good'] ?? 0);
-    $csat_bad  = intval($csat_row['bad'] ?? 0);
-    $csat_total = $csat_good + $csat_bad;
+    $csat_rated = intval($csat_row['rated'] ?? 0);
     $csat = [
-        'good'  => $csat_good,
-        'bad'   => $csat_bad,
-        'total' => $csat_total,
-        'pct'   => $csat_total > 0 ? round($csat_good / $csat_total * 100, 1) : null,
+        'rated'         => $csat_rated,
+        'avg_rating'    => $csat_row['avg_rating'] !== null ? round(floatval($csat_row['avg_rating']), 2) : null,
+        'satisfied'     => intval($csat_row['satisfied'] ?? 0),
+        'satisfied_pct' => $csat_rated > 0 ? round(intval($csat_row['satisfied']) / $csat_rated * 100, 1) : null,
     ];
 
     // --- Avg first-response & resolution time by priority (tickets created in range) ---
@@ -1377,6 +1385,48 @@ function report_business_days($date_from, $date_to)
 }
 
 /**
+ * Shared CSAT aggregation core, grouped by an arbitrary tickets column (e.g.
+ * 'ticket_assigned_to' or 'ticket_client_id'). $group_column is always a hardcoded
+ * literal supplied by the calling report function, never request input. Tickets are
+ * scoped by ticket_closed_at (when the work finished), matching the cohort basis the
+ * rest of the service-desk/technician reports already use. Returns raw sums (not
+ * pre-divided) so callers can correctly roll multiple groups up into a weighted total
+ * instead of averaging per-group percentages.
+ *
+ * @return array<int, array{rated_count:int, sum_rating:int, satisfied_count:int, comment_count:int}>
+ */
+function getCsatAggregateByGroup(mysqli $mysqli, string $group_column, string $from_dt, string $to_dt, ?int $client_id = null, int $satisfied_threshold = 4): array
+{
+    $allowed_columns = ['ticket_assigned_to', 'ticket_client_id'];
+    if (!in_array($group_column, $allowed_columns, true)) {
+        return [];
+    }
+    $client_clause = $client_id !== null ? " AND ticket_client_id = " . intval($client_id) : '';
+
+    $out = [];
+    $res = mysqli_query($mysqli,
+        "SELECT $group_column AS grp,
+            COUNT(ticket_csat_rating) AS rated_count,
+            SUM(ticket_csat_rating) AS sum_rating,
+            SUM(CASE WHEN ticket_csat_rating >= $satisfied_threshold THEN 1 ELSE 0 END) AS satisfied_count,
+            SUM(CASE WHEN ticket_csat_comment IS NOT NULL AND ticket_csat_comment <> '' THEN 1 ELSE 0 END) AS comment_count
+         FROM tickets
+         WHERE ticket_closed_at BETWEEN '$from_dt' AND '$to_dt'
+           AND ticket_archived_at IS NULL AND $group_column > 0$client_clause
+         GROUP BY $group_column");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $grp = intval($row['grp']);
+        $out[$grp] = [
+            'rated_count'     => intval($row['rated_count']),
+            'sum_rating'      => intval($row['sum_rating'] ?? 0),
+            'satisfied_count' => intval($row['satisfied_count']),
+            'comment_count'   => intval($row['comment_count']),
+        ];
+    }
+    return $out;
+}
+
+/**
  * Technician performance / utilization report (set-based). Billable vs non-billable
  * hours (joined to labor_types), tickets closed, avg handle time, CSAT and utilization
  * against a business-time capacity baseline. $date_from/$date_to are 'Y-m-d' strings.
@@ -1420,9 +1470,10 @@ function getTechnicianPerformanceReport(mysqli $mysqli, $date_from, $date_to, ?i
             'billable_value'      => 0.0,
             'tickets_closed'      => 0,
             'avg_handle_seconds'  => null,
-            'csat_good'           => 0,
-            'csat_bad'            => 0,
-            'csat_pct'            => null,
+            'csat_rated_count'    => 0,
+            'csat_avg_rating'     => null,
+            'csat_satisfied_pct' => null,
+            'csat_comment_count'  => 0,
             'utilization_pct'     => null,
         ];
     }
@@ -1454,13 +1505,11 @@ function getTechnicianPerformanceReport(mysqli $mysqli, $date_from, $date_to, ?i
         $techs[$uid]['utilization_pct']     = $capacity_seconds > 0 ? round($total / $capacity_seconds * 100, 1) : null;
     }
 
-    // Tickets closed in range + CSAT, by assigned technician.
+    // Tickets closed in range, by assigned technician.
     $res = mysqli_query($mysqli,
         "SELECT ticket_assigned_to AS uid,
             COUNT(ticket_id) AS closed,
-            AVG(TIMESTAMPDIFF(SECOND, ticket_created_at, ticket_closed_at)) AS avg_res,
-            SUM(CASE WHEN ticket_feedback = 'Good' THEN 1 ELSE 0 END) AS good,
-            SUM(CASE WHEN ticket_feedback = 'Bad'  THEN 1 ELSE 0 END) AS bad
+            AVG(TIMESTAMPDIFF(SECOND, ticket_created_at, ticket_closed_at)) AS avg_res
          FROM tickets
          WHERE ticket_closed_at BETWEEN '$from_dt' AND '$to_dt'
            AND ticket_archived_at IS NULL AND ticket_assigned_to > 0$client_clause
@@ -1471,10 +1520,19 @@ function getTechnicianPerformanceReport(mysqli $mysqli, $date_from, $date_to, ?i
             continue;
         }
         $techs[$uid]['tickets_closed'] = intval($row['closed']);
-        $techs[$uid]['csat_good']      = intval($row['good']);
-        $techs[$uid]['csat_bad']       = intval($row['bad']);
-        $ct = $techs[$uid]['csat_good'] + $techs[$uid]['csat_bad'];
-        $techs[$uid]['csat_pct'] = $ct > 0 ? round($techs[$uid]['csat_good'] / $ct * 100, 1) : null;
+    }
+
+    // CSAT, by assigned technician - via the shared aggregation helper so this
+    // matches the new CSAT report's per-technician numbers exactly.
+    $csat_by_tech = getCsatAggregateByGroup($mysqli, 'ticket_assigned_to', $from_dt, $to_dt, $client_id);
+    foreach ($csat_by_tech as $uid => $agg) {
+        if (!isset($techs[$uid])) {
+            continue;
+        }
+        $techs[$uid]['csat_rated_count']   = $agg['rated_count'];
+        $techs[$uid]['csat_avg_rating']    = $agg['rated_count'] > 0 ? round($agg['sum_rating'] / $agg['rated_count'], 2) : null;
+        $techs[$uid]['csat_satisfied_pct'] = $agg['rated_count'] > 0 ? round($agg['satisfied_count'] / $agg['rated_count'] * 100, 1) : null;
+        $techs[$uid]['csat_comment_count'] = $agg['comment_count'];
     }
 
     // Avg handle time = total time worked / tickets closed (seconds per closed ticket).
@@ -1499,12 +1557,16 @@ function getTechnicianPerformanceReport(mysqli $mysqli, $date_from, $date_to, ?i
         'total_seconds'       => $sum_total,
         'billable_value'      => round(array_sum(array_column($technicians, 'billable_value')), 2),
         'tickets_closed'      => array_sum(array_column($technicians, 'tickets_closed')),
-        'csat_good'           => array_sum(array_column($technicians, 'csat_good')),
-        'csat_bad'            => array_sum(array_column($technicians, 'csat_bad')),
+        'csat_rated_count'    => array_sum(array_column($technicians, 'csat_rated_count')),
         'team_utilization_pct' => $team_cap > 0 ? round($sum_total / $team_cap * 100, 1) : null,
     ];
-    $csat_tot = $totals['csat_good'] + $totals['csat_bad'];
-    $totals['csat_pct'] = $csat_tot > 0 ? round($totals['csat_good'] / $csat_tot * 100, 1) : null;
+    // Roll up from the helper's raw per-tech sums (not the already-rounded per-tech
+    // avg/pct display values), so this is a true weighted average rather than an
+    // average-of-averages.
+    $csat_sum_rating_total = array_sum(array_column($csat_by_tech, 'sum_rating'));
+    $csat_satisfied_total  = array_sum(array_column($csat_by_tech, 'satisfied_count'));
+    $totals['csat_avg_rating']    = $totals['csat_rated_count'] > 0 ? round($csat_sum_rating_total / $totals['csat_rated_count'], 2) : null;
+    $totals['csat_satisfied_pct'] = $totals['csat_rated_count'] > 0 ? round($csat_satisfied_total / $totals['csat_rated_count'] * 100, 1) : null;
 
     return [
         'date_from'   => $date_from,
@@ -1518,6 +1580,183 @@ function getTechnicianPerformanceReport(mysqli $mysqli, $date_from, $date_to, ?i
         ],
         'totals'      => $totals,
         'technicians' => $technicians,
+    ];
+}
+
+/**
+ * Customer satisfaction (CSAT) report (set-based). Headline KPIs, 1-5 rating
+ * distribution, a monthly trend of when ratings were given, per-technician and
+ * per-client breakdowns (via getCsatAggregateByGroup()), and a raw feedback feed.
+ * $date_from/$date_to are 'Y-m-d' strings; KPI/distribution/breakdown tables are
+ * scoped to tickets *closed* in range (same cohort basis as getServiceDeskReport()/
+ * getTechnicianPerformanceReport()) while the trend is scoped to when the rating was
+ * actually submitted (ticket_csat_rated_at) - a deliberately different lens ("when
+ * sentiment was expressed" vs "of the work finished this period, how did it land").
+ */
+function getCsatReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = null, int $low_rating_threshold = 2): array
+{
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_from)) {
+        $date_from = date('Y-01-01');
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_to)) {
+        $date_to = date('Y-m-d');
+    }
+    $from_dt = "$date_from 00:00:00";
+    $to_dt   = "$date_to 23:59:59";
+    $client_clause = $client_id !== null ? " AND ticket_client_id = " . intval($client_id) : '';
+    $closed_range  = "ticket_closed_at BETWEEN '$from_dt' AND '$to_dt' AND ticket_archived_at IS NULL$client_clause";
+
+    // --- Headline summary (cohort = tickets closed in range) ---
+    $sum_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COUNT(ticket_id) AS total_closed,
+            COUNT(ticket_csat_rating) AS rated,
+            AVG(ticket_csat_rating) AS avg_rating,
+            SUM(CASE WHEN ticket_csat_rating >= 4 THEN 1 ELSE 0 END) AS satisfied
+         FROM tickets WHERE $closed_range"));
+    $total_closed = intval($sum_row['total_closed'] ?? 0);
+    $rated        = intval($sum_row['rated'] ?? 0);
+
+    // Needs-follow-up is a current, not date-scoped, count: any ticket sitting
+    // reopened/still-open after a low rating right now, regardless of when it was
+    // rated - it's a work-queue indicator, not a period metric.
+    $followup_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COUNT(ticket_id) AS c FROM tickets
+         WHERE ticket_csat_rating IS NOT NULL AND ticket_csat_rating <= " . intval($low_rating_threshold) . "
+           AND ticket_status != 5 AND ticket_archived_at IS NULL$client_clause"));
+
+    $summary = [
+        'total_closed'          => $total_closed,
+        'rated'                 => $rated,
+        'response_rate_pct'     => $total_closed > 0 ? round($rated / $total_closed * 100, 1) : null,
+        'avg_rating'            => $sum_row['avg_rating'] !== null ? round(floatval($sum_row['avg_rating']), 2) : null,
+        'satisfied_pct'         => $rated > 0 ? round(intval($sum_row['satisfied']) / $rated * 100, 1) : null,
+        'needs_followup_count'  => intval($followup_row['c'] ?? 0),
+    ];
+
+    // --- 1-5 distribution (tickets closed in range) ---
+    $distribution = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+    $res = mysqli_query($mysqli,
+        "SELECT ticket_csat_rating AS r, COUNT(ticket_id) AS c FROM tickets
+         WHERE $closed_range AND ticket_csat_rating IS NOT NULL
+         GROUP BY ticket_csat_rating");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $r = intval($row['r']);
+        if (isset($distribution[$r])) {
+            $distribution[$r] = intval($row['c']);
+        }
+    }
+
+    // --- Monthly trend of when ratings were submitted (contiguous month axis, capped at 60) ---
+    $trend_by_month = [];
+    $res = mysqli_query($mysqli,
+        "SELECT DATE_FORMAT(ticket_csat_rated_at, '%Y-%m') AS ym,
+            COUNT(ticket_id) AS c, AVG(ticket_csat_rating) AS avg_rating
+         FROM tickets
+         WHERE ticket_csat_rated_at BETWEEN '$from_dt' AND '$to_dt'
+           AND ticket_archived_at IS NULL$client_clause
+         GROUP BY ym");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $trend_by_month[$row['ym']] = [
+            'count'      => intval($row['c']),
+            'avg_rating' => $row['avg_rating'] !== null ? round(floatval($row['avg_rating']), 2) : null,
+        ];
+    }
+    $trend = [];
+    $cursor = new DateTime(substr($date_from, 0, 7) . '-01');
+    $last   = new DateTime(substr($date_to, 0, 7) . '-01');
+    $guard  = 0;
+    while ($cursor <= $last && $guard < 60) {
+        $key = $cursor->format('Y-m');
+        $trend[] = [
+            'label'      => $cursor->format('M Y'),
+            'count'      => $trend_by_month[$key]['count'] ?? 0,
+            'avg_rating' => $trend_by_month[$key]['avg_rating'] ?? null,
+        ];
+        $cursor->modify('+1 month');
+        $guard++;
+    }
+
+    // --- Per-technician breakdown ---
+    $by_technician = [];
+    $csat_by_tech = getCsatAggregateByGroup($mysqli, 'ticket_assigned_to', $from_dt, $to_dt, $client_id);
+    if (!empty($csat_by_tech)) {
+        $uids = implode(',', array_map('intval', array_keys($csat_by_tech)));
+        $res = mysqli_query($mysqli, "SELECT user_id, user_name FROM users WHERE user_id IN ($uids)");
+        $names = [];
+        while ($row = mysqli_fetch_assoc($res)) {
+            $names[intval($row['user_id'])] = $row['user_name'];
+        }
+        foreach ($csat_by_tech as $uid => $agg) {
+            $by_technician[] = [
+                'user_id'       => $uid,
+                'name'          => $names[$uid] ?? ('User #' . $uid),
+                'rated_count'   => $agg['rated_count'],
+                'avg_rating'    => $agg['rated_count'] > 0 ? round($agg['sum_rating'] / $agg['rated_count'], 2) : null,
+                'satisfied_pct' => $agg['rated_count'] > 0 ? round($agg['satisfied_count'] / $agg['rated_count'] * 100, 1) : null,
+            ];
+        }
+        usort($by_technician, function ($a, $b) { return $b['rated_count'] - $a['rated_count']; });
+    }
+
+    // --- Per-client breakdown (only meaningful company-wide; skip when already client-scoped) ---
+    $by_client = [];
+    if ($client_id === null) {
+        $csat_by_client = getCsatAggregateByGroup($mysqli, 'ticket_client_id', $from_dt, $to_dt, null);
+        if (!empty($csat_by_client)) {
+            $cids = implode(',', array_map('intval', array_keys($csat_by_client)));
+            $res = mysqli_query($mysqli, "SELECT client_id, client_name FROM clients WHERE client_id IN ($cids) AND client_archived_at IS NULL");
+            $cnames = [];
+            while ($row = mysqli_fetch_assoc($res)) {
+                $cnames[intval($row['client_id'])] = $row['client_name'];
+            }
+            foreach ($csat_by_client as $cid => $agg) {
+                if (!isset($cnames[$cid])) {
+                    continue;
+                }
+                $by_client[] = [
+                    'client_id'     => $cid,
+                    'name'          => $cnames[$cid],
+                    'rated_count'   => $agg['rated_count'],
+                    'avg_rating'    => $agg['rated_count'] > 0 ? round($agg['sum_rating'] / $agg['rated_count'], 2) : null,
+                    'satisfied_pct' => $agg['rated_count'] > 0 ? round($agg['satisfied_count'] / $agg['rated_count'] * 100, 1) : null,
+                ];
+            }
+            usort($by_client, function ($a, $b) { return $b['rated_count'] - $a['rated_count']; });
+        }
+    }
+
+    // --- Raw feedback feed (capped, full range available via CSV export in the web page) ---
+    $feedback = [];
+    $res = mysqli_query($mysqli,
+        "SELECT t.ticket_id, t.ticket_number, t.ticket_csat_rating, t.ticket_csat_comment, t.ticket_csat_rated_at,
+            c.client_name, u.user_name AS tech_name
+         FROM tickets t
+         LEFT JOIN clients c ON c.client_id = t.ticket_client_id
+         LEFT JOIN users u ON u.user_id = t.ticket_assigned_to
+         WHERE $closed_range AND t.ticket_csat_rating IS NOT NULL
+         ORDER BY t.ticket_csat_rated_at DESC
+         LIMIT 1000");
+    while ($row = mysqli_fetch_assoc($res)) {
+        $feedback[] = [
+            'ticket_id'   => intval($row['ticket_id']),
+            'ticket_number' => intval($row['ticket_number']),
+            'client_name' => $row['client_name'],
+            'tech_name'   => $row['tech_name'],
+            'rating'      => intval($row['ticket_csat_rating']),
+            'comment'     => $row['ticket_csat_comment'],
+            'rated_at'    => $row['ticket_csat_rated_at'],
+        ];
+    }
+
+    return [
+        'date_from'     => $date_from,
+        'date_to'       => $date_to,
+        'summary'       => $summary,
+        'distribution'  => $distribution,
+        'trend'         => $trend,
+        'by_technician' => $by_technician,
+        'by_client'     => $by_client,
+        'feedback'      => $feedback,
     ];
 }
 
@@ -2247,11 +2486,14 @@ function roundToNearest15($time)
 
 function getMonthlyTax($tax_name, $month, $year, $mysqli)
 {
-    // SQL to calculate monthly tax
-    $sql = "SELECT SUM(item_tax) AS monthly_tax FROM invoice_items
+    // Prorate each item's tax across its invoice's payments by amount, rather
+    // than SUM(item_tax) over the invoice_items x payments join - an invoice
+    // with N payments in the period would otherwise count its tax N times.
+    $sql = "SELECT SUM(item_tax * payments.payment_amount / invoices.invoice_amount) AS monthly_tax FROM invoice_items
             LEFT JOIN invoices ON invoice_items.item_invoice_id = invoices.invoice_id
             LEFT JOIN payments ON invoices.invoice_id = payments.payment_invoice_id
             WHERE YEAR(payments.payment_date) = $year AND MONTH(payments.payment_date) = $month
+            AND invoices.invoice_amount > 0
             AND invoice_items.item_tax_id = (SELECT tax_id FROM taxes WHERE tax_name = '$tax_name')";
     $result = mysqli_query($mysqli, $sql);
     $row = mysqli_fetch_assoc($result);
@@ -2264,11 +2506,13 @@ function getQuarterlyTax($tax_name, $quarter, $year, $mysqli)
     $start_month = ($quarter - 1) * 3 + 1;
     $end_month = $start_month + 2;
 
-    // SQL to calculate quarterly tax
-    $sql = "SELECT SUM(item_tax) AS quarterly_tax FROM invoice_items
+    // Prorate each item's tax across its invoice's payments by amount - see
+    // getMonthlyTax() for why a flat SUM(item_tax) double-counts split payments.
+    $sql = "SELECT SUM(item_tax * payments.payment_amount / invoices.invoice_amount) AS quarterly_tax FROM invoice_items
             LEFT JOIN invoices ON invoice_items.item_invoice_id = invoices.invoice_id
             LEFT JOIN payments ON invoices.invoice_id = payments.payment_invoice_id
             WHERE YEAR(payments.payment_date) = $year AND MONTH(payments.payment_date) BETWEEN $start_month AND $end_month
+            AND invoices.invoice_amount > 0
             AND invoice_items.item_tax_id = (SELECT tax_id FROM taxes WHERE tax_name = '$tax_name')";
     $result = mysqli_query($mysqli, $sql);
     $row = mysqli_fetch_assoc($result);
@@ -2277,11 +2521,13 @@ function getQuarterlyTax($tax_name, $quarter, $year, $mysqli)
 
 function getTotalTax($tax_name, $year, $mysqli)
 {
-    // SQL to calculate total tax
-    $sql = "SELECT SUM(item_tax) AS total_tax FROM invoice_items
+    // Prorate each item's tax across its invoice's payments by amount - see
+    // getMonthlyTax() for why a flat SUM(item_tax) double-counts split payments.
+    $sql = "SELECT SUM(item_tax * payments.payment_amount / invoices.invoice_amount) AS total_tax FROM invoice_items
             LEFT JOIN invoices ON invoice_items.item_invoice_id = invoices.invoice_id
             LEFT JOIN payments ON invoices.invoice_id = payments.payment_invoice_id
             WHERE YEAR(payments.payment_date) = $year
+            AND invoices.invoice_amount > 0
             AND invoice_items.item_tax_id = (SELECT tax_id FROM taxes WHERE tax_name = '$tax_name')";
     $result = mysqli_query($mysqli, $sql);
     $row = mysqli_fetch_assoc($result);
@@ -2364,21 +2610,32 @@ function addToMailQueue($data) {
         $recipient_name = strval($email['recipient_name']);
         $subject = strval($email['subject']);
         $body = strval($email['body']);
+        $cal_str = isset($email['cal_str']) ? strval($email['cal_str']) : '';
 
-        $cal_str = '';
-        if (isset($email['cal_str'])) {
-            $cal_str = mysqli_escape_string($mysqli, $email['cal_str']);
-        }
-
-        // Check if 'email_queued_at' is set and not empty
+        // Bound parameters (not raw string interpolation) since email bodies
+        // routinely contain unescaped HTML attribute quotes (e.g. <a href='...'>)
+        // and names/subjects routinely contain apostrophes (e.g. "O'Brien") -
+        // either used to silently break this INSERT. A prepared statement sidesteps
+        // the whole escaping question rather than risking double-escaping content
+        // some callers already ran through sanitizeInput() before embedding it.
         if (isset($email['queued_at']) && !empty($email['queued_at'])) {
-            $queued_at = "'" . sanitizeInput($email['queued_at']) . "'";
+            $queued_at = sanitizeInput($email['queued_at']);
+            $stmt = mysqli_prepare($mysqli, "INSERT INTO email_queue
+                (email_recipient, email_recipient_name, email_from, email_from_name, email_subject, email_content, email_queued_at, email_cal_str)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            mysqli_stmt_bind_param($stmt, 'ssssssss', $recipient, $recipient_name, $from, $from_name, $subject, $body, $queued_at, $cal_str);
         } else {
-            // Use the current date and time if 'email_queued_at' is not set or empty
-            $queued_at = 'CURRENT_TIMESTAMP()';
+            // No explicit queued_at - use the DB server's own clock (CURRENT_TIMESTAMP(),
+            // a literal SQL function call, not user data - safe to inline) rather than
+            // PHP's, since the two can run in different timezones and a PHP-side
+            // timestamp risks silently delaying delivery until the DB clock catches up.
+            $stmt = mysqli_prepare($mysqli, "INSERT INTO email_queue
+                (email_recipient, email_recipient_name, email_from, email_from_name, email_subject, email_content, email_queued_at, email_cal_str)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), ?)");
+            mysqli_stmt_bind_param($stmt, 'sssssss', $recipient, $recipient_name, $from, $from_name, $subject, $body, $cal_str);
         }
-
-        mysqli_query($mysqli, "INSERT INTO email_queue SET email_recipient = '$recipient', email_recipient_name = '$recipient_name', email_from = '$from', email_from_name = '$from_name', email_subject = '$subject', email_content = '$body', email_queued_at = $queued_at, email_cal_str = '$cal_str'");
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
     }
 
     return true;
@@ -3186,6 +3443,92 @@ function logAction($type, $action, $description, $client_id = 0, $entity_id = 0)
     $session_user_agent_esc = mysqli_real_escape_string($mysqli, (string) $session_user_agent);
 
     mysqli_query($mysqli, "INSERT INTO logs SET log_type = '$type', log_action = '$action', log_description = '$description', log_ip = '$session_ip_esc', log_user_agent = '$session_user_agent_esc', log_client_id = $client_id, log_user_id = $session_user_id, log_entity_id = $entity_id");
+}
+
+/**
+ * Records a CSAT rating for a ticket. Idempotent - a ticket can only be rated
+ * once (WHERE ticket_csat_rating IS NULL), so a double-submit, a repeat visit to
+ * a one-click email link, or an email-security-scanner prefetching multiple star
+ * links only ever lets the first request win; every later one is a silent no-op.
+ * Returns true if THIS call was the one that set the rating (and therefore ran
+ * the low-rating side effects below), false if the ticket was already rated.
+ * $rater_label is used in the internal note/notification wording (e.g. "guest",
+ * a contact's name).
+ */
+function applyCsatRating(mysqli $mysqli, int $ticket_id, int $rating, string $comment, string $rater_label, int $low_rating_threshold): bool
+{
+    $ticket_id = intval($ticket_id);
+    $rating = max(1, min(5, $rating));
+    $comment = substr(trim($comment), 0, 1000);
+    $comment_esc = mysqli_real_escape_string($mysqli, $comment);
+    $comment_sql = $comment !== '' ? "'$comment_esc'" : 'NULL';
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_csat_rating = $rating, ticket_csat_comment = $comment_sql, ticket_csat_rated_at = NOW() WHERE ticket_id = $ticket_id AND ticket_csat_rating IS NULL");
+
+    if (mysqli_affected_rows($mysqli) === 0) {
+        return false;
+    }
+
+    if ($rating <= $low_rating_threshold) {
+        $ticket_details = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_prefix, ticket_number, ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+        $ticket_prefix = (string) ($ticket_details['ticket_prefix'] ?? '');
+        $ticket_number = intval($ticket_details['ticket_number'] ?? 0);
+        $ticket_client_id = intval($ticket_details['ticket_client_id'] ?? 0);
+
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 2, ticket_resolved_at = NULL, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $ticket_id");
+
+        $rater_label_esc = mysqli_real_escape_string($mysqli, $rater_label);
+        $note = "Automatically reopened — $rater_label_esc rated this ticket $rating/5" . ($comment_esc !== '' ? ": \"$comment_esc\"" : '.');
+        mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = '$note', ticket_reply_type = 'Internal', ticket_reply_by = 0, ticket_reply_ticket_id = $ticket_id");
+
+        logAction("Ticket", "Reopened", "Auto-reopened after a low CSAT rating ($rating/5) from $rater_label", $ticket_client_id, $ticket_id);
+        appNotify("Feedback", ucfirst($rater_label) . " rated ticket " . nullable_htmlentities($ticket_prefix) . "$ticket_number $rating/5 — ticket automatically reopened for follow-up (ID: $ticket_id)", "/agent/ticket.php?ticket_id=$ticket_id", $ticket_client_id, $ticket_id);
+    }
+
+    return true;
+}
+
+/**
+ * The 1-5 CSAT scale's face-emoji representation and short label, shared by
+ * every place a rating is rendered (widgets, single-rating displays, emails,
+ * reports) so the mapping only lives in one place. The underlying stored scale
+ * is still a plain 1-5 tinyint (ticket_csat_rating) - faces are presentation only.
+ */
+function csatFaceEmoji(int $rating): string
+{
+    $faces = [1 => '😡', 2 => '🙁', 3 => '😐', 4 => '🙂', 5 => '😄'];
+    return $faces[$rating] ?? '😐';
+}
+
+function csatFaceLabel(int $rating): string
+{
+    $labels = [1 => 'Very unhappy', 2 => 'Unhappy', 3 => 'Neutral', 4 => 'Happy', 5 => 'Very happy'];
+    return $labels[$rating] ?? '';
+}
+
+/**
+ * Renders the 1-5 face-emoji clickable row used in CSAT request/reminder
+ * emails. Industry-standard pattern (Delighted/Zendesk/etc. all use a face
+ * scale, not stars, specifically because it reads faster than counting icons)
+ * - each face links directly to guest_rate.php's one-click GET rating endpoint
+ * so the recipient can rate without leaving their inbox (see guest_rate.php for
+ * why GET is used here specifically, and how it stays safe: url_key-scoped +
+ * idempotent first-click-wins). Inline-styled table for email client
+ * compatibility - no external stylesheet, no JS. Emoji are standard Unicode
+ * (not custom images), so they render natively in virtually every mail client
+ * without needing images-enabled.
+ */
+function csatEmailRatingLinksHtml(string $base_url, int $ticket_id, string $url_key): string
+{
+    $cells = '';
+    for ($n = 1; $n <= 5; $n++) {
+        $link = htmlspecialchars("https://$base_url/guest/guest_rate.php?ticket_id=$ticket_id&url_key=$url_key&rating=$n");
+        $emoji = csatFaceEmoji($n);
+        $cells .= '<td style="text-align:center;padding:0 10px;">'
+            . "<a href=\"$link\" style=\"text-decoration:none;font-size:32px;display:block;\">$emoji</a>"
+            . '</td>';
+    }
+    return '<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:12px 0;"><tr>' . $cells . '</tr></table>';
 }
 
 function logApp($category, $type, $details) {

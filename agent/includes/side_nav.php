@@ -116,6 +116,14 @@
                                 </p>
                             </a>
                         </li>
+                        <?php if (!empty($config_ticket_csat_enable)) { ?>
+                        <li class="nav-item">
+                            <a href="/agent/csat.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "csat.php") { echo "active"; } ?>">
+                                <i class="nav-icon fas fa-star"></i>
+                                <p>CSAT Ratings</p>
+                            </a>
+                        </li>
+                        <?php } ?>
                         <li class="nav-item">
                             <a href="/agent/mail_requests.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "mail_requests.php") { echo "active"; } ?>">
                                 <i class="nav-icon fas fa-envelope-open-text"></i>
