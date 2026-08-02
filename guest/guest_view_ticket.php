@@ -119,6 +119,13 @@ if ($ticket_row) {
                         <button type="submit" class="btn btn-secondary btn-sm"><i class="fas fa-fw fa-comment-dots me-1"></i>Add comment</button>
                     </form>
                 <?php } ?>
+                <?php if ($ticket_csat_rating >= 4 && !empty($config_ticket_csat_google_review_url)) { ?>
+                    <hr class="my-3">
+                    <p class="mb-2">Glad to hear it! Mind sharing that with others?</p>
+                    <a href="<?= nullable_htmlentities($config_ticket_csat_google_review_url) ?>" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+                        <i class="fab fa-fw fa-google me-1"></i>Leave us a Google review
+                    </a>
+                <?php } ?>
             </div>
         </div>
 

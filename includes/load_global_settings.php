@@ -93,6 +93,7 @@ $config_ticket_autoclose_hours = intval($row['config_ticket_autoclose_hours']);
 $config_ticket_csat_enable = intval($row['config_ticket_csat_enable'] ?? 1);
 $config_ticket_csat_reminder_days = intval($row['config_ticket_csat_reminder_days'] ?? 3);
 $config_ticket_csat_low_rating_threshold = intval($row['config_ticket_csat_low_rating_threshold'] ?? 2);
+$config_ticket_csat_google_review_url = $row['config_ticket_csat_google_review_url'] ?? '';
 $config_ticket_new_ticket_notification_email = $row['config_ticket_new_ticket_notification_email'];
 $config_ticket_default_billable = intval($row['config_ticket_default_billable']);
 $config_ticket_default_view = intval($row['config_ticket_default_view']);

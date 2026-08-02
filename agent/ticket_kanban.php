@@ -115,6 +115,10 @@ $kanban = array_values($statuses);
                     <?php echo $item['ticket_priority']; ?>
                 </span>
 
+                        <?php if (intval($item['ticket_csat_rating'] ?? 0) > 0) { ?>
+                        <span class="csat-face-display" title="<?= csatFaceLabel(intval($item['ticket_csat_rating'])) ?>"><?= csatFaceEmoji(intval($item['ticket_csat_rating'])) ?></span>
+                        <?php } ?>
+
                         <span class="badge text-bg-secondary">
                     <?php echo $item['category_name']; ?>
                 </span>

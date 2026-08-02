@@ -85,6 +85,7 @@ foreach ($_cat_subs as $_pid => $_subs) {
                                     Priority <?php if ($sort == 'ticket_priority') { echo $order_icon; } ?>
                                 </a>
                             </th>
+                            <th>CSAT</th>
                             <th>
                                 <a class="text-dark" href="?<?php echo $url_query_strings_sort; ?>&sort=ticket_status&order=<?php echo $disp; ?>">
                                     Status <?php if ($sort == 'ticket_status') { echo $order_icon; } ?>
@@ -136,6 +137,7 @@ foreach ($_cat_subs as $_pid => $_subs) {
                             $ticket_number = intval($row['ticket_number']);
                             $ticket_subject = nullable_htmlentities($row['ticket_subject']);
                             $ticket_priority = nullable_htmlentities($row['ticket_priority']);
+                            $ticket_csat_rating = intval($row['ticket_csat_rating'] ?? 0);
                             $ticket_status_id = intval($row['ticket_status_id']);
                             $ticket_status_name = nullable_htmlentities($row['ticket_status_name']);
                             $ticket_status_color = nullable_htmlentities($row['ticket_status_color']);
@@ -433,6 +435,13 @@ foreach ($_cat_subs as $_pid => $_subs) {
                                     <span class="badge badge-<?= $_sla_color ?> mt-1" title="SLA due <?= date('M j, Y g:i A', strtotime($_sla_due)) ?>">
                                         <i class="fas fa-stopwatch me-1"></i><?= $_sla_label ?>
                                     </span>
+                                    <?php } ?>
+                                </td>
+
+                                <!-- CSAT -->
+                                <td>
+                                    <?php if ($ticket_csat_rating > 0) { ?>
+                                        <span class="csat-face-display" title="<?= csatFaceLabel($ticket_csat_rating) ?>"><?= csatFaceEmoji($ticket_csat_rating) ?></span>
                                     <?php } ?>
                                 </td>
 

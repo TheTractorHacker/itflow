@@ -247,6 +247,13 @@ if (isset($_GET['id']) && intval($_GET['id'])) {
                     <?php if ($ticket_csat_comment) { ?>
                         <p class="text-muted mb-0 mt-2">"<?php echo $ticket_csat_comment; ?>"</p>
                     <?php } ?>
+                    <?php if ($ticket_csat_rating >= 4 && !empty($config_ticket_csat_google_review_url)) { ?>
+                        <hr class="my-3">
+                        <p class="mb-2">Glad to hear it! Mind sharing that with others?</p>
+                        <a href="<?= nullable_htmlentities($config_ticket_csat_google_review_url) ?>" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+                            <i class="fab fa-fw fa-google me-1"></i>Leave us a Google review
+                        </a>
+                    <?php } ?>
                 </div>
             </div>
 

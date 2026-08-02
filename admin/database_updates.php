@@ -6021,3 +6021,12 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.39'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.39') {
+        // Optional CTA shown to clients after a 4-5 star CSAT rating, prompting a
+        // public Google review. Starts empty/unconfigured (CTA stays hidden until
+        // an admin sets it in Settings > Ticketing).
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD COLUMN IF NOT EXISTS `config_ticket_csat_google_review_url` varchar(255) DEFAULT NULL AFTER `config_ticket_csat_low_rating_threshold`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.40'");
+    }

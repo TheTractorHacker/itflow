@@ -27,7 +27,24 @@ if (isset($_POST['edit_ticket_settings'])) {
     $config_ticket_csat_reminder_days = max(1, intval($_POST['config_ticket_csat_reminder_days'] ?? 3));
     $config_ticket_csat_low_rating_threshold = min(4, max(1, intval($_POST['config_ticket_csat_low_rating_threshold'] ?? 2)));
 
-    mysqli_query($mysqli,"UPDATE settings SET config_ticket_prefix = '$config_ticket_prefix', config_ticket_next_number = $config_ticket_next_number, config_ticket_email_parse = $config_ticket_email_parse, config_ticket_autoclose_hours = $config_ticket_autoclose_hours, config_ticket_new_ticket_notification_email = '$config_ticket_new_ticket_notification_email', config_ticket_default_billable = $config_ticket_default_billable, config_ticket_default_view = $config_ticket_default_view, config_ticket_moving_columns = $config_ticket_moving_columns, config_ticket_ordering = $config_ticket_ordering, config_ticket_timer_autostart = $config_ticket_timer_autostart, config_ticket_csat_enable = $config_ticket_csat_enable, config_ticket_csat_reminder_days = $config_ticket_csat_reminder_days, config_ticket_csat_low_rating_threshold = $config_ticket_csat_low_rating_threshold WHERE company_id = 1");
+    // Optional field - blank clears it (CTA stays hidden). An invalid non-blank
+    // value doesn't abort the whole settings save (this is one field among many
+    // in the same form); it just falls back to whatever was already saved, with
+    // a warning, rather than silently accepting a broken link.
+    $raw_review_url = trim($_POST['config_ticket_csat_google_review_url'] ?? '');
+    $config_ticket_csat_google_review_url = '';
+    if ($raw_review_url !== '') {
+        if (filter_var($raw_review_url, FILTER_VALIDATE_URL) && strtolower(parse_url($raw_review_url, PHP_URL_SCHEME)) === 'https') {
+            $config_ticket_csat_google_review_url = sanitizeInput($raw_review_url);
+        } else {
+            $existing = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT config_ticket_csat_google_review_url FROM settings WHERE company_id = 1"));
+            $config_ticket_csat_google_review_url = sanitizeInput($existing['config_ticket_csat_google_review_url'] ?? '');
+            flash_alert('Google review link must be a valid HTTPS URL - left unchanged.', 'warning');
+        }
+    }
+    $config_ticket_csat_google_review_url_esc = mysqli_real_escape_string($mysqli, $config_ticket_csat_google_review_url);
+
+    mysqli_query($mysqli,"UPDATE settings SET config_ticket_prefix = '$config_ticket_prefix', config_ticket_next_number = $config_ticket_next_number, config_ticket_email_parse = $config_ticket_email_parse, config_ticket_autoclose_hours = $config_ticket_autoclose_hours, config_ticket_new_ticket_notification_email = '$config_ticket_new_ticket_notification_email', config_ticket_default_billable = $config_ticket_default_billable, config_ticket_default_view = $config_ticket_default_view, config_ticket_moving_columns = $config_ticket_moving_columns, config_ticket_ordering = $config_ticket_ordering, config_ticket_timer_autostart = $config_ticket_timer_autostart, config_ticket_csat_enable = $config_ticket_csat_enable, config_ticket_csat_reminder_days = $config_ticket_csat_reminder_days, config_ticket_csat_low_rating_threshold = $config_ticket_csat_low_rating_threshold, config_ticket_csat_google_review_url = '$config_ticket_csat_google_review_url_esc' WHERE company_id = 1");
 
     logAction("Settings", "Edit", "$session_name edited ticket settings");
 

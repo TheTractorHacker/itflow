@@ -99,6 +99,16 @@ require_once "includes/inc_all_admin.php";
                 </div>
 
                 <div class="form-group">
+                    <label>Google review link <small class="text-secondary">(optional &mdash; shown to clients as a "Leave us a Google review" prompt after a 4-5 star rating)</small></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fab fa-fw fa-google"></i></span>
+                        </div>
+                        <input type="url" class="form-control" name="config_ticket_csat_google_review_url" placeholder="https://g.page/r/.../review" value="<?php echo nullable_htmlentities($config_ticket_csat_google_review_url); ?>">
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label>Email address to notify when new tickets are raised <small class="text-secondary">(Ideally a distribution list/shared mailbox)</small></label>
                     <div class="input-group">
                         <div class="input-group-prepend">

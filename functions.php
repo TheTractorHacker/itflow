@@ -1411,7 +1411,7 @@ function getCsatAggregateByGroup(mysqli $mysqli, string $group_column, string $f
             SUM(CASE WHEN ticket_csat_rating >= $satisfied_threshold THEN 1 ELSE 0 END) AS satisfied_count,
             SUM(CASE WHEN ticket_csat_comment IS NOT NULL AND ticket_csat_comment <> '' THEN 1 ELSE 0 END) AS comment_count
          FROM tickets
-         WHERE ticket_closed_at BETWEEN '$from_dt' AND '$to_dt'
+         WHERE ticket_csat_rated_at BETWEEN '$from_dt' AND '$to_dt'
            AND ticket_archived_at IS NULL AND $group_column > 0$client_clause
          GROUP BY $group_column");
     while ($row = mysqli_fetch_assoc($res)) {
@@ -1604,17 +1604,33 @@ function getCsatReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = n
     $from_dt = "$date_from 00:00:00";
     $to_dt   = "$date_to 23:59:59";
     $client_clause = $client_id !== null ? " AND ticket_client_id = " . intval($client_id) : '';
-    $closed_range  = "ticket_closed_at BETWEEN '$from_dt' AND '$to_dt' AND ticket_archived_at IS NULL$client_clause";
+    // Two distinct cohorts, because "closed in period" and "rated in period" are
+    // genuinely different questions - a ticket can be rated long after it closes
+    // (email reminder, or just real-world lag). $closed_range answers "of tickets
+    // that closed in this window, what fraction are (by now) rated" (response
+    // rate). $rated_range answers "what ratings did we actually receive in this
+    // window" - used everywhere else (avg/satisfied/distribution/trend/
+    // per-tech/per-client/feedback feed), since that's what a period-based CSAT
+    // report is actually asking.
+    $closed_range = "ticket_closed_at BETWEEN '$from_dt' AND '$to_dt' AND ticket_archived_at IS NULL$client_clause";
+    $rated_range  = "ticket_csat_rated_at BETWEEN '$from_dt' AND '$to_dt' AND ticket_archived_at IS NULL$client_clause";
 
-    // --- Headline summary (cohort = tickets closed in range) ---
+    // --- Headline summary: ratings received in range ---
     $sum_row = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT COUNT(ticket_id) AS total_closed,
-            COUNT(ticket_csat_rating) AS rated,
+        "SELECT COUNT(ticket_id) AS rated,
             AVG(ticket_csat_rating) AS avg_rating,
             SUM(CASE WHEN ticket_csat_rating >= 4 THEN 1 ELSE 0 END) AS satisfied
+         FROM tickets WHERE $rated_range"));
+    $rated = intval($sum_row['rated'] ?? 0);
+
+    // Response rate: of tickets CLOSED in range, what fraction have (by now) been
+    // rated - independent of when the rating was actually submitted, so this uses
+    // the closed-ticket cohort rather than $rated_range.
+    $closed_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT COUNT(ticket_id) AS total_closed, COUNT(ticket_csat_rating) AS closed_rated
          FROM tickets WHERE $closed_range"));
-    $total_closed = intval($sum_row['total_closed'] ?? 0);
-    $rated        = intval($sum_row['rated'] ?? 0);
+    $total_closed = intval($closed_row['total_closed'] ?? 0);
+    $closed_rated = intval($closed_row['closed_rated'] ?? 0);
 
     // Needs-follow-up is a current, not date-scoped, count: any ticket sitting
     // reopened/still-open after a low rating right now, regardless of when it was
@@ -1627,17 +1643,17 @@ function getCsatReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = n
     $summary = [
         'total_closed'          => $total_closed,
         'rated'                 => $rated,
-        'response_rate_pct'     => $total_closed > 0 ? round($rated / $total_closed * 100, 1) : null,
+        'response_rate_pct'     => $total_closed > 0 ? round($closed_rated / $total_closed * 100, 1) : null,
         'avg_rating'            => $sum_row['avg_rating'] !== null ? round(floatval($sum_row['avg_rating']), 2) : null,
         'satisfied_pct'         => $rated > 0 ? round(intval($sum_row['satisfied']) / $rated * 100, 1) : null,
         'needs_followup_count'  => intval($followup_row['c'] ?? 0),
     ];
 
-    // --- 1-5 distribution (tickets closed in range) ---
+    // --- 1-5 distribution (ratings received in range) ---
     $distribution = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
     $res = mysqli_query($mysqli,
         "SELECT ticket_csat_rating AS r, COUNT(ticket_id) AS c FROM tickets
-         WHERE $closed_range AND ticket_csat_rating IS NOT NULL
+         WHERE $rated_range AND ticket_csat_rating IS NOT NULL
          GROUP BY ticket_csat_rating");
     while ($row = mysqli_fetch_assoc($res)) {
         $r = intval($row['r']);
@@ -1733,7 +1749,7 @@ function getCsatReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = n
          FROM tickets t
          LEFT JOIN clients c ON c.client_id = t.ticket_client_id
          LEFT JOIN users u ON u.user_id = t.ticket_assigned_to
-         WHERE $closed_range AND t.ticket_csat_rating IS NOT NULL
+         WHERE $rated_range AND t.ticket_csat_rating IS NOT NULL
          ORDER BY t.ticket_csat_rated_at DESC
          LIMIT 1000");
     while ($row = mysqli_fetch_assoc($res)) {

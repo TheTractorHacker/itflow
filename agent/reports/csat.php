@@ -263,7 +263,7 @@ $trend_avg    = array_map(function ($t) { return $t['avg_rating']; }, $report['t
                                 <tr><td colspan="4" class="text-center text-muted">No ratings in range.</td></tr>
                             <?php } else { foreach ($report['by_client'] as $c) { ?>
                                 <tr>
-                                    <td><?php echo nullable_htmlentities($c['name']); ?></td>
+                                    <td><a href="../client_overview.php?client_id=<?php echo intval($c['client_id']); ?>"><?php echo nullable_htmlentities($c['name']); ?></a></td>
                                     <td class="text-end"><?php echo intval($c['rated_count']); ?></td>
                                     <td class="text-end"><?php echo $c['avg_rating'] !== null ? $c['avg_rating'] . ' / 5' : '—'; ?></td>
                                     <td class="text-end"><?php echo $c['satisfied_pct'] !== null ? $c['satisfied_pct'] . '%' : '—'; ?></td>
