@@ -47,6 +47,7 @@ tags:
   - name: Appointments
   - name: Notifications
   - name: Alerts
+  - name: Diagnostics
   - name: Meta
 security:
   - bearerAuth: []
@@ -94,6 +95,44 @@ paths:
       summary: Logout — revoke the current bearer token
       responses:
         '200': {$ref: '#/components/responses/Ok'}
+  /crash-reports:
+    post:
+      tags: [Diagnostics]
+      summary: Report a mobile app crash (logged to App Logs, category "mobile_crash")
+      description: >
+        Semi-public: reachable without a valid bearer token, because the crash most
+        worth seeing is exactly the one that happens before login succeeds or while
+        a token is invalid/expired. A token is honored for caller correlation when
+        present, but never required.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stack_trace]
+              properties:
+                platform: {type: string, example: android}
+                app_version_name: {type: string, example: "1.13.0"}
+                app_version_code: {type: integer, example: 19}
+                device_model: {type: string, example: "Pixel 8"}
+                os_version: {type: string, example: "15"}
+                sdk_int: {type: integer, example: 35}
+                thread_name: {type: string, example: main}
+                is_fatal: {type: boolean, default: true}
+                occurred_at: {type: string, format: date-time}
+                stack_trace: {type: string}
+      responses:
+        '201':
+          description: Logged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {logged: {type: boolean, example: true}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '429': {$ref: '#/components/responses/RateLimited'}
   /dashboard:
     get:
       tags: [Dashboard]

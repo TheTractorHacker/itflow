@@ -192,6 +192,20 @@ if (!$api_user_id && $legacy_key_raw !== null) {
     }
 }
 
+// Semi-public endpoint: crash-reports. Bearer/legacy-key parsing above already ran
+// and set $api_user_id opportunistically when a valid token was presented, but this
+// must not be blocked by the hard 401 gate below - the crash we most need visibility
+// into is exactly the one that happens before login succeeds or while a token is
+// invalid/expired, when there is no way for the client to authenticate.
+if ($resource === 'crash-reports') {
+    if (!api_rate_limit('crash_ip:' . getIP(), 20, 300)) {
+        header('Retry-After: 300');
+        api_error(429, 'Rate limit exceeded');
+    }
+    require __DIR__ . '/crash_reports.php';
+    exit;
+}
+
 if (!$api_user_id) {
     api_error(401, 'Unauthorized');
 }

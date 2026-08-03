@@ -3551,7 +3551,10 @@ function logApp($category, $type, $details) {
     global $mysqli;
 
     $category = mysqli_real_escape_string($mysqli, substr($category, 0, 200));
-    $details = mysqli_real_escape_string($mysqli, substr($details, 0, 1000));
+    // 20000 (not the old 1000) so a full mobile-app crash stack trace + device/app
+    // metadata (api/v1/crash_reports.php) fits without truncation; app_log_details
+    // is TEXT as of DB 2.6.41 so the column itself no longer caps this either.
+    $details = mysqli_real_escape_string($mysqli, substr($details, 0, 20000));
 
     mysqli_query($mysqli, "INSERT INTO app_logs SET app_log_category = '$category', app_log_type = '$type', app_log_details = '$details'");
 }

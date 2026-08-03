@@ -6030,3 +6030,14 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.40'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.40') {
+        // Mobile app crash reports (POST /api/v1/crash-reports) are logged via the
+        // existing logApp() -> app_logs pipeline (category 'mobile_crash') so they
+        // show up in the existing App Logs admin page instead of needing a bespoke
+        // new screen. app_log_details was VARCHAR(1000), too small to hold a full
+        // Kotlin stack trace plus device/app metadata - widen it to TEXT.
+        mysqli_query($mysqli, "ALTER TABLE `app_logs` MODIFY COLUMN `app_log_details` TEXT NULL DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.41'");
+    }
