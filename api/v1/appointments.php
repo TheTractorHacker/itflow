@@ -44,31 +44,43 @@ if ($method === 'GET') {
         "SELECT s.schedule_id, s.schedule_start, s.schedule_end, s.schedule_onsite, s.schedule_notes,
                 t.ticket_id, t.ticket_number, t.ticket_subject, t.ticket_priority,
                 c.client_name, u.user_name AS assigned_to_name,
-                ts.ticket_status_name, ts.ticket_status_color
+                ts.ticket_status_name, ts.ticket_status_color,
+                ct.contact_name, ct.contact_phone, ct.contact_mobile,
+                l.location_address, l.location_city, l.location_state
          FROM ticket_schedules s
          JOIN tickets t ON t.ticket_id = s.schedule_ticket_id
          LEFT JOIN clients c ON t.ticket_client_id = c.client_id
          LEFT JOIN users u ON s.schedule_tech_id = u.user_id
          LEFT JOIN ticket_statuses ts ON t.ticket_status = ts.ticket_status_id
+         LEFT JOIN contacts ct ON t.ticket_contact_id = ct.contact_id
+         LEFT JOIN locations l ON l.location_client_id = t.ticket_client_id AND l.location_primary = 1
          WHERE $w
          ORDER BY s.schedule_start ASC
          LIMIT 100"
     );
     while ($row = mysqli_fetch_assoc($sql)) {
         $appts[] = [
-            'id'          => intval($row['schedule_id']),
-            'ticket_id'   => intval($row['ticket_id']),
-            'number'      => intval($row['ticket_number']),
-            'subject'     => $row['ticket_subject'],
-            'schedule'    => $row['schedule_start'],
-            'schedule_end'=> $row['schedule_end'],
-            'onsite'      => (bool)$row['schedule_onsite'],
-            'notes'       => $row['schedule_notes'],
-            'priority'    => $row['ticket_priority'],
-            'status'      => $row['ticket_status_name'],
-            'status_color'=> $row['ticket_status_color'],
-            'client'      => $row['client_name'],
-            'assigned_to' => $row['assigned_to_name'],
+            'id'            => intval($row['schedule_id']),
+            'ticket_id'     => intval($row['ticket_id']),
+            'number'        => intval($row['ticket_number']),
+            'subject'       => $row['ticket_subject'],
+            'schedule'      => $row['schedule_start'],
+            'schedule_end'  => $row['schedule_end'],
+            'onsite'        => (bool)$row['schedule_onsite'],
+            'notes'         => $row['schedule_notes'],
+            'priority'      => $row['ticket_priority'],
+            'status'        => $row['ticket_status_name'],
+            'status_color'  => $row['ticket_status_color'],
+            'client'        => $row['client_name'],
+            'assigned_to'   => $row['assigned_to_name'],
+            // On-site contact + client's primary location — for the app's "Drive"/"Call"
+            // appointment actions. The ticket's own contact (not just any client contact),
+            // same source tickets.php uses for ticket detail's contact_name/contact_phone.
+            'contact_name'  => $row['contact_name'],
+            'contact_phone' => $row['contact_phone'] ?: $row['contact_mobile'],
+            'address'       => $row['location_address'],
+            'city'          => $row['location_city'],
+            'state'         => $row['location_state'],
         ];
     }
     api_response(200, $appts);
