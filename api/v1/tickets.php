@@ -239,8 +239,19 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     $time_w     = mysqli_real_escape_string($mysqli, $time_w_raw);
     $onsite     = isset($body['onsite']) ? intval($body['onsite']) : 0;
     $contact_id = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
+    $status_id_raw = isset($body['status_id']) ? intval($body['status_id']) : 0;
 
     if (!$reply) api_error(400, 'reply is required');
+
+    // Explicit status change (e.g. the mobile app's "Add Note + set status" action,
+    // mirroring the web app's reply-form split-submit-button) - validated up front
+    // so a bad status_id fails before any writes happen.
+    $status_id_check = null;
+    if ($status_id_raw) {
+        $status_id_check = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT ticket_status_id, ticket_status_name FROM ticket_statuses WHERE ticket_status_id = $status_id_raw LIMIT 1"));
+        if (!$status_id_check) api_error(400, 'invalid status_id');
+    }
 
     // Normalize type: Customer/Client/Portal/Website all mean a client-side reply.
     // "note" is stored as 'Internal' to match the web app's own convention — the customer
@@ -307,9 +318,35 @@ if ($method === 'POST' && $id !== null && $sub === 'reply') {
     require_once $DOCUMENT_ROOT . '/includes/ai_functions.php';
     markTicketSummaryStale($mysqli, $id);
 
-    // Status auto-update
+    // Status update: an explicit status_id in the request takes priority over the
+    // type-based auto-update below (which is unchanged for callers that don't send one).
     $new_status_id = null;
-    if ($type === 'Client') {
+    if ($status_id_raw) {
+        // Capture prior status for SLA pause accounting before it's overwritten.
+        $sla_old_status_id = intval($ticket_row['ticket_status']);
+
+        // Resolved immediately becomes Closed, mirroring the web app's reply-form
+        // split-submit-button exactly (agent/post/ticket.php) - and a direct request
+        // for the Closed status itself gets the same resolved/closed bookkeeping,
+        // since the web app's "is this open" queries key off ticket_resolved_at/
+        // ticket_closed_at, not ticket_status (see the /status endpoint below).
+        $target_name = $status_id_check['ticket_status_name'];
+        if ($target_name === 'Resolved' || $target_name === 'Closed') {
+            $closed_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+                "SELECT ticket_status_id FROM ticket_statuses WHERE ticket_status_name = 'Closed' LIMIT 1"));
+            $new_status_id = $closed_row ? intval($closed_row['ticket_status_id']) : $status_id_raw;
+            mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id, ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $uid WHERE ticket_id = $id");
+            if ($target_name === 'Resolved') {
+                mysqli_query($mysqli, "INSERT INTO ticket_replies SET ticket_reply = 'Ticket closed.', ticket_reply_type = 'System', ticket_reply_time_worked = '00:01:00', ticket_reply_by = $uid, ticket_reply_ticket_id = $id");
+            }
+        } else {
+            $new_status_id = $status_id_raw;
+            mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $new_status_id WHERE ticket_id = $id");
+        }
+
+        require_once $DOCUMENT_ROOT . '/includes/sla_functions.php';
+        slaAccruePause($mysqli, $id, $sla_old_status_id, $new_status_id);
+    } elseif ($type === 'Client') {
         // Customer reply: reopen resolved/closed ticket, then move to In Progress.
         if (!empty($ticket_row['ticket_resolved_at'])) {
             mysqli_query($mysqli, "UPDATE tickets SET ticket_resolved_at = NULL, ticket_closed_at = NULL WHERE ticket_id = $id");
