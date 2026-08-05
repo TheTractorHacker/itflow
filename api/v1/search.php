@@ -65,20 +65,21 @@ foreach ($rows as $row) {
 // Assets
 $assets = [];
 $rows = api_q(
-    "SELECT a.asset_id, a.asset_name, a.asset_serial, a.asset_make, a.asset_model, c.client_name
+    "SELECT a.asset_id, a.asset_name, a.asset_tag, a.asset_serial, a.asset_make, a.asset_model, c.client_name
      FROM assets a LEFT JOIN clients c ON a.asset_client_id = c.client_id
      WHERE a.asset_archived_at IS NULL
-       AND (a.asset_name LIKE ? OR a.asset_serial LIKE ?
+       AND (a.asset_name LIKE ? OR a.asset_tag LIKE ? OR a.asset_serial LIKE ?
             OR a.asset_make LIKE ? OR a.asset_model LIKE ?)
        AND " . $scope_clause_for('a.asset_client_id') . "
      ORDER BY a.asset_name ASC LIMIT 5",
-    'ssss',
-    [$like, $like, $like, $like]
+    'sssss',
+    [$like, $like, $like, $like, $like]
 );
 foreach ($rows as $row) {
     $assets[] = [
         'id'     => intval($row['asset_id']),
         'name'   => $row['asset_name'],
+        'tag'    => $row['asset_tag'],
         'serial' => $row['asset_serial'],
         'make'   => $row['asset_make'],
         'model'  => $row['asset_model'],

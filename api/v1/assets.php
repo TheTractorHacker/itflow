@@ -34,14 +34,14 @@ if ($id === null && $sub === null) {
 
     $where = ['a.asset_archived_at IS NULL', $asset_client_scope_clause];
     if ($client_id) $where[] = "a.asset_client_id = $client_id";
-    if ($search)    $where[] = "(a.asset_name LIKE '%$search%' OR a.asset_serial LIKE '%$search%' OR a.asset_make LIKE '%$search%' OR a.asset_model LIKE '%$search%')";
+    if ($search)    $where[] = "(a.asset_name LIKE '%$search%' OR a.asset_tag LIKE '%$search%' OR a.asset_serial LIKE '%$search%' OR a.asset_make LIKE '%$search%' OR a.asset_model LIKE '%$search%')";
     if ($type)      $where[] = "a.asset_type = '$type'";
     $w = implode(' AND ', $where);
 
     $total  = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS c FROM assets a WHERE $w"))['c']);
     $assets = [];
     $sql    = mysqli_query($mysqli,
-        "SELECT a.asset_id, a.asset_name, a.asset_type, a.asset_make, a.asset_model, a.asset_serial,
+        "SELECT a.asset_id, a.asset_name, a.asset_tag, a.asset_type, a.asset_make, a.asset_model, a.asset_serial,
                 a.asset_os, a.asset_status, c.client_name
          FROM assets a LEFT JOIN clients c ON a.asset_client_id = c.client_id
          WHERE $w ORDER BY a.asset_name ASC LIMIT $limit OFFSET $offset"
@@ -50,6 +50,7 @@ if ($id === null && $sub === null) {
         $assets[] = [
             'id'     => intval($row['asset_id']),
             'name'   => $row['asset_name'],
+            'tag'    => $row['asset_tag'],
             'type'   => $row['asset_type'],
             'make'   => $row['asset_make'],
             'model'  => $row['asset_model'],
@@ -79,6 +80,7 @@ if (!$row) api_error(404, 'Asset not found');
 api_response(200, [
     'id'          => intval($row['asset_id']),
     'name'        => $row['asset_name'],
+    'tag'         => $row['asset_tag'] ?? '',
     'type'        => $row['asset_type'],
     'make'        => $row['asset_make'],
     'model'       => $row['asset_model'],
