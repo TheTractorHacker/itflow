@@ -783,7 +783,8 @@ if (isset($_POST['update_kanban_ticket'])) {
 
                     // EMAIL
                     $subject = "Ticket resolved - [$ticket_prefix$ticket_number] - $ticket_subject";
-                    $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Your ticket regarding $ticket_subject has been resolved and closed.<br><br>If you need further assistance, please reply or <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>re-open</a> to let us know! <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: $ticket_status<br>Portal: <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>View ticket</a><br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+                    $csat_rating_html = ($config_ticket_csat_enable == 1) ? csatEmailRatingLinksHtml($config_base_url, $ticket_id, $url_key) : '';
+                    $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Your ticket regarding $ticket_subject has been resolved and closed.<br><br>We hope this resolved things to your satisfaction - how would you rate it?<br>$csat_rating_html<br>If you need further assistance, please reply or <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>re-open</a> to let us know! <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: $ticket_status<br>Portal: <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>View ticket</a><br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
 
                     // Check email valid
                     if (filter_var($contact_email, FILTER_VALIDATE_EMAIL)) {
