@@ -67,6 +67,9 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     ));
 }
 
+// Included support hours (residential subscription plans) - null 'included' means not configured for this client
+$client_hours_usage = getClientIncludedHoursUsage($mysqli, $client_id);
+
 ?>
 
 <!-- ── RMM health strip ──────────────────────────────────────────────────── -->
@@ -91,6 +94,23 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
                 <a href="rmm_assets.php?client_id=<?= $client_id ?>" class="btn btn-xs btn-outline-secondary ml-auto">
                     <i class="fas fa-desktop me-1"></i>View RMM Assets
                 </a>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- ── Included support hours strip ──────────────────────────────────────── -->
+<?php if ($client_hours_usage['included'] !== null): ?>
+<div class="row mb-2">
+    <div class="col-12">
+        <div class="card mb-0" style="border-left:4px solid <?= $client_hours_usage['pct'] !== null && $client_hours_usage['pct'] >= 100 ? '#dc3545' : (($client_hours_usage['pct'] ?? 0) >= 80 ? '#ffc107' : '#28a745') ?>">
+            <div class="card-body py-2 d-flex align-items-center flex-wrap" style="gap:12px">
+                <span class="text-muted small fw-bold"><i class="fas fa-clock me-1"></i>Support Hours</span>
+                <span><?= number_format($client_hours_usage['used'], 2) ?> / <?= number_format($client_hours_usage['included'], 2) ?> hrs used this month</span>
+                <?php if ($client_hours_usage['remaining'] !== null && $client_hours_usage['remaining'] < 0): ?>
+                    <span class="badge text-bg-danger"><?= number_format(abs($client_hours_usage['remaining']), 2) ?> hrs over</span>
+                <?php endif; ?>
             </div>
         </div>
     </div>

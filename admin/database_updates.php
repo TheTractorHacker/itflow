@@ -6041,3 +6041,14 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.41'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.41') {
+        // Included remote-support hours for clients whose subscription covers a
+        // certain amount of support time per month. NULL = feature inactive for
+        // that client (default for everyone). Usage is always computed live from
+        // ticket_replies.ticket_reply_time_worked for the current calendar month -
+        // no stored balance/reset cron needed.
+        mysqli_query($mysqli, "ALTER TABLE `clients` ADD COLUMN IF NOT EXISTS `client_support_hours_included` decimal(6,2) DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.42'");
+    }

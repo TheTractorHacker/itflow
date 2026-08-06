@@ -420,7 +420,11 @@ function comet_process_job(array $job): array {
             ticket_reply_by = 0,
             ticket_reply_ticket_id = $tid
         ");
-        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 4, ticket_resolved_at = NOW() WHERE ticket_id = $tid");
+        // Resolved is an immediate alias for Closed everywhere else in this app -
+        // match that here too instead of leaving the ticket stuck at status 4
+        // relying on the slow cron-based auto-close.
+        $comet_resolved_status_id = resolveTicketStatusId(4);
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $comet_resolved_status_id, ticket_resolved_at = NOW(), ticket_closed_at = NOW() WHERE ticket_id = $tid");
 
         return ['action' => 'ticket_resolved', 'ticket_id' => $tid, 'device_name' => $dev_name];
     }

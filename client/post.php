@@ -337,10 +337,13 @@ if (isset($_GET['resolve_ticket'])) {
     // Verify the contact has access to the provided ticket ID
     if (verifyContactTicketAccess($ticket_id, "Open")) {
 
-        // Resolve the ticket
-        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 4, ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id AND ticket_client_id = $session_client_id");
+        // Resolved is an immediate alias for Closed everywhere else in this app -
+        // match that here too instead of leaving the ticket stuck at status 4
+        // relying on the slow cron-based auto-close.
+        $resolved_status_id = resolveTicketStatusId(4);
+        mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $resolved_status_id, ticket_resolved_at = NOW(), ticket_closed_at = NOW() WHERE ticket_id = $ticket_id AND ticket_client_id = $session_client_id");
 
-        $resolve_status_info = getTicketStatusInfo($mysqli, 4);
+        $resolve_status_info = getTicketStatusInfo($mysqli, $resolved_status_id);
         publishTicketEvent($ticket_id, 'status', ['status_id' => $resolve_status_info['id'], 'status_name' => $resolve_status_info['name'], 'status_color' => $resolve_status_info['color'], 'by' => $session_contact_name]);
 
         // Add reply

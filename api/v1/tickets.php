@@ -696,6 +696,13 @@ if ($method === 'POST' && $id !== null && $sub === 'status') {
     $status = intval($body['status_id'] ?? 0);
     if (!$status) api_error(400, 'status_id required');
 
+    // Resolved is an immediate alias for Closed everywhere else in this app
+    // (web reply form, quick-status, status dropdown, bulk reply, kanban) -
+    // match that here too, so picking "Resolved" from the mobile app's status
+    // picker actually closes the ticket instead of leaving it stuck at status
+    // 4 relying on the slow cron-based auto-close.
+    $status = resolveTicketStatusId($status);
+
     $status_name_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_status_name FROM ticket_statuses WHERE ticket_status_id = $status"));
     if (!$status_name_row) api_error(400, 'invalid status_id');
 

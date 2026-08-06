@@ -738,8 +738,12 @@ if (isset($_POST['update_kanban_ticket'])) {
                 mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban, ticket_status = $status, ticket_resolved_at = NULL, ticket_closed_at = NULL, ticket_closed_by = 0 WHERE ticket_id = $ticket_id");
                 customAction('ticket_update', $ticket_id);
             } elseif ($status === $statuses['Resolved']) {
-                // If the ticket was moved to a resolved status, we need to update ticket_resolved_at
-                mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban, ticket_status = $status, ticket_resolved_at = NOW() WHERE ticket_id = $ticket_id");
+                // Resolved is an immediate alias for Closed everywhere else in this
+                // app (reply form, quick-status, status dropdown, bulk reply) - match
+                // that here too instead of leaving the ticket at status 4 relying on
+                // the slow cron-based auto-close.
+                $final_status = resolveTicketStatusId($status);
+                mysqli_query($mysqli, "UPDATE tickets SET ticket_order = $kanban, ticket_status = $final_status, ticket_resolved_at = NOW(), ticket_closed_at = NOW(), ticket_closed_by = $session_user_id WHERE ticket_id = $ticket_id");
                 customAction('ticket_update', $ticket_id);
 
                 // Client notification email
@@ -778,8 +782,8 @@ if (isset($_POST['update_kanban_ticket'])) {
                     $company_phone = sanitizeInput(formatPhoneNumber($row['company_phone'], $row['company_phone_country_code']));
 
                     // EMAIL
-                    $subject = "Ticket resolved - [$ticket_prefix$ticket_number] - $ticket_subject | (pending closure)";
-                    $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Your ticket regarding $ticket_subject has been marked as solved and is pending closure.<br><br>If your request/issue is resolved, you can simply ignore this email. If you need further assistance, please reply or <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>re-open</a> to let us know! <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: $ticket_status<br>Portal: <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>View ticket</a><br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
+                    $subject = "Ticket resolved - [$ticket_prefix$ticket_number] - $ticket_subject";
+                    $body = "<i style=\'color: #808080\'>##- Please type your reply above this line -##</i><br><br>Hello $contact_name,<br><br>Your ticket regarding $ticket_subject has been resolved and closed.<br><br>If you need further assistance, please reply or <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>re-open</a> to let us know! <br><br>Ticket: $ticket_prefix$ticket_number<br>Subject: $ticket_subject<br>Status: $ticket_status<br>Portal: <a href=\'https://$config_base_url/guest/guest_view_ticket.php?ticket_id=$ticket_id&url_key=$url_key\'>View ticket</a><br><br>--<br>$company_name - Support<br>$config_ticket_from_email<br>$company_phone";
 
                     // Check email valid
                     if (filter_var($contact_email, FILTER_VALIDATE_EMAIL)) {

@@ -13,6 +13,7 @@ $client_type = nullable_htmlentities($row['client_type']);
 $client_website = nullable_htmlentities($row['client_website']);
 $client_referral = nullable_htmlentities($row['client_referral']);
 $client_net_terms = intval($row['client_net_terms']);
+$client_support_hours_included = $row['client_support_hours_included'] !== null ? floatval($row['client_support_hours_included']) : null;
 $client_tax_id_number = nullable_htmlentities($row['client_tax_id_number']);
 $client_abbreviation = nullable_htmlentities($row['client_abbreviation']);
 $client_rate = floatval($row['client_rate']);
@@ -269,6 +270,16 @@ ob_start();
                                     </option>
                                 <?php } ?>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Included Support Hours <small class="text-secondary">(per month, optional &mdash; e.g. a residential subscription plan)</small></label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fa fa-fw fa-clock"></i></span>
+                            </div>
+                            <input type="number" min="0" step="0.25" class="form-control" name="support_hours_included" placeholder="Leave blank if not applicable" value="<?php echo $client_support_hours_included !== null ? $client_support_hours_included : ''; ?>">
                         </div>
                     </div>
 

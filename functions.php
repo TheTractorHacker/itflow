@@ -1777,6 +1777,48 @@ function getCsatReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = n
 }
 
 /**
+ * Included support-hours usage for a client (e.g. residential subscriptions
+ * that cover a set amount of remote support time per month). Always computed
+ * live from ticket_replies.ticket_reply_time_worked for the given calendar
+ * month - no stored balance/reset cron needed, so it's always correct.
+ * Returns 'included' => null when the client has no allowance configured
+ * (clients.client_support_hours_included is NULL) - callers should treat that
+ * as "feature inactive for this client" and not render anything.
+ */
+function getClientIncludedHoursUsage(mysqli $mysqli, int $client_id, ?int $month = null, ?int $year = null): array {
+    $month = $month ?? intval(date('n'));
+    $year  = $year ?? intval(date('Y'));
+
+    $period_start = new DateTime(sprintf('%04d-%02d-01', $year, $month));
+    $period_end   = (clone $period_start)->modify('last day of this month')->setTime(23, 59, 59);
+    $from_dt = $period_start->format('Y-m-d H:i:s');
+    $to_dt   = $period_end->format('Y-m-d H:i:s');
+
+    $client_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT client_support_hours_included FROM clients WHERE client_id = " . intval($client_id)));
+    $included = ($client_row && $client_row['client_support_hours_included'] !== null)
+        ? floatval($client_row['client_support_hours_included']) : null;
+
+    $time_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT SUM(TIME_TO_SEC(tr.ticket_reply_time_worked)) AS total_seconds
+         FROM ticket_replies tr
+         INNER JOIN tickets t ON t.ticket_id = tr.ticket_reply_ticket_id
+         WHERE t.ticket_client_id = " . intval($client_id) . "
+           AND tr.ticket_reply_time_worked IS NOT NULL
+           AND tr.ticket_reply_created_at BETWEEN '$from_dt' AND '$to_dt'"));
+    $used = round(floatval($time_row['total_seconds'] ?? 0) / 3600, 2);
+
+    return [
+        'month'     => $month,
+        'year'      => $year,
+        'included'  => $included,
+        'used'      => $used,
+        'remaining' => $included !== null ? round($included - $used, 2) : null,
+        'pct'       => ($included !== null && $included > 0) ? round(min(100, $used / $included * 100), 1) : null,
+    ];
+}
+
+/**
  * Monthly Recurring Revenue report (set-based). Current MRR + ARR, breakdown by
  * frequency, trailing-12-month trend (approx active-at-month-end), 30-day movement
  * (new/churned), a 6-month forward billing forecast from next_date, and top clients.
@@ -3262,6 +3304,16 @@ function lookupUserPermission($module) {
 
     // Default return for no module permission
     return false;
+}
+
+// Single source of truth for "what does resolving a ticket actually mean" - a
+// "Resolved" (4) selection is treated as an immediate alias for "Closed" (5)
+// almost everywhere in this app. Several call sites independently duplicated
+// this remap and a few of them missed it, leaving tickets stuck at status 4
+// relying on the slow cron-based auto-close instead - route every status
+// write through this instead of hand-rolling the check again.
+function resolveTicketStatusId(int $status_id): int {
+    return $status_id == 4 ? 5 : $status_id;
 }
 
 // Ensures a user has access to a module (e.g. module_support) with at least the required permission level provided (defaults to read)

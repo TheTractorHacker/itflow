@@ -66,6 +66,7 @@ if (isset($_GET['ticket_id'])) {
         $client_name = nullable_htmlentities($row['client_name']);
         $client_type = nullable_htmlentities($row['client_type']);
         $client_website = nullable_htmlentities($row['client_website']);
+        $client_hours_usage = $client_id ? getClientIncludedHoursUsage($mysqli, $client_id) : ['included' => null];
 
         $client_net_terms = intval($row['client_net_terms']);
         if ($client_net_terms == 0) {
@@ -357,6 +358,23 @@ if (isset($_GET['ticket_id'])) {
             if (!$ticket_created_by && $contact_id) {
                 $initial_issue_reply_type = 'Client';
                 $initial_issue_reply_by   = $contact_id;
+            } elseif (!$ticket_created_by && $client_id) {
+                // No specific contact captured (e.g. a ticket submitted via the API
+                // using the shared/legacy key, which doesn't send a contact_id) -
+                // fall back to the client's primary contact so this still shows a
+                // real, recognizable name instead of misattributing to whichever
+                // admin the legacy key happens to resolve to.
+                $primary_contact = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT contact_id FROM contacts WHERE contact_client_id = $client_id AND contact_archived_at IS NULL ORDER BY contact_primary DESC LIMIT 1"));
+                if ($primary_contact) {
+                    $initial_issue_reply_type = 'Client';
+                    $initial_issue_reply_by   = intval($primary_contact['contact_id']);
+                } else {
+                    // Client has no contacts on file at all - nothing real to
+                    // attribute to. The render loop below shows the client's name
+                    // instead of the generic "System" label for this specific row.
+                    $initial_issue_reply_type = 'Internal';
+                    $initial_issue_reply_by   = 0;
+                }
             } else {
                 $initial_issue_reply_type = 'Internal';
                 $initial_issue_reply_by   = $ticket_created_by;
@@ -1123,6 +1141,16 @@ if (isset($_GET['ticket_id'])) {
                         $user_initials = 'CP';
                         $user_avatar = '';
                         $avatar_link = '';
+                    } elseif ($ticket_reply_by === 0 && $ticket_reply_id === $ticket_initial_issue_reply_id && !empty($client_name)) {
+                        // The initial-issue backfill couldn't attribute to a specific
+                        // contact (client has none on file) or staff creator - show the
+                        // client's name rather than the generic "System" label below,
+                        // which is meant for genuinely automated events, not a ticket a
+                        // client actually submitted.
+                        $ticket_reply_by_display = $client_name;
+                        $user_initials = initials($client_name);
+                        $user_avatar = '';
+                        $avatar_link = '';
                     } elseif ($ticket_reply_by === 0) {
                         // No real user - a genuinely system/automation-generated entry
                         // (e.g. an auto-reopen note, a scheduled sync note), not a person
@@ -1268,6 +1296,14 @@ if (isset($_GET['ticket_id'])) {
                     </div>
                     <div class="card-body p-3">
                         <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_resolved_at) && empty($ticket_closed_at)) { ?>
+                        <?php if ($client_hours_usage['included'] !== null) { ?>
+                        <div class="text-center small text-muted mb-2">
+                            <i class="fas fa-fw fa-clock me-1"></i><?= number_format($client_hours_usage['used'], 2) ?> / <?= number_format($client_hours_usage['included'], 2) ?> included hrs used this month
+                            <?php if ($client_hours_usage['remaining'] < 0) { ?>
+                                <span class="text-danger fw-bold">(<?= number_format(abs($client_hours_usage['remaining']), 2) ?> over)</span>
+                            <?php } ?>
+                        </div>
+                        <?php } ?>
                         <div class="d-flex align-items-center justify-content-center mb-3">
                             <input type="text" inputmode="numeric" maxlength="2" id="hours" name="hours" placeholder="00" form="ticketReplyForm" class="form-control form-control-sm text-center" style="max-width:3.5rem;">
                             <span class="mx-1 fw-bold">:</span>

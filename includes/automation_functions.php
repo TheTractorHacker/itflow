@@ -150,8 +150,15 @@ function automationExecuteAction($mysqli, array $action, array &$context, array 
 
         case 'set_status':
             if (!$tid) return null;
-            $sid = intval($aval);
-            mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $sid WHERE ticket_id = $tid");
+            // Resolved is an immediate alias for Closed everywhere else in this
+            // app - match that here too instead of leaving the ticket stuck at
+            // status 4 relying on the slow cron-based auto-close.
+            $sid = resolveTicketStatusId(intval($aval));
+            if ($sid == 5) {
+                mysqli_query($mysqli, "UPDATE tickets SET ticket_status = 5, ticket_resolved_at = NOW(), ticket_closed_at = NOW() WHERE ticket_id = $tid");
+            } else {
+                mysqli_query($mysqli, "UPDATE tickets SET ticket_status = $sid WHERE ticket_id = $tid");
+            }
             logAction("Automation", "Update", "Rule '$rule_name': set status=$sid on ticket $tid", $client_id, $tid);
             return "set status=$sid on ticket #$tid";
 
