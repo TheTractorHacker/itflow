@@ -733,6 +733,13 @@ body.dark-mode .content-wrapper small.text-muted {
     color: #fff;
 }
 
+/* Same bug, different component: card-header.bg-dark (client/guest ticket and
+   item view headers) never got a text color either, so the ticket number/
+   subject heading was invisible-on-invisible in light mode. */
+.card-header.bg-dark {
+    color: #fff;
+}
+
 /* ===== Table row hover accent ===== */
 .table-hover tbody tr:hover {
     background-color: var(--color-accent-soft);

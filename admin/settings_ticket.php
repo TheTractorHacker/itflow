@@ -10,6 +10,16 @@ require_once "includes/inc_all_admin.php";
             <form action="post.php" method="post" autocomplete="off">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
 
+                <div class="p-3 mb-3 border border-primary-subtle rounded-3 bg-primary-subtle bg-opacity-10">
+                    <label class="fw-bold mb-1"><i class="fab fa-fw fa-google me-1"></i>Google review link <small class="fw-normal text-secondary">(optional &mdash; shown to clients as a "Leave us a Google review" prompt after a 4-5 star rating)</small></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fab fa-fw fa-google"></i></span>
+                        </div>
+                        <input type="url" class="form-control" name="config_ticket_csat_google_review_url" placeholder="https://g.page/r/.../review" value="<?php echo nullable_htmlentities($config_ticket_csat_google_review_url); ?>">
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label>Ticket Prefix</label>
                     <div class="input-group">
@@ -96,16 +106,6 @@ require_once "includes/inc_all_admin.php";
                             <option value="<?= $t ?>" <?php if ($config_ticket_csat_low_rating_threshold == $t) { echo "selected"; } ?>><?= csatFaceEmoji($t) ?> <?= csatFaceLabel($t) ?> or below</option>
                         <?php } ?>
                     </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Google review link <small class="text-secondary">(optional &mdash; shown to clients as a "Leave us a Google review" prompt after a 4-5 star rating)</small></label>
-                    <div class="input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text"><i class="fab fa-fw fa-google"></i></span>
-                        </div>
-                        <input type="url" class="form-control" name="config_ticket_csat_google_review_url" placeholder="https://g.page/r/.../review" value="<?php echo nullable_htmlentities($config_ticket_csat_google_review_url); ?>">
-                    </div>
                 </div>
 
                 <div class="form-group">

@@ -1525,12 +1525,6 @@ if (isset($_POST["export_client_pdf"])) {
       $company_phone<br>$company_email<br>
     ";
 
-    if (!$config_whitelabel_enabled) {
-        $html .= '<div style="text-align:right;">
-        <small class="text-muted">Powered by ITFlow</small>
-        </div>';
-    }
-
     $html .= '<hr>';
 
     // Client header information (non-table)

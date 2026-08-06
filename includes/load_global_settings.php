@@ -175,10 +175,6 @@ $config_ai_timeout_seconds = intval($row['config_ai_timeout_seconds'] ?? 25);
 // Destructive Deletes
 $config_destructive_deletes_enable = intval($row['config_destructive_deletes_enable']);
 
-// White label
-$config_whitelabel_enabled = intval($row['config_whitelabel_enabled']);
-$config_whitelabel_key = $row['config_whitelabel_key'];
-
 
 // Select Arrays
 $colors_array = array (

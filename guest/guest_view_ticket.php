@@ -59,7 +59,9 @@ if ($ticket_row) {
     $ticket_prefix = nullable_htmlentities($ticket_row['ticket_prefix']);
     $ticket_number = intval($ticket_row['ticket_number']);
     $ticket_status = nullable_htmlentities($ticket_row['ticket_status_name']);
+    $ticket_status_color = nullable_htmlentities($ticket_row['ticket_status_color']);
     $ticket_priority = nullable_htmlentities($ticket_row['ticket_priority']);
+    $ticket_priority_color = ['Low' => '#17a2b8', 'Medium' => '#ffc107', 'High' => '#dc3545', 'Critical' => '#8b0000'][$ticket_priority] ?? '#6c757d';
     $ticket_subject = nullable_htmlentities($ticket_row['ticket_subject']);
     $ticket_details = $purifier->purify($ticket_row['ticket_details']);
     $ticket_assigned_to = nullable_htmlentities($ticket_row['user_name']);
@@ -73,23 +75,20 @@ if ($ticket_row) {
 
     <div class="card mt-3">
         <div class="card-header bg-dark text-center">
-            <h4 class="mt-1">
-                Ticket <?php echo $ticket_prefix, $ticket_number ?>
-            </h4>
+            <div class="text-uppercase small" style="letter-spacing:.06em; opacity:.7;">Ticket <?php echo $ticket_prefix, $ticket_number ?></div>
+            <h4 class="mt-1 mb-0"><?php echo $ticket_subject ?></h4>
         </div>
 
         <div class="card-body prettyContent">
-            <h5><strong>Subject:</strong> <?php echo $ticket_subject ?></h5>
-            <hr>
-            <p>
-                <strong>State:</strong> <?php echo $ticket_status ?>
-                <br>
-                <strong>Priority:</strong> <?php echo $ticket_priority ?>
-                <br>
-                <?php if (!empty($ticket_assigned_to) && empty($ticket_closed_at)) { ?>
-                    <strong>Assigned to: </strong> <?php echo $ticket_assigned_to ?>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <span class="badge rounded-pill tkt-pill-badge <?= tagTextClass($ticket_status_color) ?>" style="background-color:<?= $ticket_status_color ?>;"><?php echo $ticket_status ?></span>
+                <?php if (!empty($ticket_priority)) { ?>
+                    <span class="badge rounded-pill tkt-pill-badge <?= tagTextClass($ticket_priority_color) ?>" style="background-color:<?= $ticket_priority_color ?>;"><?php echo $ticket_priority ?> priority</span>
                 <?php } ?>
-            </p>
+                <?php if (!empty($ticket_assigned_to) && empty($ticket_closed_at)) { ?>
+                    <span class="text-muted small"><i class="fas fa-fw fa-user-headset me-1"></i>Assigned to <?php echo $ticket_assigned_to ?></span>
+                <?php } ?>
+            </div>
             <?php echo $ticket_details ?>
         </div>
     </div>
@@ -120,11 +119,12 @@ if ($ticket_row) {
                     </form>
                 <?php } ?>
                 <?php if ($ticket_csat_rating >= 4 && !empty($config_ticket_csat_google_review_url)) { ?>
-                    <hr class="my-3">
-                    <p class="mb-2">Glad to hear it! Mind sharing that with others?</p>
-                    <a href="<?= nullable_htmlentities($config_ticket_csat_google_review_url) ?>" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
-                        <i class="fab fa-fw fa-google me-1"></i>Leave us a Google review
-                    </a>
+                    <div class="google-review-cta mt-3 text-center">
+                        <p class="mb-2 fw-semibold">Glad to hear it! Mind sharing that with others?</p>
+                        <a href="<?= nullable_htmlentities($config_ticket_csat_google_review_url) ?>" target="_blank" rel="noopener" class="btn btn-google btn-lg px-4">
+                            <i class="fab fa-fw fa-google me-2"></i>Leave us a Google review
+                        </a>
+                    </div>
                 <?php } ?>
             </div>
         </div>
@@ -278,7 +278,7 @@ if ($ticket_row) {
         echo "Ticket ID not found!";
     } ?>
 
-<div class="card-footer">
+<div class="card-footer text-center">
     <?php echo "<i class='fas fa-phone fa-fw me-2'></i>$company_phone | <i class='fas fa-globe fa-fw me-2 ms-2'></i>$company_website"; ?>
 </div>
 

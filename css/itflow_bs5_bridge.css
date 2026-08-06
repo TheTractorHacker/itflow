@@ -345,9 +345,14 @@
 /* Anchored next to the sidebar toggle with a deliberate width — never a flex-stretched
    element floating in whatever space the other nav groups don't claim. */
 .app-header-search { width: 280px; max-width: 32vw; margin-inline-start: .25rem; }
-.form-control-navbar { background-color: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); color: #fff; }
-.form-control-navbar::placeholder { color: rgba(255,255,255,.55); }
-.form-control-navbar:focus { background-color: rgba(255,255,255,.16); color: #fff; box-shadow: none; border-color: rgba(255,255,255,.4); }
+/* Scoped under .app-header (not just .form-control-navbar) so this beats itflow_design.css's
+   plain ".form-control" rule on specificity alone - that file loads AFTER this one and its
+   ".form-control" selector has the same specificity (one class), so without the extra
+   ancestor scope it wins the cascade on load order and flattens the navbar search box to a
+   plain white input instead of the intended translucent-on-dark pill. */
+.app-header .form-control-navbar { background-color: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); color: #fff; }
+.app-header .form-control-navbar::placeholder { color: rgba(255,255,255,.55); }
+.app-header .form-control-navbar:focus { background-color: rgba(255,255,255,.16); color: #fff; box-shadow: none; border-color: rgba(255,255,255,.4); }
 .btn-navbar { background-color: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); border-left: 0; color: rgba(255,255,255,.75); }
 .btn-navbar:hover, .btn-navbar:focus { background-color: rgba(255,255,255,.24); color: #fff; }
 .navbar-badge { font-size: .6rem; padding: .2em .4em; }

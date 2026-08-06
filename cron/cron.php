@@ -86,10 +86,6 @@ $config_log_retention = intval($row['config_log_retention']);
 // Set Currency Format
 $currency_format = numfmt_create($company_locale, NumberFormatter::CURRENCY);
 
-// White label
-$config_whitelabel_enabled = intval($row['config_whitelabel_enabled']);
-$config_whitelabel_key = $row['config_whitelabel_key'];
-
 // Check cron is enabled
 if ($config_enable_cron == 0) {
     exit("Cron: is not enabled -- Quitting..");
@@ -166,13 +162,6 @@ while ($row = mysqli_fetch_assoc($sql)) {
  *  ACTION DATA
  * ###############################################################################################################
  */
-
-// Whitelabel - Disable if expired/invalid
-if ($config_whitelabel_enabled && !validateWhitelabelKey($config_whitelabel_key)) {
-    mysqli_query($mysqli, "UPDATE settings SET config_whitelabel_enabled = 0, config_whitelabel_key = '' WHERE company_id = 1");
-    appNotify("Settings", "White-labelling was disabled due to expired/invalid key", "/admin/settings_modules.php");
-}
-
 
 // GET NOTIFICATIONS
 

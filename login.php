@@ -94,7 +94,6 @@ $config_mail_from_name  = sanitizeInput($row['config_mail_from_name']);
 
 $config_client_portal_enable     = intval($row['config_client_portal_enable']);
 $config_login_remember_me_expire = intval($row['config_login_remember_me_expire']);
-$config_whitelabel_enabled       = intval($row['config_whitelabel_enabled']);
 
 $config_login_key_required = $row['config_login_key_required'];
 $config_login_key_secret   = $row['config_login_key_secret'];
@@ -913,12 +912,6 @@ $show_login_form = (!$show_role_choice && !$show_mfa_form);
         </div>
     </div>
 </div>
-
-<?php
-if (!$config_whitelabel_enabled) {
-    echo '<small class="text-muted">Powered by ITFlow</small>';
-}
-?>
 
 <script src="plugins/jquery/jquery.min.js"></script>
 <script src="plugins/bootstrap5/js/bootstrap.bundle.min.js"></script>

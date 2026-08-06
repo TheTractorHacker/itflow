@@ -222,6 +222,19 @@ a:focus-visible, .btn:focus-visible, .nav-link:focus-visible { outline: 2px soli
 .csat-card .card-body { padding: 1.75rem 1.5rem; }
 .csat-card-lede { color: var(--if-muted); }
 
+/* Google review CTA: a soft accent wash (not a plain link) so it reads as a
+   reward for the 4-5 star rating that just happened, not one more form field.
+   The button itself is the one deliberate exception to the app's teal accent
+   in this whole file - it borrows Google's own blue, the same "wear the
+   destination's colors" convention every real "Sign in with Google"/"Pay with
+   PayPal" button uses, because its entire job is to signal "this leaves the
+   app" before the click happens. */
+.google-review-cta { background-color: var(--color-accent-soft); border-radius: var(--if-radius); padding: 1.1rem 1.25rem; }
+:root[data-bs-theme="dark"] .google-review-cta { background-color: rgba(13,148,136,.15); }
+.btn-google { background-color: #4285F4; border-color: #4285F4; color: #fff; font-weight: 600; box-shadow: 0 2px 6px rgba(66,133,244,.35); transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease; }
+.btn-google:hover, .btn-google:focus { background-color: #3367D6; border-color: #3367D6; color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(66,133,244,.45); }
+@media (prefers-reduced-motion: reduce) { .btn-google { transition: none; } .btn-google:hover, .btn-google:focus { transform: none; } }
+
 /* ---- Ticket detail sidebar: the stacked cards (Time Entry, Appointments,
    Technicians, Live Chat, Activity Summary, Tasks, Worksheets, Attachments,
    Charges, Contact) had no gap and no shadow between them, so they visually
