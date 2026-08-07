@@ -33,7 +33,7 @@ ob_start();
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fa fa-fw fa-robot"></i></span>
                 </div>
-                <input type="text" class="form-control" name="provider" value="<?php echo $provider_name; ?>" placeholder="ex OpenAI">
+                <input type="text" class="form-control" name="provider" value="<?php echo $provider_name; ?>" placeholder="ex OpenAI" required>
             </div>
         </div>
 
@@ -43,7 +43,7 @@ ob_start();
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fa fa-fw fa-globe"></i></span>
                 </div>
-                <input type="url" class="form-control" name="url" value="<?php echo $url; ?>" placeholder="ex https://ai.company.ext/api">
+                <input type="url" class="form-control" name="url" value="<?php echo $url; ?>" placeholder="ex https://api.openai.com/v1" required>
             </div>
         </div>
 

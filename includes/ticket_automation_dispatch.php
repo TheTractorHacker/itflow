@@ -76,9 +76,12 @@ if (!function_exists('runTicketCreatedAutomation')) {
                         }
                     }
 
-                    if (!empty($summaries)) {
-                        automationLogRun($mysqli, $rule, 'ticket_created', $context, implode('; ', $summaries));
-                    }
+                    // Log every match, even when every action was a silent no-op
+                    // (e.g. AI triage failing) - otherwise the Run Log gives zero
+                    // signal that a rule is matching but never actually doing
+                    // anything, which is the single most likely real-world failure.
+                    automationLogRun($mysqli, $rule, 'ticket_created', $context,
+                        !empty($summaries) ? implode('; ', $summaries) : 'Matched - no action produced a result (check error log)');
                 } catch (\Throwable $e) {
                     // A single broken rule must not stop the others or the ticket insert.
                     if (function_exists('logApp')) {

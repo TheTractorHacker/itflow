@@ -9,10 +9,15 @@ if (isset($_POST['edit_ai_settings'])) {
     // Company-wide AI enable flag
     $config_ai_enable = (intval($_POST['config_ai_enable']) === 1) ? 1 : 0;
 
-    // Input character cap (floor to a sane minimum)
+    // Input character cap (clamped to a sane range - the column is a plain
+    // int(11), and an out-of-range value here throws an uncaught mysqli
+    // exception under this app's strict mysqli error mode, which would abort
+    // the whole settings save including the config_ai_enable toggle below)
     $config_ai_max_input_chars = intval($_POST['config_ai_max_input_chars']);
     if ($config_ai_max_input_chars < 1000) {
         $config_ai_max_input_chars = 1000;
+    } elseif ($config_ai_max_input_chars > 100000) {
+        $config_ai_max_input_chars = 100000;
     }
 
     // Request timeout in seconds (clamped to a sane range)

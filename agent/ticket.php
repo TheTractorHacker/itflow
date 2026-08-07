@@ -555,9 +555,11 @@ if (isset($_GET['ticket_id'])) {
                                     <i class="fas fa-fw fa-ellipsis-v"></i>
                                 </button>
                                 <div class="dropdown-menu">
+                                    <?php if (function_exists('aiEnabled') && aiEnabled($client_id)) { ?>
                                     <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/ticket/ticket_summary.php?ticket_id=<?= $ticket_id ?>" data-modal-size="lg">
                                         <i class="fas fa-fw fa-lightbulb me-2"></i>Summarize
                                     </a>
+                                    <?php } ?>
                                     <a class="dropdown-item ajax-modal" href="#" data-modal-url="modals/ticket/ticket_merge.php?ticket_id=<?= $ticket_id ?>">
                                         <i class="fas fa-fw fa-clone me-2"></i>Merge Ticket
                                     </a>

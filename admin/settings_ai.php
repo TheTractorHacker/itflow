@@ -33,7 +33,7 @@ require_once "includes/inc_all_admin.php";
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fa fa-fw fa-text-width"></i></span>
                         </div>
-                        <input type="number" class="form-control" name="config_ai_max_input_chars" min="1000" step="500" value="<?php echo intval($config_ai_max_input_chars); ?>">
+                        <input type="number" class="form-control" name="config_ai_max_input_chars" min="1000" max="100000" step="500" value="<?php echo intval($config_ai_max_input_chars); ?>">
                     </div>
                     <small class="form-text text-muted">Input sent to the AI provider is truncated to this many characters per message (default 12000).</small>
                 </div>

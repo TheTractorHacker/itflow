@@ -235,7 +235,13 @@ function automationExecuteAction($mysqli, array $action, array &$context, array 
 
             $ai = aiChat($messages, 'General', ['temperature' => 0, 'max_tokens' => 300, 'client_id' => $client_id]);
             if (empty($ai['ok'])) {
-                return null; // AI disabled/unconfigured/failed
+                // AI disabled/unconfigured/failed - silent no-op by design (must
+                // never block the ticket-created dispatch), but log the real
+                // reason so a broken provider/model config is diagnosable.
+                if (!empty($ai['error']) && $ai['error'] !== 'AI is disabled') {
+                    error_log("Automation ai_triage failed for ticket $tid: " . $ai['error']);
+                }
+                return null;
             }
 
             // Extract the JSON object (tolerate stray code fences / prose).

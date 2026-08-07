@@ -56,6 +56,7 @@ window.CSP_NONCE = <?php echo json_encode($csp_nonce ?? ''); ?>;
 
 <!-- AdminLTE 4 App -->
 <script src="/plugins/adminlte4/js/adminlte.min.js"></script>
+<script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">window.csrfToken = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;</script>
 <?php
 // Cache-bust first-party JS on every edit (falls back to the request time if the
 // file is somehow missing) so a stale Cloudflare/browser cache can't keep serving

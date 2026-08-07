@@ -12,10 +12,11 @@ $sql = mysqli_query($mysqli,
 );
 
 $trigger_labels = [
-    'schedule'      => 'Scheduled check',
-    'rmm_alert'     => 'New RMM alert',
-    'asset_offline' => 'Asset offline',
-    'asset_online'  => 'Asset online',
+    'schedule'       => 'Scheduled check',
+    'ticket_created' => 'Ticket created',
+    'rmm_alert'      => 'New RMM alert',
+    'asset_offline'  => 'Asset offline',
+    'asset_online'   => 'Asset online',
 ];
 ?>
 

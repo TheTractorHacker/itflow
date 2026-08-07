@@ -106,17 +106,22 @@ if (!function_exists('aiChat')) {
         // 'General' use case so newer use cases (e.g. 'Reply Draft') keep working
         // without requiring a dedicated ai_models row. This never changes the
         // behaviour of callers that already pass a configured use case.
+        // ai_model_id ASC makes the pick deterministic if an admin ever ends up
+        // with two rows sharing a use case (the CRUD forms block this going
+        // forward, but pre-existing duplicates could still be out there).
         $use_case_esc = mysqli_real_escape_string($mysqli, $use_case);
         $sql = mysqli_query($mysqli, "SELECT ai_model_name, ai_provider_api_url, ai_provider_api_key
             FROM ai_models
             LEFT JOIN ai_providers ON ai_model_ai_provider_id = ai_provider_id
             WHERE ai_model_use_case = '$use_case_esc'
+            ORDER BY ai_model_id ASC
             LIMIT 1");
         if ((!$sql || mysqli_num_rows($sql) === 0) && $use_case !== 'General') {
             $sql = mysqli_query($mysqli, "SELECT ai_model_name, ai_provider_api_url, ai_provider_api_key
                 FROM ai_models
                 LEFT JOIN ai_providers ON ai_model_ai_provider_id = ai_provider_id
                 WHERE ai_model_use_case = 'General'
+                ORDER BY ai_model_id ASC
                 LIMIT 1");
         }
         if (!$sql || mysqli_num_rows($sql) === 0) {
@@ -125,13 +130,18 @@ if (!function_exists('aiChat')) {
         }
         $row = mysqli_fetch_assoc($sql);
         $model_name = $row['ai_model_name'] ?? '';
-        $url = $row['ai_provider_api_url'] ?? '';
+        $base_url = $row['ai_provider_api_url'] ?? '';
         $key = decryptSetting($row['ai_provider_api_key'] ?? '');
 
-        if (empty($url) || empty($model_name)) {
+        if (empty($base_url) || empty($model_name)) {
             $result['error'] = 'AI provider/model not fully configured';
             return $result;
         }
+
+        // Providers are configured with their base API URL (e.g.
+        // https://api.openai.com/v1); the OpenAI-compatible chat/completions
+        // path is appended here so admins don't need to know/type it.
+        $url = rtrim($base_url, '/') . '/chat/completions';
 
         // Truncate oversized message content to the char cap (per message)
         foreach ($messages as $i => $m) {

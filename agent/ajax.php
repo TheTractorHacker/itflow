@@ -1029,16 +1029,18 @@ if (isset($_GET['ai_reword'])) {
 
     require_once __DIR__ . "/../includes/ai_functions.php";
 
+    // Collecting the input data from the AJAX request.
+    $inputJSON = file_get_contents('php://input');
+    $input = json_decode($inputJSON, TRUE); // Convert JSON into array.
+
+    validateCSRFToken($input['csrf_token'] ?? '');
+
     // The reword system prompt comes from the configured 'General' model.
     $promptText = '';
     $model_q = mysqli_query($mysqli, "SELECT ai_model_prompt FROM ai_models WHERE ai_model_use_case = 'General' LIMIT 1");
     if ($model_q && ($model_row = mysqli_fetch_assoc($model_q))) {
         $promptText = $model_row['ai_model_prompt'];
     }
-
-    // Collecting the input data from the AJAX request.
-    $inputJSON = file_get_contents('php://input');
-    $input = json_decode($inputJSON, TRUE); // Convert JSON into array.
 
     $userText = $input['text'] ?? '';
 
@@ -1064,10 +1066,14 @@ if (isset($_GET['ai_reword'])) {
         $cleanedContent = trim($cleanedContent);
 
         // Return the cleaned response.
-        echo json_encode(['rewordedText' => $cleanedContent]);
+        echo json_encode(['ok' => true, 'rewordedText' => $cleanedContent]);
     } else {
-        // Handle errors or unexpected response structure.
-        echo json_encode(['rewordedText' => 'Failed to get a response from the AI API.']);
+        // Surface the real failure server-side so a broken provider/model config
+        // is diagnosable, and tell the client NOT to overwrite the editor's
+        // existing content with a canned error string (that used to destroy
+        // whatever the agent had already typed).
+        error_log('ai_reword failed: ' . ($ai['error'] ?? 'unknown error'));
+        echo json_encode(['ok' => false, 'error' => $ai['error'] ?? 'AI reword unavailable']);
     }
 
 }
@@ -1075,9 +1081,13 @@ if (isset($_GET['ai_reword'])) {
 if (isset($_GET['ai_create_document_template'])) {
     // get_ai_document_template.php
 
+    enforceUserPermission('module_support');
+
     header('Content-Type: text/html; charset=UTF-8');
 
     require_once __DIR__ . "/../includes/ai_functions.php";
+
+    validateCSRFToken($_POST['csrf_token'] ?? '');
 
     $prompt = $_POST['prompt'] ?? '';
 
@@ -1099,10 +1109,13 @@ if (isset($_GET['ai_create_document_template'])) {
     // Centralised call: gains timeout, input cap and max_tokens for free.
     $ai = aiChat($messages, 'General', ['temperature' => 0.5]);
 
-    $template = $ai['ok'] ? $ai['content'] : "<p>No content returned from AI.</p>";
-
-    // Print the generated HTML template directly
-    echo $template;
+    if ($ai['ok']) {
+        // Print the generated HTML template directly
+        echo $ai['content'];
+    } else {
+        error_log('ai_create_document_template failed: ' . ($ai['error'] ?? 'unknown error'));
+        echo "<p>No content returned from AI: " . htmlspecialchars($ai['error'] ?? 'unknown error') . "</p>";
+    }
 }
 
 if (isset($_GET['ai_ticket_summary'])) {
@@ -1112,6 +1125,8 @@ if (isset($_GET['ai_ticket_summary'])) {
     header('Content-Type: text/html; charset=UTF-8');
 
     require_once __DIR__ . "/../includes/ai_functions.php";
+
+    validateCSRFToken($_POST['csrf_token'] ?? '');
 
     // Retrieve the ticket_id from POST
     $ticket_id = intval($_POST['ticket_id']);
@@ -1126,6 +1141,10 @@ if (isset($_GET['ai_ticket_summary'])) {
         LIMIT 1
     ");
     $row = mysqli_fetch_assoc($sql);
+    if (!$row) {
+        echo "Ticket not found.";
+        exit;
+    }
     $ticket_subject = $row['ticket_subject'];
     $ticket_details = strip_tags($row['ticket_details']); // strip HTML for cleaner prompt
     $ticket_status = $row['ticket_status_name'];
@@ -1260,6 +1279,9 @@ if (isset($_GET['ai_ticket_summary'])) {
             echo $summary;
         } else {
             // AI disabled/unconfigured/failed - degrade gracefully, do not cache.
+            if (!empty($ai['error']) && $ai['error'] !== 'AI is disabled') {
+                error_log('ai_ticket_summary failed for ticket ' . $ticket_id . ': ' . $ai['error']);
+            }
             echo "No summary available.";
         }
     }
@@ -1284,6 +1306,8 @@ if (isset($_GET['ai_ticket_reply_draft'])) {
     header('Content-Type: application/json; charset=UTF-8');
 
     require_once __DIR__ . "/../includes/ai_functions.php";
+
+    validateCSRFToken($_POST['csrf_token'] ?? '');
 
     $ticket_id = intval($_POST['ticket_id'] ?? 0);
 
@@ -1454,6 +1478,9 @@ if (isset($_GET['ai_ticket_reply_draft'])) {
         echo json_encode(['ok' => true, 'draft' => $draft]);
     } else {
         // AI disabled / unconfigured / provider failure - degrade gracefully.
+        if (!empty($ai['error']) && $ai['error'] !== 'AI is disabled') {
+            error_log('ai_ticket_reply_draft failed for ticket ' . $ticket_id . ': ' . $ai['error']);
+        }
         echo json_encode(['ok' => false, 'error' => $ai['error'] ?? 'AI draft unavailable']);
     }
     exit;

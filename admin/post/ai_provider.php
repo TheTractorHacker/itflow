@@ -10,9 +10,14 @@ if (isset($_POST['add_ai_provider'])) {
 
     validateCSRFToken($_POST['csrf_token']);
 
-    $provider = sanitizeInput($_POST['provider']);
-    $url = sanitizeInput($_POST['url']);
+    $provider = trim(sanitizeInput($_POST['provider']));
+    $url = trim(sanitizeInput($_POST['url']));
     $api_key = mysqli_real_escape_string($mysqli, encryptSetting(sanitizeInput($_POST['api_key'])));
+
+    if ($provider === '' || $url === '') {
+        flash_alert("Provider Name and URL are required", 'error');
+        redirect();
+    }
 
     mysqli_query($mysqli,"INSERT INTO ai_providers SET ai_provider_name = '$provider', ai_provider_api_url = '$url', ai_provider_api_key = '$api_key'");
 
@@ -20,7 +25,7 @@ if (isset($_POST['add_ai_provider'])) {
 
     logAction("AI Provider", "Create", "$session_name created AI Provider $provider");
 
-    flash_alert("AI Model <strong>$provider</strong> created");
+    flash_alert("AI Provider <strong>$provider</strong> created");
 
     redirect();
 
@@ -31,8 +36,13 @@ if (isset($_POST['edit_ai_provider'])) {
     validateCSRFToken($_POST['csrf_token']);
 
     $provider_id = intval($_POST['provider_id']);
-    $provider = sanitizeInput($_POST['provider']);
-    $url = sanitizeInput($_POST['url']);
+    $provider = trim(sanitizeInput($_POST['provider']));
+    $url = trim(sanitizeInput($_POST['url']));
+
+    if ($provider === '' || $url === '') {
+        flash_alert("Provider Name and URL are required", 'error');
+        redirect();
+    }
 
     // Only overwrite the stored API key if a new value was actually entered,
     // so a blank field (the normal case, since the key is never redisplayed) doesn't wipe it.
@@ -47,7 +57,7 @@ if (isset($_POST['edit_ai_provider'])) {
 
     logAction("AI Provider", "Edit", "$session_name edited AI Provider $provider");
 
-    flash_alert("AI Model <strong>$provider</strong> edited");
+    flash_alert("AI Provider <strong>$provider</strong> edited");
 
     redirect();
 

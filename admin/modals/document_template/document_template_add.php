@@ -67,7 +67,7 @@ $(document).ready(function(){
         $.ajax({
             url: '/agent/ajax.php?ai_create_document_template', // The PHP script that calls the OpenAI API
             method: 'POST',
-            data: { prompt: prompt },
+            data: { prompt: prompt, csrf_token: '<?= $_SESSION['csrf_token'] ?>' },
             dataType: 'html',
             success: function(response) {
                 // Assuming you have exactly one TinyMCE instance on the page

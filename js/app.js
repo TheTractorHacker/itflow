@@ -309,12 +309,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show the progress indicator
                     editor.setProgressState(true);
 
-                    fetch('ajax.php?ai_reword', {
+                    fetch('/agent/ajax.php?ai_reword', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ text: content }),
+                        body: JSON.stringify({ text: content, csrf_token: window.csrfToken }),
                     })
                         .then(response => {
                             if (!response.ok) {
@@ -323,18 +323,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             return response.json();
                         })
                         .then(data => {
-                            editor.undoManager.transact(function() {
-                                editor.setContent(data.rewordedText || 'Error: Could not reword the text.');
-                            });
-
                             editor.setProgressState(false);
                             rewordButtonApi.setEnabled(true);
 
-                            editor.notificationManager.open({
-                                text: 'Text reworded successfully!',
-                                type: 'success',
-                                timeout: 3000
-                            });
+                            if (data.ok && data.rewordedText) {
+                                editor.undoManager.transact(function() {
+                                    editor.setContent(data.rewordedText);
+                                });
+                                editor.notificationManager.open({
+                                    text: 'Text reworded successfully!',
+                                    type: 'success',
+                                    timeout: 3000
+                                });
+                            } else {
+                                // Leave the editor's existing content untouched on failure.
+                                editor.notificationManager.open({
+                                    text: data.error || 'Could not reword the text.',
+                                    type: 'error',
+                                    timeout: 5000
+                                });
+                            }
                         })
                         .catch(error => {
                             console.error('Error:', error);
@@ -424,26 +432,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     rewordButtonApi.setEnabled(false);
                     editor.setProgressState(true);
 
-                    fetch('ajax.php?ai_reword', {
+                    fetch('/agent/ajax.php?ai_reword', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: content }),
+                        body: JSON.stringify({ text: content, csrf_token: window.csrfToken }),
                     })
                         .then(response => {
                             if (!response.ok) throw new Error('Network response was not ok');
                             return response.json();
                         })
                         .then(data => {
-                            editor.undoManager.transact(function() {
-                                editor.setContent(data.rewordedText || 'Error: Could not reword the text.');
-                            });
                             editor.setProgressState(false);
                             rewordButtonApi.setEnabled(true);
-                            editor.notificationManager.open({
-                                text: 'Text reworded successfully!',
-                                type: 'success',
-                                timeout: 3000
-                            });
+
+                            if (data.ok && data.rewordedText) {
+                                editor.undoManager.transact(function() {
+                                    editor.setContent(data.rewordedText);
+                                });
+                                editor.notificationManager.open({
+                                    text: 'Text reworded successfully!',
+                                    type: 'success',
+                                    timeout: 3000
+                                });
+                            } else {
+                                // Leave the editor's existing content untouched on failure.
+                                editor.notificationManager.open({
+                                    text: data.error || 'Could not reword the text.',
+                                    type: 'error',
+                                    timeout: 5000
+                                });
+                            }
                         })
                         .catch(error => {
                             console.error('Error:', error);

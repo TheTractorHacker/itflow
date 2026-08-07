@@ -56,7 +56,7 @@ ob_start();
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fa fa-fw fa-robot"></i></span>
                 </div>
-                <input type="text" class="form-control" name="model" value="<?php echo $model_name; ?>" placeholder="ex gpt-4">
+                <input type="text" class="form-control" name="model" value="<?php echo $model_name; ?>" placeholder="ex gpt-4o-mini" required>
             </div>
         </div>
 
@@ -70,6 +70,7 @@ ob_start();
                     <option <?php if ($use_case == 'General') { echo "selected"; } ?>>General</option>
                     <option <?php if ($use_case == 'Tickets') { echo "selected"; } ?>>Tickets</option>
                     <option <?php if ($use_case == 'Documentation') { echo "selected"; } ?>>Documentation</option>
+                    <option <?php if ($use_case == 'Reply Draft') { echo "selected"; } ?>>Reply Draft</option>
                 </select>
             </div>
         </div>

@@ -198,6 +198,9 @@ function ticket_automation_actions(array $rule): array {
                         <?php endif; ?>
                     </td>
                     <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-secondary ajax-modal" data-modal-url="modals/ticket_automation/edit_rule.php?rule_id=<?php echo $rule_id; ?>">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <a href="post.php?toggle=<?php echo $rule_id; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>"
                            class="btn btn-sm btn-<?php echo $enabled ? 'warning' : 'success'; ?>">
                             <?php echo $enabled ? 'Disable' : 'Enable'; ?>

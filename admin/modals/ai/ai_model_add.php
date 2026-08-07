@@ -44,7 +44,7 @@ ob_start();
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fa fa-fw fa-robot"></i></span>
                 </div>
-                <input type="text" class="form-control" name="model" placeholder="ex gpt-4">
+                <input type="text" class="form-control" name="model" placeholder="ex gpt-4o-mini" required>
             </div>
         </div>
 
@@ -58,6 +58,7 @@ ob_start();
                     <option>General</option>
                     <option>Tickets</option>
                     <option>Documentation</option>
+                    <option>Reply Draft</option>
                 </select>
             </div>
         </div>

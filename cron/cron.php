@@ -1584,8 +1584,28 @@ if (!empty($automation_rules)) {
                 $conditions = automationGetConditions($rule);
                 if (!automationConditionsMatch($conditions, $context)) continue;
 
+                // Unlike rmm_alert/asset_offline/online (each gated by an
+                // automation_processed_at column on the source event so they only
+                // ever fire once), a schedule rule re-evaluates every open ticket on
+                // every cron pass with no such gate. That's fine for naturally
+                // idempotent actions (set_priority, set_status, assign_to,
+                // escalate - re-asserting the same state is a harmless no-op), but
+                // add_note/ai_triage post a NEW ticket reply and a NEW billed AI
+                // call every single time, so a long-lived matching ticket
+                // accumulates duplicate notes forever. Fire those two at most once
+                // per (rule, ticket): skip them (but still let other actions in the
+                // same rule run) once this rule has already logged a run against
+                // this ticket.
+                $already_ran = mysqli_num_rows(mysqli_query($mysqli,
+                    "SELECT 1 FROM ticket_automation_runs
+                     WHERE rule_id = " . intval($rule['rule_id']) . "
+                       AND ticket_id = $tid AND trigger_type = 'schedule' LIMIT 1")) > 0;
+
                 $summaries = [];
                 foreach (automationGetActions($rule) as $action) {
+                    if ($already_ran && in_array($action['action'] ?? '', ['add_note', 'ai_triage'], true)) {
+                        continue;
+                    }
                     $summary = automationExecuteAction($mysqli, $action, $context, $rule);
                     if ($summary !== null) $summaries[] = $summary;
                 }
@@ -1627,9 +1647,12 @@ if (!empty($automation_rules)) {
                     $summary = automationExecuteAction($mysqli, $action, $context, $rule);
                     if ($summary !== null) $summaries[] = $summary;
                 }
-                if (!empty($summaries)) {
-                    automationLogRun($mysqli, $rule, 'rmm_alert', $context, implode('; ', $summaries));
-                }
+                // This trigger only ever fires once per alert (gated by
+                // automation_processed_at below), so log the match even when every
+                // action was a no-op - otherwise a broken action (e.g. AI triage)
+                // leaves zero trace that the rule ran at all.
+                automationLogRun($mysqli, $rule, 'rmm_alert', $context,
+                    !empty($summaries) ? implode('; ', $summaries) : 'Matched - no action produced a result (check error log)');
             }
 
             mysqli_query($mysqli, "UPDATE rmm_alerts SET automation_processed_at = NOW() WHERE id = " . intval($alert['id']));
@@ -1674,9 +1697,12 @@ if (!empty($automation_rules)) {
                         $summary = automationExecuteAction($mysqli, $action, $context, $rule);
                         if ($summary !== null) $summaries[] = $summary;
                     }
-                    if (!empty($summaries)) {
-                        automationLogRun($mysqli, $rule, $trigger_type, $context, implode('; ', $summaries));
-                    }
+                    // This trigger only ever fires once per status change (gated by
+                    // automation_processed_at below), so log the match even when
+                    // every action was a no-op - otherwise a broken action (e.g. AI
+                    // triage) leaves zero trace that the rule ran at all.
+                    automationLogRun($mysqli, $rule, $trigger_type, $context,
+                        !empty($summaries) ? implode('; ', $summaries) : 'Matched - no action produced a result (check error log)');
                 }
             }
 
