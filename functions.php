@@ -4354,7 +4354,15 @@ function sanitize_url($url) {
 function redirect($url = null, $permanent = false) {
     // Use referer if no URL is provided
     if (!$url) {
-        $url = $_SERVER['HTTP_REFERER'] ?? 'index.php';
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        // Guard against a self-referential referrer (e.g. a plain GET action
+        // link whose own URL gets reported back as HTTP_REFERER) - using it
+        // as-is would send the browser right back to this same request,
+        // forever, instead of somewhere it can actually land.
+        if ($referer !== '' && parse_url($referer, PHP_URL_PATH) === ($_SERVER['SCRIPT_NAME'] ?? null)) {
+            $referer = '';
+        }
+        $url = $referer !== '' ? $referer : 'index.php';
     }
 
     if (!headers_sent()) {
