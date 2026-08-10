@@ -66,7 +66,7 @@ if (isset($_GET['ticket_id'])) {
         $client_name = nullable_htmlentities($row['client_name']);
         $client_type = nullable_htmlentities($row['client_type']);
         $client_website = nullable_htmlentities($row['client_website']);
-        $client_hours_usage = $client_id ? getClientIncludedHoursUsage($mysqli, $client_id) : ['included' => null];
+        $client_issues_usage = $client_id ? getClientIncludedIssuesUsage($mysqli, $client_id) : ['remote' => ['included' => null], 'onsite' => ['included' => null]];
 
         $client_net_terms = intval($row['client_net_terms']);
         if ($client_net_terms == 0) {
@@ -95,6 +95,7 @@ if (isset($_GET['ticket_id'])) {
         $ticket_schedule_end  = nullable_htmlentities($row['ticket_schedule_end'] ?? '');
         $ticket_appt_notes    = nullable_htmlentities($row['ticket_appointment_notes'] ?? '');
         $ticket_onsite = intval($row['ticket_onsite']);
+        $ticket_delivery_method = nullable_htmlentities($row['ticket_delivery_method']);
         if ($ticket_scheduled_for) {
             $sched_ts  = strtotime($ticket_scheduled_for);
             $sched_fmt = date('D, M j · g:i A', $sched_ts);
@@ -700,6 +701,23 @@ if (isset($_GET['ticket_id'])) {
                         <i class="fas fa-fw fa-folder me-1"></i><?= $ticket_category_display ?: "No category" ?>
                     </div>
 
+                    <!-- Delivery Method -->
+                    <div>
+                        <a href="#" title="Delivery Method - which included-issues allowance this counts against"
+                            <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_closed_at)) { ?>
+                                class="ajax-modal"
+                                data-modal-url="modals/ticket/ticket_delivery_method.php?id=<?= $ticket_id ?>"
+                            <?php } ?>
+                        >
+                            <?php if ($ticket_delivery_method === 'Remote') { ?>
+                                <span class="text-muted"><i class="fas fa-fw fa-laptop me-1"></i>Remote</span>
+                            <?php } elseif ($ticket_delivery_method === 'Onsite') { ?>
+                                <span class="text-muted"><i class="fas fa-fw fa-house-user me-1"></i>Onsite</span>
+                            <?php } else { ?>
+                                <span class="text-muted"><i class="fas fa-fw fa-route me-1"></i>No delivery method</span>
+                            <?php } ?>
+                        </a>
+                    </div>
 
                 </div>
                 <!-- End Assigned To / Priority / Board / Category / Schedule -->
@@ -1298,12 +1316,18 @@ if (isset($_GET['ticket_id'])) {
                     </div>
                     <div class="card-body p-3">
                         <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_resolved_at) && empty($ticket_closed_at)) { ?>
-                        <?php if ($client_hours_usage['included'] !== null) { ?>
+                        <?php if ($client_issues_usage['remote']['included'] !== null || $client_issues_usage['onsite']['included'] !== null) { ?>
                         <div class="text-center small text-muted mb-2">
-                            <i class="fas fa-fw fa-clock me-1"></i><?= number_format($client_hours_usage['used'], 2) ?> / <?= number_format($client_hours_usage['included'], 2) ?> included hrs used this month
-                            <?php if ($client_hours_usage['remaining'] < 0) { ?>
-                                <span class="text-danger fw-bold">(<?= number_format(abs($client_hours_usage['remaining']), 2) ?> over)</span>
-                            <?php } ?>
+                            <?php foreach (['remote' => ['icon' => 'fa-laptop', 'label' => 'Remote'], 'onsite' => ['icon' => 'fa-house-user', 'label' => 'Onsite']] as $key => $meta):
+                                $u = $client_issues_usage[$key];
+                                if ($u['included'] === null) continue;
+                            ?>
+                            <div><i class="fas fa-fw <?= $meta['icon'] ?> me-1"></i><?= $meta['label'] ?>: <?= $u['used'] ?> / <?= $u['included'] ?> issues used this month
+                                <?php if ($u['remaining'] < 0) { ?>
+                                    <span class="text-danger fw-bold">(<?= abs($u['remaining']) ?> over)</span>
+                                <?php } ?>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
                         <?php } ?>
                         <div class="d-flex align-items-center justify-content-center mb-3">

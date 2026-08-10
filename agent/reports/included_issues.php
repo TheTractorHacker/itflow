@@ -14,12 +14,13 @@ $month_names = [1=>'January',2=>'February',3=>'March',4=>'April',5=>'May',6=>'Ju
 
 $sql_clients = mysqli_query($mysqli,
     "SELECT client_id, client_name FROM clients
-     WHERE client_support_hours_included IS NOT NULL AND client_archived_at IS NULL
+     WHERE (client_support_issues_included_remote IS NOT NULL OR client_support_issues_included_onsite IS NOT NULL)
+       AND client_archived_at IS NULL
      ORDER BY client_name ASC");
 
 $rows = [];
 while ($c = mysqli_fetch_assoc($sql_clients)) {
-    $usage = getClientIncludedHoursUsage($mysqli, intval($c['client_id']), $month, $year);
+    $usage = getClientIncludedIssuesUsage($mysqli, intval($c['client_id']), $month, $year);
     $rows[] = [
         'client_id'   => intval($c['client_id']),
         'client_name' => $c['client_name'],
@@ -27,11 +28,30 @@ while ($c = mysqli_fetch_assoc($sql_clients)) {
     ];
 }
 
+// Renders one Included/Used/Remaining/% cell group for remote or onsite.
+function renderIssuesUsageCells(array $u): void {
+    if ($u['included'] === null) {
+        echo '<td class="text-end text-muted" colspan="4">&mdash;</td>';
+        return;
+    }
+    $over = $u['remaining'] !== null && $u['remaining'] < 0;
+    echo '<td class="text-end">' . $u['included'] . '</td>';
+    echo '<td class="text-end">' . $u['used'] . '</td>';
+    echo '<td class="text-end ' . ($over ? 'text-danger fw-bold' : '') . '">' . ($over ? '(' . abs($u['remaining']) . ' over)' : $u['remaining']) . '</td>';
+    echo '<td class="text-end">';
+    if ($u['pct'] !== null) {
+        echo '<span class="badge ' . ($u['pct'] >= 100 ? 'text-bg-danger' : ($u['pct'] >= 80 ? 'text-bg-warning' : 'text-bg-success')) . '">' . $u['pct'] . '%</span>';
+    } else {
+        echo '&mdash;';
+    }
+    echo '</td>';
+}
+
 ?>
 
 <div class="card card-dark">
     <div class="card-header py-2">
-        <h3 class="card-title mt-2"><i class="fas fa-fw fa-clock me-2"></i>Included Support Hours</h3>
+        <h3 class="card-title mt-2"><i class="fas fa-fw fa-house-user me-2"></i>Included Support Issues</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-primary d-print-none js-print-page"><i class="fas fa-fw fa-print me-2"></i>Print</button>
         </div>
@@ -54,7 +74,15 @@ while ($c = mysqli_fetch_assoc($sql_clients)) {
             <table class="table table-striped table-sm">
                 <thead>
                     <tr>
-                        <th>Client</th>
+                        <th rowspan="2" class="align-bottom">Client</th>
+                        <th colspan="4" class="text-center"><i class="fas fa-fw fa-laptop me-1"></i>Remote</th>
+                        <th colspan="4" class="text-center"><i class="fas fa-fw fa-house-user me-1"></i>Onsite</th>
+                    </tr>
+                    <tr>
+                        <th class="text-end">Included</th>
+                        <th class="text-end">Used</th>
+                        <th class="text-end">Remaining</th>
+                        <th class="text-end">%</th>
                         <th class="text-end">Included</th>
                         <th class="text-end">Used</th>
                         <th class="text-end">Remaining</th>
@@ -63,25 +91,12 @@ while ($c = mysqli_fetch_assoc($sql_clients)) {
                 </thead>
                 <tbody>
                     <?php if (empty($rows)) { ?>
-                        <tr><td colspan="5" class="text-center text-muted">No clients have an included-hours plan configured. Set one on a client's Edit form.</td></tr>
-                    <?php } else { foreach ($rows as $r) {
-                        $u = $r['usage'];
-                        $over = $u['remaining'] !== null && $u['remaining'] < 0;
-                    ?>
+                        <tr><td colspan="9" class="text-center text-muted">No clients have an included-issues plan configured. Set one on a client's Edit form.</td></tr>
+                    <?php } else { foreach ($rows as $r) { ?>
                         <tr>
                             <td><a href="../client_overview.php?client_id=<?= $r['client_id'] ?>"><?= nullable_htmlentities($r['client_name']) ?></a></td>
-                            <td class="text-end"><?= number_format($u['included'], 2) ?> hrs</td>
-                            <td class="text-end"><?= number_format($u['used'], 2) ?> hrs</td>
-                            <td class="text-end <?= $over ? 'text-danger fw-bold' : '' ?>">
-                                <?= $over ? '(' . number_format(abs($u['remaining']), 2) . ' over)' : number_format($u['remaining'], 2) . ' hrs' ?>
-                            </td>
-                            <td class="text-end">
-                                <?php if ($u['pct'] !== null) { ?>
-                                    <span class="badge <?= $u['pct'] >= 100 ? 'text-bg-danger' : ($u['pct'] >= 80 ? 'text-bg-warning' : 'text-bg-success') ?>"><?= $u['pct'] ?>%</span>
-                                <?php } else { ?>
-                                    &mdash;
-                                <?php } ?>
-                            </td>
+                            <?php renderIssuesUsageCells($r['usage']['remote']); ?>
+                            <?php renderIssuesUsageCells($r['usage']['onsite']); ?>
                         </tr>
                     <?php } } ?>
                 </tbody>

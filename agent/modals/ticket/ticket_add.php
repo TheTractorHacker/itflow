@@ -173,6 +173,22 @@ ob_start();
                         </div>
                     </div>
 
+                    <div class="col">
+                        <div class="form-group">
+                            <label>Delivery Method <small class="text-secondary">(optional)</small></label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fa fa-fw fa-route"></i></span>
+                                </div>
+                                <select class="form-control select2" name="delivery_method">
+                                    <option value="">&mdash; Not set &mdash;</option>
+                                    <option value="Remote">Remote</option>
+                                    <option value="Onsite">Onsite</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="row">

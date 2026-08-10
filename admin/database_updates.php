@@ -6052,3 +6052,23 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.42'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.42') {
+        // Replace the hours-based included-support allowance with a per-month
+        // issue COUNT, split remote vs onsite - matches how residential
+        // subscription plans are actually sold (e.g. "3 remote issues/mo"),
+        // doesn't depend on technicians consistently logging worked time, and
+        // isn't skewed by how fast/slow a given issue was resolved. NULL =
+        // feature inactive for that allowance (default for everyone). No client
+        // had a non-null client_support_hours_included set on either host at the
+        // time of this migration, so there is nothing to carry forward.
+        mysqli_query($mysqli, "ALTER TABLE `clients` ADD COLUMN IF NOT EXISTS `client_support_issues_included_remote` int(11) DEFAULT NULL");
+        mysqli_query($mysqli, "ALTER TABLE `clients` ADD COLUMN IF NOT EXISTS `client_support_issues_included_onsite` int(11) DEFAULT NULL");
+        mysqli_query($mysqli, "ALTER TABLE `clients` DROP COLUMN IF EXISTS `client_support_hours_included`");
+
+        // Which allowance a ticket counts against. NULL = not classified (most
+        // tickets, e.g. anyone without an issues-included plan configured).
+        mysqli_query($mysqli, "ALTER TABLE `tickets` ADD COLUMN IF NOT EXISTS `ticket_delivery_method` varchar(20) DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.43'");
+    }

@@ -67,8 +67,8 @@ if ($config_module_enable_rmm && lookupUserPermission('module_rmm') >= 1) {
     ));
 }
 
-// Included support hours (residential subscription plans) - null 'included' means not configured for this client
-$client_hours_usage = getClientIncludedHoursUsage($mysqli, $client_id);
+// Included support issues (residential subscription plans) - null 'included' means not configured for this client
+$client_issues_usage = getClientIncludedIssuesUsage($mysqli, $client_id);
 
 ?>
 
@@ -100,17 +100,25 @@ $client_hours_usage = getClientIncludedHoursUsage($mysqli, $client_id);
 </div>
 <?php endif; ?>
 
-<!-- ── Included support hours strip ──────────────────────────────────────── -->
-<?php if ($client_hours_usage['included'] !== null): ?>
+<!-- ── Included support issues strip ─────────────────────────────────────── -->
+<?php if ($client_issues_usage['remote']['included'] !== null || $client_issues_usage['onsite']['included'] !== null): ?>
 <div class="row mb-2">
     <div class="col-12">
-        <div class="card mb-0" style="border-left:4px solid <?= $client_hours_usage['pct'] !== null && $client_hours_usage['pct'] >= 100 ? '#dc3545' : (($client_hours_usage['pct'] ?? 0) >= 80 ? '#ffc107' : '#28a745') ?>">
-            <div class="card-body py-2 d-flex align-items-center flex-wrap" style="gap:12px">
-                <span class="text-muted small fw-bold"><i class="fas fa-clock me-1"></i>Support Hours</span>
-                <span><?= number_format($client_hours_usage['used'], 2) ?> / <?= number_format($client_hours_usage['included'], 2) ?> hrs used this month</span>
-                <?php if ($client_hours_usage['remaining'] !== null && $client_hours_usage['remaining'] < 0): ?>
-                    <span class="badge text-bg-danger"><?= number_format(abs($client_hours_usage['remaining']), 2) ?> hrs over</span>
-                <?php endif; ?>
+        <div class="card mb-0">
+            <div class="card-body py-2 d-flex align-items-center flex-wrap" style="gap:20px">
+                <span class="text-muted small fw-bold"><i class="fas fa-house-user me-1"></i>Included Support Issues</span>
+                <?php foreach (['remote' => ['icon' => 'fa-laptop', 'label' => 'Remote'], 'onsite' => ['icon' => 'fa-house-user', 'label' => 'Onsite']] as $key => $meta):
+                    $u = $client_issues_usage[$key];
+                    if ($u['included'] === null) continue;
+                ?>
+                <span class="d-flex align-items-center" style="gap:6px;border-left:4px solid <?= $u['pct'] !== null && $u['pct'] >= 100 ? '#dc3545' : (($u['pct'] ?? 0) >= 80 ? '#ffc107' : '#28a745') ?>;padding-left:8px">
+                    <i class="fas fa-fw <?= $meta['icon'] ?>"></i>
+                    <span><?= $meta['label'] ?>: <?= $u['used'] ?> / <?= $u['included'] ?> used this month</span>
+                    <?php if ($u['remaining'] !== null && $u['remaining'] < 0): ?>
+                        <span class="badge text-bg-danger"><?= abs($u['remaining']) ?> over</span>
+                    <?php endif; ?>
+                </span>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>

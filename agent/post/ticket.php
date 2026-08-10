@@ -28,6 +28,7 @@ if (isset($_POST['add_ticket'])) {
     $category_id = intval($_POST['category_id']);
     $subject = sanitizeInput($_POST['subject']);
     $priority = sanitizeInput($_POST['priority']);
+    $delivery_method = in_array($_POST['delivery_method'] ?? '', ['Remote', 'Onsite'], true) ? $_POST['delivery_method'] : null;
     $details = mysqli_real_escape_string($mysqli, $_POST['details']);
     $vendor_ticket_number = sanitizeInput($_POST['vendor_ticket_number']);
     $vendor_id = intval($_POST['vendor_id']);
@@ -94,8 +95,9 @@ if (isset($_POST['add_ticket'])) {
         }
     }
     $contract_id_sql = $contract_id > 0 ? $contract_id : 'NULL';
+    $delivery_method_sql = $delivery_method !== null ? "'" . mysqli_real_escape_string($mysqli, $delivery_method) . "'" : 'NULL';
 
-    mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$config_ticket_prefix', ticket_number = $ticket_number, ticket_source = 'Agent', ticket_category = $category_id, ticket_subject = '$subject', ticket_details = '$details', ticket_priority = '$priority', ticket_billable = '$billable', ticket_status = '$ticket_status', ticket_vendor_ticket_number = '$vendor_ticket_number', ticket_vendor_id = $vendor_id, ticket_location_id = $location_id, ticket_asset_id = $asset_id, ticket_created_by = $session_user_id, ticket_assigned_to = $assigned_to, ticket_contact_id = $contact_id, ticket_url_key = '$url_key', ticket_due_at = $due, ticket_client_id = $client_id, ticket_invoice_id = 0, ticket_project_id = $project_id, ticket_contract_id = $contract_id_sql, ticket_sla_response_due = $sla_response_due, ticket_sla_resolution_due = $sla_resolution_due");
+    mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$config_ticket_prefix', ticket_number = $ticket_number, ticket_source = 'Agent', ticket_category = $category_id, ticket_subject = '$subject', ticket_details = '$details', ticket_priority = '$priority', ticket_billable = '$billable', ticket_status = '$ticket_status', ticket_vendor_ticket_number = '$vendor_ticket_number', ticket_vendor_id = $vendor_id, ticket_location_id = $location_id, ticket_asset_id = $asset_id, ticket_created_by = $session_user_id, ticket_assigned_to = $assigned_to, ticket_contact_id = $contact_id, ticket_url_key = '$url_key', ticket_due_at = $due, ticket_client_id = $client_id, ticket_invoice_id = 0, ticket_project_id = $project_id, ticket_contract_id = $contract_id_sql, ticket_sla_response_due = $sla_response_due, ticket_sla_resolution_due = $sla_resolution_due, ticket_delivery_method = $delivery_method_sql");
 
     $ticket_id = mysqli_insert_id($mysqli);
 
@@ -394,6 +396,32 @@ if (isset($_POST['edit_ticket_priority'])) {
     logAction("Ticket", "Edit", "$session_name changed priority from $original_priority to $priority for ticket $ticket_prefix$ticket_number", $client_id, $ticket_id);
 
     customAction('ticket_update', $ticket_id);
+
+}
+
+if (isset($_POST['edit_ticket_delivery_method'])) {
+
+    validateCSRFToken($_POST['csrf_token']);
+
+    enforceUserPermission('module_support', 2);
+
+    $ticket_id = intval($_POST['ticket_id']);
+    $delivery_method = sanitizeInput($_POST['delivery_method']);
+    if (!in_array($delivery_method, ['Remote', 'Onsite'], true)) {
+        $delivery_method = null;
+    }
+    $client_id = intval($_POST['client_id']);
+
+    if ($client_id) {
+        enforceClientAccess();
+    }
+
+    $delivery_method_sql = $delivery_method !== null ? "'" . mysqli_real_escape_string($mysqli, $delivery_method) . "'" : 'NULL';
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_delivery_method = $delivery_method_sql WHERE ticket_id = $ticket_id");
+
+    logAction("Ticket", "Edit", "$session_name set delivery method to " . ($delivery_method ?? 'Not set') . " for ticket $ticket_id", $client_id, $ticket_id);
+
+    redirect();
 
     flash_alert("Priority updated from <strong>$original_priority</strong> to <strong>$priority</strong>");
 

@@ -90,9 +90,9 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="/agent/reports/included_hours.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "included_hours.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-clock"></i>
-                            <p>Included Support Hours</p>
+                        <a href="/agent/reports/included_issues.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "included_issues.php") { echo "active"; } ?>">
+                            <i class="nav-icon fas fa-house-user"></i>
+                            <p>Included Support Issues</p>
                         </a>
                     </li>
 

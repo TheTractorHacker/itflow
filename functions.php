@@ -1777,15 +1777,17 @@ function getCsatReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = n
 }
 
 /**
- * Included support-hours usage for a client (e.g. residential subscriptions
- * that cover a set amount of remote support time per month). Always computed
- * live from ticket_replies.ticket_reply_time_worked for the given calendar
- * month - no stored balance/reset cron needed, so it's always correct.
- * Returns 'included' => null when the client has no allowance configured
- * (clients.client_support_hours_included is NULL) - callers should treat that
- * as "feature inactive for this client" and not render anything.
+ * Included support-issues usage for a client (e.g. residential subscriptions
+ * that cover a set number of support issues per month), split remote vs
+ * onsite. Always computed live from tickets.ticket_delivery_method /
+ * ticket_created_at for the given calendar month - no stored balance/reset
+ * cron needed, so it's always correct. Each of 'remote'/'onsite' has
+ * 'included' => null when that allowance isn't configured for this client
+ * (clients.client_support_issues_included_remote/_onsite is NULL) - callers
+ * should treat that as "feature inactive" for that allowance and not render
+ * anything for it.
  */
-function getClientIncludedHoursUsage(mysqli $mysqli, int $client_id, ?int $month = null, ?int $year = null): array {
+function getClientIncludedIssuesUsage(mysqli $mysqli, int $client_id, ?int $month = null, ?int $year = null): array {
     $month = $month ?? intval(date('n'));
     $year  = $year ?? intval(date('Y'));
 
@@ -1795,26 +1797,37 @@ function getClientIncludedHoursUsage(mysqli $mysqli, int $client_id, ?int $month
     $to_dt   = $period_end->format('Y-m-d H:i:s');
 
     $client_row = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT client_support_hours_included FROM clients WHERE client_id = " . intval($client_id)));
-    $included = ($client_row && $client_row['client_support_hours_included'] !== null)
-        ? floatval($client_row['client_support_hours_included']) : null;
+        "SELECT client_support_issues_included_remote, client_support_issues_included_onsite
+         FROM clients WHERE client_id = " . intval($client_id)));
+    $included_remote = ($client_row && $client_row['client_support_issues_included_remote'] !== null)
+        ? intval($client_row['client_support_issues_included_remote']) : null;
+    $included_onsite = ($client_row && $client_row['client_support_issues_included_onsite'] !== null)
+        ? intval($client_row['client_support_issues_included_onsite']) : null;
 
-    $time_row = mysqli_fetch_assoc(mysqli_query($mysqli,
-        "SELECT SUM(TIME_TO_SEC(tr.ticket_reply_time_worked)) AS total_seconds
-         FROM ticket_replies tr
-         INNER JOIN tickets t ON t.ticket_id = tr.ticket_reply_ticket_id
-         WHERE t.ticket_client_id = " . intval($client_id) . "
-           AND tr.ticket_reply_time_worked IS NOT NULL
-           AND tr.ticket_reply_created_at BETWEEN '$from_dt' AND '$to_dt'"));
-    $used = round(floatval($time_row['total_seconds'] ?? 0) / 3600, 2);
+    $counts_row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT
+            SUM(CASE WHEN ticket_delivery_method = 'Remote' THEN 1 ELSE 0 END) AS remote_count,
+            SUM(CASE WHEN ticket_delivery_method = 'Onsite' THEN 1 ELSE 0 END) AS onsite_count
+         FROM tickets
+         WHERE ticket_client_id = " . intval($client_id) . "
+           AND ticket_created_at BETWEEN '$from_dt' AND '$to_dt'"));
+    $used_remote = intval($counts_row['remote_count'] ?? 0);
+    $used_onsite = intval($counts_row['onsite_count'] ?? 0);
+
+    $summarize = function (?int $included, int $used): array {
+        return [
+            'included'  => $included,
+            'used'      => $used,
+            'remaining' => $included !== null ? ($included - $used) : null,
+            'pct'       => ($included !== null && $included > 0) ? round(min(100, $used / $included * 100), 1) : null,
+        ];
+    };
 
     return [
-        'month'     => $month,
-        'year'      => $year,
-        'included'  => $included,
-        'used'      => $used,
-        'remaining' => $included !== null ? round($included - $used, 2) : null,
-        'pct'       => ($included !== null && $included > 0) ? round(min(100, $used / $included * 100), 1) : null,
+        'month'  => $month,
+        'year'   => $year,
+        'remote' => $summarize($included_remote, $used_remote),
+        'onsite' => $summarize($included_onsite, $used_onsite),
     ];
 }
 

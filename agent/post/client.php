@@ -290,12 +290,13 @@ if (isset($_POST['edit_client'])) {
         client_lead = ?,
         client_abbreviation = ?,
         client_notes = ?,
-        client_support_hours_included = ?
+        client_support_issues_included_remote = ?,
+        client_support_issues_included_onsite = ?
         WHERE client_id = ?"
     );
     mysqli_stmt_bind_param(
         $query,
-        "ssssdisissdi",
+        "ssssdisissiii",
         $name,
         $type,
         $website,
@@ -306,7 +307,8 @@ if (isset($_POST['edit_client'])) {
         $lead,
         $abbreviation,
         $notes,
-        $support_hours_included,
+        $support_issues_included_remote,
+        $support_issues_included_onsite,
         $client_id
     );
     mysqli_stmt_execute($query);
