@@ -410,10 +410,18 @@ if (isset($_POST['edit_ticket_delivery_method'])) {
     if (!in_array($delivery_method, ['Remote', 'Onsite'], true)) {
         $delivery_method = null;
     }
-    $client_id = intval($_POST['client_id']);
+
+    // Look up the ticket's real client - never trust the POSTed client_id for
+    // the access check, or a restricted agent could edit another client's
+    // ticket by simply lying about which client it belongs to.
+    $ticket_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ticket_client_id FROM tickets WHERE ticket_id = $ticket_id LIMIT 1"));
+    if (!$ticket_row) {
+        redirect();
+    }
+    $client_id = intval($ticket_row['ticket_client_id']);
 
     if ($client_id) {
-        enforceClientAccess();
+        enforceClientAccess($client_id);
     }
 
     $delivery_method_sql = $delivery_method !== null ? "'" . mysqli_real_escape_string($mysqli, $delivery_method) . "'" : 'NULL';
