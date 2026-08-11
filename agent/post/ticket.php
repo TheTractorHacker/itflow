@@ -3641,19 +3641,40 @@ if (isset($_POST['upload_ticket_attachment'])) {
 
     $allowed = ['jpg','jpeg','gif','png','webp','pdf','txt','md','doc','docx','odt','csv','xls','xlsx','ods','pptx','odp','zip','tar','gz','xml','msg','json','wav','mp3','ogg','mov','mp4','av1','ovpn'];
 
-    if (!empty($_FILES['attachment_file']) && $_FILES['attachment_file']['error'] === UPLOAD_ERR_OK) {
+    if (!empty($_FILES['attachment_file']['name']) && is_array($_FILES['attachment_file']['name'])) {
 
-        $ref_name = checkFileUpload($_FILES['attachment_file'], $allowed);
+        $upload_dir = $_SERVER['DOCUMENT_ROOT'] . "/uploads/tickets/$ticket_id/";
+        mkdirMissing($_SERVER['DOCUMENT_ROOT'] . "/uploads/tickets/");
+        mkdirMissing($upload_dir);
 
-        if (is_string($ref_name) && preg_match('/^[a-zA-Z0-9]+\.[a-zA-Z0-9]+$/', $ref_name)) {
+        $uploaded_count = 0;
+        $rejected_count = 0;
 
-            $upload_dir = $_SERVER['DOCUMENT_ROOT'] . "/uploads/tickets/$ticket_id/";
-            mkdirMissing($_SERVER['DOCUMENT_ROOT'] . "/uploads/tickets/");
-            mkdirMissing($upload_dir);
+        foreach ($_FILES['attachment_file']['name'] as $index => $original_name) {
 
-            move_uploaded_file($_FILES['attachment_file']['tmp_name'], $upload_dir . $ref_name);
+            $single_file = [
+                'name'     => $_FILES['attachment_file']['name'][$index],
+                'type'     => $_FILES['attachment_file']['type'][$index],
+                'tmp_name' => $_FILES['attachment_file']['tmp_name'][$index],
+                'error'    => $_FILES['attachment_file']['error'][$index],
+                'size'     => $_FILES['attachment_file']['size'][$index],
+            ];
 
-            $name = sanitizeInput($_FILES['attachment_file']['name']);
+            if ($single_file['error'] !== UPLOAD_ERR_OK) {
+                $rejected_count++;
+                continue;
+            }
+
+            $ref_name = checkFileUpload($single_file, $allowed);
+
+            if (!is_string($ref_name) || !preg_match('/^[a-zA-Z0-9]+\.[a-zA-Z0-9]+$/', $ref_name)) {
+                $rejected_count++;
+                continue;
+            }
+
+            move_uploaded_file($single_file['tmp_name'], $upload_dir . $ref_name);
+
+            $name = sanitizeInput($original_name);
             $ref  = mysqli_real_escape_string($mysqli, $ref_name);
 
             mysqli_query($mysqli,
@@ -3661,10 +3682,15 @@ if (isset($_POST['upload_ticket_attachment'])) {
             );
 
             logAction("Ticket", "Edit", "Uploaded attachment $name to ticket", $client_id, $ticket_id);
-            flash_alert("Attachment uploaded", 'success');
+            $uploaded_count++;
+        }
 
+        if ($uploaded_count && $rejected_count) {
+            flash_alert("$uploaded_count file(s) uploaded, $rejected_count skipped (invalid or unsupported type)", 'warning');
+        } elseif ($uploaded_count) {
+            flash_alert($uploaded_count === 1 ? "Attachment uploaded" : "$uploaded_count attachments uploaded", 'success');
         } else {
-            flash_alert("Invalid or unsupported file type", 'error');
+            flash_alert("No files uploaded - invalid or unsupported file type", 'error');
         }
 
     } else {

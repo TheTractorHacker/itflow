@@ -496,6 +496,183 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Initialize TinyMCE for the ticket reply/note editor - same as .tinymceTicket above,
+    // but with a screenshot-paste-to-upload flow layered in. Only the actual reply box on
+    // an existing ticket carries this class (it needs a real ticket_id to upload into), so
+    // canned responses/ticket templates/new-ticket forms above are untouched.
+    tinymce.init({
+        selector: '.tinymceTicketReply',
+        browser_spellcheck: true,
+        contextmenu: false,
+        resize: true,
+        min_height: 200,
+        max_height: 600,
+        promotion: false,
+        branding: false,
+        menubar: false,
+        statusbar: false,
+        toolbar: [
+            { name: 'styles', items: ['styles'] },
+            { name: 'formatting', items: ['bold', 'italic', 'forecolor'] },
+            { name: 'link', items: ['link'] },
+            { name: 'lists', items: ['bullist', 'numlist'] },
+            { name: 'indentation', items: ['outdent', 'indent'] },
+            { name: 'media', items: ['image'] },
+            { name: 'ai', items: ['reword', 'undo', 'redo'] },
+            { name: 'custom', items: ['redactButton'] },
+            { name: 'code', items: ['code'] },
+        ],
+        mobile: {
+            menubar: false,
+            toolbar: [
+                { name: 'styles', items: ['styles'] },
+                { name: 'formatting', items: ['bold', 'italic', 'forecolor'] },
+                { name: 'link', items: ['link'] },
+                { name: 'lists', items: ['bullist', 'numlist'] },
+                { name: 'indentation', items: ['outdent', 'indent'] },
+                { name: 'media', items: ['image'] },
+                { name: 'ai', items: ['reword', 'undo', 'redo'] },
+                { name: 'custom', items: ['redactButton'] },
+                { name: 'code', items: ['code'] },
+            ],
+        },
+        convert_urls: false,
+        plugins: 'link image lists table code codesample fullscreen autoresize code',
+        license_key: 'gpl',
+        // Let a pasted screenshot (e.g. clipboard from Win+Shift+S / Cmd+Shift+4) through
+        // as a blob instead of being silently dropped - images_upload_handler below then
+        // ships that blob to the server and swaps it for a real <img src> pointing at the
+        // uploaded file, same as typing/dragging one in via the toolbar image button.
+        paste_data_images: true,
+        images_upload_handler: function (blobInfo) {
+            return new Promise(function (resolve, reject) {
+                var editorEl = document.getElementById('ticket-reply-editor');
+                var ticketId = editorEl ? editorEl.getAttribute('data-ticket-id') : null;
+                var csrfInput = document.querySelector('#ticketReplyForm input[name="csrf_token"]');
+
+                if (!ticketId || !csrfInput) {
+                    reject('Image upload is not available here.');
+                    return;
+                }
+
+                var formData = new FormData();
+                formData.append('file', blobInfo.blob(), blobInfo.filename());
+                formData.append('ticket_id', ticketId);
+                formData.append('csrf_token', csrfInput.value);
+
+                fetch('ticket_attachment_upload.php', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: formData
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (data && data.location) {
+                            resolve(data.location);
+                        } else {
+                            reject((data && data.error && data.error.message) || 'Image upload failed.');
+                        }
+                    })
+                    .catch(function () {
+                        reject('Image upload failed.');
+                    });
+            });
+        },
+        setup: function(editor) {
+            editor.on('init', function() {
+                window.onbeforeunload = function() {
+                    // If editor is dirty AND not inside a visible modal → warn
+                    const inVisibleModal = editor.getContainer()?.closest('.modal.show');
+                    if (!inVisibleModal && editor.isDirty()) {
+                        return "You have unsaved changes. Are you sure you want to leave?";
+                    }
+                };
+
+                // When the modal closes, mark editor clean
+                const modal = editor.getContainer()?.closest('.modal');
+                if (modal) {
+                    modal.addEventListener('hidden.bs.modal', () => {
+                        editor.undoManager.clear();
+                        editor.setDirty(false);
+                    });
+                }
+
+            });
+
+            var rewordButtonApi;
+
+            editor.ui.registry.addButton('reword', {
+                icon: 'ai',
+                tooltip: 'Reword Text',
+                onAction: function() {
+                    var content = editor.getContent();
+                    rewordButtonApi.setEnabled(false);
+                    editor.setProgressState(true);
+
+                    fetch('ajax.php?ai_reword', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: content, csrf_token: window.csrfToken }),
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            return response.json();
+                        })
+                        .then(data => {
+                            editor.setProgressState(false);
+                            rewordButtonApi.setEnabled(true);
+
+                            if (data.ok && data.rewordedText) {
+                                editor.undoManager.transact(function() {
+                                    editor.setContent(data.rewordedText);
+                                });
+                                editor.notificationManager.open({
+                                    text: 'Text reworded successfully!',
+                                    type: 'success',
+                                    timeout: 3000
+                                });
+                            } else {
+                                // Leave the editor's existing content untouched on failure.
+                                editor.notificationManager.open({
+                                    text: data.error || 'Could not reword the text.',
+                                    type: 'error',
+                                    timeout: 5000
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            editor.setProgressState(false);
+                            rewordButtonApi.setEnabled(true);
+                            editor.notificationManager.open({
+                                text: 'An error occurred while rewording the text.',
+                                type: 'error',
+                                timeout: 5000
+                            });
+                        });
+                },
+                onSetup: function(buttonApi) {
+                    rewordButtonApi = buttonApi;
+                    return function() {};
+                }
+            });
+
+            editor.ui.registry.addButton('redactButton', {
+                icon: 'permanent-pen',
+                tooltip: 'Redact Text',
+                onAction: function() {
+                    var selectedText = editor.selection.getContent({ format: 'text' });
+                    if (selectedText) {
+                        var newContent = '<span style="font-weight: bold; color: red;">[REDACTED]</span>';
+                        editor.selection.setContent(newContent);
+                    } else {
+                        alert('Please select a word to redact');
+                    }
+                }
+            });
+        }
+    });
+
     // Initialize TinyMCE for the email signature editor. Deliberately separate from
     // .tinymceTicket above - that toolbar has no font size or clear-formatting control
     // (fine for short ticket replies), but a signature often gets pasted in from

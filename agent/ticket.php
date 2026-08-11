@@ -1046,7 +1046,8 @@ if (isset($_GET['ticket_id'])) {
                                 </div>
                                 <textarea
                                     id="ticket-reply-editor"
-                                    class="form-control tinymceTicket" name="ticket_reply"
+                                    class="form-control tinymceTicketReply" name="ticket_reply"
+                                    data-ticket-id="<?= $ticket_id ?>"
                                     placeholder="Type a response">
                                 </textarea>
                             </div>

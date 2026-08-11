@@ -208,7 +208,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['login']) || isset($_
             SELECT users.*,
                    user_settings.*,
                    contacts.*,
-                   clients.*
+                   clients.*,
+                   users.user_id AS user_id
             FROM users
             LEFT JOIN user_settings ON users.user_id = user_settings.user_id
             LEFT JOIN contacts       ON users.user_id = contacts.contact_user_id
