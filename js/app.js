@@ -203,6 +203,20 @@ document.addEventListener('DOMContentLoaded', function() {
             jQuery("#alert").slideUp(500);
         });
     }
+});
+
+function initTinyMCEEditors() {
+    // Initialize every TinyMCE editor on the page. Deliberately NOT gated
+    // behind DOMContentLoaded (see initSelect2Widgets above for the full
+    // explanation): this whole script re-executes on every AJAX modal load,
+    // but DOMContentLoaded only fires once per page, so any .tinymce* field
+    // inside a modal (document/contract/ticket templates, canned responses,
+    // the ticket-reply-edit modal, etc.) silently stayed a plain unstyled
+    // <textarea> instead of a rich-text editor. Calling this directly re-runs
+    // it on every modal load. Safe to call repeatedly: tinymce.init() skips
+    // elements that already have an active editor attached (verified live -
+    // re-running this while the ticket page's own editor is open does not
+    // duplicate or disturb it).
 
     // Initialize TinyMCE
     tinymce.init({
@@ -834,7 +848,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTinyMCEEditors);
+} else {
+    initTinyMCEEditors();
+}
 
+document.addEventListener('DOMContentLoaded', function() {
     // ---- Date/time pickers (Tempus Dominus 6) ----
     document.querySelectorAll('.datetimepicker').forEach(function (el) {
         try { new tempusDominus.TempusDominus(el); } catch (err) { /* noop */ }
