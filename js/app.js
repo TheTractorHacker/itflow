@@ -160,20 +160,18 @@ document.addEventListener('input', function (e) {
     }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Prevents resubmit on forms
-    if (window.history.replaceState) {
-        window.history.replaceState(null, null, window.location.href);
-    }
-
-    // Slide alert up after 4 secs (jQuery kept as a coexistence shim)
-    if (window.jQuery) {
-        jQuery("#alert").fadeTo(5000, 500).slideUp(500, function() {
-            jQuery("#alert").slideUp(500);
-        });
-    }
-
-    // Initialize select boxes (Tom Select replaces Select2)
+function initSelect2Widgets() {
+    // Initialize select boxes (Tom Select replaces Select2). Deliberately NOT
+    // gated behind DOMContentLoaded below: this whole script is re-executed
+    // every time an AJAX modal loads (ajax_modal.js's executeInjectedScripts
+    // re-runs modal_footer.php's <script src="/js/app.js">), but
+    // DOMContentLoaded only ever fires once per page - a listener added after
+    // it has already fired never runs, so every modal-loaded .select2
+    // (including multi-selects like a client's Tags field) was silently stuck
+    // as a plain native <select>, where clicking a second option without
+    // holding Ctrl/Cmd deselects the first. Calling this directly re-runs it
+    // on every modal load and picks up newly-added elements; the el.tomselect
+    // guard makes repeat calls safe for ones already initialized.
     document.querySelectorAll('.select2').forEach(function (el) {
         if (el.tomselect) { return; }
         var opts = {
@@ -186,6 +184,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (ph) { opts.placeholder = ph; }
         try { new TomSelect(el, opts); } catch (err) { /* noop */ }
     });
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSelect2Widgets);
+} else {
+    initSelect2Widgets();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevents resubmit on forms
+    if (window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.href);
+    }
+
+    // Slide alert up after 4 secs (jQuery kept as a coexistence shim)
+    if (window.jQuery) {
+        jQuery("#alert").fadeTo(5000, 500).slideUp(500, function() {
+            jQuery("#alert").slideUp(500);
+        });
+    }
 
     // Initialize TinyMCE
     tinymce.init({
