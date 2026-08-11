@@ -123,6 +123,28 @@ ob_start();
                 </div>
 
                 <div class="form-group">
+                    <label>Included Support Issues <small class="text-secondary">(per month, optional &mdash; e.g. a residential subscription plan)</small></label>
+                    <div class="row">
+                        <div class="col">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fa fa-fw fa-laptop"></i></span>
+                                </div>
+                                <input type="number" min="0" step="1" class="form-control" name="support_issues_included_remote" placeholder="Remote / mo" value="<?php echo $client_support_issues_included_remote !== null ? $client_support_issues_included_remote : ''; ?>">
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fa fa-fw fa-house-user"></i></span>
+                                </div>
+                                <input type="number" min="0" step="1" class="form-control" name="support_issues_included_onsite" placeholder="Onsite / mo" value="<?php echo $client_support_issues_included_onsite !== null ? $client_support_issues_included_onsite : ''; ?>">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label>Referral</label>
                     <div class="input-group">
                         <div class="input-group-prepend">
@@ -271,28 +293,6 @@ ob_start();
                                     </option>
                                 <?php } ?>
                             </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Included Support Issues <small class="text-secondary">(per month, optional &mdash; e.g. a residential subscription plan)</small></label>
-                        <div class="row">
-                            <div class="col">
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fa fa-fw fa-laptop"></i></span>
-                                    </div>
-                                    <input type="number" min="0" step="1" class="form-control" name="support_issues_included_remote" placeholder="Remote / mo" value="<?php echo $client_support_issues_included_remote !== null ? $client_support_issues_included_remote : ''; ?>">
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fa fa-fw fa-house-user"></i></span>
-                                    </div>
-                                    <input type="number" min="0" step="1" class="form-control" name="support_issues_included_onsite" placeholder="Onsite / mo" value="<?php echo $client_support_issues_included_onsite !== null ? $client_support_issues_included_onsite : ''; ?>">
-                                </div>
-                            </div>
                         </div>
                     </div>
 
