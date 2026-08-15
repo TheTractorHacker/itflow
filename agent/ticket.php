@@ -495,7 +495,7 @@ if (isset($_GET['ticket_id'])) {
             <li class="breadcrumb-item active"><?php echo "$ticket_prefix$ticket_number";?></li>
         </ol>
 
-        <div class="card shadow-sm mb-3">
+        <div class="card shadow-sm mb-3 ticket-header-compact">
             <div class="card-body pb-3">
 
                 <!-- Subject + action toolbar -->
@@ -883,102 +883,9 @@ if (isset($_GET['ticket_id'])) {
 
             <div class="col-md-9">
 
-                <!-- Asset card -->
-                <?php if ($asset_id) { ?>
-                    <div class="card mb-3">
-                        <div class="card-header px-3 py-2">
-                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-desktop me-2"></i>Assets</h5>
-                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
-                            <div class="card-tools">
-                                <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_edit_asset.php?id=<?= $ticket_id ?>">
-                                    <i class="fas fa-fw fa-edit"></i>
-                                </a>
-                            </div>
-                            <?php } ?>
-                        </div>
-                        <div class="card-body p-3">
-                            <div>
-                                <a class="ajax-modal" href="#" data-modal-size="lg"
-                                    data-modal-url="modals/asset/asset_details.php?<?= $client_url ?>&id=<?= $asset_id ?>">
-                                    <i class="fa fa-fw fa-<?php echo $asset_icon; ?> text-secondary me-2"></i><strong><?php echo $asset_name; ?></strong>
-                                </a>
-                            </div>
-
-                            <?php
-                            // RMM status for the primary asset (Syncro-Beta)
-                            if ($config_module_enable_rmm && lookupUserPermission("module_rmm") >= 1) {
-                                $rmm_tklink = mysqli_fetch_assoc(mysqli_query($mysqli,
-                                    "SELECT arl.id, arl.rmm_status, arl.hostname, arl.last_seen, arl.os_name, arl.logged_in_user
-                                      FROM asset_rmm_links arl WHERE arl.asset_id=$asset_id LIMIT 1"
-                                ));
-                                if ($rmm_tklink) {
-                                    $rmm_badge = $rmm_tklink['rmm_status'] === 'online' ? 'text-bg-success' : ($rmm_tklink['rmm_status'] === 'offline' ? 'text-bg-danger' : 'text-bg-secondary');
-                                    ?>
-                                    <div class="mt-2 pt-2 border-top small">
-                                        <div class="d-flex align-items-center mb-1">
-                                            <i class="fas fa-fw fa-server text-secondary me-2"></i>
-                                            <span class="me-2"><?= nullable_htmlentities($rmm_tklink['hostname']) ?></span>
-                                            <span class="badge <?= $rmm_badge ?>"><?= ucfirst($rmm_tklink['rmm_status']) ?></span>
-                                        </div>
-                                        <div class="text-muted">
-                                            OS: <?= nullable_htmlentities($rmm_tklink['os_name']) ?>
-                                            &nbsp;&middot;&nbsp; Last seen: <?= nullable_htmlentities($rmm_tklink['last_seen']) ?>
-                                            <?php if ($rmm_tklink['logged_in_user']): ?>
-                                            &nbsp;&middot;&nbsp; User: <?= nullable_htmlentities($rmm_tklink['logged_in_user']) ?>
-                                            <?php endif; ?>
-                                        </div>
-                                        <a href="/agent/asset_details.php?asset_id=<?= $asset_id ?>" class="btn btn-xs btn-info mt-2">
-                                            <i class="fas fa-desktop me-1"></i>View Asset
-                                        </a>
-                                    </div>
-                                    <?php
-                                }
-                            }
-                            ?>
-
-                            <?php
-                            while ($row = mysqli_fetch_assoc($sql_additional_assets)) {
-                                $additional_asset_id = intval($row['asset_id']);
-                                $additional_asset_name = nullable_htmlentities($row['asset_name']);
-                                $additional_asset_type = nullable_htmlentities($row['asset_type']);
-                                $additional_asset_icon = getAssetIcon($additional_asset_type);
-                                ?>
-                                <div class="mt-1">
-                                    <a class="ajax-modal" href="#" data-modal-size="lg"
-                                        data-modal-url="modals/asset/asset_details.php?<?= $client_url ?>&id=<?= $additional_asset_id ?>">
-                                        <i class="fa fa-fw fa-<?php echo $additional_asset_icon; ?> text-secondary me-2"></i><?php echo $additional_asset_name; ?>
-                                    </a>
-                                    <?php if (empty($ticket_closed_at)) { ?>
-                                        <a class="confirm-link float-end" href="post.php?delete_ticket_additional_asset=<?= $additional_asset_id; ?>&ticket_id=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" title="Remove asset from ticket">
-                                            <i class="fas fa-fw fa-times text-secondary"></i>
-                                        </a>
-                                    <?php } ?>
-                                </div>
-                            <?php
-
-                            }
-                            ?>
-                        </div>
-                    </div>
-                <?php } else { ?>
-                    <div class="card mb-3">
-                        <div class="card-header px-3 py-2">
-                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-desktop me-2"></i>Assets</h5>
-                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
-                            <div class="card-tools">
-                                <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_edit_asset.php?id=<?= $ticket_id ?>">
-                                    <i class="fas fa-fw fa-edit"></i>
-                                </a>
-                            </div>
-                            <?php } ?>
-                        </div>
-                        <div class="card-body p-3 text-muted">
-                            No assets linked to this ticket.
-                        </div>
-                    </div>
-                <?php } // End if asset_id ?>
-                <!-- End Asset card -->
-
+                <!-- Reply composer: promoted above the thread and the asset card - this is
+                     the action a technician takes on nearly every visit, so it shouldn't
+                     require scrolling past reference info first. -->
                 <!-- Only show ticket reply modal if status is not closed -->
                 <?php if (lookupUserPermission("module_support") >= 2 && empty($ticket_resolved_at) && empty($ticket_closed_at)) { ?>
 
@@ -987,7 +894,7 @@ if (isset($_GET['ticket_id'])) {
                             <input type="hidden" name="ticket_id" id="ticket_id" value="<?php echo $ticket_id; ?>">
                             <input type="hidden" name="client_id" id="client_id" value="<?php echo $client_id; ?>">
 
-                            <div class="card card-body d-print-none p-3">
+                            <div class="card card-body d-print-none p-3 ticket-primary-panel">
 
                                 <div class="form-group mb-0">
                                     <div class="btn-group btn-block js-btn-group-toggle">
@@ -1202,7 +1109,7 @@ if (isset($_GET['ticket_id'])) {
                     ?>
 
                     <!-- Begin ticket reply card -->
-                    <div class="card border-left border-<?= $ticket_reply_type_border ?> mb-3" style="border-left-width: 8px !important;" data-reply-type="<?= $ticket_reply_type ?>">
+                    <div class="card ticket-thread-reply border-left border-<?= $ticket_reply_type_border ?> mb-3" style="border-left-width: 8px !important;" data-reply-type="<?= $ticket_reply_type ?>">
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center w-100">
                                 <!-- Left side content -->
@@ -1306,12 +1213,116 @@ if (isset($_GET['ticket_id'])) {
 
                 ?>
 
+                <!-- Asset card: moved below the thread - reference info a technician
+                     checks occasionally, not the primary reason they opened this ticket. -->
+                <?php if ($asset_id) { ?>
+                    <div class="card mt-3">
+                        <div class="card-header px-3 py-2">
+                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-desktop me-2"></i>Assets</h5>
+                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
+                            <div class="card-tools">
+                                <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_edit_asset.php?id=<?= $ticket_id ?>">
+                                    <i class="fas fa-fw fa-edit"></i>
+                                </a>
+                            </div>
+                            <?php } ?>
+                        </div>
+                        <div class="card-body p-3">
+                            <div>
+                                <a class="ajax-modal" href="#" data-modal-size="lg"
+                                    data-modal-url="modals/asset/asset_details.php?<?= $client_url ?>&id=<?= $asset_id ?>">
+                                    <i class="fa fa-fw fa-<?php echo $asset_icon; ?> text-secondary me-2"></i><strong><?php echo $asset_name; ?></strong>
+                                </a>
+                            </div>
+
+                            <?php
+                            // RMM status for the primary asset (Syncro-Beta)
+                            if ($config_module_enable_rmm && lookupUserPermission("module_rmm") >= 1) {
+                                $rmm_tklink = mysqli_fetch_assoc(mysqli_query($mysqli,
+                                    "SELECT arl.id, arl.rmm_status, arl.hostname, arl.last_seen, arl.os_name, arl.logged_in_user
+                                      FROM asset_rmm_links arl WHERE arl.asset_id=$asset_id LIMIT 1"
+                                ));
+                                if ($rmm_tklink) {
+                                    $rmm_badge = $rmm_tklink['rmm_status'] === 'online' ? 'text-bg-success' : ($rmm_tklink['rmm_status'] === 'offline' ? 'text-bg-danger' : 'text-bg-secondary');
+                                    ?>
+                                    <div class="mt-2 pt-2 border-top small">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-fw fa-server text-secondary me-2"></i>
+                                            <span class="me-2"><?= nullable_htmlentities($rmm_tklink['hostname']) ?></span>
+                                            <span class="badge <?= $rmm_badge ?>"><?= ucfirst($rmm_tklink['rmm_status']) ?></span>
+                                        </div>
+                                        <div class="text-muted">
+                                            OS: <?= nullable_htmlentities($rmm_tklink['os_name']) ?>
+                                            &nbsp;&middot;&nbsp; Last seen: <?= nullable_htmlentities($rmm_tklink['last_seen']) ?>
+                                            <?php if ($rmm_tklink['logged_in_user']): ?>
+                                            &nbsp;&middot;&nbsp; User: <?= nullable_htmlentities($rmm_tklink['logged_in_user']) ?>
+                                            <?php endif; ?>
+                                        </div>
+                                        <a href="/agent/asset_details.php?asset_id=<?= $asset_id ?>" class="btn btn-xs btn-info mt-2">
+                                            <i class="fas fa-desktop me-1"></i>View Asset
+                                        </a>
+                                    </div>
+                                    <?php
+                                }
+                            }
+                            ?>
+
+                            <?php
+                            while ($row = mysqli_fetch_assoc($sql_additional_assets)) {
+                                $additional_asset_id = intval($row['asset_id']);
+                                $additional_asset_name = nullable_htmlentities($row['asset_name']);
+                                $additional_asset_type = nullable_htmlentities($row['asset_type']);
+                                $additional_asset_icon = getAssetIcon($additional_asset_type);
+                                ?>
+                                <div class="mt-1">
+                                    <a class="ajax-modal" href="#" data-modal-size="lg"
+                                        data-modal-url="modals/asset/asset_details.php?<?= $client_url ?>&id=<?= $additional_asset_id ?>">
+                                        <i class="fa fa-fw fa-<?php echo $additional_asset_icon; ?> text-secondary me-2"></i><?php echo $additional_asset_name; ?>
+                                    </a>
+                                    <?php if (empty($ticket_closed_at)) { ?>
+                                        <a class="confirm-link float-end" href="post.php?delete_ticket_additional_asset=<?= $additional_asset_id; ?>&ticket_id=<?= $ticket_id ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>" title="Remove asset from ticket">
+                                            <i class="fas fa-fw fa-times text-secondary"></i>
+                                        </a>
+                                    <?php } ?>
+                                </div>
+                            <?php
+
+                            }
+                            ?>
+                        </div>
+                    </div>
+                <?php } else { ?>
+                    <div class="card mt-3">
+                        <div class="card-header px-3 py-2">
+                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-desktop me-2"></i>Assets</h5>
+                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
+                            <div class="card-tools">
+                                <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_edit_asset.php?id=<?= $ticket_id ?>">
+                                    <i class="fas fa-fw fa-edit"></i>
+                                </a>
+                            </div>
+                            <?php } ?>
+                        </div>
+                        <div class="card-body p-3 text-muted">
+                            No assets linked to this ticket.
+                        </div>
+                    </div>
+                <?php } // End if asset_id ?>
+                <!-- End Asset card -->
+
             </div>
 
             <div class="col-md-3 ticket-sidebar">
 
+                <!-- Sidebar is a flex column - each card below carries an explicit
+                     `order` so it's tiered by how often it's actually used, independent
+                     of PHP render/query order. Tier 1 (order 1-4, always expanded):
+                     Time Entry, Tasks, Contact, Attachments. Tier 2 (order 5+, body
+                     collapsed by default via native Bootstrap collapse - header stays
+                     visible so nothing is hidden from awareness, just deferred). -->
+
                 <!-- Time Entry card -->
-                <div class="card time-entry-card">
+                <div class="card time-entry-card" style="order:1;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-stopwatch me-2"></i>Time Entry</h5>
                     </div>
@@ -1360,13 +1371,14 @@ if (isset($_GET['ticket_id'])) {
 
                 <!-- Time Entry Log card -->
                 <?php if (mysqli_num_rows($sql_time_entries) > 0) { ?>
-                <div class="card">
+                <div class="card ticket-sidebar-compact" style="order:8;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-list-ul me-2"></i>Time Entry Log</h5>
                         <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-chevron-down"></i></button>
+                            <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-timeEntryLog" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
                     </div>
+                    <div class="collapse" id="sidebarBody-timeEntryLog">
                     <div class="card-body p-3" style="max-height:220px;overflow-y:auto;">
                         <?php while ($te = mysqli_fetch_assoc($sql_time_entries)) {
                             $te_onsite     = intval($te['ticket_reply_onsite'] ?? 0);
@@ -1434,11 +1446,12 @@ if (isset($_GET['ticket_id'])) {
                         <span class="badge rounded-pill tkt-pill-badge text-light" style="background-color:var(--color-accent);"><?= formatDuration($ticket_total_reply_time) ?></span>
                     </div>
                     <?php } ?>
+                    </div>
                 </div>
                 <?php } ?>
 
                 <!-- ── Appointments card ──────────────────────────────── -->
-                <div class="card">
+                <div class="card ticket-sidebar-compact" style="order:6;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-calendar-alt me-2"></i>Appointments</h5>
                         <div class="card-tools">
@@ -1447,9 +1460,10 @@ if (isset($_GET['ticket_id'])) {
                                data-modal-url="modals/ticket/ticket_schedule_add.php?ticket_id=<?= $ticket_id ?>"
                                title="Add Appointment"><i class="fas fa-plus"></i></a>
                             <?php } ?>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-chevron-down"></i></button>
+                            <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-appointments" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
                     </div>
+                    <div class="collapse" id="sidebarBody-appointments">
                     <?php if (mysqli_num_rows($sql_schedules) > 0) { ?>
                     <div class="card-body p-0">
                         <?php $sched_idx = 0; while ($se = mysqli_fetch_assoc($sql_schedules)) {
@@ -1501,17 +1515,19 @@ if (isset($_GET['ticket_id'])) {
                         <?php } ?>
                     </div>
                     <?php } ?>
+                    </div>
                 </div>
                 <!-- ── End Appointments card ────────────────────────────── -->
 
                 <!-- ── Additional Technicians card ────────────────────── -->
-                <div class="card">
+                <div class="card ticket-sidebar-compact" style="order:7;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-user-cog me-2"></i>Technicians</h5>
                         <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-chevron-down"></i></button>
+                            <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-technicians" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
                     </div>
+                    <div class="collapse" id="sidebarBody-technicians">
                     <div class="card-body p-3">
 
                         <!-- Primary assigned tech (read-only display) -->
@@ -1571,6 +1587,7 @@ if (isset($_GET['ticket_id'])) {
                         <?php } ?>
 
                     </div>
+                    </div>
                 </div>
                 <!-- ── End Additional Technicians card ────────────────── -->
 
@@ -1596,13 +1613,14 @@ if (isset($_GET['ticket_id'])) {
                     }
                 ?>
                 <!-- Live Chat card -->
-                <div class="card">
+                <div class="card ticket-sidebar-compact" style="order:11;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-comments me-2"></i>Live Chat</h5>
                         <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                            <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-liveChat" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
                     </div>
+                    <div class="collapse" id="sidebarBody-liveChat">
                     <div class="card-body p-3">
                         <div id="ticket-chat-messages" class="mb-2" style="max-height:260px;overflow-y:auto;"></div>
                         <form id="ticket-chat-form" class="d-flex" autocomplete="off">
@@ -1610,21 +1628,23 @@ if (isset($_GET['ticket_id'])) {
                             <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i></button>
                         </form>
                     </div>
+                    </div>
                 </div>
                 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">window.__ticketChatHistory = <?= json_encode($ticket_chat_history, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;</script>
                 <?php } ?>
 
                 <!-- Ticket activity right card -->
-                <div class="card">
+                <div class="card ticket-sidebar-compact" style="order:12;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-history me-2"></i>Activity Summary</h5>
 
                         <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-activitySummary" aria-expanded="false">
                                 <i class="fas fa-chevron-down"></i>
                             </button>
                         </div>
                     </div>
+                    <div class="collapse" id="sidebarBody-activitySummary">
                     <div class="card-body p-3 ">
 
                         <!-- Created -->
@@ -1651,19 +1671,9 @@ if (isset($_GET['ticket_id'])) {
                             </div>
                         <?php } ?>
 
-                        <!-- Board -->
-                        <?php if ($ticket_board_display) { ?>
-                            <div class="mt-2">
-                                <i class="fas fa-fw fa-columns text-secondary me-1"></i><strong class="me-1">Board:</strong><?= $ticket_board_display ?>
-                            </div>
-                        <?php } ?>
-
-                        <!-- Category -->
-                        <?php if ($ticket_category) { ?>
-                            <div class="mt-2">
-                                <i class="fas fa-fw fa-layer-group text-secondary me-1"></i><strong class="me-1">Category:</strong><?= $ticket_category_display ?>
-                            </div>
-                        <?php } ?>
+                        <!-- Board / Category intentionally not repeated here - already shown
+                             as chips in the header's metadata row, this card is the second
+                             place they'd otherwise appear with no cross-reference. -->
 
                         <!-- First response (for SLA) -->
                         <?php if ($ticket_first_response_at) { ?>
@@ -1734,12 +1744,13 @@ if (isset($_GET['ticket_id'])) {
                         <?php } ?>
 
                     </div>
+                    </div>
                 </div>
                 <!-- End details card -->
 
                 <!-- Tasks Card -->
                 <?php if (empty($ticket_resolved_at) || (!empty($ticket_resolved_at) && $task_count > 0)) { ?>
-                <div class="card">
+                <div class="card" style="order:2;">
                     <div class="card-header px-3 py-2 d-flex align-items-center" style="gap:8px;">
                         <i class="fas fa-fw fa-tasks text-muted" style="font-size:13px;flex-shrink:0;"></i>
                         <span class="fw-bold me-1" style="font-size:14px;">Tasks</span>
@@ -1900,17 +1911,19 @@ if (isset($_GET['ticket_id'])) {
                 $worksheet_count = mysqli_num_rows($sql_worksheets);
                 if (empty($ticket_resolved_at) || $worksheet_count > 0) {
                 ?>
-                <div class="card">
+                <div class="card ticket-sidebar-compact" style="order:9;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-clipboard-list me-2"></i>Worksheets</h5>
-                        <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                         <div class="card-tools">
+                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <a href="#" class="btn btn-tool ajax-modal" data-modal-url="modals/ticket/ticket_worksheet_add.php?ticket_id=<?= $ticket_id ?>">
                                 <i class="fas fa-plus"></i>
                             </a>
+                            <?php } ?>
+                            <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-worksheets" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
-                        <?php } ?>
                     </div>
+                    <div class="collapse" id="sidebarBody-worksheets">
                     <div class="card-body p-0">
                         <?php if ($worksheet_count == 0) { ?>
                             <p class="text-secondary text-center p-3 mb-0">No worksheets yet.</p>
@@ -2037,6 +2050,7 @@ if (isset($_GET['ticket_id'])) {
 
                         <?php } // end worksheet loop ?>
                     </div>
+                    </div>
                 </div>
                 <?php } ?>
                 <!-- End Worksheets Card -->
@@ -2047,7 +2061,7 @@ if (isset($_GET['ticket_id'])) {
                 $pending_outtake_count = mysqli_num_rows($sql_pending_outtakes);
                 $attachment_count = mysqli_num_rows($sql_ticket_all_attachments);
                 ?>
-                <div class="card">
+                <div class="card" style="order:4;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-paperclip me-2"></i>Attachments</h5>
                     </div>
@@ -2131,7 +2145,7 @@ if (isset($_GET['ticket_id'])) {
 
                 <!-- Charges Card -->
                 <?php if ($config_module_enable_ticket_charges && (empty($ticket_resolved_at) || !empty($charge_rows))) { ?>
-                <div class="card">
+                <div class="card ticket-sidebar-compact" style="order:10;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1">
                             <i class="fas fa-fw fa-dollar-sign me-2"></i>Charges
@@ -2139,15 +2153,17 @@ if (isset($_GET['ticket_id'])) {
                                 <span class="badge text-bg-secondary ms-1">$<?= number_format($charges_subtotal, 2) ?></span>
                             <?php } ?>
                         </h5>
-                        <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                         <div class="card-tools">
+                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <a href="#" class="btn btn-tool ajax-modal"
                                data-modal-url="modals/ticket/ticket_charge_add.php?ticket_id=<?= $ticket_id ?>&client_id=<?= $client_id ?>">
                                 <i class="fas fa-plus"></i>
                             </a>
+                            <?php } ?>
+                            <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-charges" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
-                        <?php } ?>
                     </div>
+                    <div class="collapse" id="sidebarBody-charges">
                     <div class="card-body p-0">
                         <?php if (empty($charge_rows)) { ?>
                             <p class="text-secondary text-center p-3 mb-0">No charges yet.</p>
@@ -2214,13 +2230,14 @@ if (isset($_GET['ticket_id'])) {
                         </div>
                         <?php } ?>
                     </div>
+                    </div>
                 </div>
                 <?php } ?>
                 <!-- End Charges Card -->
 
                 <!-- Contact card -->
                 <?php if ($contact_id) { ?>
-                    <div class="card">
+                    <div class="card" style="order:3;">
                         <div class="card-header px-3 py-2">
                             <h5 class="card-title mt-1"><i class="fas fa-fw fa-user-check me-2"></i>Contact</h5>
                             <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
@@ -2275,17 +2292,19 @@ if (isset($_GET['ticket_id'])) {
                 <!-- Ticket watchers card -->
                 <?php if (empty($ticket_closed_at) && mysqli_num_rows($sql_ticket_watchers) > 0) { ?>
 
-                    <div class="card">
+                    <div class="card ticket-sidebar-compact" style="order:5;">
                         <div class="card-header px-3 py-2">
                             <h5 class="card-title mt-1"><i class="fas fa-fw fa-eye me-2"></i>Watchers</h5>
-                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <div class="card-tools">
+                                <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                                 <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_add_watcher.php?ticket_id=<?= $ticket_id ?>">
                                     <i class="fas fa-fw fa-user-plus"></i>
                                 </a>
+                                <?php } ?>
+                                <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-watchers" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                             </div>
-                            <?php } ?>
                         </div>
+                        <div class="collapse" id="sidebarBody-watchers">
                         <div class="card-body p-3">
 
                             <?php
@@ -2305,6 +2324,7 @@ if (isset($_GET['ticket_id'])) {
 
                             <?php } ?>
                         </div>
+                        </div>
                     </div>
                 <?php } ?>
                 <!-- End Ticket watchers card -->
@@ -2315,10 +2335,14 @@ if (isset($_GET['ticket_id'])) {
                     $sql_linked_alerts = mysqli_query($mysqli, "SELECT * FROM rmm_alerts WHERE ticket_id = $ticket_id ORDER BY created_at DESC");
                     if (mysqli_num_rows($sql_linked_alerts) > 0):
                 ?>
-                <div class="card mb-3" style="border-top:2px solid #17a2b8">
+                <div class="card ticket-sidebar-compact mb-3" style="border-top:2px solid #17a2b8;order:13;">
                     <div class="card-header px-3 py-2">
                         <h5 class="card-title mt-1"><i class="fas fa-fw fa-bell me-2"></i>Linked RMM Alerts</h5>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-rmmAlerts" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
+                        </div>
                     </div>
+                    <div class="collapse" id="sidebarBody-rmmAlerts">
                     <div class="card-body p-3 small">
                         <?php while ($linked_alert = mysqli_fetch_assoc($sql_linked_alerts)):
                             $la_id = intval($linked_alert['id']);
@@ -2342,6 +2366,7 @@ if (isset($_GET['ticket_id'])) {
                             <?php endif; ?>
                         </div>
                         <?php endwhile; ?>
+                    </div>
                     </div>
                 </div>
                 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
@@ -2372,17 +2397,19 @@ if (isset($_GET['ticket_id'])) {
 
                 <!-- Vendor card -->
                 <?php if ($vendor_id) { ?>
-                    <div class="card mb-3">
+                    <div class="card ticket-sidebar-compact mb-3" style="order:14;">
                         <div class="card-header px-3 py-2">
                             <h5 class="card-title mt-1"><i class="fas fa-fw fa-building me-2"></i>Vendor</h5>
-                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <div class="card-tools">
+                                <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                                 <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_edit_vendor.php?ticket_id=<?= $ticket_id ?>">
                                     <i class="fas fa-fw fa-edit"></i>
                                 </a>
+                                <?php } ?>
+                                <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-vendor" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                             </div>
-                            <?php } ?>
                         </div>
+                        <div class="collapse" id="sidebarBody-vendor">
                         <div class="card-body p-3">
 
                             <div>
@@ -2421,23 +2448,26 @@ if (isset($_GET['ticket_id'])) {
                             <?php } ?>
 
                         </div>
+                        </div>
                     </div>
                 <?php } //End Else ?>
                 <!-- End Vendor card -->
 
                 <!-- project card -->
                 <?php if ($project_id) { ?>
-                    <div class="card">
+                    <div class="card ticket-sidebar-compact" style="order:15;">
                         <div class="card-header px-3 py-2">
                             <h5 class="card-title mt-1"><i class="fas fa-fw fa-project-diagram me-2"></i>Project</h5>
-                            <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <div class="card-tools">
+                                <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                                 <button type="button" class="btn btn-tool ajax-modal" data-modal-url="modals/ticket/ticket_edit_project.php?id=<?= $ticket_id ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
+                                <?php } ?>
+                                <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-project" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                             </div>
-                            <?php } ?>
                         </div>
+                        <div class="collapse" id="sidebarBody-project">
                         <div class="card-body p-3">
                             <div>
                                 <i class="fa fa-fw fa-project-diagram text-secondary me-2"></i><a href="project_details.php?project_id=<?php echo $project_id; ?>" target="_blank"><strong><?= $project_name ?><i class="fa fa-fw fa-external-link-alt ms-1"></i></strong>
@@ -2449,6 +2479,7 @@ if (isset($_GET['ticket_id'])) {
                                     <i class="fa fa-fw fa-user-tie text-secondary me-2"></i><?= $project_manager_name ?>
                                 </div>
                             <?php } ?>
+                        </div>
                         </div>
                     </div>
                 <?php } ?>
@@ -2545,12 +2576,12 @@ require_once "../includes/footer.php";
 
 <script src="/plugins/SortableJS/Sortable.min.js"></script>
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
-var _tasksTbody = document.querySelector('table#tasks tbody');
-if (_tasksTbody) new Sortable(_tasksTbody, {
+var _tasksList = document.querySelector('#tasks');
+if (_tasksList) new Sortable(_tasksList, {
     handle: '.drag-handle',
     animation: 150,
     onEnd: function (evt) {
-        const rows = document.querySelectorAll('table#tasks tbody tr');
+        const rows = document.querySelectorAll('#tasks > li');
         const positions = Array.from(rows).map((row, index) => ({
             id: row.dataset.taskId,
             order: index

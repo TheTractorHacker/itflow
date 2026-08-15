@@ -745,3 +745,68 @@ body.dark-mode .content-wrapper small.text-muted {
     background-color: var(--color-accent-soft);
 }
 
+/* ===== Ticket detail page — visual hierarchy pass =====
+   Goal: the conversation/composer (what a tech actually reads and does on every
+   visit) should read as the primary surface; the sidebar's low-frequency
+   reference cards should recede rather than compete with it 1-for-1. */
+
+/* Header card: identity+actions, the status/tags/chip rows, and the SLA meters
+   were stacked with equal spacing/borders as if they were peers - visually the
+   busiest block on the page before you even reach any content. Tightening the
+   rhythm and lightening the internal dividers reads as one cohesive strip
+   instead of four stacked sections, without removing any of the information. */
+.ticket-alga-theme .ticket-header-compact .card-body {
+    padding-top: .65rem;
+    padding-bottom: .65rem;
+}
+.ticket-alga-theme .ticket-header-compact .border-top {
+    border-top-color: var(--color-border-soft) !important;
+    padding-top: .5rem !important;
+    margin-top: .35rem !important;
+}
+
+/* Composer + conversation get a touch more presence than a generic .card. */
+.ticket-alga-theme .ticket-primary-panel {
+    box-shadow: 0 6px 16px -4px rgba(16, 24, 40, .14), 0 2px 6px -2px rgba(16, 24, 40, .08);
+}
+.ticket-alga-theme .ticket-thread-reply .card-body {
+    padding: .85rem 1rem;
+    font-size: .92rem;
+    line-height: 1.55;
+}
+
+/* Sidebar cards carry an explicit inline `order` (tiered by usage frequency,
+   see agent/ticket.php) - flex-column is what makes that `order` apply. */
+.ticket-alga-theme .ticket-sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Cards in the sidebar's collapsed-by-default tier: quieter chrome (smaller
+   headers, flatter shadow) so they read as reference material rather than
+   competing with the always-visible cards above them, plus a rotating chevron
+   on their native Bootstrap collapse toggle (data-bs-toggle="collapse" - same
+   idiom already used app-wide for #advancedFilter panels, no new JS needed). */
+.ticket-alga-theme .ticket-sidebar-compact.card {
+    box-shadow: none;
+    border: 1px solid var(--color-border-soft);
+}
+.ticket-alga-theme .ticket-sidebar-compact .card-header {
+    padding: .5rem .75rem;
+}
+.ticket-alga-theme .ticket-sidebar-compact .card-header .card-title {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+.ticket-alga-theme .ticket-sidebar-compact .card-body {
+    padding: .65rem .75rem;
+    font-size: .82rem;
+}
+.ticket-alga-theme .ticket-sidebar-compact .card-tools .btn-tool .fa-chevron-down {
+    transition: transform .15s ease-out;
+}
+.ticket-alga-theme .ticket-sidebar-compact .card-tools .btn-tool[aria-expanded="true"] .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
