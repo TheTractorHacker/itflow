@@ -570,14 +570,23 @@ $(document).on('click', '.ticket-group-header', function(e) {
     $chevron.css('transform', $body.is(':visible') ? 'rotate(0deg)' : 'rotate(-90deg)');
 });
 
-// While a dropdown-menu is open it may have been reparented to <body> (see
-// app.js's .table-responsive .dropdown handling, which escapes the table's
-// clipping/scroll container) - so $item.closest('.dropdown') can no longer
-// find its way back to the original toggle/pill. Fall back to the reverse
-// pointer app.js leaves on the menu in that case.
+// While a dropdown-menu is open it has been reparented to <body> (see app.js's
+// initTableResponsiveDropdowns(), which escapes the table's clipping/scroll
+// container - every dropdown on this page lives inside .table-responsive, so
+// this fires every time) - so $item.closest('.dropdown') can no longer find
+// its way back to the original toggle/pill; the menu item now hangs directly
+// off <body> with no .dropdown ancestor at all, and every .css()/.text() call
+// below silently no-ops on an empty jQuery set. Use the placeholder comment
+// initTableResponsiveDropdowns() leaves in the menu's original spot (inside
+// the real .dropdown container) to find our way back - that's the only
+// pointer it actually sets (as a plain element property, not jQuery .data()).
 function resolveDropdown($item) {
-    var $menu = $item.closest('.dropdown-menu');
-    return $menu.data('trf-dropdown') || $item.closest('.dropdown');
+    var menu = $item.closest('.dropdown-menu')[0];
+    var placeholder = menu && menu._trfPlaceholder;
+    if (placeholder && placeholder.parentNode) {
+        return $(placeholder.parentNode).closest('.dropdown');
+    }
+    return $item.closest('.dropdown');
 }
 
 // Category dropdown item click
