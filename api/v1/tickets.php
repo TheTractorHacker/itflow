@@ -639,6 +639,13 @@ if ($method === 'POST' && $id === null) {
     // same reasoning already applied to legacy-key chat/reply attribution below.
     $created_by_sql = $legacy_api_key_auth ? 0 : $uid;
 
+    // Bearer token for every guest-facing link (CSAT rating, "view ticket",
+    // resolve/reopen, etc.) - every other ticket-creation path sets this via
+    // randomString(32); this one never did, leaving ticket_url_key NULL for
+    // every API-created ticket and breaking all of those links with a generic
+    // "Oops, something went wrong!" (NULL never equality-matches '' in SQL).
+    $url_key = randomString(32);
+
     // Prepared statement: ticket_subject/ticket_details are user-supplied free
     // text and are bound. The remaining columns are ints or already-validated
     // values ($prefix_esc = escaped config, $priority = whitelisted enum), left
@@ -646,8 +653,8 @@ if ($method === 'POST' && $id === null) {
     // bytes the previous escaped-then-interpolated INSERT did.
     $new_id = api_exec(
         "INSERT INTO tickets (ticket_prefix, ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
-         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_created_at, ticket_updated_at)
-         VALUES ('$prefix_esc', ?, ?, $client, $contact, '$priority', $status, $assigned, $created_by_sql, 'API', $next_num, $category, $asset_id, NOW(), NOW())",
+         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_url_key, ticket_created_at, ticket_updated_at)
+         VALUES ('$prefix_esc', ?, ?, $client, $contact, '$priority', $status, $assigned, $created_by_sql, 'API', $next_num, $category, $asset_id, '$url_key', NOW(), NOW())",
         'ss',
         [$subject_raw, $details_raw]
     );
