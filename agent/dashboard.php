@@ -1378,6 +1378,7 @@ if ($user_config_dashboard_technical_enable == 1) {
 <?php if ($user_config_dashboard_financial_enable == 1) { ?>
 
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+document.addEventListener('DOMContentLoaded', function () {
     // Bootstrap-like defaults for Chart.js v4
     Chart.defaults.font.family = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
     Chart.defaults.color = '#292b2c';
@@ -1783,12 +1784,14 @@ if ($user_config_dashboard_technical_enable == 1) {
             }
         });
     })();
+});
 </script>
 
 <?php } ?>
 
 <?php if ($user_config_dashboard_technical_enable == 1) { ?>
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+document.addEventListener('DOMContentLoaded', function () {
 // TICKET FLOW (Opened vs Resolved)
 (function() {
     var ctx = document.getElementById('ticketFlowChart');
@@ -1886,5 +1889,6 @@ if ($user_config_dashboard_technical_enable == 1) {
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right' } } }
     });
 })();
+});
 </script>
 <?php } ?>

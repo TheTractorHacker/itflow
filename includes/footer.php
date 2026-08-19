@@ -33,29 +33,37 @@ window.CSP_NONCE = <?php echo json_encode($csp_nonce ?? ''); ?>;
 
 <!-- REQUIRED SCRIPTS -->
 
+<!-- All deferred: fetched in parallel without blocking the parser, still execute in
+     document order right before DOMContentLoaded - the same guarantee plain blocking
+     <script> tags gave, just without forcing 2.5MB of JS to download+run serially on
+     every page load. Safe because every consumer already gates its real work behind
+     DOMContentLoaded or a later event/click handler (app.js, ajax_modal.js) - the only
+     exceptions were dashboard.php/rmm_dashboard.php's Chart.js init blocks, which ran
+     immediately at parse time and have been wrapped in DOMContentLoaded listeners to match. -->
+
 <!-- Bootstrap 5 (bundle includes Popper) -->
-<script src="/plugins/bootstrap5/js/bootstrap.bundle.min.js"></script>
+<script src="/plugins/bootstrap5/js/bootstrap.bundle.min.js" defer></script>
 
 <!-- Vanilla plugins (BS5 stack) -->
-<script src="/plugins/tom-select/js/tom-select.complete.min.js"></script>
-<script src="/plugins/litepicker/js/litepicker.js"></script>
-<script src="/plugins/tempus-dominus/js/tempus-dominus.min.js"></script>
-<script src="/plugins/simple-datatables/js/simple-datatables.js"></script>
-<script src="/plugins/inputmask5/dist/inputmask.min.js"></script>
+<script src="/plugins/tom-select/js/tom-select.complete.min.js" defer></script>
+<script src="/plugins/litepicker/js/litepicker.js" defer></script>
+<script src="/plugins/tempus-dominus/js/tempus-dominus.min.js" defer></script>
+<script src="/plugins/simple-datatables/js/simple-datatables.js" defer></script>
+<script src="/plugins/inputmask5/dist/inputmask.min.js" defer></script>
 
 <!-- Custom js (kept, version-agnostic) -->
-<script src="/plugins/moment/moment.min.js"></script>
-<script src="/plugins/chart.js/chart.umd.min.js"></script>
-<script src="/plugins/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
-<script src="/plugins/marked/marked.min.js"></script>
-<script src="/plugins/turndown/turndown.js"></script>
-<script src="/plugins/turndown/turndown-plugin-gfm.js"></script>
-<script src="/plugins/clipboardjs/clipboard.min.js"></script>
-<script src="/js/keepalive.js"></script>
-<script src="/plugins/intl-tel-input/js/intlTelInput.min.js"></script>
+<script src="/plugins/moment/moment.min.js" defer></script>
+<script src="/plugins/chart.js/chart.umd.min.js" defer></script>
+<script src="/plugins/tinymce/tinymce.min.js" referrerpolicy="origin" defer></script>
+<script src="/plugins/marked/marked.min.js" defer></script>
+<script src="/plugins/turndown/turndown.js" defer></script>
+<script src="/plugins/turndown/turndown-plugin-gfm.js" defer></script>
+<script src="/plugins/clipboardjs/clipboard.min.js" defer></script>
+<script src="/js/keepalive.js" defer></script>
+<script src="/plugins/intl-tel-input/js/intlTelInput.min.js" defer></script>
 
 <!-- AdminLTE 4 App -->
-<script src="/plugins/adminlte4/js/adminlte.min.js"></script>
+<script src="/plugins/adminlte4/js/adminlte.min.js" defer></script>
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">window.csrfToken = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;</script>
 <?php
 // Cache-bust first-party JS on every edit (falls back to the request time if the
@@ -65,7 +73,7 @@ window.CSP_NONCE = <?php echo json_encode($csp_nonce ?? ''); ?>;
 foreach (['app.js', 'ajax_modal.js', 'confirm_modal.js'] as $__asset) {
     $__asset_path = __DIR__ . '/../js/' . $__asset;
     $__asset_version = file_exists($__asset_path) ? filemtime($__asset_path) : time();
-    echo '<script src="/js/' . $__asset . '?v=' . $__asset_version . '"></script>' . "\n";
+    echo '<script src="/js/' . $__asset . '?v=' . $__asset_version . '" defer></script>' . "\n";
 }
 ?>
 
