@@ -187,6 +187,14 @@ function refreshMailOauthAccessToken(string $provider, string $oauth_client_id, 
                 'refresh_token' => $json['refresh_token'] ?? null,
             ];
         }
+    } elseif (is_array($response)) {
+        // Surface the provider's actual reason (e.g. AADSTS7000215 invalid
+        // client secret, AADSTS700082 expired refresh token) instead of
+        // silently returning null - the generic "Missing OAuth access token"
+        // exception this feeds into used to hide exactly what needed fixing.
+        $err_json = json_decode($response['body'] ?? '', true);
+        $err_detail = is_array($err_json) ? ($err_json['error_description'] ?? $err_json['error'] ?? $response['body']) : $response['body'];
+        logApp("Cron-Mail-Queue", "error", "Outbound SMTP ($provider): OAuth token refresh failed (HTTP {$response['code']}): " . substr((string) $err_detail, 0, 500));
     }
 
     return $result;

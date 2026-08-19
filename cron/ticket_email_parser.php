@@ -172,6 +172,7 @@ function getMicrosoftAccessToken(string $username, array $mailbox): ?string {
     }
 
     if (empty($config_mail_oauth_client_id) || empty($config_mail_oauth_client_secret) || empty($refresh_token) || empty($config_mail_oauth_tenant_id)) {
+        logApp("Cron-Email-Parser", "error", "Mailbox #{$mailbox_id}: Microsoft OAuth token refresh skipped - client_id/client_secret/tenant_id/refresh_token not fully configured in Admin > Settings > Mail.");
         return null;
     }
 
@@ -185,10 +186,22 @@ function getMicrosoftAccessToken(string $username, array $mailbox): ?string {
         // IMAP/SMTP scopes typically included at initial consent; not needed for refresh
     ]);
 
-    if (!$resp['ok']) return null;
+    if (!$resp['ok']) {
+        // Surface Microsoft's actual reason (e.g. AADSTS7000215 invalid client
+        // secret, AADSTS700082 expired refresh token) instead of silently
+        // returning null - a generic "no usable access token" downstream error
+        // used to hide exactly what needed fixing and where.
+        $err_json = json_decode($resp['body'] ?? '', true);
+        $err_detail = is_array($err_json) ? ($err_json['error_description'] ?? $err_json['error'] ?? $resp['body']) : $resp['body'];
+        logApp("Cron-Email-Parser", "error", "Mailbox #{$mailbox_id}: Microsoft OAuth token refresh failed (HTTP {$resp['code']}): " . substr((string) $err_detail, 0, 500));
+        return null;
+    }
 
     $json = json_decode($resp['body'], true);
-    if (!is_array($json) || empty($json['access_token'])) return null;
+    if (!is_array($json) || empty($json['access_token'])) {
+        logApp("Cron-Email-Parser", "error", "Mailbox #{$mailbox_id}: Microsoft OAuth token refresh returned no access_token despite HTTP {$resp['code']}.");
+        return null;
+    }
 
     $new_access_token = $json['access_token'];
     $expires_at = date('Y-m-d H:i:s', time() + (int)($json['expires_in'] ?? 3600));
