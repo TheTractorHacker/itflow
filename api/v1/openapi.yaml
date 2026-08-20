@@ -48,6 +48,7 @@ tags:
   - name: Notifications
   - name: Alerts
   - name: Diagnostics
+  - name: Public
   - name: Meta
 security:
   - bearerAuth: []
@@ -132,6 +133,45 @@ paths:
                 type: object
                 properties: {logged: {type: boolean, example: true}}
         '400': {$ref: '#/components/responses/BadRequest'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+  /csat:
+    get:
+      tags: [Public]
+      summary: Aggregate CSAT rating summary for public embedding (e.g. a website trust badge)
+      description: >
+        Fully public: no bearer token or API key accepted or required. Returns only
+        the aggregate rating and anonymous 4-5 star comment snippets - never client
+        names, contact names, or ticket subjects - so the response is safe to embed
+        directly on a public marketing site with no further filtering by the caller.
+        Cached for 5 minutes (Cache-Control: public, max-age=300).
+      security: []
+      responses:
+        '200':
+          description: CSAT summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  average_rating: {type: number, format: float, nullable: true, example: 4.8}
+                  total_ratings: {type: integer, example: 132}
+                  rating_breakdown:
+                    type: object
+                    properties:
+                      "1": {type: integer}
+                      "2": {type: integer}
+                      "3": {type: integer}
+                      "4": {type: integer}
+                      "5": {type: integer}
+                  testimonials:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rating: {type: integer, example: 5}
+                        comment: {type: string, example: "Great information on the specs. Thank you for putting this together."}
+                        date: {type: string, format: date, example: "2026-07-31"}
+        '405': {$ref: '#/components/responses/BadRequest'}
         '429': {$ref: '#/components/responses/RateLimited'}
   /dashboard:
     get:

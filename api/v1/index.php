@@ -206,6 +206,23 @@ if ($resource === 'crash-reports') {
     exit;
 }
 
+// Public endpoint: csat. Aggregate rating summary only - meant to be embedded
+// directly on the MSP's own public marketing site as a rating/testimonial
+// widget, so no login is possible or expected. Deliberately exposes nothing
+// beyond what a Google review badge already would (no client/contact names,
+// no ticket subjects) - see csat.php.
+if ($resource === 'csat') {
+    if ($method !== 'GET') {
+        api_error(405, 'Method not allowed');
+    }
+    if (!api_rate_limit('csat_ip:' . getIP(), 60, 300)) {
+        header('Retry-After: 300');
+        api_error(429, 'Rate limit exceeded');
+    }
+    require __DIR__ . '/csat.php';
+    exit;
+}
+
 if (!$api_user_id) {
     api_error(401, 'Unauthorized');
 }
