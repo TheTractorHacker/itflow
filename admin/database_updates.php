@@ -6118,3 +6118,56 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.46'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.46') {
+        // Move the included-issues allowance from the client to the contract.
+        // A client can have several active contracts (tickets already pick one
+        // via ticket_contract_id for SLA purposes) - a single client-level
+        // number couldn't represent "3 remote/mo on the residential plan, 10
+        // remote/mo on the managed-services plan" for a client on both.
+        // Usage (getContractIncludedIssuesUsage()) is now scored per contract,
+        // matched on ticket_contract_id instead of just ticket_client_id.
+        mysqli_query($mysqli, "ALTER TABLE `contracts` ADD COLUMN IF NOT EXISTS `contract_support_issues_included_remote` int(11) DEFAULT NULL");
+        mysqli_query($mysqli, "ALTER TABLE `contracts` ADD COLUMN IF NOT EXISTS `contract_support_issues_included_onsite` int(11) DEFAULT NULL");
+
+        // Carry forward existing client-level values, but only where the
+        // destination is unambiguous: a client with exactly one active,
+        // non-archived contract. A client with zero or multiple active
+        // contracts has no single correct contract to attribute the old
+        // client-level number to, so those are left unmigrated - re-enter the
+        // allowance on the correct contract by hand for any such client.
+        mysqli_query($mysqli, "
+            UPDATE contracts c
+            JOIN (
+                SELECT contract_client_id
+                FROM contracts
+                WHERE contract_status = 'Active' AND contract_archived_at IS NULL
+                GROUP BY contract_client_id
+                HAVING COUNT(*) = 1
+            ) one ON one.contract_client_id = c.contract_client_id
+            JOIN clients cl ON cl.client_id = c.contract_client_id
+            SET c.contract_support_issues_included_remote = cl.client_support_issues_included_remote,
+                c.contract_support_issues_included_onsite = cl.client_support_issues_included_onsite
+            WHERE c.contract_status = 'Active' AND c.contract_archived_at IS NULL
+              AND (cl.client_support_issues_included_remote IS NOT NULL OR cl.client_support_issues_included_onsite IS NOT NULL)
+        ");
+
+        mysqli_query($mysqli, "ALTER TABLE `clients` DROP COLUMN IF EXISTS `client_support_issues_included_remote`");
+        mysqli_query($mysqli, "ALTER TABLE `clients` DROP COLUMN IF EXISTS `client_support_issues_included_onsite`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.47'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.47') {
+        // Public CSAT API (GET /api/v1/csat) only publishes a rating's comment
+        // when a staff member has explicitly opted it in - CSAT comments were
+        // captured with "anything you'd like to add? (optional)", never with
+        // the client's knowledge it might be quoted on the public website, and
+        // free text can carry PII (names, phone numbers) the structured fields
+        // deliberately exclude. Defaults to 0 (not approved) for every existing
+        // rating, so nothing already collected goes public without review.
+        mysqli_query($mysqli, "ALTER TABLE `tickets` ADD COLUMN IF NOT EXISTS `ticket_csat_public_approved` tinyint(1) NOT NULL DEFAULT 0 AFTER `ticket_csat_rated_at`");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.48'");
+    }
+
