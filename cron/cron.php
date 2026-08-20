@@ -63,6 +63,7 @@ $config_ticket_csat_enable = intval($row['config_ticket_csat_enable'] ?? 1);
 $config_ticket_csat_reminder_days = intval($row['config_ticket_csat_reminder_days'] ?? 3);
 $config_ticket_csat_low_rating_threshold = intval($row['config_ticket_csat_low_rating_threshold'] ?? 2);
 $config_ticket_new_ticket_notification_email = sanitizeInput($row['config_ticket_new_ticket_notification_email']);
+$config_ticket_default_technician_id = intval($row['config_ticket_default_technician_id'] ?? 0);
 
 // Get Config for Telemetry
 $config_theme = $row['config_theme'];
@@ -305,7 +306,7 @@ if (mysqli_num_rows($sql_recurring_tickets) > 0) {
         $frequency = sanitizeInput(strtolower($row['recurring_ticket_frequency']));
         $billable = intval($row['recurring_ticket_billable']);
         $created_id = intval($row['recurring_ticket_created_by']);
-        $assigned_id = intval($row['recurring_ticket_assigned_to']);
+        $assigned_id = resolveTicketAssignee(intval($row['recurring_ticket_assigned_to']));
         $client_id = intval($row['recurring_ticket_client_id']);
         $contact_id = intval($row['recurring_ticket_contact_id']);
         $asset_id = intval($row['recurring_ticket_asset_id']);

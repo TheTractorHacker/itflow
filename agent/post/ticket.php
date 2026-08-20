@@ -18,7 +18,7 @@ if (isset($_POST['add_ticket'])) {
     enforceUserPermission('module_support', 2);
 
     $client_id = intval($_POST['client_id']);
-    $assigned_to = intval($_POST['assigned_to']);
+    $assigned_to = resolveTicketAssignee(intval($_POST['assigned_to']));
     if ($assigned_to == 0) {
         $ticket_status = 1;
     } else {
@@ -1978,7 +1978,7 @@ if (isset($_POST['bulk_add_asset_ticket'])) {
 
     enforceUserPermission('module_support', 2);
 
-    $assigned_to = intval($_POST['bulk_assigned_to']);
+    $assigned_to = resolveTicketAssignee(intval($_POST['bulk_assigned_to']));
     if ($assigned_to == 0) {
         $ticket_status = 1;
     } else {

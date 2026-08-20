@@ -26,6 +26,7 @@ if (isset($_POST['edit_ticket_settings'])) {
     $config_ticket_csat_enable = intval($_POST['config_ticket_csat_enable'] ?? 0);
     $config_ticket_csat_reminder_days = max(1, intval($_POST['config_ticket_csat_reminder_days'] ?? 3));
     $config_ticket_csat_low_rating_threshold = min(4, max(1, intval($_POST['config_ticket_csat_low_rating_threshold'] ?? 2)));
+    $config_ticket_default_technician_id = intval($_POST['config_ticket_default_technician_id'] ?? 0);
 
     // Optional field - blank clears it (CTA stays hidden). An invalid non-blank
     // value doesn't abort the whole settings save (this is one field among many
@@ -44,7 +45,7 @@ if (isset($_POST['edit_ticket_settings'])) {
     }
     $config_ticket_csat_google_review_url_esc = mysqli_real_escape_string($mysqli, $config_ticket_csat_google_review_url);
 
-    mysqli_query($mysqli,"UPDATE settings SET config_ticket_prefix = '$config_ticket_prefix', config_ticket_next_number = $config_ticket_next_number, config_ticket_email_parse = $config_ticket_email_parse, config_ticket_autoclose_hours = $config_ticket_autoclose_hours, config_ticket_new_ticket_notification_email = '$config_ticket_new_ticket_notification_email', config_ticket_default_billable = $config_ticket_default_billable, config_ticket_default_view = $config_ticket_default_view, config_ticket_moving_columns = $config_ticket_moving_columns, config_ticket_ordering = $config_ticket_ordering, config_ticket_timer_autostart = $config_ticket_timer_autostart, config_ticket_csat_enable = $config_ticket_csat_enable, config_ticket_csat_reminder_days = $config_ticket_csat_reminder_days, config_ticket_csat_low_rating_threshold = $config_ticket_csat_low_rating_threshold, config_ticket_csat_google_review_url = '$config_ticket_csat_google_review_url_esc' WHERE company_id = 1");
+    mysqli_query($mysqli,"UPDATE settings SET config_ticket_prefix = '$config_ticket_prefix', config_ticket_next_number = $config_ticket_next_number, config_ticket_email_parse = $config_ticket_email_parse, config_ticket_autoclose_hours = $config_ticket_autoclose_hours, config_ticket_new_ticket_notification_email = '$config_ticket_new_ticket_notification_email', config_ticket_default_billable = $config_ticket_default_billable, config_ticket_default_view = $config_ticket_default_view, config_ticket_moving_columns = $config_ticket_moving_columns, config_ticket_ordering = $config_ticket_ordering, config_ticket_timer_autostart = $config_ticket_timer_autostart, config_ticket_csat_enable = $config_ticket_csat_enable, config_ticket_csat_reminder_days = $config_ticket_csat_reminder_days, config_ticket_csat_low_rating_threshold = $config_ticket_csat_low_rating_threshold, config_ticket_csat_google_review_url = '$config_ticket_csat_google_review_url_esc', config_ticket_default_technician_id = $config_ticket_default_technician_id WHERE company_id = 1");
 
     logAction("Settings", "Edit", "$session_name edited ticket settings");
 

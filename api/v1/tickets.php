@@ -579,7 +579,7 @@ if ($method === 'POST' && $id === null) {
     $priority_in = strtolower(trim($body['priority'] ?? ''));
     $priority = in_array($priority_in, ['low','medium','high','critical'])
                 ? ucfirst($priority_in) : 'Low';
-    $assigned = isset($body['assigned_to']) ? intval($body['assigned_to']) : 0;
+    $assigned = resolveTicketAssignee(isset($body['assigned_to']) ? intval($body['assigned_to']) : 0);
     $contact  = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
     $category = isset($body['category_id']) ? intval($body['category_id']) : 0;
     $hostname = mysqli_real_escape_string($mysqli, trim($body['hostname'] ?? ''));

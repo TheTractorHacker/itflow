@@ -97,7 +97,7 @@ if (isset($_POST['bulk_force_recurring_tickets'])) {
                 $billable = intval($row['recurring_ticket_billable']);
                 $old_next_recurring_date = sanitizeInput($row['recurring_ticket_next_run']);
                 $created_id = intval($row['recurring_ticket_created_by']);
-                $assigned_id = intval($row['recurring_ticket_assigned_to']);
+                $assigned_id = resolveTicketAssignee(intval($row['recurring_ticket_assigned_to']));
                 $contact_id = intval($row['recurring_ticket_contact_id']);
                 $client_id = intval($row['recurring_ticket_client_id']);
                 $asset_id = intval($row['recurring_ticket_asset_id']);
@@ -239,7 +239,7 @@ if (isset($_GET['force_recurring_ticket'])) {
         $billable = intval($row['recurring_ticket_billable']);
         $old_next_recurring_date = sanitizeInput($row['recurring_ticket_next_run']);
         $created_id = intval($row['recurring_ticket_created_by']);
-        $assigned_id = intval($row['recurring_ticket_assigned_to']);
+        $assigned_id = resolveTicketAssignee(intval($row['recurring_ticket_assigned_to']));
         $contact_id = intval($row['recurring_ticket_contact_id']);
         $client_id = intval($row['recurring_ticket_client_id']);
         $asset_id = intval($row['recurring_ticket_asset_id']);

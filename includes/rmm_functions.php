@@ -90,6 +90,8 @@ function createTicketFromRmmAlert($mysqli, array $alert, int $created_by, string
     ");
     $number   = mysqli_insert_id($mysqli);
     $url_key  = randomString(32);
+    $resolved_assigned_to = resolveTicketAssignee(0);
+    $ticket_status = $resolved_assigned_to > 0 ? 2 : 1;
 
     mysqli_query($mysqli,
         "INSERT INTO tickets SET
@@ -97,12 +99,13 @@ function createTicketFromRmmAlert($mysqli, array $alert, int $created_by, string
          ticket_number=$number,
          ticket_subject='$subject_esc',
          ticket_details='$details_esc',
-         ticket_status=1,
+         ticket_status=$ticket_status,
          ticket_priority='$priority_esc',
          ticket_source='$source_esc',
          ticket_client_id=$client_id,
          ticket_asset_id=$asset_id,
          ticket_created_by=$created_by,
+         ticket_assigned_to=$resolved_assigned_to,
          ticket_url_key='$url_key',
          ticket_created_at=NOW()"
     );

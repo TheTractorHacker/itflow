@@ -100,6 +100,7 @@ $config_ticket_default_view = intval($row['config_ticket_default_view']);
 $config_ticket_moving_columns = intval($row['config_ticket_moving_columns']);
 $config_ticket_ordering = intval($row['config_ticket_ordering']);
 $config_ticket_timer_autostart = intval($row['config_ticket_timer_autostart']);
+$config_ticket_default_technician_id = intval($row['config_ticket_default_technician_id'] ?? 0);
 
 // Cron
 $config_enable_cron = intval($row['config_enable_cron']);

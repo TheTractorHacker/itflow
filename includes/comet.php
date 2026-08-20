@@ -368,6 +368,8 @@ function comet_process_job(array $job): array {
         );
 
         $url_key = bin2hex(random_bytes(16));
+        $resolved_assigned_to = resolveTicketAssignee(0);
+        $ticket_status = $resolved_assigned_to > 0 ? 2 : 1;
         mysqli_query($mysqli, "INSERT INTO tickets SET
             ticket_prefix = '$prefix',
             ticket_number = $ticket_number,
@@ -375,9 +377,10 @@ function comet_process_job(array $job): array {
             ticket_subject = '$subject_safe',
             ticket_details = '$detail_safe',
             ticket_priority = 'High',
-            ticket_status = 1,
+            ticket_status = $ticket_status,
             ticket_client_id = $client_id,
             ticket_created_by = 0,
+            ticket_assigned_to = $resolved_assigned_to,
             ticket_url_key = '$url_key'
         ");
         $ticket_id = mysqli_insert_id($mysqli);
@@ -506,6 +509,8 @@ function comet_check_missed_backups(int $threshold_hours = 48): array {
             );
 
             $url_key = bin2hex(random_bytes(16));
+            $resolved_assigned_to = resolveTicketAssignee(0);
+            $ticket_status = $resolved_assigned_to > 0 ? 2 : 1;
             mysqli_query($mysqli, "INSERT INTO tickets SET
                 ticket_prefix = '$prefix',
                 ticket_number = $ticket_number,
@@ -513,9 +518,10 @@ function comet_check_missed_backups(int $threshold_hours = 48): array {
                 ticket_subject = '$subject_safe',
                 ticket_details = '$detail_safe',
                 ticket_priority = 'High',
-                ticket_status = 1,
+                ticket_status = $ticket_status,
                 ticket_client_id = $client_id,
                 ticket_created_by = 0,
+                ticket_assigned_to = $resolved_assigned_to,
                 ticket_url_key = '$url_key'
             ");
             $ticket_id = mysqli_insert_id($mysqli);

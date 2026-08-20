@@ -79,6 +79,28 @@ require_once "includes/inc_all_admin.php";
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>Default Ticket Assignee <small class="text-secondary">(every new ticket that isn't otherwise assigned - by a form field, a recurring ticket's own setting, an automation rule, etc. - is automatically assigned to this technician instead of being left unassigned)</small></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-fw fa-user-check"></i></span>
+                        </div>
+                        <select class="form-control select2" name="config_ticket_default_technician_id">
+                            <option value="0">- Not Assigned -</option>
+                            <?php
+                            $sql_default_technician = mysqli_query($mysqli, "SELECT user_id, user_name FROM users
+                                WHERE user_type = 1 AND user_status = 1 AND user_archived_at IS NULL
+                                ORDER BY user_name ASC");
+                            while ($row = mysqli_fetch_assoc($sql_default_technician)) {
+                                $default_technician_id = intval($row['user_id']);
+                                $default_technician_name = nullable_htmlentities($row['user_name']); ?>
+                                <option <?php if ($config_ticket_default_technician_id == $default_technician_id) { echo "selected"; } ?>
+                                    value="<?php echo $default_technician_id; ?>"><?php echo $default_technician_name; ?></option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                </div>
+
                 <hr>
                 <h6 class="text-muted text-uppercase mb-2" style="font-size:.72rem; letter-spacing:.06em;">Customer Satisfaction (CSAT)</h6>
 

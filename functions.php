@@ -3681,6 +3681,24 @@ function getCompanyNameAndPhone(): array {
     return $cached;
 }
 
+// Resolves what ticket_assigned_to should be at ticket-creation time: an
+// explicit assignee (a form field, a recurring-ticket template's stored
+// assignee, an API request body value, etc.) always wins; otherwise falls
+// back to the admin-configured default technician (Admin > Settings >
+// Tickets), or stays unassigned (0) if neither is set. Post-creation
+// automation rules (assign_to/escalate actions, see
+// includes/ticket_automation_dispatch.php) still run after the insert on the
+// sites that have them wired up and can reassign from here - this is only
+// the fallback used at INSERT time, one tier below an explicit pick and one
+// tier above staying unassigned.
+function resolveTicketAssignee(int $explicit_assigned_to): int {
+    global $config_ticket_default_technician_id;
+    if ($explicit_assigned_to > 0) {
+        return $explicit_assigned_to;
+    }
+    return intval($config_ticket_default_technician_id ?? 0);
+}
+
 function addTicket($contact_id, $contact_name, $contact_email, $client_id, $date, $subject, $message, $attachments, $original_message_file, $ccs, $mailbox_id = null) {
     global $mysqli, $config_app_name, $config_ticket_prefix, $config_ticket_client_general_notifications, $config_ticket_new_ticket_notification_email, $config_base_url, $config_ticket_from_name, $config_ticket_from_email, $config_ticket_default_billable;
     $company = getCompanyNameAndPhone();
@@ -3735,15 +3753,19 @@ function addTicket($contact_id, $contact_name, $contact_email, $client_id, $date
 
     $url_key = randomString(32);
     $ticket_mailbox_id_sql = ($mailbox_id !== null && $mailbox_id !== '') ? intval($mailbox_id) : 'NULL';
+    $resolved_assigned_to = resolveTicketAssignee(0);
+    $ticket_status = $resolved_assigned_to > 0 ? 2 : 1;
 
-    mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$ticket_prefix_esc', ticket_number = $ticket_number, ticket_source = 'Email', ticket_subject = '$subject_esc', ticket_details = '$message_esc', ticket_priority = 'Low', ticket_status = 1, ticket_billable = $config_ticket_default_billable, ticket_created_by = 0, ticket_contact_id = $contact_id, ticket_url_key = '$url_key', ticket_client_id = $client_id, ticket_mailbox_id = $ticket_mailbox_id_sql");
+    mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$ticket_prefix_esc', ticket_number = $ticket_number, ticket_source = 'Email', ticket_subject = '$subject_esc', ticket_details = '$message_esc', ticket_priority = 'Low', ticket_status = $ticket_status, ticket_billable = $config_ticket_default_billable, ticket_created_by = 0, ticket_contact_id = $contact_id, ticket_url_key = '$url_key', ticket_client_id = $client_id, ticket_mailbox_id = $ticket_mailbox_id_sql, ticket_assigned_to = $resolved_assigned_to");
     $id = mysqli_insert_id($mysqli);
 
     // Logging
     logAction("Ticket", "Create", "Email parser: Client contact $contact_email_esc created ticket $ticket_prefix_esc$ticket_number ($subject) ($id)", $client_id, $id);
 
-    // Email-parsed tickets are never auto-assigned, so broadcast to active
-    // agents so the mobile app gets a push for it too.
+    // Broadcast to active agents so the mobile app gets a push for it too,
+    // even when the default-technician setting (Admin > Settings > Tickets)
+    // assigned it - that setting only sets the fallback assignee, it doesn't
+    // change who gets notified about new tickets.
     appNotify("Ticket", "Email parser: $contact_email_esc raised a new ticket $ticket_prefix_esc$ticket_number - $subject", "/agent/ticket.php?ticket_id=$id" . ($client_id ? "&client_id=$client_id" : ''), $client_id, $id);
 
     mkdirMissing(__DIR__ . '/uploads/tickets/');
