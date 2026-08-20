@@ -6105,3 +6105,16 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.45'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.45') {
+        // Admin > Settings > Tickets > Default Ticket Assignee. 0 = not set
+        // (matches this codebase's 0-sentinel convention for other nullable
+        // FK-style ticket settings, e.g. no separate "enabled" flag needed).
+        // Applied at ticket-creation time via resolveTicketAssignee() in
+        // functions.php - fills in ticket_assigned_to only when nothing else
+        // (an explicit form field, a recurring ticket's own stored assignee,
+        // an automation rule) already set it.
+        mysqli_query($mysqli, "ALTER TABLE `settings` ADD COLUMN IF NOT EXISTS `config_ticket_default_technician_id` int(11) DEFAULT NULL");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.46'");
+    }
