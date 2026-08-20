@@ -1732,3 +1732,82 @@ if (isset($_POST['update_project_task_kanban'])) {
     echo json_encode(['status' => 'success']);
     exit;
 }
+
+/*
+ * Comet Backup device/job status for client_overview.php's Comet card,
+ * fetched async - see the comment in client_overview.php's Comet block for
+ * why this was split out of that page's own synchronous render path.
+ * Returns an HTML fragment (not JSON) since it's injected directly into the
+ * card body via fetch().then(r => r.text()).
+ */
+if (isset($_GET['comet_client_status'])) {
+    header('Content-Type: text/html; charset=utf-8');
+
+    enforceUserPermission('module_client');
+
+    $client_id = intval($_GET['client_id']);
+    enforceClientAccess();
+
+    if (empty($config_comet_enabled)) {
+        echo '<p class="text-muted text-center py-3 mb-0">Comet Backup is not enabled.</p>';
+        exit;
+    }
+
+    require_once "../includes/comet.php";
+
+    $comet_map = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT map_comet_username FROM comet_client_map WHERE map_client_id = $client_id LIMIT 1"
+    ));
+    if (!$comet_map) {
+        echo '<p class="text-muted text-center py-3 mb-0">No Comet mapping configured for this client.</p>';
+        exit;
+    }
+
+    $c_username  = $comet_map['map_comet_username'];
+    $c_last_jobs = comet_last_jobs_per_device($c_username);
+    $c_devices   = (comet_get_users()[$c_username] ?? [])['Devices'] ?? [];
+
+    if (empty($c_devices)) {
+        echo '<p class="text-muted text-center py-3 mb-0">No devices found for this user in Comet.</p>';
+        exit;
+    }
+?>
+<table class="table table-sm table-borderless table-hover mb-0">
+    <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;" class="text-muted border-bottom">
+        <tr>
+            <th class="ps-3" style="width:30px;"></th>
+            <th>Device</th>
+            <th>Status</th>
+            <th>Last Backup</th>
+            <th>Size</th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($c_devices as $devid => $devdata):
+        $dev_name = $devdata['FriendlyName'] ?? $devid;
+        $job      = $c_last_jobs[$dev_name] ?? null;
+        $status   = $job ? intval($job['Status']) : 0;
+        $sc  = comet_status_class($status);
+        $sl  = comet_status_label($status);
+        $si  = comet_status_icon($status);
+        $ago = $job ? timeAgo(date('Y-m-d H:i:s', $job['StartTime'])) : '—';
+        $full= $job ? date('Y-m-d H:i', $job['StartTime']) : '';
+        $sz  = ($job && ($job['BytesOut'] ?? 0)) ? comet_fmt_bytes(intval($job['BytesOut'])) : '—';
+        $err = !empty($job['ErrorString']) ? htmlspecialchars(mb_strimwidth($job['ErrorString'], 0, 60, '…')) : '';
+    ?>
+    <tr>
+        <td class="ps-3 text-center"><i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i></td>
+        <td class="small fw-bold"><?= htmlspecialchars($dev_name) ?></td>
+        <td>
+            <span class="badge badge-<?= $sc ?>"><?= $sl ?></span>
+            <?php if ($err): ?><span class="text-danger small d-block"><?= $err ?></span><?php endif; ?>
+        </td>
+        <td class="text-muted small" title="<?= $full ?>"><?= $ago ?></td>
+        <td class="text-muted small"><?= $sz ?></td>
+    </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+<?php
+    exit;
+}

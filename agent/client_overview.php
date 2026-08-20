@@ -318,8 +318,11 @@ if ($has_fav_assets || $has_fav_creds):
                     $credential_name       = nullable_htmlentities($row['credential_name']);
                     $credential_description= nullable_htmlentities($row['credential_description']);
                     $credential_uri        = sanitize_url($row['credential_uri']);
-                    $credential_username   = nullable_htmlentities(decryptCredentialEntry($row['credential_username']));
-                    $credential_password   = nullable_htmlentities(decryptCredentialEntry($row['credential_password']));
+                    $credential_username_raw = decryptCredentialEntry($row['credential_username']);
+                    $credential_password_raw = decryptCredentialEntry($row['credential_password']);
+                    $vault_locked           = ($credential_username_raw === null || $credential_password_raw === null);
+                    $credential_username   = $vault_locked ? '' : nullable_htmlentities($credential_username_raw);
+                    $credential_password   = $vault_locked ? '' : nullable_htmlentities($credential_password_raw);
                     $credential_otp_secret = nullable_htmlentities($row['credential_otp_secret']);
 
                     $username_display = $credential_username
@@ -336,6 +339,13 @@ if ($has_fav_assets || $has_fav_creds):
                             <i class="fas fa-fw fa-key text-dark me-1"></i><?= $credential_name ?>
                         </a>
                     </td>
+                    <?php if ($vault_locked): ?>
+                    <td colspan="2">
+                        <span class="text-muted small" title="Your credential vault session has expired. Sign out and back in to view or copy this password.">
+                            <i class="fas fa-lock"></i> Locked - sign in again to view
+                        </span>
+                    </td>
+                    <?php else: ?>
                     <td><?= $username_display ?></td>
                     <td class="text-nowrap">
                         <button class="btn p-0" type="button"
@@ -348,6 +358,7 @@ if ($has_fav_assets || $has_fav_creds):
                         </button>
                         <div><?= $otp_display ?></div>
                     </td>
+                    <?php endif; ?>
                 </tr>
                 <?php endwhile; ?>
                 </tbody>
@@ -645,15 +656,19 @@ if ($has_stale || $has_expiring || $has_expired):
 
 <!-- ── Comet Backup ──────────────────────────────────────────────────────── -->
 <?php
+// comet_get_users()/comet_get_jobs_for_user() (via comet_last_jobs_per_device())
+// each make a blocking curl_exec() to an external Comet Backup server - up to
+// 15s timeout apiece, so up to ~30s worst case for this card alone if Comet is
+// ever slow/unreachable. That used to run inline in this page's render path,
+// meaning the WHOLE page waited on a third-party server's health. Now it's a
+// placeholder + async fetch (see js/comet_client_status.js) so client_overview.php
+// itself never blocks on it - only the card's own contents are delayed.
 if (!empty($config_comet_enabled)) {
-    require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/comet.php';
     $comet_map = mysqli_fetch_assoc(mysqli_query($mysqli,
         "SELECT map_comet_username FROM comet_client_map WHERE map_client_id = $client_id LIMIT 1"
     ));
     if ($comet_map) {
-        $c_username  = $comet_map['map_comet_username'];
-        $c_last_jobs = comet_last_jobs_per_device($c_username);
-        $c_devices   = (comet_get_users()[$c_username] ?? [])['Devices'] ?? [];
+        $c_username = $comet_map['map_comet_username'];
 ?>
 <div class="card card-dark mt-3">
     <div class="card-header py-2 d-flex align-items-center">
@@ -665,49 +680,11 @@ if (!empty($config_comet_enabled)) {
             <i class="fas fa-expand-alt me-1"></i>Full View
         </a>
     </div>
-    <div class="card-body p-0">
-        <?php if (empty($c_devices)): ?>
-            <p class="text-muted text-center py-3 mb-0">No devices found for this user in Comet.</p>
-        <?php else: ?>
-        <table class="table table-sm table-borderless table-hover mb-0">
-            <thead style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;" class="text-muted border-bottom">
-                <tr>
-                    <th class="ps-3" style="width:30px;"></th>
-                    <th>Device</th>
-                    <th>Status</th>
-                    <th>Last Backup</th>
-                    <th>Size</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($c_devices as $devid => $devdata):
-                $dev_name = $devdata['FriendlyName'] ?? $devid;
-                $job      = $c_last_jobs[$dev_name] ?? null;
-                $status   = $job ? intval($job['Status']) : 0;
-                $sc  = comet_status_class($status);
-                $sl  = comet_status_label($status);
-                $si  = comet_status_icon($status);
-                $ago = $job ? timeAgo(date('Y-m-d H:i:s', $job['StartTime'])) : '—';
-                $full= $job ? date('Y-m-d H:i', $job['StartTime']) : '';
-                $sz  = ($job && ($job['BytesOut'] ?? 0)) ? comet_fmt_bytes(intval($job['BytesOut'])) : '—';
-                $err = !empty($job['ErrorString']) ? htmlspecialchars(mb_strimwidth($job['ErrorString'], 0, 60, '…')) : '';
-            ?>
-            <tr>
-                <td class="ps-3 text-center"><i class="fas fa-<?= $si ?> text-<?= $sc ?>"></i></td>
-                <td class="small fw-bold"><?= htmlspecialchars($dev_name) ?></td>
-                <td>
-                    <span class="badge badge-<?= $sc ?>"><?= $sl ?></span>
-                    <?php if ($err): ?><span class="text-danger small d-block"><?= $err ?></span><?php endif; ?>
-                </td>
-                <td class="text-muted small" title="<?= $full ?>"><?= $ago ?></td>
-                <td class="text-muted small"><?= $sz ?></td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php endif; ?>
+    <div class="card-body p-0" id="cometBackupCardBody" data-client-id="<?= $client_id ?>">
+        <p class="text-muted text-center py-3 mb-0"><i class="fas fa-spinner fa-spin me-2"></i>Loading backup status…</p>
     </div>
 </div>
+<script src="js/comet_client_status.js"></script>
 <?php
     }
 }

@@ -602,9 +602,17 @@ function decryptCredentialEntry($credential_password_ciphertext)
     $credential_ciphertext = $salt = substr($credential_password_ciphertext, 16);
 
     // Get the user session info.
-    $user_encryption_session_ciphertext = $_SESSION['user_encryption_session_ciphertext'];
-    $user_encryption_session_iv =  $_SESSION['user_encryption_session_iv'];
-    $user_encryption_session_key = $_COOKIE['user_encryption_session_key'];
+    $user_encryption_session_ciphertext = $_SESSION['user_encryption_session_ciphertext'] ?? '';
+    $user_encryption_session_iv =  $_SESSION['user_encryption_session_iv'] ?? '';
+    $user_encryption_session_key = $_COOKIE['user_encryption_session_key'] ?? '';
+
+    // Vault is locked for this session (e.g. a remember-me-restored session
+    // that never derived a vault key, or a vault-key cookie past its expiry
+    // while the auth session itself is still alive) - fail loudly with a
+    // distinct null sentinel instead of silently decrypting to bool(false).
+    if ($user_encryption_session_ciphertext === '' || $user_encryption_session_iv === '' || $user_encryption_session_key === '') {
+        return null;
+    }
 
     // Decrypt the session key to get the master key
     $site_encryption_master_key = openssl_decrypt($user_encryption_session_ciphertext, 'aes-128-cbc', $user_encryption_session_key, 0, $user_encryption_session_iv);
