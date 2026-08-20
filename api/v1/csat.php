@@ -28,21 +28,34 @@ while ($row = mysqli_fetch_assoc($res)) {
 }
 
 // Recent positive (4-5 star) testimonial snippets - comment text + rating +
-// date only. No name/client/ticket attribution at all, by design: this
-// endpoint has no auth, so anything identifying would be a real data leak,
-// not just an editorial choice a caller could opt out of.
+// date only, no name/client/ticket attribution at all, by design.
+//
+// Two deliberate safeguards beyond that, since this endpoint has no auth:
+//  1. Only comments a staff member explicitly marked ticket_csat_public_approved
+//     - a CSAT comment is captured with "anything you'd like to add? (optional)",
+//     never with the client's knowledge it might be quoted on the public
+//     website, and free text can carry PII (names, phone numbers, etc.) that
+//     the structured fields deliberately exclude but can't be filtered out of
+//     prose automatically. A human reviewing before publish is the only
+//     reliable guard against that.
+//  2. strip_tags() as defense-in-depth against stored XSS on the site that
+//     embeds this - the comment is stored as raw user input (only SQL-escaped,
+//     never HTML-escaped, see applyCsatRating()), and this endpoint's entire
+//     purpose is "embed this on a public page", so it can't assume every
+//     future caller remembers to escape it before rendering.
 $testimonials = [];
 $res = mysqli_query($mysqli,
     "SELECT ticket_csat_rating AS rating, ticket_csat_comment AS comment, ticket_csat_rated_at AS rated_at
      FROM tickets
      WHERE ticket_csat_rating >= 4 AND ticket_csat_comment IS NOT NULL AND ticket_csat_comment != ''
+       AND ticket_csat_public_approved = 1
        AND ticket_archived_at IS NULL
      ORDER BY ticket_csat_rated_at DESC
      LIMIT 10");
 while ($row = mysqli_fetch_assoc($res)) {
     $testimonials[] = [
         'rating'  => intval($row['rating']),
-        'comment' => $row['comment'],
+        'comment' => strip_tags($row['comment']),
         'date'    => date('Y-m-d', strtotime($row['rated_at'])),
     ];
 }

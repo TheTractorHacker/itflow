@@ -180,6 +180,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         </a>
                     </th>
                     <th>Status</th>
+                    <th title="Shown in the public rating widget (GET /api/v1/csat) when checked">Public</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -193,6 +194,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                     $csat_rating = intval($row['ticket_csat_rating']);
                     $csat_comment = nullable_htmlentities($row['ticket_csat_comment']);
                     $csat_rated_at = nullable_htmlentities($row['ticket_csat_rated_at']);
+                    $csat_public_approved = intval($row['ticket_csat_public_approved']);
                     $needs_followup = ($csat_rating <= $config_ticket_csat_low_rating_threshold && $ticket_status_id != 5);
                     ?>
                     <tr class="<?php echo $needs_followup ? "table-danger" : ""; ?>">
@@ -213,6 +215,15 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                                 <span class="badge text-bg-secondary"><?php echo nullable_htmlentities($row['ticket_status_name']); ?></span>
                             <?php } ?>
                         </td>
+                        <td class="text-center">
+                            <?php if ($csat_rating >= 4 && $csat_comment) { ?>
+                                <div class="form-check form-switch d-inline-block mb-0">
+                                    <input type="checkbox" class="form-check-input js-csat-public-toggle" data-ticket-id="<?php echo $ticket_id; ?>" <?php echo $csat_public_approved ? "checked" : ""; ?>>
+                                </div>
+                            <?php } else { ?>
+                                <span class="text-muted small">-</span>
+                            <?php } ?>
+                        </td>
                     </tr>
                 <?php } ?>
                 </tbody>
@@ -221,5 +232,26 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
         <?php require_once "../includes/filter_footer.php"; ?>
     </div>
 </div>
+
+<script>
+$(document).on('change', '.js-csat-public-toggle', function () {
+    var $box = $(this);
+    var approved = $box.is(':checked') ? 1 : 0;
+    var csrf = $('input[name="csrf_token"]').first().val();
+
+    $box.prop('disabled', true);
+    $.post('post.php', { toggle_csat_public_approved: 1, ticket_id: $box.data('ticket-id'), approved: approved, csrf_token: csrf }, function (res) {
+        if (!res.ok) {
+            $box.prop('checked', !approved);
+            alert('Could not update - please try again.');
+        }
+    }, 'json').fail(function () {
+        $box.prop('checked', !approved);
+        alert('Could not update - please try again.');
+    }).always(function () {
+        $box.prop('disabled', false);
+    });
+});
+</script>
 
 <?php require_once "../includes/footer.php"; ?>
