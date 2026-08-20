@@ -6072,3 +6072,36 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.43'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.43') {
+        // Every one of these tables carried only a PRIMARY KEY - every
+        // client-scoped lookup on agent/client_overview.php (and, for
+        // ticket_replies, every ticket detail page load) was a full table
+        // scan. Cheap and safe at current row counts; closes off page-load
+        // degradation as data grows. See EXPLAIN evidence from the perf audit
+        // that prompted this - tickets/logs/ticket_replies confirmed type=ALL
+        // before this migration.
+        mysqli_query($mysqli, "ALTER TABLE `tickets` ADD INDEX IF NOT EXISTS `idx_tickets_client_archived_updated` (`ticket_client_id`, `ticket_archived_at`, `ticket_updated_at`)");
+        mysqli_query($mysqli, "ALTER TABLE `logs` ADD INDEX IF NOT EXISTS `idx_logs_client_created` (`log_client_id`, `log_created_at`)");
+        mysqli_query($mysqli, "ALTER TABLE `ticket_replies` ADD INDEX IF NOT EXISTS `idx_ticket_replies_ticket_archived` (`ticket_reply_ticket_id`, `ticket_reply_archived_at`)");
+        mysqli_query($mysqli, "ALTER TABLE `assets` ADD INDEX IF NOT EXISTS `idx_assets_client_archived` (`asset_client_id`, `asset_archived_at`)");
+        mysqli_query($mysqli, "ALTER TABLE `credentials` ADD INDEX IF NOT EXISTS `idx_credentials_client_archived` (`credential_client_id`, `credential_archived_at`)");
+        mysqli_query($mysqli, "ALTER TABLE `domains` ADD INDEX IF NOT EXISTS `idx_domains_client_archived_expire` (`domain_client_id`, `domain_archived_at`, `domain_expire`)");
+        mysqli_query($mysqli, "ALTER TABLE `certificates` ADD INDEX IF NOT EXISTS `idx_certificates_client_archived_expire` (`certificate_client_id`, `certificate_archived_at`, `certificate_expire`)");
+        mysqli_query($mysqli, "ALTER TABLE `software` ADD INDEX IF NOT EXISTS `idx_software_client_archived_expire` (`software_client_id`, `software_archived_at`, `software_expire`)");
+        mysqli_query($mysqli, "ALTER TABLE `shared_items` ADD INDEX IF NOT EXISTS `idx_shared_items_client_active_created` (`item_client_id`, `item_active`, `item_created_at`)");
+        mysqli_query($mysqli, "ALTER TABLE `contacts` ADD INDEX IF NOT EXISTS `idx_contacts_client_archived` (`contact_client_id`, `contact_archived_at`)");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.44'");
+    }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.44') {
+        // Defense in depth for /opt/scripts/itflow_rmm_sync.php's alert-sync
+        // loop (SELECT-then-INSERT, no transaction): a proper flock() mutex
+        // was added there to stop overlapping cron runs, but a unique
+        // constraint closes the same gap at the DB layer too, in case
+        // anything else ever writes here without going through that lock.
+        mysqli_query($mysqli, "ALTER TABLE `rmm_alerts` ADD UNIQUE INDEX IF NOT EXISTS `uniq_integration_alert` (`integration_id`, `tactical_alert_id`)");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.45'");
+    }
