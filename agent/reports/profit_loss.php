@@ -547,6 +547,7 @@ $expense_categories[] = ['category_id' => 0, 'category_name' => 'Uncategorized']
 <?php require_once "../../includes/footer.php"; ?>
 
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+document.addEventListener('DOMContentLoaded', function () {
     Chart.defaults.font.family = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
     Chart.defaults.color = '#292b2c';
 
@@ -590,4 +591,5 @@ $expense_categories[] = ['category_id' => 0, 'category_name' => 'Uncategorized']
             }
         });
     })();
+});
 </script>

@@ -147,6 +147,7 @@ if (!empty($report_export_csv)) {
 <?php require_once "../../includes/footer.php"; ?>
 
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+document.addEventListener('DOMContentLoaded', function () {
     Chart.defaults.font.family = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
     Chart.defaults.color = '#292b2c';
 
@@ -179,4 +180,5 @@ if (!empty($report_export_csv)) {
             }
         });
     })();
+});
 </script>

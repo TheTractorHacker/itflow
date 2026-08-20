@@ -80,13 +80,6 @@ if (isset($_GET['ticket_id'])) {
         $ticket_source = nullable_htmlentities($row['ticket_source']);
         $ticket_category = intval($row['ticket_category']);
         $ticket_category_display = nullable_htmlentities($row['category_name']);
-
-        // Board = top-level category group for this ticket's category
-        $ticket_board_display = '';
-        if ($ticket_category) {
-            $row_board = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT c1.category_name AS cat_name, c2.category_name AS parent_name FROM categories c1 LEFT JOIN categories c2 ON c1.category_parent = c2.category_id WHERE c1.category_id = $ticket_category LIMIT 1"));
-            $ticket_board_display = nullable_htmlentities($row_board['parent_name'] ?? '') ?: nullable_htmlentities($row_board['cat_name'] ?? '');
-        }
         $ticket_subject = nullable_htmlentities($row['ticket_subject']);
         $ticket_details = $purifier->purify($row['ticket_details']);
         $ticket_priority = nullable_htmlentities($row['ticket_priority']);
@@ -689,11 +682,6 @@ if (isset($_GET['ticket_id'])) {
                         >
                             <?= $ticket_priority_display ?: "<span class='text-muted'><i class=\"fas fa-fw fa-flag me-1\"></i>No priority</span>" ?>
                         </a>
-                    </div>
-
-                    <!-- Board -->
-                    <div class="text-muted">
-                        <i class="fas fa-fw fa-columns me-1"></i><?= $ticket_board_display ?: "No board" ?>
                     </div>
 
                     <!-- Category -->
@@ -1373,7 +1361,7 @@ if (isset($_GET['ticket_id'])) {
                 <?php if (mysqli_num_rows($sql_time_entries) > 0) { ?>
                 <div class="card ticket-sidebar-compact" style="order:8;">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-list-ul me-2"></i>Time Entry Log</h5>
+                        <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-timeEntryLog" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-list-ul me-2"></i>Time Entry Log</h5>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-timeEntryLog" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
@@ -1453,7 +1441,7 @@ if (isset($_GET['ticket_id'])) {
                 <!-- ── Appointments card ──────────────────────────────── -->
                 <div class="card ticket-sidebar-compact" style="order:6;">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-calendar-alt me-2"></i>Appointments</h5>
+                        <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-appointments" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-calendar-alt me-2"></i>Appointments</h5>
                         <div class="card-tools">
                             <?php if (empty($ticket_closed_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <a href="#" class="btn btn-tool ajax-modal"
@@ -1522,7 +1510,7 @@ if (isset($_GET['ticket_id'])) {
                 <!-- ── Additional Technicians card ────────────────────── -->
                 <div class="card ticket-sidebar-compact" style="order:7;">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-user-cog me-2"></i>Technicians</h5>
+                        <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-technicians" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-user-cog me-2"></i>Technicians</h5>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-technicians" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
@@ -1615,7 +1603,7 @@ if (isset($_GET['ticket_id'])) {
                 <!-- Live Chat card -->
                 <div class="card ticket-sidebar-compact" style="order:11;">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-comments me-2"></i>Live Chat</h5>
+                        <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-liveChat" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-comments me-2"></i>Live Chat</h5>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-liveChat" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
@@ -1636,7 +1624,7 @@ if (isset($_GET['ticket_id'])) {
                 <!-- Ticket activity right card -->
                 <div class="card ticket-sidebar-compact" style="order:12;">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-history me-2"></i>Activity Summary</h5>
+                        <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-activitySummary" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-history me-2"></i>Activity Summary</h5>
 
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-activitySummary" aria-expanded="false">
@@ -1671,9 +1659,9 @@ if (isset($_GET['ticket_id'])) {
                             </div>
                         <?php } ?>
 
-                        <!-- Board / Category intentionally not repeated here - already shown
-                             as chips in the header's metadata row, this card is the second
-                             place they'd otherwise appear with no cross-reference. -->
+                        <!-- Category intentionally not repeated here - already shown
+                             as a chip in the header's metadata row, this card is the second
+                             place it'd otherwise appear with no cross-reference. -->
 
                         <!-- First response (for SLA) -->
                         <?php if ($ticket_first_response_at) { ?>
@@ -1913,7 +1901,7 @@ if (isset($_GET['ticket_id'])) {
                 ?>
                 <div class="card ticket-sidebar-compact" style="order:9;">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-clipboard-list me-2"></i>Worksheets</h5>
+                        <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-worksheets" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-clipboard-list me-2"></i>Worksheets</h5>
                         <div class="card-tools">
                             <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                             <a href="#" class="btn btn-tool ajax-modal" data-modal-url="modals/ticket/ticket_worksheet_add.php?ticket_id=<?= $ticket_id ?>">
@@ -2147,7 +2135,7 @@ if (isset($_GET['ticket_id'])) {
                 <?php if ($config_module_enable_ticket_charges && (empty($ticket_resolved_at) || !empty($charge_rows))) { ?>
                 <div class="card ticket-sidebar-compact" style="order:10;">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1">
+                        <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-charges" aria-expanded="false" style="cursor:pointer;">
                             <i class="fas fa-fw fa-dollar-sign me-2"></i>Charges
                             <?php if ($charge_rows) { ?>
                                 <span class="badge text-bg-secondary ms-1">$<?= number_format($charges_subtotal, 2) ?></span>
@@ -2294,7 +2282,7 @@ if (isset($_GET['ticket_id'])) {
 
                     <div class="card ticket-sidebar-compact" style="order:5;">
                         <div class="card-header px-3 py-2">
-                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-eye me-2"></i>Watchers</h5>
+                            <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-watchers" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-eye me-2"></i>Watchers</h5>
                             <div class="card-tools">
                                 <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                                 <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_add_watcher.php?ticket_id=<?= $ticket_id ?>">
@@ -2337,7 +2325,7 @@ if (isset($_GET['ticket_id'])) {
                 ?>
                 <div class="card ticket-sidebar-compact mb-3" style="border-top:2px solid #17a2b8;order:13;">
                     <div class="card-header px-3 py-2">
-                        <h5 class="card-title mt-1"><i class="fas fa-fw fa-bell me-2"></i>Linked RMM Alerts</h5>
+                        <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-rmmAlerts" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-bell me-2"></i>Linked RMM Alerts</h5>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-bs-toggle="collapse" data-bs-target="#sidebarBody-rmmAlerts" aria-expanded="false"><i class="fas fa-chevron-down"></i></button>
                         </div>
@@ -2399,7 +2387,7 @@ if (isset($_GET['ticket_id'])) {
                 <?php if ($vendor_id) { ?>
                     <div class="card ticket-sidebar-compact mb-3" style="order:14;">
                         <div class="card-header px-3 py-2">
-                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-building me-2"></i>Vendor</h5>
+                            <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-vendor" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-building me-2"></i>Vendor</h5>
                             <div class="card-tools">
                                 <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                                 <a class="btn btn-tool ajax-modal" href="#" data-modal-url="modals/ticket/ticket_edit_vendor.php?ticket_id=<?= $ticket_id ?>">
@@ -2457,7 +2445,7 @@ if (isset($_GET['ticket_id'])) {
                 <?php if ($project_id) { ?>
                     <div class="card ticket-sidebar-compact" style="order:15;">
                         <div class="card-header px-3 py-2">
-                            <h5 class="card-title mt-1"><i class="fas fa-fw fa-project-diagram me-2"></i>Project</h5>
+                            <h5 class="card-title mt-1" data-bs-toggle="collapse" data-bs-target="#sidebarBody-project" aria-expanded="false" style="cursor:pointer;"><i class="fas fa-fw fa-project-diagram me-2"></i>Project</h5>
                             <div class="card-tools">
                                 <?php if (empty($ticket_resolved_at) && lookupUserPermission("module_support") >= 2) { ?>
                                 <button type="button" class="btn btn-tool ajax-modal" data-modal-url="modals/ticket/ticket_edit_project.php?id=<?= $ticket_id ?>">

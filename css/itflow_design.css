@@ -184,6 +184,23 @@ code, kbd, samp, pre, .text-monospace, .font-monospace, .if-mono { font-family: 
 .modal-header { border-bottom: 1px solid var(--if-border); }
 .modal-footer { border-top: 1px solid var(--if-border); }
 
+/* ---- Breadcrumbs: unstyled Bootstrap defaults read as an afterthought (tiny,
+   cramped, plain "/" separators) sitting right above each detail page's title
+   card - quiet but legible wayfinding instead. ---- */
+.breadcrumb {
+  --bs-breadcrumb-divider: "\2039";
+  font-size: .82rem;
+  padding: 0;
+  margin-bottom: .6rem;
+}
+.breadcrumb-item, .breadcrumb-item a { color: var(--if-muted); }
+.breadcrumb-item a { text-decoration: none; font-weight: 500; }
+.breadcrumb-item a:hover { color: var(--color-accent); text-decoration: underline; }
+.breadcrumb-item.active { color: var(--if-ink); font-weight: 600; }
+.breadcrumb-item + .breadcrumb-item::before {
+  color: var(--if-border-strong); font-weight: 700; padding-right: .6rem; padding-left: .1rem;
+}
+
 /* ---- Refined scrollbars (subtle, not loud) ---- */
 * { scrollbar-width: thin; scrollbar-color: var(--if-border-strong) transparent; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }

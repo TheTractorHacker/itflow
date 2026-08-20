@@ -798,6 +798,14 @@ body.dark-mode .content-wrapper small.text-muted {
     font-size: .8rem;
     font-weight: 600;
     color: var(--color-text-muted);
+    border-radius: 4px;
+    transition: color .1s ease-out;
+}
+/* The title text itself carries the same collapse toggle as the chevron button
+   (see agent/ticket.php) - a much bigger, easier click target than the small
+   chevron alone for a row whose only job most of the time is "expand this". */
+.ticket-alga-theme .ticket-sidebar-compact .card-header .card-title:hover {
+    color: var(--color-accent);
 }
 .ticket-alga-theme .ticket-sidebar-compact .card-body {
     padding: .65rem .75rem;

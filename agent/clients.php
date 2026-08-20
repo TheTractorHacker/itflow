@@ -508,7 +508,7 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
                         </td>
                         <td>
                             <a href="client_overview.php?client_id=<?= $client_id ?>"
-                                class="text-dark"
+                                class="text-dark text-decoration-none"
                                 data-bs-toggle="popover"
                                 data-bs-trigger="hover"
                                 data-bs-placement="right"
@@ -528,8 +528,14 @@ $num_rows = mysqli_fetch_row(mysqli_query($mysqli, "SELECT FOUND_ROWS()"));
 
                                     </div>
                                 </div>
-                                <div class="ms-2"><?php if ($client_tags_display) { echo $client_tags_display; } ?></div>
                             </a>
+                            <!-- Tag pills are themselves <a> links (see $client_tag_name_display_array
+                                 above) - kept outside the client-name <a> above so they don't nest
+                                 inside it (invalid HTML5; browsers reparse/close the outer anchor
+                                 early, which was breaking both this cell's layout and its click target). -->
+                            <?php if ($client_tags_display) { ?>
+                            <div class="ms-2 mt-1"><?php echo $client_tags_display; ?></div>
+                            <?php } ?>
                         </td>
                         <td>
                             <?php

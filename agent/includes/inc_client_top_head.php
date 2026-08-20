@@ -67,7 +67,7 @@
 <div class="collapse <?php if (basename($_SERVER["PHP_SELF"]) == "client_overview.php") { echo "show"; } ?>" id="clientHeader">
 
     <div class="card-group mb-3">
-        <div class="card card-body px-3 py-2">
+        <div class="card card-body px-3 py-2 justify-content-center">
             <h5>Primary Location</h5>
             <?php if (!empty($location_address)) { ?>
                 <div>
@@ -97,7 +97,7 @@
             <?php } ?>
         </div>
 
-        <div class="card card-body px-3 py-2">
+        <div class="card card-body px-3 py-2 justify-content-center">
             <h5>Primary Contact</h5>
             <?php
 
@@ -136,7 +136,7 @@
 
         <?php if (lookupUserPermission("module_financial") >= 1 && $config_module_enable_accounting == 1) { ?>
 
-        <div class="card card-body px-3 py-2">
+        <div class="card card-body px-3 py-2 justify-content-center">
             <h5>Billing</h5>
             <div class="ms-1 text-secondary">Hourly Rate
                 <span class="text-dark float-end"> <?php echo numfmt_format_currency($currency_format, $client_rate, $client_currency_code); ?></span>
@@ -174,7 +174,7 @@
         <?php } ?>
 
         <?php if (lookupUserPermission("module_support") >= 1 && $config_module_enable_ticketing == 1) { ?>
-        <div class="card card-body px-3 py-2">
+        <div class="card card-body px-3 py-2 justify-content-center">
             <h5>Support</h5>
             <div class="ms-1 text-secondary">Open Tickets
                 <span class="text-dark float-end"><?php echo $num_active_tickets; ?></span>

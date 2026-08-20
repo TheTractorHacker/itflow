@@ -322,6 +322,7 @@ $priority_colors = [
 <?php require_once "../../includes/footer.php"; ?>
 
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+document.addEventListener('DOMContentLoaded', function () {
     // Bootstrap-like defaults for Chart.js v4
     Chart.defaults.font.family = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
     Chart.defaults.color = '#292b2c';
@@ -402,4 +403,5 @@ $priority_colors = [
             }
         });
     })();
+});
 </script>
