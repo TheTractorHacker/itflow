@@ -592,6 +592,21 @@ if ($method === 'POST' && $id === null) {
     // ticket for a client outside their permitted set.
     if (!api_client_scope_ok($client)) api_error(403, 'Access denied');
 
+    // Fall back to the client's primary contact when the caller didn't supply
+    // one - most API callers (e.g. ITPanel Pro's quick-ticket, when its own
+    // contact_id config isn't set) know which client a ticket is for but not
+    // which specific contact, leaving every such ticket contact-less even
+    // though the client is unambiguous. Only ever fills a gap, never
+    // overrides an explicitly-submitted contact_id.
+    if (!$contact && $client) {
+        $primary_contact = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT contact_id FROM contacts WHERE contact_client_id = $client AND contact_archived_at IS NULL
+             ORDER BY contact_primary DESC, contact_id ASC LIMIT 1"));
+        if ($primary_contact) {
+            $contact = intval($primary_contact['contact_id']);
+        }
+    }
+
     // Validate category against ticket categories
     if ($category) {
         $cat_row = mysqli_fetch_assoc(mysqli_query($mysqli,
