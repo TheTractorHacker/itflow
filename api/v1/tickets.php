@@ -581,6 +581,7 @@ if ($method === 'POST' && $id === null) {
                 ? ucfirst($priority_in) : 'Low';
     $assigned = resolveTicketAssignee(isset($body['assigned_to']) ? intval($body['assigned_to']) : 0);
     $contact  = isset($body['contact_id']) ? intval($body['contact_id']) : 0;
+    $contract = isset($body['contract_id']) ? intval($body['contract_id']) : 0;
     $category = isset($body['category_id']) ? intval($body['category_id']) : 0;
     $hostname = mysqli_real_escape_string($mysqli, trim($body['hostname'] ?? ''));
 
@@ -604,6 +605,26 @@ if ($method === 'POST' && $id === null) {
              ORDER BY contact_primary DESC, contact_id ASC LIMIT 1"));
         if ($primary_contact) {
             $contact = intval($primary_contact['contact_id']);
+        }
+    }
+
+    // Same reasoning for contract linkage: leaving ticket_contract_id NULL
+    // silently exempts every API-created ticket from included-hours allowance
+    // tracking (getContractIncludedIssuesUsage() only counts tickets that are
+    // actually linked). Only auto-link when it's unambiguous - a client with
+    // exactly one active, non-archived contract - matching the same
+    // ambiguity rule already used when this feature's own DB migration
+    // carried forward old client-level allowance values. A client with zero
+    // or multiple active contracts is left unlinked, same as before.
+    $contract_id_sql = 'NULL';
+    if ($contract) {
+        $contract_id_sql = $contract;
+    } elseif ($client) {
+        $active_contracts = mysqli_query($mysqli,
+            "SELECT contract_id FROM contracts WHERE contract_client_id = $client
+             AND contract_status = 'Active' AND contract_archived_at IS NULL LIMIT 2");
+        if (mysqli_num_rows($active_contracts) === 1) {
+            $contract_id_sql = intval(mysqli_fetch_assoc($active_contracts)['contract_id']);
         }
     }
 
@@ -668,8 +689,8 @@ if ($method === 'POST' && $id === null) {
     // bytes the previous escaped-then-interpolated INSERT did.
     $new_id = api_exec(
         "INSERT INTO tickets (ticket_prefix, ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
-         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_url_key, ticket_created_at, ticket_updated_at)
-         VALUES ('$prefix_esc', ?, ?, $client, $contact, '$priority', $status, $assigned, $created_by_sql, 'API', $next_num, $category, $asset_id, '$url_key', NOW(), NOW())",
+         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_contract_id, ticket_url_key, ticket_created_at, ticket_updated_at)
+         VALUES ('$prefix_esc', ?, ?, $client, $contact, '$priority', $status, $assigned, $created_by_sql, 'API', $next_num, $category, $asset_id, $contract_id_sql, '$url_key', NOW(), NOW())",
         'ss',
         [$subject_raw, $details_raw]
     );
