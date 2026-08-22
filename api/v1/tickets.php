@@ -597,9 +597,16 @@ if ($method === 'POST' && $id === null) {
     // one - most API callers (e.g. ITPanel Pro's quick-ticket, when its own
     // contact_id config isn't set) know which client a ticket is for but not
     // which specific contact, leaving every such ticket contact-less even
-    // though the client is unambiguous. Only ever fills a gap, never
-    // overrides an explicitly-submitted contact_id.
-    if (!$contact && $client) {
+    // though the client is unambiguous. When one IS explicitly submitted, it
+    // must actually belong to the same client - api_client_scope_ok() above
+    // only checked the caller's access to $client, it says nothing about
+    // whether a caller-supplied contact_id belongs to a completely different
+    // client, which would mix tenant data on the created ticket.
+    if ($contact) {
+        $contact_ok = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT contact_id FROM contacts WHERE contact_id = $contact AND contact_client_id = $client LIMIT 1"));
+        if (!$contact_ok) api_error(400, 'contact_id does not belong to client_id');
+    } elseif ($client) {
         $primary_contact = mysqli_fetch_assoc(mysqli_query($mysqli,
             "SELECT contact_id FROM contacts WHERE contact_client_id = $client AND contact_archived_at IS NULL
              ORDER BY contact_primary DESC, contact_id ASC LIMIT 1"));
@@ -611,13 +618,18 @@ if ($method === 'POST' && $id === null) {
     // Same reasoning for contract linkage: leaving ticket_contract_id NULL
     // silently exempts every API-created ticket from included-hours allowance
     // tracking (getContractIncludedIssuesUsage() only counts tickets that are
-    // actually linked). Only auto-link when it's unambiguous - a client with
-    // exactly one active, non-archived contract - matching the same
-    // ambiguity rule already used when this feature's own DB migration
-    // carried forward old client-level allowance values. A client with zero
-    // or multiple active contracts is left unlinked, same as before.
+    // actually linked). An explicitly-submitted contract_id must belong to
+    // $client for the same cross-tenant reason as contact_id above. Auto-link
+    // only when it's unambiguous - a client with exactly one active,
+    // non-archived contract - matching the same ambiguity rule already used
+    // when this feature's own DB migration carried forward old client-level
+    // allowance values. A client with zero or multiple active contracts is
+    // left unlinked, same as before.
     $contract_id_sql = 'NULL';
     if ($contract) {
+        $contract_ok = mysqli_fetch_assoc(mysqli_query($mysqli,
+            "SELECT contract_id FROM contracts WHERE contract_id = $contract AND contract_client_id = $client LIMIT 1"));
+        if (!$contract_ok) api_error(400, 'contract_id does not belong to client_id');
         $contract_id_sql = $contract;
     } elseif ($client) {
         $active_contracts = mysqli_query($mysqli,
