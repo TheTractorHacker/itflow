@@ -39,7 +39,7 @@ if ($resource === 'outtakes' && $id !== null) {
 }
 
 // List outtakes for a ticket
-if ($resource === 'tickets' && $sub === 'outtakes' && $method === 'GET') {
+if ($resource === 'tickets' && $id !== null && $sub === 'outtakes' && $method === 'GET') {
     $outtakes = [];
     $sql = mysqli_query($mysqli,
         "SELECT ot.outtake_id, ot.outtake_sign_token, ot.outtake_tech_notes,
@@ -66,7 +66,7 @@ if ($resource === 'tickets' && $sub === 'outtakes' && $method === 'GET') {
 }
 
 // Create outtake form
-if ($resource === 'tickets' && $sub === 'outtake' && $method === 'POST') {
+if ($resource === 'tickets' && $id !== null && $sub === 'outtake' && $method === 'POST') {
     $sign_token = bin2hex(random_bytes(32));
     mysqli_query($mysqli,
         "INSERT INTO ticket_outtake_forms

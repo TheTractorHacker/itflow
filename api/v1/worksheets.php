@@ -39,7 +39,7 @@ if ($resource === 'worksheets' && $id !== null) {
 }
 
 // Charges for a ticket
-if ($resource === 'tickets' && $sub === 'charges' && $method === 'GET') {
+if ($resource === 'tickets' && $id !== null && $sub === 'charges' && $method === 'GET') {
     $charges = [];
     $sql = mysqli_query($mysqli,
         "SELECT c.*, u.user_name AS created_by_name
@@ -67,7 +67,7 @@ if ($resource === 'tickets' && $sub === 'charges' && $method === 'GET') {
 }
 
 // Worksheets list for a ticket (regular worksheets only — outtake forms are in ticket_outtake_forms)
-if ($resource === 'tickets' && $sub === 'worksheets' && $method === 'GET') {
+if ($resource === 'tickets' && $id !== null && $sub === 'worksheets' && $method === 'GET') {
     $worksheets = [];
     $sql = mysqli_query($mysqli,
         "SELECT w.*, t.worksheet_template_name, u.user_name AS created_by_name
@@ -213,7 +213,7 @@ if ($resource === 'worksheet-templates' && $method === 'GET') {
 }
 
 // Create ticket charge
-if ($resource === 'tickets' && $sub === 'charges' && $method === 'POST') {
+if ($resource === 'tickets' && $id !== null && $sub === 'charges' && $method === 'POST') {
     $body      = json_decode(file_get_contents('php://input'), true) ?? [];
     $name      = mysqli_real_escape_string($mysqli, trim($body['name'] ?? ''));
     $desc      = mysqli_real_escape_string($mysqli, trim($body['description'] ?? ''));
@@ -232,7 +232,7 @@ if ($resource === 'tickets' && $sub === 'charges' && $method === 'POST') {
 }
 
 // Create worksheet from template
-if ($resource === 'tickets' && $sub === 'worksheets' && $method === 'POST') {
+if ($resource === 'tickets' && $id !== null && $sub === 'worksheets' && $method === 'POST') {
     $body        = json_decode(file_get_contents('php://input'), true) ?? [];
     $template_id = intval($body['template_id'] ?? 0);
     $is_outtake  = intval($body['is_outtake'] ?? 0);
