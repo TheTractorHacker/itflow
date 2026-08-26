@@ -81,8 +81,8 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
         .section-title { background: #f0f0f0; padding: 8px 16px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: #444; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; }
         .field-row { display: flex; align-items: center; padding: 9px 16px; border-bottom: 1px solid #f0f0f0; }
         .field-row .field-label { flex: 1; font-size: 14px; color: #333; }
-        .field-row .field-input { min-width: 200px; text-align: right; }
-        .field-row .field-input input[type="checkbox"] { width: 20px; height: 20px; }
+        .field-row .field-input { min-width: 200px; display: flex; justify-content: flex-end; align-items: center; }
+        .field-row .field-input input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
         .disclaimer { padding: 16px; background: #fafafa; border-top: 1px solid #eee; font-size: 13px; color: #555; }
         .disclaimer ul { padding-left: 20px; margin-top: 8px; }
         .disclaimer li { margin-bottom: 6px; }

@@ -92,6 +92,17 @@ window.openAjaxModal = function (modalUrl, modalSize, options) {
       host.appendChild(modalEl);
       executeInjectedScripts(modalEl);
 
+      // Bootstrap tooltips/popovers only auto-init on elements present at the page's
+      // own DOMContentLoaded (see js/app.js) - anything arriving later via this
+      // innerHTML injection needs its own instance, or e.g. a credential's password
+      // reveal popover silently does nothing when clicked inside an ajax-loaded modal.
+      modalEl.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        bootstrap.Tooltip.getOrCreateInstance(el);
+      });
+      modalEl.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
+        bootstrap.Popover.getOrCreateInstance(el, { container: 'body' });
+      });
+
       const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
       modal.show();
 

@@ -1324,7 +1324,7 @@ if (isset($_GET['ticket_id'])) {
                             ?>
                             <div><i class="fas fa-fw <?= $meta['icon'] ?> me-1"></i><?= $meta['label'] ?>: <?= $u['used'] ?> / <?= $u['included'] ?> issues used this month
                                 <?php if ($u['remaining'] < 0) { ?>
-                                    <span class="text-danger fw-bold">(<?= abs($u['remaining']) ?> over)</span>
+                                    <span class="text-danger fw-bold" style="white-space:nowrap;">(<?= abs($u['remaining']) ?> over)</span>
                                 <?php } ?>
                             </div>
                             <?php endforeach; ?>
@@ -1473,7 +1473,7 @@ if (isset($_GET['ticket_id'])) {
                             $se_notes   = nullable_htmlentities($se['schedule_notes'] ?? '');
                         ?>
                         <div class="px-3 py-2 small <?= $sched_idx > 1 ? 'border-top' : '' ?>">
-                            <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <div class="fw-bold"><?= $se_start . $se_end_str ?></div>
                                     <div class="text-muted">
@@ -2103,7 +2103,7 @@ if (isset($_GET['ticket_id'])) {
                         <div class="border-bottom px-3 py-2 d-flex align-items-center">
                             <i class="fas fa-file text-secondary me-2"></i>
                             <span class="flex-grow-1">
-                                <?= $att_name ?> <small class="text-secondary"><?= $att_date ?></small>
+                                <a target="_blank" href="../uploads/tickets/<?= $ticket_id ?>/<?= $att_ref ?>"><?= $att_name ?></a> <small class="text-secondary"><?= $att_date ?></small>
                             </span>
                             <div class="ms-2 dropdown dropleft text-center">
                                 <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown">
