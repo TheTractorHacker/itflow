@@ -41,6 +41,12 @@
                         <p>API Keys</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/admin/api_docs.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "api_docs.php") {echo "active";} ?>">
+                        <i class="nav-icon fas fa-code"></i>
+                        <p>API Docs</p>
+                    </a>
+                </li>
 
                 <li class="nav-header">CONFIGURATION</li>
 
