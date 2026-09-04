@@ -106,16 +106,16 @@ $client_issues_usage = getClientIncludedIssuesUsage($mysqli, $client_id);
     <div class="col-12">
         <div class="card mb-0">
             <div class="card-body py-2 d-flex align-items-center flex-wrap" style="gap:20px">
-                <span class="text-muted small fw-bold"><i class="fas fa-house-user me-1"></i>Included Support Issues</span>
+                <span class="text-muted small fw-bold"><i class="fas fa-house-user me-1"></i>Included Support Hours</span>
                 <?php foreach (['remote' => ['icon' => 'fa-laptop', 'label' => 'Remote'], 'onsite' => ['icon' => 'fa-house-user', 'label' => 'Onsite']] as $key => $meta):
                     $u = $client_issues_usage[$key];
                     if ($u['included'] === null) continue;
                 ?>
                 <span class="d-flex align-items-center" style="gap:6px;border-left:4px solid <?= $u['pct'] !== null && $u['pct'] >= 100 ? '#dc3545' : (($u['pct'] ?? 0) >= 80 ? '#ffc107' : '#28a745') ?>;padding-left:8px">
                     <i class="fas fa-fw <?= $meta['icon'] ?>"></i>
-                    <span><?= $meta['label'] ?>: <?= $u['used'] ?> / <?= $u['included'] ?> used this month</span>
+                    <span><?= $meta['label'] ?>: <?= number_format($u['used'], 2) ?> / <?= number_format($u['included'], 2) ?> hrs used this month</span>
                     <?php if ($u['remaining'] !== null && $u['remaining'] < 0): ?>
-                        <span class="badge text-bg-danger"><?= abs($u['remaining']) ?> over</span>
+                        <span class="badge text-bg-danger"><?= number_format(abs($u['remaining']), 2) ?> hrs over</span>
                     <?php endif; ?>
                 </span>
                 <?php endforeach; ?>

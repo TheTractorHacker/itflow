@@ -13,8 +13,6 @@ $client_type = nullable_htmlentities($row['client_type']);
 $client_website = nullable_htmlentities($row['client_website']);
 $client_referral = nullable_htmlentities($row['client_referral']);
 $client_net_terms = intval($row['client_net_terms']);
-$client_support_issues_included_remote = $row['client_support_issues_included_remote'] !== null ? intval($row['client_support_issues_included_remote']) : null;
-$client_support_issues_included_onsite = $row['client_support_issues_included_onsite'] !== null ? intval($row['client_support_issues_included_onsite']) : null;
 $client_tax_id_number = nullable_htmlentities($row['client_tax_id_number']);
 $client_abbreviation = nullable_htmlentities($row['client_abbreviation']);
 $client_rate = floatval($row['client_rate']);
@@ -119,28 +117,6 @@ ob_start();
                         </div>
                         <input type="text" class="form-control" name="type" placeholder="Industry"
                                value="<?php echo $client_type; ?>">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Included Support Issues <small class="text-secondary">(per month, optional &mdash; e.g. a residential subscription plan)</small></label>
-                    <div class="row">
-                        <div class="col">
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text"><i class="fa fa-fw fa-laptop"></i></span>
-                                </div>
-                                <input type="number" min="0" step="1" class="form-control" name="support_issues_included_remote" placeholder="Remote / mo" value="<?php echo $client_support_issues_included_remote !== null ? $client_support_issues_included_remote : ''; ?>">
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text"><i class="fa fa-fw fa-house-user"></i></span>
-                                </div>
-                                <input type="number" min="0" step="1" class="form-control" name="support_issues_included_onsite" placeholder="Onsite / mo" value="<?php echo $client_support_issues_included_onsite !== null ? $client_support_issues_included_onsite : ''; ?>">
-                            </div>
-                        </div>
                     </div>
                 </div>
 

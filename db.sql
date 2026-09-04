@@ -92,6 +92,7 @@ CREATE TABLE `api_keys` (
   `api_key_created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `api_key_expire` date NOT NULL,
   `api_key_client_id` int(11) NOT NULL DEFAULT 0,
+  `api_key_permission` enum('read','write') NOT NULL DEFAULT 'write',
   PRIMARY KEY (`api_key_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -935,6 +936,8 @@ CREATE TABLE `contracts` (
   `contract_rate_after_hours` decimal(10,2) DEFAULT NULL,
   `contract_net_terms` varchar(50) DEFAULT NULL,
   `contract_support_hours` varchar(100) DEFAULT NULL,
+  `contract_support_hours_included_remote` decimal(6,2) DEFAULT NULL,
+  `contract_support_hours_included_onsite` decimal(6,2) DEFAULT NULL,
   `contract_start_date` date DEFAULT NULL,
   `contract_end_date` date DEFAULT NULL,
   `contract_renewal_frequency` varchar(50) DEFAULT NULL,
