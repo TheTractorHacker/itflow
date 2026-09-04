@@ -18,6 +18,10 @@
     ·
     <a href="https://docs.itflow.org">Docs</a>
     ·
+    <a href="docs/ARCHITECTURE.md">Architecture</a>
+    ·
+    <a href="docs/API.md">API Reference</a>
+    ·
     <a href="https://github.com/TheTractorHacker/itflow/releases">Releases</a>
     ·
     <a href="https://github.com/TheTractorHacker/itflow/issues">Report Bug</a>
@@ -40,6 +44,8 @@
 This fork adds real-world MSP dispatch and scheduling workflows that go beyond the upstream project, while staying in sync with upstream security patches and improvements.
 
 We also built a **native Android app** from scratch to go alongside this fork — giving technicians full mobile access to tickets, assets, clients, worksheets, and more. Check it out at [TheTractorHacker/itflow-msp-app](https://github.com/TheTractorHacker/itflow-msp-app).
+
+New to this codebase? [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) covers the admin/agent/client/guest portal structure, auth & permission model, data model, module toggles, and integrations. [docs/API.md](docs/API.md) is the narrative companion to the REST API.
 
 ---
 
@@ -101,6 +107,7 @@ Built with Kotlin + Jetpack Compose + Material 3. Features include:
 - Full REST API layer under `/api/v1/` powering the Android app
 - Endpoints: tickets, clients, assets, contacts, locations, credentials, worksheets, charges, appointments, search, reports
 - Token-based auth with rate limiting, token expiry, and payload size limits
+- Full reference: [docs/API.md](docs/API.md) (narrative guide) · [live OpenAPI spec](https://github.com/TheTractorHacker/itflow/blob/Syncro-Beta/api/v1/openapi.yaml) · in-app searchable reference at Settings → API Docs (`/api/v1/docs` on your own instance)
 
 ### Security Fixes (beyond upstream)
 - Fixed authorization bypass on ticket charge handlers (client access not enforced)
