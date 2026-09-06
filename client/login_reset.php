@@ -246,6 +246,13 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     <link rel="stylesheet" href="../css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
     <link rel="stylesheet" href="../css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
 
+    <!-- Motion layer. Owns every animation in the app, including the single global
+         prefers-reduced-motion guard, so no later rule can forget it. Must sit AFTER
+         itflow_design.css (it reads --if-* tokens and retunes Tabler's own .card /
+         .nav-link / .modal transitions, winning on cascade order) and BEFORE
+         itflow.compat-color.css / itflow_metrics.css / itflow.bind-tabler.css. -->
+    <link rel="stylesheet" href="../css/itflow_motion.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_motion.css') ?>">
+
     <!-- Token seam: maps this app's --if-* / --color-* tokens onto Tabler's --tblr-*. -->
     <link rel="stylesheet" href="../css/itflow.bind-tabler.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow.bind-tabler.css') ?>">
 
