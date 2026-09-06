@@ -18,6 +18,7 @@ $sql_clients = mysqli_query($mysqli,
      WHERE contract_status = 'Active' AND contract_archived_at IS NULL
        AND (contract_support_hours_included_remote IS NOT NULL OR contract_support_hours_included_onsite IS NOT NULL)
        AND client_archived_at IS NULL
+       $access_permission_query
      ORDER BY client_name ASC");
 
 $rows = [];

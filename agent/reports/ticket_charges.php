@@ -15,6 +15,7 @@ $show_uninvoiced_only = isset($_GET['uninvoiced']);
 $sql_charge_years = mysqli_query($mysqli, "SELECT DISTINCT YEAR(charge_created_at) AS charge_year FROM ticket_charges ORDER BY charge_year DESC");
 
 $having = $show_uninvoiced_only ? "HAVING uninvoiced_amount > 0" : "";
+$client_access_sql = ($client_access_string !== '' && !$session_is_admin) ? " AND t.ticket_client_id IN ($client_access_string)" : "";
 
 $sql_tickets = mysqli_query($mysqli, "
     SELECT
@@ -29,6 +30,7 @@ $sql_tickets = mysqli_query($mysqli, "
     LEFT JOIN clients c ON t.ticket_client_id = c.client_id
     WHERE tc.charge_archived_at IS NULL
     AND YEAR(tc.charge_created_at) = $year
+    $client_access_sql
     GROUP BY t.ticket_id
     $having
     ORDER BY last_charge_at DESC

@@ -51,6 +51,11 @@ $sql_payment_years = mysqli_query($mysqli, "SELECT DISTINCT YEAR(payment_date) A
             JOIN payments AS p ON i.invoice_id = p.payment_invoice_id";
             if ($year != 'all') {
                 $sql_clients .= " WHERE YEAR(p.payment_date) = $year";
+            } else {
+                $sql_clients .= " WHERE 1=1";
+            }
+            if ($client_access_string !== '' && !$session_is_admin) {
+                $sql_clients .= " AND c.client_id IN ($client_access_string)";
             }
         $sql_clients .= " GROUP BY c.client_id
             HAVING amount_paid > 599

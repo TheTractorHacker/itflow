@@ -1405,11 +1405,15 @@ function report_business_days($date_from, $date_to)
  */
 function getCsatAggregateByGroup(mysqli $mysqli, string $group_column, string $from_dt, string $to_dt, ?int $client_id = null, int $satisfied_threshold = 4): array
 {
+    global $client_access_string, $session_is_admin;
+
     $allowed_columns = ['ticket_assigned_to', 'ticket_client_id'];
     if (!in_array($group_column, $allowed_columns, true)) {
         return [];
     }
-    $client_clause = $client_id !== null ? " AND ticket_client_id = " . intval($client_id) : '';
+    $client_clause = $client_id !== null
+        ? " AND ticket_client_id = " . intval($client_id)
+        : ((isset($client_access_string, $session_is_admin) && $client_access_string !== '' && !$session_is_admin) ? " AND ticket_client_id IN ($client_access_string)" : '');
 
     $out = [];
     $res = mysqli_query($mysqli,
@@ -1603,6 +1607,8 @@ function getTechnicianPerformanceReport(mysqli $mysqli, $date_from, $date_to, ?i
  */
 function getCsatReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = null, int $low_rating_threshold = 2): array
 {
+    global $client_access_string, $session_is_admin;
+
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_from)) {
         $date_from = date('Y-01-01');
     }
@@ -1611,7 +1617,9 @@ function getCsatReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = n
     }
     $from_dt = "$date_from 00:00:00";
     $to_dt   = "$date_to 23:59:59";
-    $client_clause = $client_id !== null ? " AND ticket_client_id = " . intval($client_id) : '';
+    $client_clause = $client_id !== null
+        ? " AND ticket_client_id = " . intval($client_id)
+        : ((isset($client_access_string, $session_is_admin) && $client_access_string !== '' && !$session_is_admin) ? " AND ticket_client_id IN ($client_access_string)" : '');
     // Two distinct cohorts, because "closed in period" and "rated in period" are
     // genuinely different questions - a ticket can be rated long after it closes
     // (email reminder, or just real-world lag). $closed_range answers "of tickets
@@ -1913,6 +1921,8 @@ function getClientIncludedIssuesUsage(mysqli $mysqli, int $client_id, ?int $mont
  */
 function getMrrReport(mysqli $mysqli, ?int $client_id = null)
 {
+    global $client_access_string, $session_is_admin;
+
     // App only exposes 'month' and 'year'; others handled defensively so a future
     // frequency doesn't silently drop out of MRR.
     $freq_expr = "CASE recurring_invoice_frequency
@@ -1926,9 +1936,16 @@ function getMrrReport(mysqli $mysqli, ?int $client_id = null)
     // $client_id restricts every query below to one client - used by the API when the
     // caller is authenticated via a client-scoped legacy key, so a key restricted to one
     // client can never see another client's (or the whole company's) recurring revenue.
-    // The classic web report always calls this with $client_id = null (company-wide).
-    $client_clause = $client_id !== null ? " AND recurring_invoice_client_id = " . intval($client_id) : '';
-    $client_clause_ri = $client_id !== null ? " AND ri.recurring_invoice_client_id = " . intval($client_id) : '';
+    // The classic web report always calls this with $client_id = null (company-wide), in
+    // which case it instead falls back to the requesting session user's own
+    // user_client_permissions allow-list (same as every other agent/*.php page).
+    $restricted = isset($client_access_string, $session_is_admin) && $client_access_string !== '' && !$session_is_admin;
+    $client_clause = $client_id !== null
+        ? " AND recurring_invoice_client_id = " . intval($client_id)
+        : ($restricted ? " AND recurring_invoice_client_id IN ($client_access_string)" : '');
+    $client_clause_ri = $client_id !== null
+        ? " AND ri.recurring_invoice_client_id = " . intval($client_id)
+        : ($restricted ? " AND ri.recurring_invoice_client_id IN ($client_access_string)" : '');
 
     $active_where = "recurring_invoice_status = 1 AND recurring_invoice_archived_at IS NULL$client_clause";
 
@@ -2055,6 +2072,10 @@ function getMrrReport(mysqli $mysqli, ?int $client_id = null)
  */
 function getArAgingReport(mysqli $mysqli)
 {
+    global $client_access_string, $session_is_admin;
+
+    $client_clause = (isset($client_access_string, $session_is_admin) && $client_access_string !== '' && !$session_is_admin) ? " AND i.invoice_client_id IN ($client_access_string)" : '';
+
     $res = mysqli_query($mysqli,
         "SELECT i.invoice_client_id AS client_id, cl.client_name,
                 DATEDIFF(CURDATE(), i.invoice_due) AS days_overdue,
@@ -2065,7 +2086,7 @@ function getArAgingReport(mysqli $mysqli)
              SELECT payment_invoice_id, SUM(payment_amount) AS paid
              FROM payments GROUP BY payment_invoice_id
          ) p ON p.payment_invoice_id = i.invoice_id
-         WHERE i.invoice_status NOT IN ('Draft', 'Cancelled', 'Non-Billable')
+         WHERE i.invoice_status NOT IN ('Draft', 'Cancelled', 'Non-Billable')$client_clause
          HAVING balance > 0.005");
 
     $buckets = ['b_0_30' => 0.0, 'b_31_60' => 0.0, 'b_61_90' => 0.0, 'b_90_plus' => 0.0, 'total' => 0.0];
@@ -2123,19 +2144,24 @@ function getArAgingReport(mysqli $mysqli)
  */
 function getClientProfitability(mysqli $mysqli, $year)
 {
+    global $client_access_string, $session_is_admin;
+
     $year = intval($year);
+    $restricted = isset($client_access_string, $session_is_admin) && $client_access_string !== '' && !$session_is_admin;
 
     $rev = [];
+    $client_clause_i = $restricted ? " AND i.invoice_client_id IN ($client_access_string)" : '';
     $res = mysqli_query($mysqli,
         "SELECT i.invoice_client_id AS cid, SUM(p.payment_amount) AS rev
          FROM payments p JOIN invoices i ON i.invoice_id = p.payment_invoice_id
-         WHERE YEAR(p.payment_date) = $year
+         WHERE YEAR(p.payment_date) = $year$client_clause_i
          GROUP BY i.invoice_client_id");
     while ($r = mysqli_fetch_assoc($res)) {
         $rev[intval($r['cid'])] = floatval($r['rev']);
     }
 
     $lab = [];
+    $client_clause_t = $restricted ? " AND t.ticket_client_id IN ($client_access_string)" : '';
     $res = mysqli_query($mysqli,
         "SELECT t.ticket_client_id AS cid,
             SUM(TIME_TO_SEC(tr.ticket_reply_time_worked) / 3600 * COALESCE(lt.labor_type_rate, 0)) AS val,
@@ -2143,7 +2169,7 @@ function getClientProfitability(mysqli $mysqli, $year)
          FROM ticket_replies tr
          JOIN tickets t ON t.ticket_id = tr.ticket_reply_ticket_id
          LEFT JOIN labor_types lt ON lt.labor_type_id = tr.ticket_reply_labor_type_id
-         WHERE tr.ticket_reply_time_worked IS NOT NULL AND YEAR(tr.ticket_reply_created_at) = $year
+         WHERE tr.ticket_reply_time_worked IS NOT NULL AND YEAR(tr.ticket_reply_created_at) = $year$client_clause_t
          GROUP BY t.ticket_client_id");
     while ($r = mysqli_fetch_assoc($res)) {
         $lab[intval($r['cid'])] = ['val' => floatval($r['val']), 'secs' => intval($r['secs'])];
@@ -2249,6 +2275,8 @@ function getProfitLossSummary(mysqli $mysqli, $year)
  */
 function getRmmHealthReport(mysqli $mysqli, $date_from, $date_to, ?int $client_id = null)
 {
+    global $client_access_string, $session_is_admin;
+
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_from)) {
         $date_from = date('Y-01-01');
     }
@@ -2259,9 +2287,16 @@ function getRmmHealthReport(mysqli $mysqli, $date_from, $date_to, ?int $client_i
     $to_dt     = "$date_to 23:59:59";
     // $client_id restricts every query below to one client - used by the API when the
     // caller is authenticated via a client-scoped legacy key. The classic web report
-    // always calls this with $client_id = null (company-wide).
-    $client_clause    = $client_id !== null ? " AND client_id = " . intval($client_id) : '';
-    $client_clause_ra = $client_id !== null ? " AND ra.client_id = " . intval($client_id) : '';
+    // always calls this with $client_id = null (company-wide), in which case it instead
+    // falls back to the requesting session user's own user_client_permissions allow-list
+    // (same as every other agent/*.php page).
+    $restricted = isset($client_access_string, $session_is_admin) && $client_access_string !== '' && !$session_is_admin;
+    $client_clause    = $client_id !== null
+        ? " AND client_id = " . intval($client_id)
+        : ($restricted ? " AND client_id IN ($client_access_string)" : '');
+    $client_clause_ra = $client_id !== null
+        ? " AND ra.client_id = " . intval($client_id)
+        : ($restricted ? " AND ra.client_id IN ($client_access_string)" : '');
     $range     = "created_at BETWEEN '$from_dt' AND '$to_dt'$client_clause";
     $range_ra  = "ra.created_at BETWEEN '$from_dt' AND '$to_dt'$client_clause_ra";
 
@@ -4882,6 +4917,36 @@ function validateDate($date) {
         return $date;
     }
     return date('Y-m-d'); // Fallback
+}
+
+// Ticket categories named after a delivery method drive ticket_delivery_method
+// automatically (used by getContractIncludedIssuesUsage() for included-hours
+// billing) so the two stay in sync no matter which UI/API path set the category.
+function getTicketDeliveryMethodForCategory($mysqli, int $category_id): ?string {
+    static $map = [
+        'remote' => 'Remote',
+        'maintenance' => 'Remote',
+        'maintaince' => 'Remote', // matches the live "Maintaince" category (typo'd name, kept for compatibility)
+        'on-site' => 'Onsite',
+        'onsite' => 'Onsite',
+        'project' => 'Onsite',
+    ];
+
+    if (!$category_id) {
+        return null;
+    }
+
+    $category_name = getFieldById('categories', $category_id, 'category_name');
+
+    return $map[strtolower(trim((string) $category_name))] ?? null;
+}
+
+// Clients raising a ticket without picking a category default to the "Remote"
+// ticket category (which in turn defaults ticket_delivery_method to Remote).
+function getDefaultClientTicketCategoryId($mysqli): int {
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli,
+        "SELECT category_id FROM categories WHERE category_type = 'Ticket' AND category_name = 'Remote' AND category_archived_at IS NULL LIMIT 1"));
+    return $row ? intval($row['category_id']) : 0;
 }
 
 function ticketCategoryOptions($mysqli, $selected = 0) {

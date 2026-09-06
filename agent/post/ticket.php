@@ -29,6 +29,9 @@ if (isset($_POST['add_ticket'])) {
     $subject = sanitizeInput($_POST['subject']);
     $priority = sanitizeInput($_POST['priority']);
     $delivery_method = in_array($_POST['delivery_method'] ?? '', ['Remote', 'Onsite'], true) ? $_POST['delivery_method'] : null;
+    // Category is the source of truth for delivery method when it maps to one,
+    // overriding whatever was manually picked in the Delivery Method field above.
+    $delivery_method = getTicketDeliveryMethodForCategory($mysqli, $category_id) ?? $delivery_method;
     $details = mysqli_real_escape_string($mysqli, $_POST['details']);
     $vendor_ticket_number = sanitizeInput($_POST['vendor_ticket_number']);
     $vendor_id = intval($_POST['vendor_id']);
@@ -275,7 +278,14 @@ if (isset($_POST['edit_ticket'])) {
         enforceClientAccess();
     }
 
-    mysqli_query($mysqli, "UPDATE tickets SET ticket_category = $category_id, ticket_subject = '$ticket_subject', ticket_priority = '$ticket_priority', ticket_billable = $billable, ticket_details = '$details', ticket_due_at = $due, ticket_vendor_ticket_number = '$vendor_ticket_number', ticket_contact_id = $contact_id, ticket_assigned_to = $assigned_to, ticket_vendor_id = $vendor_id, ticket_location_id = $location_id, ticket_asset_id = $asset_id, ticket_project_id = $project_id WHERE ticket_id = $ticket_id");
+    // Category is the source of truth for delivery method when it maps to one;
+    // leave ticket_delivery_method untouched for categories with no mapping.
+    $derived_delivery_method = getTicketDeliveryMethodForCategory($mysqli, $category_id);
+    $delivery_method_sql_fragment = $derived_delivery_method !== null
+        ? ", ticket_delivery_method = '" . mysqli_real_escape_string($mysqli, $derived_delivery_method) . "'"
+        : '';
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_category = $category_id, ticket_subject = '$ticket_subject', ticket_priority = '$ticket_priority', ticket_billable = $billable, ticket_details = '$details', ticket_due_at = $due, ticket_vendor_ticket_number = '$vendor_ticket_number', ticket_contact_id = $contact_id, ticket_assigned_to = $assigned_to, ticket_vendor_id = $vendor_id, ticket_location_id = $location_id, ticket_asset_id = $asset_id, ticket_project_id = $project_id$delivery_method_sql_fragment WHERE ticket_id = $ticket_id");
 
     recalculateTicketSla($mysqli, $ticket_id);
 
@@ -929,7 +939,12 @@ if (isset($_POST['quick_categorize_ticket'])) {
     $client_id = intval($td['ticket_client_id']);
     if ($client_id) { enforceClientAccess($client_id); }
 
-    mysqli_query($mysqli, "UPDATE tickets SET ticket_category = $category_id WHERE ticket_id = $ticket_id");
+    $derived_delivery_method = getTicketDeliveryMethodForCategory($mysqli, $category_id);
+    $delivery_method_sql_fragment = $derived_delivery_method !== null
+        ? ", ticket_delivery_method = '" . mysqli_real_escape_string($mysqli, $derived_delivery_method) . "'"
+        : '';
+
+    mysqli_query($mysqli, "UPDATE tickets SET ticket_category = $category_id$delivery_method_sql_fragment WHERE ticket_id = $ticket_id");
 
     $cat_name = $category_id ? nullable_htmlentities(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT category_name FROM categories WHERE category_id = $category_id LIMIT 1"))['category_name'] ?? '') : '';
     logAction("Ticket", "Edit", "Category changed on ticket {$td['ticket_prefix']}{$td['ticket_number']}", intval($td['ticket_client_id']), $ticket_id);
@@ -1472,6 +1487,13 @@ if (isset($_POST['bulk_edit_ticket_category'])) {
     // POST variables
     $category_id = intval($_POST['bulk_category']);
 
+    // Category is the source of truth for delivery method when it maps to one;
+    // same category for every ticket in this batch, so derive it once.
+    $derived_delivery_method = getTicketDeliveryMethodForCategory($mysqli, $category_id);
+    $delivery_method_sql_fragment = $derived_delivery_method !== null
+        ? ", ticket_delivery_method = '" . mysqli_real_escape_string($mysqli, $derived_delivery_method) . "'"
+        : '';
+
     // Assign Tech to Selected Tickets
     if (isset($_POST['ticket_ids'])) {
 
@@ -1499,7 +1521,7 @@ if (isset($_POST['bulk_edit_ticket_category'])) {
             $category_name = sanitizeInput(getFieldById('categories', $category_id, 'category_name'));
 
             // Update ticket
-            mysqli_query($mysqli, "UPDATE tickets SET ticket_category = '$category_id' WHERE ticket_id = $ticket_id");
+            mysqli_query($mysqli, "UPDATE tickets SET ticket_category = '$category_id'$delivery_method_sql_fragment WHERE ticket_id = $ticket_id");
 
             logAction("Ticket", "Edit", "$session_name updated the category on ticket $ticket_prefix$ticket_number - $ticket_subject from $previous_category_name to $category_name", $client_id, $ticket_id);
 
@@ -1992,6 +2014,8 @@ if (isset($_POST['bulk_add_asset_ticket'])) {
     $use_primary_contact = intval($_POST['use_primary_contact']);
     $ticket_template_id = intval($_POST['bulk_ticket_template_id']);
     $billable = intval($_POST['bulk_billable'] ?? 0);
+    $delivery_method = getTicketDeliveryMethodForCategory($mysqli, $category_id);
+    $delivery_method_sql = $delivery_method !== null ? "'" . mysqli_real_escape_string($mysqli, $delivery_method) . "'" : 'NULL';
 
     // Check to see if adding a ticket by template
     if($ticket_template_id) {
@@ -2051,7 +2075,7 @@ if (isset($_POST['bulk_add_asset_ticket'])) {
             //Generate a unique URL key for clients to access
             $url_key = randomString(32);
 
-            mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$config_ticket_prefix', ticket_number = $ticket_number, ticket_category = $category_id, ticket_subject = '$subject_asset_prepended', ticket_details = '$details', ticket_priority = '$priority', ticket_billable = $billable, ticket_status = $ticket_status, ticket_asset_id = $asset_id, ticket_created_by = $session_user_id, ticket_assigned_to = $assigned_to, ticket_url_key = '$url_key', ticket_client_id = $client_id, ticket_project_id = $project_id");
+            mysqli_query($mysqli, "INSERT INTO tickets SET ticket_prefix = '$config_ticket_prefix', ticket_number = $ticket_number, ticket_category = $category_id, ticket_subject = '$subject_asset_prepended', ticket_details = '$details', ticket_priority = '$priority', ticket_billable = $billable, ticket_status = $ticket_status, ticket_asset_id = $asset_id, ticket_created_by = $session_user_id, ticket_assigned_to = $assigned_to, ticket_url_key = '$url_key', ticket_client_id = $client_id, ticket_project_id = $project_id, ticket_delivery_method = $delivery_method_sql");
 
             $ticket_id = mysqli_insert_id($mysqli);
 

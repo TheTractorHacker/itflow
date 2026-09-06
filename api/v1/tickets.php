@@ -647,6 +647,12 @@ if ($method === 'POST' && $id === null) {
         if (!$cat_row) $category = 0;
     }
 
+    // Category is the source of truth for delivery method when it maps to one
+    // (see functions.php getTicketDeliveryMethodForCategory) so API-created
+    // tickets feed the same included-hours allowance tracking as the UI paths.
+    $delivery_method = getTicketDeliveryMethodForCategory($mysqli, $category);
+    $delivery_method_sql = $delivery_method !== null ? "'" . mysqli_real_escape_string($mysqli, $delivery_method) . "'" : 'NULL';
+
     // Auto-link to a matching asset for this client by hostname/asset name
     $asset_id = 0;
     if ($hostname && $client) {
@@ -701,8 +707,8 @@ if ($method === 'POST' && $id === null) {
     // bytes the previous escaped-then-interpolated INSERT did.
     $new_id = api_exec(
         "INSERT INTO tickets (ticket_prefix, ticket_subject, ticket_details, ticket_client_id, ticket_contact_id, ticket_priority,
-         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_contract_id, ticket_url_key, ticket_created_at, ticket_updated_at)
-         VALUES ('$prefix_esc', ?, ?, $client, $contact, '$priority', $status, $assigned, $created_by_sql, 'API', $next_num, $category, $asset_id, $contract_id_sql, '$url_key', NOW(), NOW())",
+         ticket_status, ticket_assigned_to, ticket_created_by, ticket_source, ticket_number, ticket_category, ticket_asset_id, ticket_contract_id, ticket_url_key, ticket_created_at, ticket_updated_at, ticket_delivery_method)
+         VALUES ('$prefix_esc', ?, ?, $client, $contact, '$priority', $status, $assigned, $created_by_sql, 'API', $next_num, $category, $asset_id, $contract_id_sql, '$url_key', NOW(), NOW(), $delivery_method_sql)",
         'ss',
         [$subject_raw, $details_raw]
     );

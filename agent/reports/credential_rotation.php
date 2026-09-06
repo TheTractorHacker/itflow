@@ -15,6 +15,7 @@ $passwords_not_rotated_sql = mysqli_query($mysqli,
         FROM credentials
         LEFT JOIN clients ON credential_client_id = client_id
         WHERE DATE(credential_password_changed_at) < DATE_SUB(CURDATE(), INTERVAL $days DAY)
+        $access_permission_query
         ORDER BY client_name"
 );
 
