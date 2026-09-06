@@ -46,10 +46,86 @@ if (!empty($config_theme_accent_custom) && preg_match('/^#[0-9A-Fa-f]{6}$/', $co
 // Effective dark mode: per-user preference wins; otherwise the company default applies.
 $effective_theme_dark = $user_config_theme_dark ? 1 : $config_theme_dark_default;
 
+// ----- Shell helper: custom-link icons -----
+// Custom links (admin/custom_link.php) store a BARE Font Awesome 5 name - "handshake",
+// "question-circle" - and the icon field is optional, so a link saved without one used
+// to emit class="fas fa-": a 0x0 <i> that punched a hole in the sidebar's icon column
+// and left an orphan chevron behind in the folded 4rem rail. Normalised once here for
+// the three places that render those links (includes/top_nav.php,
+// agent/includes/side_nav.php, admin/includes/side_nav.php) so they cannot drift:
+// tolerate a name typed WITH its "fa-" / "fas fa-" prefix, drop anything that is not
+// safe in a class attribute, and fall back to fa-link so the row always has an icon.
+// Takes the RAW column value - it does its own escaping by construction.
+function itflow_nav_icon_class($icon, $fallback = 'fa-link')
+{
+    $icon = strtolower(trim((string) $icon));
+    $icon = preg_replace('/^fa[bdlrs]?\s+/', '', $icon);      // "fas fa-cog" -> "fa-cog"
+    $icon = preg_replace('/^fa-/', '', $icon);                // "fa-cog"     -> "cog"
+    $icon = preg_replace('/[^a-z0-9-]/', '', $icon);          // class-attribute safe
+    return $icon === '' ? $fallback : 'fa-' . $icon;
+}
+
 ?>
 
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="<?= $effective_theme_dark ? 'dark' : 'light' ?>" data-accent="<?= nullable_htmlentities($config_theme) ?>">
+<?php
+/* ---------------------------------------------------------------------------
+   <html> attributes, and why each one is here.
+
+   data-bs-theme            Bootstrap 5 / Tabler colour mode. Tabler keys its
+                            entire dark palette off html[data-bs-theme="dark"],
+                            and css/itflow_design.css already declares its dark
+                            --if-* tokens on :root[data-bs-theme="dark"], so this
+                            single root-level trigger drives both. (body.dark-mode
+                            below is the app's older, non-equivalent trigger; it
+                            still drives --color-* in itflow_custom.css and is
+                            still read by the per-company accent block further
+                            down, so it is kept.)
+
+   data-accent              Per-company accent name. Pre-existing hook.
+
+   data-bs-layout="fluid"   Tabler ships:
+                              html[data-bs-layout=fluid] .container,
+                              html[data-bs-layout=fluid] [class^=container-],
+                              html[data-bs-layout=fluid] [class*=" container-"]
+                                  { max-width: 100% }
+                            The AdminLTE shell wrapped page content in
+                            .container-fluid (full bleed). The Tabler shell wraps
+                            it in .container-xl, which is capped at 1140/1320px.
+                            For a dense ops tool full of wide tables that cap is a
+                            regression, so this attribute restores exactly the old
+                            full-bleed behaviour using Tabler's own supported
+                            switch instead of a custom max-width override.
+                            Remove this attribute to get the centred, capped
+                            Tabler reading width instead - nothing else has to
+                            change.
+
+   data-bs-navbar-position  Tabler 1.5 ships a layout switcher implemented purely
+     ="vertical"            in CSS:
+                              html:not([data-bs-navbar-position=vertical])
+                                .page:has(> [class*=navbar-expand]:not(.navbar-vertical))
+                                > .navbar-vertical            { display: none }
+                              html[data-bs-navbar-position=vertical]
+                                .page:has(> .navbar-vertical)
+                                > [class*=navbar-expand]:not(.navbar-vertical)
+                                                              { display: none }
+                            i.e. if .page has BOTH a vertical sidebar and a
+                            horizontal navbar as DIRECT children, Tabler hides one
+                            of them. This app needs both, so the horizontal top
+                            navbar is deliberately rendered INSIDE .page-wrapper
+                            (see includes/top_nav.php + includes/inc_wrapper.php)
+                            where neither rule can reach it. Declaring the layout
+                            as vertical here is belt-and-braces: if markup ever
+                            drifts and a horizontal navbar does become a direct
+                            child of .page, the sidebar - the app's only complete
+                            navigation - survives rather than vanishing.
+   --------------------------------------------------------------------------- */
+?>
+<html lang="en"
+      data-bs-theme="<?= $effective_theme_dark ? 'dark' : 'light' ?>"
+      data-accent="<?= nullable_htmlentities($config_theme) ?>"
+      data-bs-layout="fluid"
+      data-bs-navbar-position="vertical">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -66,9 +142,12 @@ $effective_theme_dark = $user_config_theme_dark ? 1 : $config_theme_dark_default
     <!-- Font Awesome -->
     <link rel="stylesheet" href="/plugins/fontawesome-free/css/all.min.css">
 
-    <!-- Core stack: Bootstrap 5.3 + AdminLTE 4 -->
-    <link rel="stylesheet" href="/plugins/bootstrap5/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/plugins/adminlte4/css/adminlte.min.css">
+    <!-- Core stack: Tabler 1.5 (vendored, self-contained - zero @font-face, all url()
+         refs are inline data: SVGs). Tabler bundles its own Bootstrap 5 build, so
+         plugins/bootstrap5/css/bootstrap.min.css and plugins/adminlte4/css/adminlte.min.css
+         are both gone. bootstrap.bundle.min.js is deliberately KEPT (see footer.php):
+         only the CSS was replaced. -->
+    <link rel="stylesheet" href="/plugins/tabler/css/tabler.min.css">
 
     <!-- Vanilla plugin styles (BS5 flavor) -->
     <link rel="stylesheet" href="/plugins/tom-select/css/tom-select.bootstrap5.min.css">
@@ -77,15 +156,40 @@ $effective_theme_dark = $user_config_theme_dark ? 1 : $config_theme_dark_default
     <link rel="stylesheet" href="/plugins/toastr/toastr.min.css">
     <link rel="stylesheet" href="/plugins/intl-tel-input/css/intlTelInput.min.css">
 
-    <!-- Theme: BS5 bridge (maps BS vars -> Alga tokens) THEN the custom theme -->
+    <!-- Theme: BS5 bridge (self-hosted AdminLTE components + app shims) THEN the
+         custom theme THEN the design layer. -->
+    <!-- Compatibility shims. These were split out of css/itflow_bs5_bridge.css and
+         MUST be linked: 55 selectors the app still emits live only in these files
+         now, so without them .info-box, .small-box, .card-tools, .form-group,
+         .form-row, .input-group-prepend/-append, .btn-block and friends have no
+         styling at all under Tabler. Both load anywhere after tabler.min.css, and
+         both must precede css/itflow.bind-tabler.css (shim-adminlte's .small-box
+         .icon rule depends on winning against bind-tabler's .icon reset). -->
+    <link rel="stylesheet" href="/css/itflow.shim-bs4.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow.shim-bs4.css') ?>">
+    <link rel="stylesheet" href="/css/itflow.shim-adminlte.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow.shim-adminlte.css') ?>">
+
     <link rel="stylesheet" href="/css/itflow_bs5_bridge.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_bs5_bridge.css') ?>">
     <link rel="stylesheet" href="/css/itflow_custom.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_custom.css') ?>">
     <link rel="stylesheet" href="/css/itflow_design.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow_design.css') ?>">
 
+    <!-- --color-* -> --if-* alias. MUST come after BOTH itflow_custom.css (which
+         declares --color-*) and itflow_design.css (which declares --if-*): it is a
+         pure alias layer and linked any earlier it silently does nothing. Keeps the
+         ~500 existing var(--color-...) reads resolving to one source of truth, and
+         fixes card headers rendering a different grey than their own card body in
+         dark mode. -->
+    <link rel="stylesheet" href="/css/itflow.compat-color.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow.compat-color.css') ?>">
+
+    <!-- Token seam: maps this app's --if-* / --color-* tokens onto Tabler's --tblr-*.
+         MUST load after the design layer (so the mappings win) and BEFORE the
+         per-company accent block below (so a custom accent still overrides them). -->
+    <link rel="stylesheet" href="/css/itflow.bind-tabler.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow.bind-tabler.css') ?>">
+
     <!-- Per-company appearance customizer: recolor the CSS-variable theme from the chosen accent.
          $theme_accent_hex / $effective_theme_dark were resolved above (before <html>). This block
-         also pushes the accent straight into Bootstrap 5's own variables so BS5/AL4 components pick
-         it up, and is emitted AFTER itflow_bs5_bridge.css so it wins. -->
+         also pushes the accent straight into Bootstrap 5's own variables; css/itflow.bind-tabler.css
+         re-exports those onto --tblr-* so Tabler components pick the accent up too. Emitted LAST
+         so it wins. -->
     <?php if ($theme_accent_hex !== '' || !empty($config_theme_card_radius)): ?>
     <style nonce="<?php echo $csp_nonce; ?>">
     <?php if ($theme_accent_hex !== ''):
@@ -134,15 +238,99 @@ $effective_theme_dark = $user_config_theme_dark ? 1 : $config_theme_dark_default
     </style>
     <?php endif; ?>
 
+    <!-- Sidebar scroll affordance. The sidebar is position:fixed and #sidebar-menu is
+         its own scroll container, so a nav taller than the viewport (admin at 1100px:
+         1182px of items in a 1061px column) is cut flush at the column's bottom edge
+         with nothing to say so - scrolling the WINDOW moves none of it, and overlay
+         scrollbars, which is what current Chromium draws here, paint nothing at rest.
+         js/shell.js owns .has-scroll-start / .has-scroll-end and also scrolls the
+         current page's own entry into view on first paint; these two marks are the
+         visible half of that and are meaningless without it, which is why they live
+         with the rest of the shell rather than in a stylesheet.
+
+         Desktop only: below Tabler's navbar-expand-lg breakpoint the aside is not a
+         fixed full-height column and has no cut edge to mark. The gradient hangs off
+         the aside itself (already a containing block at position:fixed) so it adds no
+         new one - putting it on .container-fluid would have re-based the folded rail's
+         absolutely positioned flyouts. -->
+    <style nonce="<?php echo $csp_nonce; ?>">
+    @media (min-width: 992px) {
+        /* More nav below the fold: dissolve the last row into the sidebar. */
+        aside.navbar-vertical::after {
+            content: "";
+            position: absolute;
+            inset-inline: 0;
+            bottom: 0;
+            height: 3.5rem;
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity .15s ease-out;
+            background: linear-gradient(to top, var(--tblr-bg-surface) 35%, transparent);
+        }
+        aside.navbar-vertical.has-scroll-end::after { opacity: 1; }
+
+        /* More nav above the fold: lift the brand onto a shadow so the list reads as
+           running underneath it instead of starting mid-item. */
+        aside.navbar-vertical > .container-fluid > .navbar-brand {
+            position: relative;
+            z-index: 1;
+            transition: box-shadow .15s ease-out;
+        }
+        aside.navbar-vertical.has-scroll-start > .container-fluid > .navbar-brand {
+            box-shadow: 0 .75rem .75rem -.75rem rgba(0, 0, 0, .45);
+        }
+    }
+    </style>
+
     <!-- Scripts: jQuery kept as a coexistence shim for un-ported inline $() calls -->
     <script src="/plugins/jquery/jquery.min.js"></script>
     <script src="/plugins/toastr/toastr.min.js"></script>
 </head>
-<body class="
-    layout-fixed sidebar-expand-lg text-sm
-    accent-<?php echo nullable_htmlentities($config_theme); ?>
-    <?php if ($effective_theme_dark) echo 'dark-mode'; ?>
-">
-    <!-- AdminLTE 4 layout: app-wrapper > app-header + app-sidebar + app-main -->
-    <div class="app-wrapper">
+<?php
+/* ---------------------------------------------------------------------------
+   BODY CLASSES
 
+   Dropped (all AdminLTE 4 only, and all now dead):
+     layout-fixed        - AL4 grid layout modifier, no first-party consumer.
+     sidebar-expand-lg   - AL4 PushMenu read its responsive breakpoint out of
+                           getComputedStyle(body,'::before').content on this class,
+                           which only AL4's own CSS supplied. Both the CSS and the
+                           JS are gone in the same change, as they must be.
+     text-sm             - AL4 set 0.875rem here; Tabler's base font-size is
+                           already 0.875rem, so this is a no-op.
+
+   Kept (both still have live first-party consumers):
+     accent-<name>       - per-company accent hook.
+     dark-mode           - itflow_custom.css declares the dark --color-* token set
+                           on body.dark-mode, and the per-company accent block
+                           above targets body.dark-mode for its dark hover/soft
+                           variants. Removing it would silently break the accent
+                           in dark mode.
+   --------------------------------------------------------------------------- */
+?>
+<body class="accent-<?php echo nullable_htmlentities($config_theme); ?><?php if ($effective_theme_dark) echo ' dark-mode'; ?>">
+    <?php
+    /* -----------------------------------------------------------------------
+       TABLER SHELL - part 1 of 3. Opens ONE wrapper (.page). Closes nothing.
+
+         includes/header.php      opens  <html> <body> <div class="page">
+         includes/inc_wrapper.php opens  .page-wrapper > .page-body > .container-xl
+         includes/footer.php      closes container-xl / page-body / page-wrapper /
+                                  page, then </body></html>
+
+       Four structural levels below <body>, exactly as the AdminLTE shell had
+       (app-wrapper / app-main / app-content / container-fluid). Do not add or
+       remove a level here without changing footer.php AND guest/includes/inc_wrapper.php
+       in the same commit - 209 pages require includes/footer.php and none of them
+       would error, they would just render wrong.
+
+       .page's direct children, in DOM order, are:
+         1. the vertical sidebar  <aside class="navbar navbar-vertical navbar-expand-lg">
+            emitted by whichever side_nav include the page family uses
+         2. <div class="page-wrapper">
+       The horizontal top navbar is NOT a direct child of .page - see the
+       data-bs-navbar-position note above and includes/top_nav.php.
+       ----------------------------------------------------------------------- */
+    ?>
+    <div class="page">
