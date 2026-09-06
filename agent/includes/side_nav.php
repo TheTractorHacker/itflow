@@ -1,332 +1,339 @@
-<!-- Main Sidebar Container (AdminLTE 4). data-bs-theme="dark" keeps the sidebar dark in both app themes. -->
-<aside class="app-sidebar shadow d-print-none" data-bs-theme="dark">
+<?php
+// Current page, used below to (a) mark individual links active (unchanged,
+// pre-existing pattern) and (b) decide which collapsible section should
+// start expanded, so navigating never lands you inside a collapsed group
+// hiding the very page you're on.
+//
+// This map is the whole reason the sidebar does not bury the page you are on,
+// and it is resolved SERVER-SIDE: the correct group is emitted already open
+// (.show on the toggle + menu, .active on the <li>), so it is correct on the
+// first paint and stays correct even if js/shell.js has not run yet.
+$current_page = basename($_SERVER["PHP_SELF"]);
+$in_reports_section = (strpos($_SERVER["PHP_SELF"], '/agent/reports/') !== false);
 
-    <div class="sidebar-brand">
-        <a class="brand-link" href="/agent/dashboard.php">
-            <?php if (!empty($session_company_logo)) { ?>
-                <img src="/uploads/settings/<?php echo nullable_htmlentities($session_company_logo); ?>" class="brand-image" style="max-height:33px;width:auto;object-fit:contain;" alt="">
-            <?php } else { ?>
-                <div class="brand-image"><i class="fas fa-building fa-2x"></i></div>
-            <?php } ?>
-            <span class="brand-text"><?php echo nullable_htmlentities($session_company_name); ?></span>
-        </a>
-    </div>
+$section_pages = [
+    'organization'  => ['clients.php'],
+    'crm'           => ['pipeline.php', 'opportunities.php', 'campaigns.php', 'segments.php'],
+    'service_desk'  => ['tickets.php', 'ticket.php', 'recurring_tickets.php', 'csat.php', 'mail_requests.php'],
+    'work'          => ['projects.php', 'project_details.php', 'calendar.php'],
+    'billing'       => ['quotes.php', 'quote.php', 'invoices.php', 'invoice.php', 'recurring_invoices.php', 'recurring_invoice.php', 'revenues.php', 'products.php'],
+    'finance'       => ['payments.php', 'vendors.php', 'expenses.php', 'recurring_expenses.php', 'accounts.php', 'transfers.php', 'trips.php'],
+    'endpoint'      => ['rmm_dashboard.php', 'rmm_assets.php', 'rmm_asset.php', 'rmm_alerts.php', 'rmm_scripts.php', 'rmm_checks.php', 'network.php', 'firewalls.php'],
+    'backups'       => ['backups.php'],
+];
+$section_open = [];
+foreach ($section_pages as $key => $pages) {
+    $section_open[$key] = in_array($current_page, $pages, true);
+}
+?>
+<!-- Main Sidebar (Tabler vertical navbar).
+     data-bs-theme="dark" keeps the sidebar dark in both app themes, exactly as the
+     AdminLTE 4 shell did.
 
-    <!-- Sidebar -->
-    <div class="sidebar-wrapper">
+     Collapsible groups use Tabler's .nav-item.dropdown shape but deliberately carry
+     NO data-bs-toggle="dropdown": bootstrap.bundle.min.js would then wire them
+     itself and fight js/shell.js, which owns this toggle. The hook shell.js binds
+     is a.nav-link.dropdown-toggle[data-if-toggle="submenu"]; it flips .show on the
+     toggle and on its #id-matched .dropdown-menu sibling, .active on the parent
+     <li>, and aria-expanded on the toggle. -->
+<aside class="navbar navbar-vertical navbar-expand-lg d-print-none" data-bs-theme="dark">
+    <div class="container-fluid">
 
-        <!-- Sidebar Menu -->
-        <nav class="mt-2">
-            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" role="menu">
-                <li class="nav-item">
-                    <a href="/agent/dashboard.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "dashboard.php") { echo "active"; } ?>">
-                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                        <p>Dashboard</p>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="navbar-brand w-100">
+            <a href="/agent/dashboard.php" class="d-flex align-items-center gap-2 w-100 text-reset text-decoration-none" style="min-width:0;">
+                <?php if (!empty($session_company_logo)) { ?>
+                    <img src="/uploads/settings/<?php echo nullable_htmlentities($session_company_logo); ?>" style="max-height:33px;width:auto;object-fit:contain;" alt="">
+                <?php } else { ?>
+                    <i class="fas fa-building fa-lg"></i>
+                <?php } ?>
+                <span class="text-truncate" title="<?php echo nullable_htmlentities($session_company_name); ?>"><?php echo nullable_htmlentities($session_company_name); ?></span>
+            </a>
+        </div>
+
+        <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-2">
+
+                <li class="nav-item<?php if ($current_page == "dashboard.php") { echo " active"; } ?>">
+                    <a href="/agent/dashboard.php" class="nav-link<?php if ($current_page == "dashboard.php") { echo " active"; } ?>">
+                        <span class="nav-link-icon"><i class="fas fa-tachometer-alt"></i></span>
+                        <span class="nav-link-title">Dashboard</span>
                     </a>
                 </li>
+
                 <?php if (lookupUserPermission("module_rmm_alerts") >= 1) { ?>
-                <li class="nav-item">
-                    <a href="/agent/alerts.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "alerts.php") { echo "active"; } ?>">
-                        <i class="nav-icon fas fa-bell"></i>
-                        <p>
-                            Alerts
-                            <?php
-                            $num_central_alerts = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT
-                                (SELECT COUNT(*) FROM rmm_alerts WHERE status='new') +
-                                (SELECT COUNT(*) FROM comet_backup_alerts WHERE alert_status='new') AS c"))['c'] ?? 0);
-                            if ($num_central_alerts) { ?>
-                                <span class="right badge text-bg-danger" data-bs-toggle="tooltip" title="Open Alerts"><?php echo $num_central_alerts; ?></span>
-                            <?php } ?>
-                        </p>
+                <li class="nav-item<?php if ($current_page == "alerts.php") { echo " active"; } ?>">
+                    <a href="/agent/alerts.php" class="nav-link<?php if ($current_page == "alerts.php") { echo " active"; } ?>">
+                        <span class="nav-link-icon"><i class="fas fa-bell"></i></span>
+                        <span class="nav-link-title">Alerts</span>
+                        <?php
+                        $num_central_alerts = intval(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT
+                            (SELECT COUNT(*) FROM rmm_alerts WHERE status='new') +
+                            (SELECT COUNT(*) FROM comet_backup_alerts WHERE alert_status='new') AS c"))['c'] ?? 0);
+                        if ($num_central_alerts) { ?>
+                            <span class="ms-auto badge text-bg-danger" data-bs-toggle="tooltip" title="Open Alerts"><?php echo $num_central_alerts; ?></span>
+                        <?php } ?>
                     </a>
                 </li>
                 <?php } ?>
+
                 <?php if (lookupUserPermission("module_client") >= 1) { ?>
-                    <li class="nav-item">
-                        <a href="/agent/clients.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "clients.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-users"></i>
-                            <p>
-                                Clients
-                                <?php if ($num_active_clients) { ?>
-                                    <span class="right badge text-light" data-bs-toggle="tooltip" title="Active Clients"><?php echo $num_active_clients; ?></span>
-                                <?php } ?>
-                            </p>
+                <li class="nav-item dropdown mt-2<?php echo $section_open['organization'] ? ' active' : ''; ?>">
+                    <a href="#nav-group-organization" class="nav-link dropdown-toggle<?php echo $section_open['organization'] ? ' show' : ''; ?>" data-if-toggle="submenu" role="button" aria-controls="nav-group-organization" aria-expanded="<?php echo $section_open['organization'] ? 'true' : 'false'; ?>">
+                        <span class="nav-link-icon"><i class="fas fa-sitemap"></i></span>
+                        <span class="nav-link-title">Organization</span>
+                    </a>
+                    <div class="dropdown-menu<?php echo $section_open['organization'] ? ' show' : ''; ?>" id="nav-group-organization">
+                        <a href="/agent/clients.php" class="dropdown-item<?php if ($current_page == "clients.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-users"></i></span>
+                            <span class="text-truncate">Clients</span>
+                            <?php if ($num_active_clients) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Active Clients"><?php echo $num_active_clients; ?></span>
+                            <?php } ?>
                         </a>
-                    </li>
+                    </div>
+                </li>
                 <?php } ?>
 
                 <?php if (lookupUserPermission("module_sales") >= 1) { ?>
-                    <li class="nav-header mt-3">CRM</li>
-                    <li class="nav-item">
-                        <a href="/agent/pipeline.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "pipeline.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-stream"></i>
-                            <p>Pipeline</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/agent/opportunities.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "opportunities.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-funnel-dollar"></i>
-                            <p>Opportunities</p>
-                        </a>
-                    </li>
-                    <?php if (lookupUserPermission("module_client") >= 1) { ?>
-                    <li class="nav-item">
-                        <a href="/agent/clients.php?leads=1" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "clients.php" && isset($_GET['leads']) && $_GET['leads'] == 1) { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-bullhorn"></i>
-                            <p>Leads</p>
-                        </a>
-                    </li>
-                    <?php } ?>
-                    <li class="nav-item">
-                        <a href="/agent/campaigns.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "campaigns.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-paper-plane"></i>
-                            <p>Campaigns</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/agent/segments.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "segments.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-layer-group"></i>
-                            <p>Segments</p>
-                        </a>
-                    </li>
-                <?php } ?>
-
-                <?php if (lookupUserPermission("module_support") >= 1) { ?>
-                    <?php if ($config_module_enable_ticketing == 1) { ?>
-                        <li class="nav-header mt-3">SUPPORT</li>
-                        <li class="nav-item">
-                            <a href="/agent/tickets.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "tickets.php" || basename($_SERVER["PHP_SELF"]) == "ticket.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-life-ring"></i>
-                                <p>
-                                    Tickets
-                                    <?php if ($num_active_tickets) { ?>
-                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Open Tickets"><?php echo $num_active_tickets; ?></span>
-                                    <?php } ?>
-                                </p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/agent/recurring_tickets.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "recurring_tickets.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-redo-alt"></i>
-                                <p>
-                                    Recurring Tickets
-                                    <?php if ($num_recurring_tickets) { ?>
-                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Active Recurring Tickets"><?php echo $num_recurring_tickets; ?></span>
-                                    <?php } ?>
-                                </p>
-                            </a>
-                        </li>
-                        <?php if (!empty($config_ticket_csat_enable)) { ?>
-                        <li class="nav-item">
-                            <a href="/agent/csat.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "csat.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-star"></i>
-                                <p>CSAT Ratings</p>
-                            </a>
-                        </li>
-                        <?php } ?>
-                        <li class="nav-item">
-                            <a href="/agent/mail_requests.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "mail_requests.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-envelope-open-text"></i>
-                                <p>
-                                    Requests
-                                    <?php if ($num_mail_requests) { ?>
-                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Unknown-sender emails awaiting review"><?php echo $num_mail_requests; ?></span>
-                                    <?php } ?>
-                                </p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/agent/projects.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "projects.php" || basename($_SERVER["PHP_SELF"]) == "project_details.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-project-diagram"></i>
-                                <p>
-                                    Projects
-                                    <?php if ($num_active_projects) { ?>
-                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Open Projects"><?php echo $num_active_projects; ?></span>
-                                    <?php } ?>
-                                </p>
-                            </a>
-                        </li>
-                    <?php } ?>
-                <?php } ?>
-
-                <li class="nav-item">
-                    <a href="/agent/calendar.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "calendar.php") { echo "active"; } ?>">
-                        <i class="nav-icon fas fa-calendar-alt"></i>
-                        <p>Calendar</p>
+                <li class="nav-item dropdown mt-2<?php echo $section_open['crm'] ? ' active' : ''; ?>">
+                    <a href="#nav-group-crm" class="nav-link dropdown-toggle<?php echo $section_open['crm'] ? ' show' : ''; ?>" data-if-toggle="submenu" role="button" aria-controls="nav-group-crm" aria-expanded="<?php echo $section_open['crm'] ? 'true' : 'false'; ?>">
+                        <span class="nav-link-icon"><i class="fas fa-funnel-dollar"></i></span>
+                        <span class="nav-link-title">CRM</span>
                     </a>
+                    <div class="dropdown-menu<?php echo $section_open['crm'] ? ' show' : ''; ?>" id="nav-group-crm">
+                        <a href="/agent/pipeline.php" class="dropdown-item<?php if ($current_page == "pipeline.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-stream"></i></span>
+                            <span class="text-truncate">Pipeline</span>
+                        </a>
+                        <a href="/agent/opportunities.php" class="dropdown-item<?php if ($current_page == "opportunities.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-funnel-dollar"></i></span>
+                            <span class="text-truncate">Opportunities</span>
+                        </a>
+                        <a href="/agent/campaigns.php" class="dropdown-item<?php if ($current_page == "campaigns.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-paper-plane"></i></span>
+                            <span class="text-truncate">Campaigns</span>
+                        </a>
+                        <a href="/agent/segments.php" class="dropdown-item<?php if ($current_page == "segments.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-layer-group"></i></span>
+                            <span class="text-truncate">Segments</span>
+                        </a>
+                    </div>
+                </li>
+                <?php } ?>
+
+                <?php if (lookupUserPermission("module_support") >= 1 && $config_module_enable_ticketing == 1) { ?>
+                <li class="nav-item dropdown mt-2<?php echo $section_open['service_desk'] ? ' active' : ''; ?>">
+                    <a href="#nav-group-service-desk" class="nav-link dropdown-toggle<?php echo $section_open['service_desk'] ? ' show' : ''; ?>" data-if-toggle="submenu" role="button" aria-controls="nav-group-service-desk" aria-expanded="<?php echo $section_open['service_desk'] ? 'true' : 'false'; ?>">
+                        <span class="nav-link-icon"><i class="fas fa-life-ring"></i></span>
+                        <span class="nav-link-title">Service Desk</span>
+                        <?php if ($num_active_tickets) { ?>
+                            <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Open Tickets"><?php echo $num_active_tickets; ?></span>
+                        <?php } ?>
+                    </a>
+                    <div class="dropdown-menu<?php echo $section_open['service_desk'] ? ' show' : ''; ?>" id="nav-group-service-desk">
+                        <a href="/agent/tickets.php" class="dropdown-item<?php if ($current_page == "tickets.php" || $current_page == "ticket.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-life-ring"></i></span>
+                            <span class="text-truncate">Tickets</span>
+                            <?php if ($num_active_tickets) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Open Tickets"><?php echo $num_active_tickets; ?></span>
+                            <?php } ?>
+                        </a>
+                        <a href="/agent/recurring_tickets.php" class="dropdown-item<?php if ($current_page == "recurring_tickets.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-redo-alt"></i></span>
+                            <span class="text-truncate">Recurring Tickets</span>
+                            <?php if ($num_recurring_tickets) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Active Recurring Tickets"><?php echo $num_recurring_tickets; ?></span>
+                            <?php } ?>
+                        </a>
+                        <?php if (!empty($config_ticket_csat_enable)) { ?>
+                        <a href="/agent/csat.php" class="dropdown-item<?php if ($current_page == "csat.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-star"></i></span>
+                            <span class="text-truncate">CSAT Ratings</span>
+                        </a>
+                        <?php } ?>
+                        <a href="/agent/mail_requests.php" class="dropdown-item<?php if ($current_page == "mail_requests.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-envelope-open-text"></i></span>
+                            <span class="text-truncate">Requests</span>
+                            <?php if ($num_mail_requests) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Unknown-sender emails awaiting review"><?php echo $num_mail_requests; ?></span>
+                            <?php } ?>
+                        </a>
+                    </div>
+                </li>
+                <?php } ?>
+
+                <li class="nav-item dropdown mt-2<?php echo $section_open['work'] ? ' active' : ''; ?>">
+                    <a href="#nav-group-work" class="nav-link dropdown-toggle<?php echo $section_open['work'] ? ' show' : ''; ?>" data-if-toggle="submenu" role="button" aria-controls="nav-group-work" aria-expanded="<?php echo $section_open['work'] ? 'true' : 'false'; ?>">
+                        <span class="nav-link-icon"><i class="fas fa-calendar-alt"></i></span>
+                        <span class="nav-link-title">Work</span>
+                    </a>
+                    <div class="dropdown-menu<?php echo $section_open['work'] ? ' show' : ''; ?>" id="nav-group-work">
+                        <?php if (lookupUserPermission("module_support") >= 1 && $config_module_enable_ticketing == 1) { ?>
+                        <a href="/agent/projects.php" class="dropdown-item<?php if ($current_page == "projects.php" || $current_page == "project_details.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-project-diagram"></i></span>
+                            <span class="text-truncate">Projects</span>
+                            <?php if ($num_active_projects) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Open Projects"><?php echo $num_active_projects; ?></span>
+                            <?php } ?>
+                        </a>
+                        <?php } ?>
+                        <a href="/agent/calendar.php" class="dropdown-item<?php if ($current_page == "calendar.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-calendar-alt"></i></span>
+                            <span class="text-truncate">Calendar</span>
+                        </a>
+                    </div>
                 </li>
 
                 <?php if ($config_module_enable_kb == 1 && lookupUserPermission("module_kb") >= 1) { ?>
-                    <li class="nav-item">
-                        <a href="/agent/kb_articles.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "kb_articles.php" || basename($_SERVER["PHP_SELF"]) == "kb_article.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-book"></i>
-                            <p>Knowledge Base</p>
+                    <li class="nav-item<?php if ($current_page == "kb_articles.php" || $current_page == "kb_article.php") { echo " active"; } ?>">
+                        <a href="/agent/kb_articles.php" class="nav-link<?php if ($current_page == "kb_articles.php" || $current_page == "kb_article.php") { echo " active"; } ?>">
+                            <span class="nav-link-icon"><i class="fas fa-book"></i></span>
+                            <span class="nav-link-title">Knowledge Base</span>
                         </a>
                     </li>
                 <?php } ?>
 
                 <?php if ($config_module_enable_accounting == 1 && lookupUserPermission("module_sales") >= 1) { ?>
-                    <li class="nav-header mt-3">BILLING</li>
-                    <li class="nav-item">
-                        <a href="/agent/quotes.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "quotes.php" || basename($_SERVER["PHP_SELF"]) == "quote.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-comment-dollar"></i>
-                            <p>
-                                Quotes
-                                <?php if ($num_open_quotes) { ?>
-                                    <span class="right badge text-light" data-bs-toggle="tooltip" title="Active Quotes"><?php echo $num_open_quotes; ?></span>
-                                <?php } ?>
-                            </p>
+                <li class="nav-item dropdown mt-2<?php echo $section_open['billing'] ? ' active' : ''; ?>">
+                    <a href="#nav-group-billing" class="nav-link dropdown-toggle<?php echo $section_open['billing'] ? ' show' : ''; ?>" data-if-toggle="submenu" role="button" aria-controls="nav-group-billing" aria-expanded="<?php echo $section_open['billing'] ? 'true' : 'false'; ?>">
+                        <span class="nav-link-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                        <span class="nav-link-title">Billing</span>
+                    </a>
+                    <div class="dropdown-menu<?php echo $section_open['billing'] ? ' show' : ''; ?>" id="nav-group-billing">
+                        <a href="/agent/quotes.php" class="dropdown-item<?php if ($current_page == "quotes.php" || $current_page == "quote.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-comment-dollar"></i></span>
+                            <span class="text-truncate">Quotes</span>
+                            <?php if ($num_open_quotes) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Active Quotes"><?php echo $num_open_quotes; ?></span>
+                            <?php } ?>
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/agent/invoices.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "invoices.php" || basename($_SERVER["PHP_SELF"]) == "invoice.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-file-invoice"></i>
-                            <p>
-                                Invoices
-                                <?php if ($num_open_invoices) { ?>
-                                    <span class="right badge text-light" data-bs-toggle="tooltip" title="Open Invoices"><?php echo $num_open_invoices; ?></span>
-                                <?php } ?>
-                            </p>
+                        <a href="/agent/invoices.php" class="dropdown-item<?php if ($current_page == "invoices.php" || $current_page == "invoice.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-file-invoice"></i></span>
+                            <span class="text-truncate">Invoices</span>
+                            <?php if ($num_open_invoices) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Open Invoices"><?php echo $num_open_invoices; ?></span>
+                            <?php } ?>
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/agent/recurring_invoices.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "recurring_invoices.php" || basename($_SERVER["PHP_SELF"]) == "recurring_invoice.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-redo-alt"></i>
-                            <p>
-                                Recurring Invoices
-                                <?php if ($num_recurring_invoices) { ?>
-                                    <span class="right badge text-light" data-bs-toggle="tooltip" title="Active Recurring Invoices"><?php echo $num_recurring_invoices; ?></span>
-                                <?php } ?>
-                            </p>
+                        <a href="/agent/recurring_invoices.php" class="dropdown-item<?php if ($current_page == "recurring_invoices.php" || $current_page == "recurring_invoice.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-redo-alt"></i></span>
+                            <span class="text-truncate">Recurring Invoices</span>
+                            <?php if ($num_recurring_invoices) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Active Recurring Invoices"><?php echo $num_recurring_invoices; ?></span>
+                            <?php } ?>
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/agent/revenues.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "revenues.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-hand-holding-usd"></i>
-                            <p>Revenues</p>
+                        <a href="/agent/revenues.php" class="dropdown-item<?php if ($current_page == "revenues.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-hand-holding-usd"></i></span>
+                            <span class="text-truncate">Revenues</span>
                         </a>
-                    </li>
-                <?php } ?>
-
-                <?php if (($config_module_enable_accounting == 1 || $config_module_enable_ticket_charges == 1) && lookupUserPermission("module_sales") >= 1) { ?>
-                    <?php if ($config_module_enable_accounting != 1) { ?>
-                    <li class="nav-header mt-3">BILLING</li>
-                    <?php } ?>
-                    <li class="nav-item">
-                        <a href="/agent/products.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "products.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-box-open"></i>
-                            <p>Products</p>
+                        <a href="/agent/products.php" class="dropdown-item<?php if ($current_page == "products.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-box-open"></i></span>
+                            <span class="text-truncate">Products</span>
                         </a>
-                    </li>
+                    </div>
+                </li>
+                <?php } elseif ($config_module_enable_ticket_charges == 1 && lookupUserPermission("module_sales") >= 1) { ?>
+                <li class="nav-item<?php if ($current_page == "products.php") { echo " active"; } ?>">
+                    <a href="/agent/products.php" class="nav-link<?php if ($current_page == "products.php") { echo " active"; } ?>">
+                        <span class="nav-link-icon"><i class="fas fa-box-open"></i></span>
+                        <span class="nav-link-title">Products</span>
+                    </a>
+                </li>
                 <?php } ?>
 
                 <?php if ($config_module_enable_accounting == 1) { ?>
-                    <li class="nav-header mt-3">FINANCE</li>
-                    <?php if (lookupUserPermission("module_financial") >= 1) { ?>
-                        <li class="nav-item">
-                            <a href="/agent/payments.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "payments.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-credit-card"></i>
-                                <p>Payments</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/agent/vendors.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "vendors.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-building"></i>
-                                <p>Vendors</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/agent/expenses.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "expenses.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-shopping-cart"></i>
-                                <p>Expenses</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/agent/recurring_expenses.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "recurring_expenses.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-redo-alt"></i>
-                                <p>
-                                    Recurring Expenses
-                                    <?php if ($num_recurring_expenses) { ?>
-                                        <span class="right badge text-light" data-bs-toggle="tooltip" title="Recurring Expenses"><?php echo $num_recurring_expenses; ?></span>
-                                    <?php } ?>
-                                </p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/agent/accounts.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "accounts.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-piggy-bank"></i>
-                                <p>Accounts</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/agent/transfers.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "transfers.php") { echo "active"; } ?>">
-                                <i class="nav-icon fas fa-exchange-alt"></i>
-                                <p>Transfers</p>
-                            </a>
-                        </li>
-                        <?php if ($config_module_enable_payroll && $session_is_admin) { ?>
-                        <li class="nav-item">
-                            <a href="/admin/payroll_periods.php" class="nav-link">
-                                <i class="nav-icon fas fa-money-check"></i>
-                                <p>Payroll</p>
-                            </a>
-                        </li>
-                        <?php } ?>
-                    <?php } ?>
-                    <li class="nav-item">
-                        <a href="/agent/trips.php" class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == "trips.php") { echo "active"; } ?>">
-                            <i class="nav-icon fas fa-route"></i>
-                            <p>Trips</p>
+                <li class="nav-item dropdown mt-2<?php echo $section_open['finance'] ? ' active' : ''; ?>">
+                    <a href="#nav-group-finance" class="nav-link dropdown-toggle<?php echo $section_open['finance'] ? ' show' : ''; ?>" data-if-toggle="submenu" role="button" aria-controls="nav-group-finance" aria-expanded="<?php echo $section_open['finance'] ? 'true' : 'false'; ?>">
+                        <span class="nav-link-icon"><i class="fas fa-piggy-bank"></i></span>
+                        <span class="nav-link-title">Finance</span>
+                    </a>
+                    <div class="dropdown-menu<?php echo $section_open['finance'] ? ' show' : ''; ?>" id="nav-group-finance">
+                        <?php if (lookupUserPermission("module_financial") >= 1) { ?>
+                        <a href="/agent/payments.php" class="dropdown-item<?php if ($current_page == "payments.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-credit-card"></i></span>
+                            <span class="text-truncate">Payments</span>
                         </a>
-                    </li>
+                        <a href="/agent/vendors.php" class="dropdown-item<?php if ($current_page == "vendors.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-building"></i></span>
+                            <span class="text-truncate">Vendors</span>
+                        </a>
+                        <a href="/agent/expenses.php" class="dropdown-item<?php if ($current_page == "expenses.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-shopping-cart"></i></span>
+                            <span class="text-truncate">Expenses</span>
+                        </a>
+                        <a href="/agent/recurring_expenses.php" class="dropdown-item<?php if ($current_page == "recurring_expenses.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-redo-alt"></i></span>
+                            <span class="text-truncate">Recurring Expenses</span>
+                            <?php if ($num_recurring_expenses) { ?>
+                                <span class="ms-auto badge text-light" data-bs-toggle="tooltip" title="Recurring Expenses"><?php echo $num_recurring_expenses; ?></span>
+                            <?php } ?>
+                        </a>
+                        <a href="/agent/accounts.php" class="dropdown-item<?php if ($current_page == "accounts.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-piggy-bank"></i></span>
+                            <span class="text-truncate">Accounts</span>
+                        </a>
+                        <a href="/agent/transfers.php" class="dropdown-item<?php if ($current_page == "transfers.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-exchange-alt"></i></span>
+                            <span class="text-truncate">Transfers</span>
+                        </a>
+                        <?php if ($config_module_enable_payroll && $session_is_admin) { ?>
+                        <a href="/admin/payroll_periods.php" class="dropdown-item">
+                            <span class="dropdown-item-icon"><i class="fas fa-money-check"></i></span>
+                            <span class="text-truncate">Payroll</span>
+                        </a>
+                        <?php } ?>
+                        <?php } ?>
+                        <a href="/agent/trips.php" class="dropdown-item<?php if ($current_page == "trips.php") { echo " active"; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-route"></i></span>
+                            <span class="text-truncate">Trips</span>
+                        </a>
+                    </div>
+                </li>
                 <?php } ?>
 
                 <?php if ($config_module_enable_rmm && lookupUserPermission("module_rmm") >= 1) { ?>
-                <li class="nav-header mt-3">RMM</li>
-                <li class="nav-item">
-                    <a href="/agent/rmm_dashboard.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_dashboard.php') { echo 'active'; } ?>">
-                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                        <p>RMM Dashboard</p>
+                <li class="nav-item dropdown mt-2<?php echo $section_open['endpoint'] ? ' active' : ''; ?>">
+                    <a href="#nav-group-endpoints" class="nav-link dropdown-toggle<?php echo $section_open['endpoint'] ? ' show' : ''; ?>" data-if-toggle="submenu" role="button" aria-controls="nav-group-endpoints" aria-expanded="<?php echo $section_open['endpoint'] ? 'true' : 'false'; ?>">
+                        <span class="nav-link-icon"><i class="fas fa-desktop"></i></span>
+                        <span class="nav-link-title">Endpoints</span>
                     </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/agent/rmm_assets.php" class="nav-link <?php if (in_array(basename($_SERVER['PHP_SELF']), ['rmm_assets.php','rmm_asset.php'])) { echo 'active'; } ?>">
-                        <i class="nav-icon fas fa-desktop"></i>
-                        <p>Assets</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/agent/rmm_alerts.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_alerts.php') { echo 'active'; } ?>">
-                        <i class="nav-icon fas fa-bell"></i>
-                        <p>RMM Alerts</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/agent/rmm_scripts.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_scripts.php') { echo 'active'; } ?>">
-                        <i class="nav-icon fas fa-code"></i>
-                        <p>Scripts</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/agent/rmm_checks.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'rmm_checks.php') { echo 'active'; } ?>">
-                        <i class="nav-icon fas fa-heartbeat"></i>
-                        <p>Check Policies</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/agent/network.php" class="nav-link <?php if (in_array(basename($_SERVER['PHP_SELF']), ['network.php','firewalls.php'])) { echo 'active'; } ?>">
-                        <i class="nav-icon fas fa-network-wired"></i>
-                        <p>Network</p>
-                    </a>
+                    <div class="dropdown-menu<?php echo $section_open['endpoint'] ? ' show' : ''; ?>" id="nav-group-endpoints">
+                        <a href="/agent/rmm_dashboard.php" class="dropdown-item<?php if ($current_page == 'rmm_dashboard.php') { echo ' active'; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-tachometer-alt"></i></span>
+                            <span class="text-truncate">RMM Dashboard</span>
+                        </a>
+                        <a href="/agent/rmm_assets.php" class="dropdown-item<?php if (in_array($current_page, ['rmm_assets.php','rmm_asset.php'])) { echo ' active'; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-desktop"></i></span>
+                            <span class="text-truncate">Assets</span>
+                        </a>
+                        <a href="/agent/rmm_alerts.php" class="dropdown-item<?php if ($current_page == 'rmm_alerts.php') { echo ' active'; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-bell"></i></span>
+                            <span class="text-truncate">RMM Alerts</span>
+                        </a>
+                        <a href="/agent/rmm_scripts.php" class="dropdown-item<?php if ($current_page == 'rmm_scripts.php') { echo ' active'; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-code"></i></span>
+                            <span class="text-truncate">Scripts</span>
+                        </a>
+                        <a href="/agent/rmm_checks.php" class="dropdown-item<?php if ($current_page == 'rmm_checks.php') { echo ' active'; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-heartbeat"></i></span>
+                            <span class="text-truncate">Check Policies</span>
+                        </a>
+                        <a href="/agent/network.php" class="dropdown-item<?php if (in_array($current_page, ['network.php','firewalls.php'])) { echo ' active'; } ?>">
+                            <span class="dropdown-item-icon"><i class="fas fa-network-wired"></i></span>
+                            <span class="text-truncate">Network</span>
+                        </a>
+                    </div>
                 </li>
                 <?php } ?>
 
                 <?php if (!empty($config_comet_enabled) && lookupUserPermission("module_rmm") >= 1) { ?>
-                <li class="nav-header mt-3">Backups</li>
-                <li class="nav-item">
-                    <a href="/agent/backups.php" class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'backups.php') { echo 'active'; } ?>">
-                        <i class="nav-icon fas fa-cloud-upload-alt"></i>
-                        <p>Dashboard</p>
+                <li class="nav-item mt-3<?php if ($current_page == 'backups.php') { echo ' active'; } ?>">
+                    <a href="/agent/backups.php" class="nav-link<?php if ($current_page == 'backups.php') { echo ' active'; } ?>">
+                        <span class="nav-link-icon"><i class="fas fa-cloud-upload-alt"></i></span>
+                        <span class="nav-link-title">Backups</span>
                     </a>
                 </li>
                 <?php } ?>
@@ -334,19 +341,19 @@
                 <?php if (lookupUserPermission("module_client") >= 1) { ?>
                 <li class="nav-item mt-3">
                     <a href="/agent/contacts.php" class="nav-link">
-                        <i class="fas fa-users nav-icon"></i>
-                        <p>Client Overview</p>
-                        <i class="fas fa-angle-right nav-icon float-end"></i>
+                        <span class="nav-link-icon"><i class="fas fa-users"></i></span>
+                        <span class="nav-link-title">Client Overview</span>
+                        <i class="fas fa-angle-right ms-auto"></i>
                     </a>
                 </li>
                 <?php } ?>
 
                 <?php if (lookupUserPermission("module_reporting") >= 1) { ?>
-                    <li class="nav-item mt-3">
-                        <a href="/agent/reports/" class="nav-link">
-                            <i class="fas fa-chart-line nav-icon"></i>
-                            <p>Reports</p>
-                            <i class="fas fa-angle-right nav-icon float-end"></i>
+                    <li class="nav-item<?php echo (lookupUserPermission("module_client") >= 1) ? '' : ' mt-3'; ?><?php if ($in_reports_section) { echo " active"; } ?>">
+                        <a href="/agent/reports/" class="nav-link<?php if ($in_reports_section) { echo " active"; } ?>">
+                            <span class="nav-link-icon"><i class="fas fa-chart-line"></i></span>
+                            <span class="nav-link-title">Reports</span>
+                            <i class="fas fa-angle-right ms-auto"></i>
                         </a>
                     </li>
                 <?php } ?>
@@ -359,7 +366,7 @@
                 while ($row = mysqli_fetch_assoc($sql_custom_links)) {
                     $custom_link_name = nullable_htmlentities($row['custom_link_name']);
                     $custom_link_uri = sanitize_url($row['custom_link_uri']);
-                    $custom_link_icon = nullable_htmlentities($row['custom_link_icon']);
+                    $custom_link_icon_class = itflow_nav_icon_class($row['custom_link_icon']);
                     $custom_link_new_tab = intval($row['custom_link_new_tab']);
                     if ($custom_link_new_tab == 1) {
                         $target = "target='_blank' rel='noopener noreferrer'";
@@ -369,23 +376,20 @@
 
                     ?>
 
-                <li class="nav-item">
-                    <a href="<?php echo $custom_link_uri; ?>" <?php echo $target; ?> class="nav-link <?php if (basename($_SERVER["PHP_SELF"]) == basename($custom_link_uri)) { echo "active"; } ?>">
-                        <i class="fas fa-<?php echo $custom_link_icon; ?> nav-icon"></i>
-                        <p><?php echo $custom_link_name; ?></p>
-                        <i class="fas fa-angle-right nav-icon float-end"></i>
+                <li class="nav-item<?php if ($current_page == basename($custom_link_uri)) { echo " active"; } ?>">
+                    <a href="<?php echo $custom_link_uri; ?>" <?php echo $target; ?> class="nav-link<?php if ($current_page == basename($custom_link_uri)) { echo " active"; } ?>">
+                        <span class="nav-link-icon"><i class="fas <?php echo $custom_link_icon_class; ?>"></i></span>
+                        <span class="nav-link-title"><?php echo $custom_link_name; ?></span>
+                        <i class="fas fa-angle-right ms-auto"></i>
                     </a>
                 </li>
 
                 <?php } ?>
 
             </ul>
-        </nav>
-        <!-- /.sidebar-menu -->
-
-        <div class="mb-3"></div>
+            <div class="mb-3"></div>
+        </div>
+        <!-- /.navbar-collapse -->
 
     </div>
-    <!-- /.sidebar-wrapper -->
-
 </aside>
