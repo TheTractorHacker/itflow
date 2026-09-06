@@ -68,7 +68,16 @@ $fields = mysqli_query($mysqli, "SELECT f.*, COALESCE(r.response_value,'') AS re
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $tmpl_name ?> — <?= $client_name ?></title>
-    <link rel="stylesheet" href="/plugins/bootstrap5/css/bootstrap.min.css">
+    <!-- Core stack: Tabler 1.5 (vendored, self-contained). Tabler bundles its own
+         Bootstrap 5 build, so plugins/bootstrap5/css/bootstrap.min.css is gone.
+         This page never used any AdminLTE-only class (.small-box, .info-box,
+         .card-tools...), so itflow.shim-adminlte.css is not needed here - only
+         the BS4-compat shim, for .form-group and .btn-block below, which moved
+         out of itflow_bs5_bridge.css during the Tabler port and would otherwise
+         render unstyled on this page (it never went through the shared
+         includes/header.php chain that other pages get the shim from). -->
+    <link rel="stylesheet" href="/plugins/tabler/css/tabler.min.css">
+    <link rel="stylesheet" href="/css/itflow.shim-bs4.css">
     <link rel="stylesheet" href="/css/itflow_bs5_bridge.css">
     <link rel="stylesheet" href="/plugins/fontawesome-free/css/all.min.css">
     <style>
