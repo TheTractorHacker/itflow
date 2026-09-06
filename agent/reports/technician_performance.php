@@ -261,9 +261,6 @@ $cap_hours_per_tech = $report['capacity']['capacity_hours_per_tech'];
 
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 document.addEventListener('DOMContentLoaded', function () {
-    Chart.defaults.font.family = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
-    Chart.defaults.color = '#292b2c';
-
     // BILLABLE vs NON-BILLABLE HOURS (stacked bar per technician)
     (function () {
         var ctx = document.getElementById("tpHoursChart");

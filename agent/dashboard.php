@@ -1379,10 +1379,6 @@ if ($user_config_dashboard_technical_enable == 1) {
 
 <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
 document.addEventListener('DOMContentLoaded', function () {
-    // Bootstrap-like defaults for Chart.js v4
-    Chart.defaults.font.family = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
-    Chart.defaults.color = '#292b2c';
-
     // CASH FLOW
     (function () {
         var ctx = document.getElementById("cashFlow");
