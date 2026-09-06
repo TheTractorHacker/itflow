@@ -437,10 +437,10 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
         <?php } ?>
         <div class="<?= $client_url ? 'col-12' : 'col-lg-10' ?>">
 
-    <div class="row mb-3">
+    <div class="row g-3 mb-3">
         <?php
         $_stats = [
-            ['label' => 'All Tickets',  'value' => $total_tickets_all,           'href' => '?' . $client_url,                                            'icon' => 'fa-list', 'color' => '#64748B', 'rgb' => '100,116,139'],
+            ['label' => 'All Tickets',  'value' => $total_tickets_all,           'href' => '?' . $client_url,                                            'icon' => 'fa-list', 'color' => '#475569', 'rgb' => '71,85,105'],
             ['label' => 'Unassigned',   'value' => $total_tickets_unassigned,    'href' => '?' . $client_url . 'assigned=unassigned',                    'icon' => 'fa-user-slash', 'color' => '#F59E0B', 'rgb' => '245,158,11'],
             ['label' => 'Unresolved',   'value' => $total_tickets_open,          'href' => '?' . $client_url . 'status=Open',                            'icon' => 'fa-exclamation-circle', 'color' => '#3B82F6', 'rgb' => '59,130,246'],
             ['label' => 'Due Today',    'value' => $total_tickets_due_today,     'href' => '?' . $client_url . 'status=Open&due_today=1', 'active' => isset($_GET['due_today']), 'icon' => 'fa-clock', 'color' => '#D97706', 'rgb' => '217,119,6'],
@@ -450,7 +450,7 @@ $sql_ticket_tags_filter = mysqli_query($mysqli, "SELECT * FROM tags WHERE tag_ty
         ];
         foreach ($_stats as $_stat) {
         ?>
-        <div class="col">
+        <div class="col-6 col-md-4 col-xl">
             <a class="ticket-stat-box <?= !empty($_stat['active']) ? 'active' : '' ?>" href="<?= $_stat['href'] ?>" style="--stat-color: <?= $_stat['color'] ?>; --stat-color-rgb: <?= $_stat['rgb'] ?>;">
                 <span class="ticket-stat-icon"><i class="fas fa-fw <?= $_stat['icon'] ?>"></i></span>
                 <span>

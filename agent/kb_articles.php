@@ -138,11 +138,25 @@ if (isset($kb_groups['Uncategorized'])) {
         <hr>
 
         <?php if ($num_rows[0] == 0) { ?>
-            <p class="text-secondary text-center py-4">No articles found.</p>
+            <div class="kb-empty">
+                <i class="fas fa-book"></i>
+                No articles found.
+                <?php if (lookupUserPermission("module_kb") >= 2) { ?>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary ajax-modal" data-modal-size="lg" data-modal-url="modals/kb_article/kb_article_add.php<?php if (isset($client_id)) { echo "?client_id=$client_id"; } ?>">
+                        <i class="fas fa-plus me-2"></i>New Article
+                    </button>
+                </div>
+                <?php } ?>
+            </div>
         <?php } ?>
 
         <?php foreach ($kb_groups as $group_name => $articles) { ?>
-            <h5 class="mt-3 mb-3"><i class="fas fa-fw fa-folder text-secondary me-2"></i><?= nullable_htmlentities($group_name) ?></h5>
+            <div class="kb-chapter">
+                <span class="kb-chapter-icon"><i class="fas fa-fw fa-folder"></i></span>
+                <span class="kb-chapter-name"><?= nullable_htmlentities($group_name) ?></span>
+                <span class="kb-chapter-count"><?= count($articles) ?> article<?= count($articles) == 1 ? '' : 's' ?></span>
+            </div>
             <div class="row">
                 <?php foreach ($articles as $row) {
                     $kb_article_id = intval($row['kb_article_id']);
@@ -164,15 +178,15 @@ if (isset($kb_groups['Uncategorized'])) {
                     }
                 ?>
                     <div class="col-md-4 mb-4">
-                        <div class="card h-100">
+                        <div class="card kb-article-card">
                             <div class="card-body">
                                 <h5 class="card-title">
-                                    <a class="text-dark" href="<?= $kb_article_url ?>"><?= $kb_article_title ?></a>
+                                    <a href="<?= $kb_article_url ?>"><?= $kb_article_title ?></a>
                                 </h5>
-                                <p class="card-text text-secondary small"><?= nullable_htmlentities($kb_article_preview) ?></p>
+                                <p class="card-text"><?= nullable_htmlentities($kb_article_preview) ?></p>
                             </div>
                             <div class="card-footer d-flex align-items-center justify-content-between bg-white">
-                                <div>
+                                <div class="kb-article-meta">
                                     <?php if ($kb_article_client_id == 0) { ?>
                                         <span class="badge text-bg-info">Central</span>
                                     <?php } else { ?>
@@ -183,7 +197,7 @@ if (isset($kb_groups['Uncategorized'])) {
                                     <?php } else { ?>
                                         <i class="fas fa-fw fa-eye-slash text-muted" data-bs-toggle="tooltip" title="Hidden from client portal"></i>
                                     <?php } ?>
-                                    <small class="text-secondary ms-1"><?= nullable_htmlentities(date('M j, Y', strtotime($kb_article_updated_at))) ?></small>
+                                    <span><?= nullable_htmlentities(date('M j, Y', strtotime($kb_article_updated_at))) ?></span>
                                 </div>
                                 <div class="dropdown dropleft text-center">
                                     <button class="btn btn-secondary btn-sm" data-bs-toggle="dropdown" data-boundary="window">

@@ -66,11 +66,14 @@ if ($row) {
     </li>
 </ol>
 
-<div class="card">
-    <div class="card-body prettyContent">
-        <h3><?php echo $kb_article_title; ?></h3>
-        <p class="text-muted"><small>Last updated: <?php echo date('M j, Y', strtotime($kb_article_updated_at)); ?></small></p>
-        <hr>
+<div class="card kb-reader-card">
+    <div class="card-header">
+        <div class="h4 mb-0"><?php echo $kb_article_title; ?></div>
+        <div class="kb-reader-meta">
+            <span><i class="far fa-fw fa-clock me-1"></i>Updated <?php echo date('M j, Y', strtotime($kb_article_updated_at)); ?></span>
+        </div>
+    </div>
+    <div class="card-body prettyContent kb-prose">
         <?php echo $kb_article_content; ?>
     </div>
 </div>

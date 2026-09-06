@@ -797,7 +797,13 @@ body.dark-mode .content-wrapper small.text-muted {
 .ticket-alga-theme .ticket-sidebar-compact .card-header .card-title {
     font-size: .8rem;
     font-weight: 600;
-    color: var(--color-text-muted);
+    /* Full-contrast ink, not --color-text-muted: this row is now a real click
+       target (see below), and a washed-out gray reads as disabled/secondary
+       text rather than "click to expand". Hierarchy vs. the always-open Tier 1
+       cards above still comes through via the smaller font-size, not a dimmer
+       color. Icon stays --color-text-muted (untouched) so only the label itself
+       gets the contrast bump. */
+    color: var(--color-text);
     border-radius: 4px;
     transition: color .1s ease-out;
 }

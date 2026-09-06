@@ -76,11 +76,19 @@ $sql_attachments = mysqli_query(
     <div class="row">
 
         <div class="col-md-9">
-            <div class="card">
+            <div class="card kb-reader-card">
                 <div class="card-header">
                     <div class="h4 mb-0"><?php echo $kb_article_title; ?></div>
+                    <div class="kb-reader-meta">
+                        <?php if ($kb_article_client_id == 0) { ?>
+                            <span class="badge text-bg-info">Central</span>
+                        <?php } else { ?>
+                            <span class="badge text-bg-secondary"><?php echo $kb_article_client_name; ?></span>
+                        <?php } ?>
+                        <span><i class="far fa-fw fa-clock me-1"></i>Updated <?php echo nullable_htmlentities(date('M d, Y', strtotime($kb_article_updated_at))); ?></span>
+                    </div>
                 </div>
-                <div class="card-body prettyContent">
+                <div class="card-body prettyContent kb-prose">
                     <?php echo $kb_article_content; ?>
                 </div>
             </div>

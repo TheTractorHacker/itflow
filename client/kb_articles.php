@@ -67,11 +67,18 @@ if (isset($kb_groups['Uncategorized'])) {
         </form>
 
         <?php if (empty($kb_groups)) { ?>
-            <p class="text-muted text-center py-4">No articles found.</p>
+            <div class="kb-empty">
+                <i class="fas fa-book"></i>
+                No articles found.
+            </div>
         <?php } ?>
 
         <?php foreach ($kb_groups as $group_name => $articles) { ?>
-            <h5 class="mt-3 mb-3"><i class="fas fa-fw fa-folder text-secondary me-2"></i><?= nullable_htmlentities($group_name) ?></h5>
+            <div class="kb-chapter">
+                <span class="kb-chapter-icon"><i class="fas fa-fw fa-folder"></i></span>
+                <span class="kb-chapter-name"><?= nullable_htmlentities($group_name) ?></span>
+                <span class="kb-chapter-count"><?= count($articles) ?> article<?= count($articles) == 1 ? '' : 's' ?></span>
+            </div>
             <div class="row">
                 <?php foreach ($articles as $row) {
                     $kb_article_id = intval($row['kb_article_id']);
@@ -86,7 +93,7 @@ if (isset($kb_groups['Uncategorized'])) {
                     }
                 ?>
                     <div class="col-md-4 mb-4">
-                        <div class="card h-100">
+                        <div class="card kb-article-card">
                             <div class="card-body">
                                 <h5 class="card-title">
                                     <a href="kb_article.php?id=<?= $kb_article_id ?>"><?= $kb_article_title ?></a>
@@ -94,10 +101,10 @@ if (isset($kb_groups['Uncategorized'])) {
                                         <span class="badge text-bg-info ms-2">Central</span>
                                     <?php } ?>
                                 </h5>
-                                <p class="card-text text-muted small"><?= nullable_htmlentities($kb_article_preview) ?></p>
+                                <p class="card-text"><?= nullable_htmlentities($kb_article_preview) ?></p>
                             </div>
                             <div class="card-footer d-flex align-items-center justify-content-between bg-white">
-                                <small class="text-muted"><?= date('M j, Y', strtotime($kb_article_updated_at)) ?></small>
+                                <span class="kb-article-meta"><?= date('M j, Y', strtotime($kb_article_updated_at)) ?></span>
                                 <a href="kb_article.php?id=<?= $kb_article_id ?>" class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-eye"></i> View
                                 </a>
