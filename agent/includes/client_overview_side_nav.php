@@ -2,6 +2,15 @@
 // Badge Counts
 // UNCHANGED from the AdminLTE-generation version of this file: same queries, same
 // $access_permission_query scoping, same variable names.
+//
+// THESE COUNTS ARE COMPANY-WIDE ON PURPOSE. Every query below joins clients and
+// is scoped only by $access_permission_query (what this user may see), never by a
+// single client_id - this sidebar is only ever included when the URL carries NO
+// client_id (see agent/includes/inc_client_overview_all.php and the else-branch of
+// agent/{contacts,contact_details,assets,asset_details,networks,services}.php).
+// Do not "fix" them into per-client numbers: the per-client rail is
+// agent/includes/client_side_nav.php, which gets its counts from
+// agent/includes/inc_all_client.php and scopes every one of them to $client_id.
 
 $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT('contact_id') AS num FROM contacts LEFT JOIN clients ON contact_client_id = client_id WHERE contact_archived_at IS NULL AND client_archived_at IS NULL $access_permission_query"));
 $num_contacts = $row['num'];
@@ -34,13 +43,34 @@ $num_software = $row['num'];
 $current_page = basename($_SERVER["PHP_SELF"]);
 
 ?>
-<!-- Client-Overview Sidebar (Tabler vertical navbar).
+<!-- Company-wide Sidebar (Tabler vertical navbar).
      data-bs-theme="dark" keeps the sidebar dark in both app themes, exactly as the
      AdminLTE shell did.
 
-     Was AdminLTE 3's aside.main-sidebar > div.sidebar > ul.nav-sidebar with
-     data-widget="treeview" (a widget with no handler - there are no submenus here,
-     so nothing was lost). Now the same Tabler shape the agent/admin sidebars use:
+     WHAT THIS RAIL IS, AND WHY THERE ARE TWO OF THEM
+     ------------------------------------------------
+     This app has two secondary rails over the same record types, and they are two
+     SCOPES, not two designs:
+
+       agent/includes/client_side_nav.php   ONE CLIENT. Included from
+           inc_all_client.php, i.e. only when the URL carries a client_id. Every
+           href carries that client_id, every count is scoped to it, and the brand
+           names the client.
+
+       agent/includes/client_overview_side_nav.php  (this file)  COMPANY-WIDE.
+           Included from inc_client_overview_all.php, i.e. only when the URL has NO
+           client_id. No href carries a client_id and every count spans every
+           client the user may see.
+
+     This rail used to call itself "Client Overview" and back-link to the clients
+     list, so walking contacts.php -> contact_details.php?client_id=20 looked like
+     the SAME client redrawing itself with a different, shorter set of items. It
+     was never a client map at all; it was the company-wide map wearing a client's
+     label. The brand below now states the scope ("Company-wide"), and the item
+     order/grouping matches client_side_nav.php exactly, so the two rails read as
+     one system seen at two scopes.
+
+     Markup shape is the one every migrated sidebar uses:
 
        aside.navbar.navbar-vertical.navbar-expand-lg > .container-fluid
          > button.navbar-toggler + .navbar-brand + .collapse.navbar-collapse#sidebar-menu
@@ -58,13 +88,30 @@ $current_page = basename($_SERVER["PHP_SELF"]);
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- Brand area. The back link keeps its own .section-nav-back styling from
-             css/itflow_bs5_bridge.css, so the brand box contributes no padding of its
-             own (p-0) and lets the link fill it (w-100). -->
-        <div class="navbar-brand p-0 w-100">
-            <a class="section-nav-back" href="clients.php">
-                <i class="fas fa-arrow-left"></i> Client Overview
+        <!-- Brand area: the same stacked shape client_side_nav.php uses - the same
+             "All Clients" back link over an identity block - so the ONLY thing that
+             differs between the two rails is the value in the identity slot: a
+             client's name and type there, the "Company-wide" scope here. Both keep
+             their existing .client-nav-back / .client-nav-header / .client-nav-avatar
+             styling from css/itflow_bs5_bridge.css, so the brand box contributes no
+             padding of its own (p-0) and lets the two children fill it
+             (w-100 + flex-column + align-items-stretch).
+
+             The identity block is a <div>, not an <a>: it is a scope label, not a
+             destination. There is no per-client page to send it to. -->
+        <div class="navbar-brand p-0 w-100 flex-column align-items-stretch">
+
+            <a class="client-nav-back" href="/agent/clients.php">
+                <i class="fas fa-arrow-left"></i> All Clients
             </a>
+
+            <div class="client-nav-header" title="These lists span every client you can see">
+                <span class="client-nav-avatar"><i class="fas fa-sitemap"></i></span>
+                <span class="client-nav-identity">
+                    <span class="client-nav-name">Company-wide</span>
+                </span>
+            </div>
+
         </div>
 
         <div class="collapse navbar-collapse" id="sidebar-menu">
@@ -72,7 +119,7 @@ $current_page = basename($_SERVER["PHP_SELF"]);
 
                 <?php  if (lookupUserPermission("module_support") >= 1) { ?>
                     <li class="nav-item<?php if ($current_page == "contacts.php" || $current_page == "contact_details.php") { echo " active"; } ?>">
-                        <a href="contacts.php" class="nav-link<?php if ($current_page == "contacts.php" || $current_page == "contact_details.php") { echo " active"; } ?>">
+                        <a href="/agent/contacts.php" class="nav-link<?php if ($current_page == "contacts.php" || $current_page == "contact_details.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-address-book"></i></span>
                             <span class="nav-link-title">Contacts</span>
                             <?php
@@ -82,7 +129,7 @@ $current_page = basename($_SERVER["PHP_SELF"]);
                         </a>
                     </li>
                     <li class="nav-item<?php if ($current_page == "locations.php") { echo " active"; } ?>">
-                        <a href="locations.php" class="nav-link<?php if ($current_page == "locations.php") { echo " active"; } ?>">
+                        <a href="/agent/locations.php" class="nav-link<?php if ($current_page == "locations.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-map-marker-alt"></i></span>
                             <span class="nav-link-title">Locations</span>
                             <?php
@@ -91,8 +138,10 @@ $current_page = basename($_SERVER["PHP_SELF"]);
                             <?php } ?>
                         </a>
                     </li>
-                    <li class="nav-item<?php if ($current_page == "assets.php") { echo " active"; } ?>">
-                        <a href="assets.php" class="nav-link<?php if ($current_page == "assets.php") { echo " active"; } ?>">
+                    <li class="nav-item nav-section-title">DOCUMENTATION</li>
+
+                    <li class="nav-item<?php if ($current_page == "assets.php" || $current_page == "asset_details.php") { echo " active"; } ?>">
+                        <a href="/agent/assets.php" class="nav-link<?php if ($current_page == "assets.php" || $current_page == "asset_details.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-desktop"></i></span>
                             <span class="nav-link-title">Assets</span>
                             <?php
@@ -102,7 +151,7 @@ $current_page = basename($_SERVER["PHP_SELF"]);
                         </a>
                     </li>
                     <li class="nav-item<?php if ($current_page == "software.php") { echo " active"; } ?>">
-                        <a href="software.php" class="nav-link<?php if ($current_page == "software.php") { echo " active"; } ?>">
+                        <a href="/agent/software.php" class="nav-link<?php if ($current_page == "software.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-cube"></i></span>
                             <span class="nav-link-title">Licenses</span>
                             <?php
@@ -112,7 +161,7 @@ $current_page = basename($_SERVER["PHP_SELF"]);
                         </a>
                     </li>
                     <li class="nav-item<?php if ($current_page == "credentials.php") { echo " active"; } ?>">
-                        <a href="credentials.php" class="nav-link<?php if ($current_page == "credentials.php") { echo " active"; } ?>">
+                        <a href="/agent/credentials.php" class="nav-link<?php if ($current_page == "credentials.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-key"></i></span>
                             <span class="nav-link-title">Credentials</span>
                             <?php
@@ -122,7 +171,7 @@ $current_page = basename($_SERVER["PHP_SELF"]);
                         </a>
                     </li>
                     <li class="nav-item<?php if ($current_page == "networks.php") { echo " active"; } ?>">
-                        <a href="networks.php" class="nav-link<?php if ($current_page == "networks.php") { echo " active"; } ?>">
+                        <a href="/agent/networks.php" class="nav-link<?php if ($current_page == "networks.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-network-wired"></i></span>
                             <span class="nav-link-title">Networks</span>
                             <?php
@@ -132,7 +181,7 @@ $current_page = basename($_SERVER["PHP_SELF"]);
                         </a>
                     </li>
                     <li class="nav-item<?php if ($current_page == "certificates.php") { echo " active"; } ?>">
-                        <a href="certificates.php" class="nav-link<?php if ($current_page == "certificates.php") { echo " active"; } ?>">
+                        <a href="/agent/certificates.php" class="nav-link<?php if ($current_page == "certificates.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-lock"></i></span>
                             <span class="nav-link-title">Certificates</span>
                             <?php
@@ -142,7 +191,7 @@ $current_page = basename($_SERVER["PHP_SELF"]);
                         </a>
                     </li>
                     <li class="nav-item<?php if ($current_page == "domains.php") { echo " active"; } ?>">
-                        <a href="domains.php" class="nav-link<?php if ($current_page == "domains.php") { echo " active"; } ?>">
+                        <a href="/agent/domains.php" class="nav-link<?php if ($current_page == "domains.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-globe"></i></span>
                             <span class="nav-link-title">Domains</span>
                             <?php
@@ -152,7 +201,7 @@ $current_page = basename($_SERVER["PHP_SELF"]);
                         </a>
                     </li>
                     <li class="nav-item<?php if ($current_page == "services.php") { echo " active"; } ?>">
-                        <a href="services.php" class="nav-link<?php if ($current_page == "services.php") { echo " active"; } ?>">
+                        <a href="/agent/services.php" class="nav-link<?php if ($current_page == "services.php") { echo " active"; } ?>">
                             <span class="nav-link-icon"><i class="fas fa-stream"></i></span>
                             <span class="nav-link-title">Services</span>
                             <?php
