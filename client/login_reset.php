@@ -206,8 +206,9 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
    The reset logic above (token verification, hash_equals, mail queue, logging)
    and the two form branches below are untouched - this is a shell swap.
-   .btn-block and .input-group-append are self-hosted in css/itflow_bs5_bridge.css
-   (lines ~248 and ~262), not AdminLTE, so the inputs and buttons need no edit.
+   .btn-block and .input-group-append now come from css/itflow.shim-bs4.css (they
+   moved out of itflow_bs5_bridge.css - see that file's own "WHAT MOVED OUT"
+   comment), which is why that stylesheet is linked below alongside tabler.min.css.
    --------------------------------------------------------------------------- */
 ?>
 <html lang="en">
@@ -239,6 +240,12 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
          plugins/bootstrap5/css/bootstrap.min.css and
          plugins/adminlte4/css/adminlte.min.css are both gone. -->
     <link rel="stylesheet" href="../plugins/tabler/css/tabler.min.css">
+
+    <!-- Compatibility shim: .form-group, .input-group-prepend/-append and
+         .btn-block below have no styling under Tabler without it. This page only
+         needs the BS4-selector shim, not the AdminLTE one - it has no
+         .info-box/.small-box/.card-tools markup. -->
+    <link rel="stylesheet" href="../css/itflow.shim-bs4.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/css/itflow.shim-bs4.css') ?>">
 
     <!-- Theme: BS5 bridge (self-hosted components + app shims) THEN the custom
          theme THEN the design layer. -->
