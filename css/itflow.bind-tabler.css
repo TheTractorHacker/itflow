@@ -143,9 +143,23 @@
     --tblr-navbar-hover-color: #ffffff;
     --tblr-bg-surface: #2b3038;
     --tblr-border-color: rgba(255, 255, 255, .08);
+    /* Tabler's OWN vertical-navbar active-item rule
+       (.navbar-expand-lg .navbar-nav .nav-item.active > .nav-link, in
+       tabler.min.css) reads --tblr-navbar-active-bg, not --tblr-primary, and
+       at 6 chained classes it outranks the simpler .nav-link.active override
+       below - so leaving this token unset meant every active sidebar item
+       silently fell back to Tabler's own near-invisible default instead of
+       the app's accent colour, no matter what that override rule said. This
+       is the token Tabler's rule actually reads, so set it directly instead
+       of fighting the specificity. */
+    --tblr-navbar-active-bg: var(--tblr-primary);
     background-color: #2b3038;
     color: #c2c7d0;
 }
+/* Belt-and-suspenders for any active .nav-link that doesn't match Tabler's
+   specific .nav-item.active > .nav-link shape above (e.g. the active class
+   landing on the link itself with a different ancestor chain) - the token
+   fix above is what actually renders in this app's own markup today. */
 [data-bs-theme="dark"] .navbar-vertical .nav-link.active,
 .navbar-vertical[data-bs-theme="dark"] .nav-link.active {
     background-color: var(--tblr-primary);
