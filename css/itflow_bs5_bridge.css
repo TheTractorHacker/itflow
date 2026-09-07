@@ -423,6 +423,25 @@
        client name instead of sitting in its own row. */
     border-bottom: 1px solid rgba(255, 255, 255, .16);
 }
+/* This is a real overlap fix, not just cosmetic breathing room. For the
+   two-row client/section brand (back-link + identity block), the combined
+   content height (measured: 134.19px) is taller than .navbar-brand's own
+   flex-computed box (measured: 122.31px, ~12px short) - overflow:visible
+   lets the identity block render past its own container's bottom edge, but
+   .collapse.navbar-collapse (the next sibling, holding this .navbar-nav)
+   starts flowing from where the container's box ACTUALLY ends, not where its
+   overflowing content visually ends. So without this, the nav list's own top
+   edge sits ~12px inside the still-rendering identity block - the active
+   item's solid-colour pill was overlapping real estate the client name/avatar
+   were still occupying, not merely sitting close to it. margin (not padding)
+   so it does not fight Bootstrap's .pt-lg-2 utility
+   (`padding-top:.5rem!important` on .navbar-nav) - this adds on top of it -
+   and it is unconditional, not lg-gated, so the gap exists below the lg
+   breakpoint too, where .pt-lg-2 contributes nothing. The ~12px chosen here
+   is not a coincidence: measure before changing this value again. */
+.navbar-vertical .navbar-nav {
+    margin-top: .75rem;
+}
 .client-nav-avatar {
     flex-shrink: 0;
     width: 2.25rem;
