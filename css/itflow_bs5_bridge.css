@@ -414,7 +414,14 @@
     width: 100%;
     padding: .85rem 1rem;
     text-decoration: none;
-    border-bottom: 1px solid var(--if-chrome-border);
+    /* Deliberately NOT --if-chrome-border (rgba(255,255,255,.08), tuned for
+       continuing the header's own hairline - see .client-nav-back above): at
+       .08 opacity this line all but disappears against the dark sidebar, so
+       the identity block (client name/avatar) read as fused into the nav
+       list right below it - most visible where the first item is also the
+       active one, whose highlight pill then looked like it grew out of the
+       client name instead of sitting in its own row. */
+    border-bottom: 1px solid rgba(255, 255, 255, .16);
 }
 .client-nav-avatar {
     flex-shrink: 0;
