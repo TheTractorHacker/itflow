@@ -128,6 +128,20 @@
     <!-- Scripts: jQuery kept as a coexistence shim; toastr for alert feedback -->
     <script src="/plugins/jquery/jquery.min.js"></script>
     <script src="/plugins/toastr/toastr.min.js"></script>
+    <!-- Toast options - see includes/header.php for the full rationale (motion-layer
+         entrance fights toastr's default fadeIn unless show is handed to CSS). -->
+    <script nonce="<?php echo $csp_nonce; ?>">
+    if (window.toastr) {
+        toastr.options = {
+            "closeButton": false, "debug": false, "newestOnTop": false,
+            "progressBar": false, "positionClass": "toast-top-center",
+            "preventDuplicates": false, "onclick": null,
+            "showDuration": "0",   "showEasing": "linear", "showMethod": "show",
+            "hideDuration": "160", "hideEasing": "linear", "hideMethod": "fadeOut",
+            "timeOut": "5000", "extendedTimeOut": "1000"
+        };
+    }
+    </script>
 
 </head>
 <?php

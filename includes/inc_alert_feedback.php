@@ -9,23 +9,9 @@ if (!empty($_SESSION['alert_message'])) {
 
     <script type="text/javascript" nonce="<?php echo htmlspecialchars($csp_nonce ?? '', ENT_QUOTES); ?>">
 
-        toastr.options = {
-            "closeButton": false,
-            "debug": false,
-            "newestOnTop": false,
-            "progressBar": false,
-            "positionClass": "toast-top-center",
-            "preventDuplicates": false,
-            "onclick": null,
-            "showDuration": "300",
-            "hideDuration": "1000",
-            "timeOut": "5000",
-            "extendedTimeOut": "1000",
-            "showEasing": "swing",
-            "hideEasing": "linear",
-            "showMethod": "fadeIn",
-            "hideMethod": "fadeOut"
-        }
+        /* Options are set once, in includes/header.php / guest/includes/guest_header.php,
+           so every toast path shares them - including the AJAX ones, which never
+           reached this file. */
 
         toastr[<?php echo json_encode($_SESSION['alert_type']); ?>](<?php echo json_encode($_SESSION['alert_message']); ?>)
 
