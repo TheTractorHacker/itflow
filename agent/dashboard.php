@@ -765,8 +765,7 @@ if ($user_config_dashboard_technical_enable == 1) {
     $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(ticket_id) AS c FROM tickets WHERE ticket_closed_at IS NOT NULL AND YEAR(ticket_closed_at) = $year"));
     $tickets_resolved_year = intval($r['c']);
 
-    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ROUND(AVG(TIMESTAMPDIFF(HOUR, ticket_created_at, ticket_closed_at)),1) AS avg_h FROM tickets WHERE ticket_closed_at IS NOT NULL AND YEAR(ticket_closed_at) = $year"));
-    $avg_resolution_hours = floatval($r['avg_h']);
+    $avg_resolution_hours = getAvgResolutionTimeHours($mysqli, $year);
 
     // Resolved by technician for selected year
     $sql_resolved_by_tech = mysqli_query($mysqli, "SELECT user_name, COUNT(ticket_id) AS c FROM tickets LEFT JOIN users ON ticket_assigned_to = user_id WHERE ticket_closed_at IS NOT NULL AND YEAR(ticket_closed_at) = $year AND ticket_assigned_to > 0 GROUP BY user_name ORDER BY c DESC LIMIT 8");
@@ -944,6 +943,7 @@ if ($user_config_dashboard_technical_enable == 1) {
             <div class="icon"><i class="fa fa-check-double"></i></div>
         </a>
 
+        <?php if ($config_dashboard_avg_resolution_enable) { ?>
         <div class="small-box bg-info">
             <div class="inner">
                 <h3><?php echo $avg_resolution_hours > 0 ? $avg_resolution_hours . 'h' : 'N/A'; ?></h3>
@@ -951,6 +951,7 @@ if ($user_config_dashboard_technical_enable == 1) {
             </div>
             <div class="icon"><i class="fa fa-stopwatch"></i></div>
         </div>
+        <?php } ?>
     </div>
 
     <div class="dash-charts mb-3">
