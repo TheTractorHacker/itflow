@@ -6256,3 +6256,24 @@ if (LATEST_DATABASE_VERSION > CURRENT_DATABASE_VERSION) {
 
         mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.52'");
     }
+
+    if (CURRENT_DATABASE_VERSION == '2.6.52') {
+        // Holiday catalog (Admin > Ticketing > Holidays): persisted reference
+        // data, separate from sla_holidays (which calendar observes which
+        // dates) on purpose - editing/deleting a catalog entry must never
+        // silently change a calendar that already copied a date in.
+        mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `holidays` (
+            `holiday_id` int(11) NOT NULL AUTO_INCREMENT,
+            `holiday_country` varchar(200) NOT NULL,
+            `holiday_year` int(4) NOT NULL,
+            `holiday_date` date NOT NULL,
+            `holiday_name` varchar(150) NOT NULL,
+            `holiday_is_custom` tinyint(1) NOT NULL DEFAULT 0,
+            `holiday_created_by` int(11) NOT NULL DEFAULT 0,
+            `holiday_created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            PRIMARY KEY (`holiday_id`),
+            KEY `idx_holidays_country_year` (`holiday_country`,`holiday_year`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        mysqli_query($mysqli, "UPDATE `settings` SET `config_current_database_version` = '2.6.53'");
+    }

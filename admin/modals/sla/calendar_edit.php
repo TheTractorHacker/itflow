@@ -1,7 +1,12 @@
 <?php
 require_once '../../../includes/modal_header.php';
+require_once '../../../includes/holiday_functions.php';
 
 $calendar_id = intval($_GET['id']);
+
+// Company's configured country (Admin > Settings > Company) sorts the
+// catalog picker below so the relevant country's holidays are at the top.
+$company_country = sanitizeInput(mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT company_country FROM companies WHERE company_id = 1"))['company_country'] ?? '');
 
 $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM sla_business_hours WHERE calendar_id = $calendar_id LIMIT 1"));
 if (!$row) { exit('Calendar not found'); }
@@ -23,10 +28,22 @@ while ($pr = mysqli_fetch_assoc($pres)) {
     }
 }
 
-// Existing holidays
+// Existing holidays already on this calendar
 $holidays = [];
 $hres = mysqli_query($mysqli, "SELECT holiday_id, holiday_date, holiday_name FROM sla_holidays WHERE calendar_id = $calendar_id ORDER BY holiday_date");
 while ($hr = mysqli_fetch_assoc($hres)) { $holidays[] = $hr; }
+$used_dates = array_column($holidays, 'holiday_date');
+
+// Catalog entries (Admin > Ticketing > Holidays) not already added to this
+// calendar - the company's own country sorts first, everything else follows
+// by date, so the relevant options are right at the top of the picker.
+$catalog_holidays = [];
+$company_country_esc = mysqli_real_escape_string($mysqli, $company_country);
+$catres = mysqli_query($mysqli, "SELECT holiday_id, holiday_date, holiday_name, holiday_country FROM holidays ORDER BY (holiday_country = '$company_country_esc') DESC, holiday_date ASC");
+while ($catr = mysqli_fetch_assoc($catres)) {
+    if (in_array($catr['holiday_date'], $used_dates, true)) { continue; }
+    $catalog_holidays[] = $catr;
+}
 
 ob_start();
 ?>
@@ -130,21 +147,62 @@ ob_start();
         </ul>
     <?php } ?>
 
-    <form action="post.php" method="post" autocomplete="off" class="form-row align-items-end">
+    <p class="small text-secondary mb-2">
+        <i class="fas fa-fw fa-flag me-1"></i>Company country: <strong><?php echo $company_country !== '' ? nullable_htmlentities($company_country) : 'not set'; ?></strong>
+        &nbsp;&mdash;&nbsp;<a href="../holidays.php" target="_blank">Manage the holiday catalog <i class="fas fa-external-link-alt fa-xs"></i></a>
+    </p>
+
+    <form action="post.php" method="post" autocomplete="off" class="form-row align-items-end" id="addSlaHolidayForm">
         <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?>">
         <input type="hidden" name="calendar_id" value="<?php echo $calendar_id; ?>">
+
+        <div class="form-group col-sm-8 mb-2">
+            <label class="small">Holiday</label>
+            <select class="form-control form-control-sm" name="catalog_holiday_id" id="catalogHolidaySelect">
+                <?php if (empty($catalog_holidays)) { ?>
+                    <option value="0">No catalog holidays available &mdash; enter a custom one</option>
+                <?php } else { ?>
+                    <?php foreach ($catalog_holidays as $ch) { ?>
+                        <option value="<?php echo intval($ch['holiday_id']); ?>">
+                            <?php echo date('M j, Y', strtotime($ch['holiday_date'])); ?> &mdash; <?php echo nullable_htmlentities($ch['holiday_name']); ?> (<?php echo nullable_htmlentities($ch['holiday_country']); ?>)
+                        </option>
+                    <?php } ?>
+                    <option value="0">+ Enter a custom holiday&hellip;</option>
+                <?php } ?>
+            </select>
+        </div>
         <div class="form-group col-sm-4 mb-2">
-            <label class="small">Date</label>
-            <input type="date" class="form-control form-control-sm" name="holiday_date" required>
-        </div>
-        <div class="form-group col-sm-5 mb-2">
-            <label class="small">Name</label>
-            <input type="text" class="form-control form-control-sm" name="holiday_name" placeholder="e.g. Christmas Day" maxlength="150">
-        </div>
-        <div class="form-group col-sm-3 mb-2">
             <button type="submit" name="add_sla_holiday" class="btn btn-secondary btn-sm btn-block"><i class="fas fa-plus me-1"></i>Add</button>
         </div>
+
+        <div class="form-group col-sm-4 mb-2" id="customHolidayDateWrap" hidden>
+            <label class="small">Date</label>
+            <input type="date" class="form-control form-control-sm" name="holiday_date" id="customHolidayDate">
+        </div>
+        <div class="form-group col-sm-8 mb-2" id="customHolidayNameWrap" hidden>
+            <label class="small">Name</label>
+            <input type="text" class="form-control form-control-sm" name="holiday_name" id="customHolidayName" placeholder="e.g. Company Shutdown Day" maxlength="150">
+        </div>
     </form>
+
+    <script nonce="<?= htmlspecialchars($csp_nonce ?? '') ?>">
+    (function () {
+        var select = document.getElementById('catalogHolidaySelect');
+        var dateWrap = document.getElementById('customHolidayDateWrap');
+        var nameWrap = document.getElementById('customHolidayNameWrap');
+        var dateInput = document.getElementById('customHolidayDate');
+        function syncCustomFields() {
+            var isCustom = select.value === '0';
+            dateWrap.hidden = !isCustom;
+            nameWrap.hidden = !isCustom;
+            if (dateInput) { dateInput.required = isCustom; }
+        }
+        if (select) {
+            select.addEventListener('change', syncCustomFields);
+            syncCustomFields();
+        }
+    })();
+    </script>
 </div>
 
 <?php

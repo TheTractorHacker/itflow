@@ -123,14 +123,30 @@ if (isset($_POST['add_sla_holiday'])) {
     validateCSRFToken($_POST['csrf_token']);
 
     $calendar_id = intval($_POST['calendar_id']);
-    $holiday_name = sanitizeInput($_POST['holiday_name'] ?? '');
-    $holiday_date_raw = $_POST['holiday_date'] ?? '';
-    $d = DateTime::createFromFormat('Y-m-d', $holiday_date_raw);
-    if ($d === false) {
-        flash_alert("Invalid holiday date", 'error');
-        redirect();
+    $catalog_holiday_id = intval($_POST['catalog_holiday_id'] ?? 0);
+
+    if ($catalog_holiday_id > 0) {
+        // Picked from the holiday catalog (Admin > Ticketing > Holidays) -
+        // copy its date/name in, rather than referencing the catalog row by
+        // id, so later editing/deleting that catalog entry never silently
+        // changes what this calendar already has configured.
+        $catalog_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT holiday_date, holiday_name FROM holidays WHERE holiday_id = $catalog_holiday_id"));
+        if (!$catalog_row) {
+            flash_alert("That catalog holiday no longer exists", 'error');
+            redirect();
+        }
+        $holiday_date = $catalog_row['holiday_date'];
+        $holiday_name = sanitizeInput($catalog_row['holiday_name']);
+    } else {
+        $holiday_name = sanitizeInput($_POST['holiday_name'] ?? '');
+        $holiday_date_raw = $_POST['holiday_date'] ?? '';
+        $d = DateTime::createFromFormat('Y-m-d', $holiday_date_raw);
+        if ($d === false) {
+            flash_alert("Invalid holiday date", 'error');
+            redirect();
+        }
+        $holiday_date = $d->format('Y-m-d');
     }
-    $holiday_date = $d->format('Y-m-d');
 
     mysqli_query($mysqli, "INSERT INTO sla_holidays SET calendar_id = $calendar_id, holiday_date = '$holiday_date', holiday_name = '$holiday_name'");
 
