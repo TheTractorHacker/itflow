@@ -1362,6 +1362,17 @@ if ($updates->current_version !== $updates->latest_version) {
 $config_backup_auto_enabled = intval($settings_row['config_backup_auto_enabled'] ?? 0);
 $config_backup_frequency    = $settings_row['config_backup_frequency'] ?? 'daily';
 $config_backup_retain_count = max(1, intval($settings_row['config_backup_retain_count'] ?? 7));
+// Backup > Remote Storage (S3-compatible) - loaded here rather than via
+// includes/load_global_settings.php since cron.php builds $settings_row
+// itself; backup_upload_to_s3() (admin/post/backup.php) reads these as globals.
+$config_backup_s3_enabled    = intval($settings_row['config_backup_s3_enabled'] ?? 0);
+$config_backup_s3_endpoint   = $settings_row['config_backup_s3_endpoint'] ?? '';
+$config_backup_s3_region     = $settings_row['config_backup_s3_region'] ?? 'us-east-1';
+$config_backup_s3_bucket     = $settings_row['config_backup_s3_bucket'] ?? '';
+$config_backup_s3_access_key = $settings_row['config_backup_s3_access_key'] ?? '';
+$config_backup_s3_secret_key = decryptSetting($settings_row['config_backup_s3_secret_key'] ?? '');
+$config_backup_s3_path_style = intval($settings_row['config_backup_s3_path_style'] ?? 1);
+$config_backup_s3_prefix     = $settings_row['config_backup_s3_prefix'] ?? '';
 
 if ($config_backup_auto_enabled) {
     $backup_dir   = dirname(__DIR__) . '/backups';
@@ -1397,6 +1408,9 @@ if ($config_backup_auto_enabled) {
         prune_backups($backup_dir, $config_backup_retain_count);
         logApp('Backup', 'info', "Auto-backup completed: {$result['name']}");
         appNotify('Backup', "Auto-backup saved: {$result['name']}", '/admin/backup.php');
+        if (function_exists('backup_upload_to_s3')) {
+            backup_upload_to_s3($result['path'], $result['name']);
+        }
     }
 }
 

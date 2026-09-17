@@ -30,7 +30,7 @@ function fmt_age(?int $ts): string {
 <div class="card card-dark mb-3" style="border-top:3px solid #007bff;">
     <div class="card-body">
         <div class="row align-items-center">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <h4 class="mb-1"><i class="fas fa-database me-2 text-primary"></i>System Backup</h4>
                 <p class="text-muted mb-0 small">
                     <?php if ($last_backup): ?>
@@ -41,19 +41,19 @@ function fmt_age(?int $ts): string {
                     <?php endif; ?>
                 </p>
             </div>
-            <div class="col-md-6 text-md-right mt-3 mt-md-0">
+            <?php // Middle third matches the "Last Auto" tile's own col-4 in the
+            // stat row below, so the buttons land centered directly above it. ?>
+            <div class="col-md-4 text-center mt-3 mt-md-0 text-nowrap">
                 <a href="post.php?backup_download_fresh=1&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                   class="btn btn-primary me-2">
-                    <i class="fas fa-download me-2"></i>Download Backup
+                   class="btn btn-sm btn-primary me-1">
+                    <i class="fas fa-download me-1"></i>Download Backup
                 </a>
                 <a href="post.php?backup_save=1&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                   class="btn btn-outline-secondary">
-                    <i class="fas fa-save me-2"></i>Save to Server
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-save me-1"></i>Save to Server
                 </a>
-                <p class="text-muted mt-2 mb-0" style="font-size:11px;">
-                    Download streams to your browser. Save to Server stores it in history below.
-                </p>
             </div>
+            <div class="col-md-4"></div>
         </div>
 
         <!-- Quick-stat row -->
@@ -168,6 +168,101 @@ function fmt_age(?int $ts): string {
     </div>
 </div>
 
+<!-- ── Remote Storage (S3-compatible) ─────────────────────────────────────── -->
+<div class="card card-dark mb-3">
+    <div class="card-header py-2">
+        <h3 class="card-title"><i class="fas fa-fw fa-cloud-upload-alt me-2"></i>Remote Storage (S3-compatible)</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Upload every backup (manual or auto) to an S3-compatible bucket in addition to keeping it on this server - AWS S3 itself, or a self-hosted service such as RustFS or MinIO. Point <strong>Endpoint</strong> at your provider's S3 API URL; leave it blank for real AWS S3.
+        </p>
+        <form action="post.php" method="post" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+
+            <div class="form-group mb-3">
+                <div class="form-check form-check form-switch">
+                    <input type="checkbox" class="form-check-input" id="backup_s3_enabled"
+                           name="config_backup_s3_enabled" value="1"
+                           <?= $config_backup_s3_enabled ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="backup_s3_enabled">
+                        Upload backups to S3-compatible storage
+                    </label>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-6">
+                    <div class="form-group">
+                        <label class="text-muted small mb-1">Endpoint URL <span class="text-muted">(blank = AWS S3)</span></label>
+                        <input type="text" class="form-control form-control-sm" name="config_backup_s3_endpoint"
+                               placeholder="e.g. https://s3.example.com:9000 (RustFS/MinIO)"
+                               value="<?= nullable_htmlentities($config_backup_s3_endpoint) ?>">
+                    </div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="form-group">
+                        <label class="text-muted small mb-1">Region</label>
+                        <input type="text" class="form-control form-control-sm" name="config_backup_s3_region"
+                               placeholder="us-east-1" value="<?= nullable_htmlentities($config_backup_s3_region) ?>">
+                    </div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="form-group">
+                        <label class="text-muted small mb-1">Bucket</label>
+                        <input type="text" class="form-control form-control-sm" name="config_backup_s3_bucket"
+                               value="<?= nullable_htmlentities($config_backup_s3_bucket) ?>" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-4">
+                    <div class="form-group">
+                        <label class="text-muted small mb-1">Access Key</label>
+                        <input type="text" class="form-control form-control-sm" name="config_backup_s3_access_key"
+                               autocomplete="off" value="<?= nullable_htmlentities($config_backup_s3_access_key) ?>">
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="form-group">
+                        <label class="text-muted small mb-1">Secret Key</label>
+                        <input type="password" class="form-control form-control-sm" name="config_backup_s3_secret_key"
+                               autocomplete="new-password"
+                               placeholder="<?= $config_backup_s3_secret_key ? '(saved — leave blank to keep)' : '' ?>">
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="form-group">
+                        <label class="text-muted small mb-1">Key Prefix <span class="text-muted">(optional)</span></label>
+                        <input type="text" class="form-control form-control-sm" name="config_backup_s3_prefix"
+                               placeholder="e.g. itflow-backups/" value="<?= nullable_htmlentities($config_backup_s3_prefix) ?>">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <div class="form-check form-check form-switch">
+                    <input type="checkbox" class="form-check-input" id="backup_s3_path_style"
+                           name="config_backup_s3_path_style" value="1"
+                           <?= $config_backup_s3_path_style ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="backup_s3_path_style">
+                        Path-style addressing
+                    </label>
+                </div>
+                <small class="text-muted">On by default - required by most self-hosted S3-compatible services (RustFS, MinIO). Real AWS S3 works with either; turn this off only if your provider specifically requires virtual-hosted-style URLs.</small>
+            </div>
+
+            <button type="submit" name="save_backup_s3_settings" class="btn btn-primary btn-sm">
+                <i class="fas fa-check me-1"></i>Save Remote Storage
+            </button>
+            <button type="submit" name="backup_s3_test" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-plug me-1"></i>Test Connection
+            </button>
+        </form>
+    </div>
+</div>
+
 <!-- ── Backup history ─────────────────────────────────────────────────────── -->
 <div class="card card-dark">
     <div class="card-header py-2 d-flex align-items-center">
@@ -192,7 +287,7 @@ function fmt_age(?int $ts): string {
                     <th style="width:80px;">Type</th>
                     <th style="width:80px;">Size</th>
                     <th style="width:160px;">Created</th>
-                    <th style="width:90px;"></th>
+                    <th style="width:110px;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -220,16 +315,18 @@ function fmt_age(?int $ts): string {
                     <td class="text-muted small"><?= $bmb ?></td>
                     <td class="text-muted small" title="<?= $bdate ?>"><?= $bago ?></td>
                     <td class="pe-3 text-end">
-                        <a href="post.php?backup_serve=<?= urlencode($bbase) ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                           class="btn btn-xs btn-outline-primary"
-                           title="Download">
-                            <i class="fas fa-download"></i>
-                        </a>
-                        <a href="post.php?backup_delete=<?= urlencode($bbase) ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
-                           class="btn btn-xs btn-outline-danger ms-1 confirm-link"
-                           title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                        <div class="d-inline-flex gap-1">
+                            <a href="post.php?backup_serve=<?= urlencode($bbase) ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                               class="btn btn-sm btn-outline-primary"
+                               title="Download">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            <a href="post.php?backup_delete=<?= urlencode($bbase) ?>&csrf_token=<?= $_SESSION['csrf_token'] ?>"
+                               class="btn btn-sm btn-outline-danger confirm-link"
+                               title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
                     </td>
                 </tr>
             <?php endforeach; ?>
